@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="vi">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Local AI Core</title><link rel="stylesheet" href="/ui/styles.css"></head>
+<body>
+  <header><strong>Local AI Core</strong><span id="health">Đang kiểm tra hệ thống…</span><button id="new-chat">+ Cuộc trò chuyện mới</button></header>
+  <main class="workspace">
+    <aside class="files-panel">
+      <h2>Tài liệu nguồn</h2><p>PDF, DOCX, TXT hoặc Markdown</p>
+      <label id="dropzone" class="dropzone"><input id="file-input" type="file" accept=".pdf,.docx,.txt,.md"><span>Thả tệp vào đây</span><small>hoặc bấm để chọn</small></label>
+      <button id="upload" class="primary" disabled>Tải lên & lập chỉ mục</button>
+      <div id="file-status" class="status">Chưa chọn tài liệu.</div>
+      <hr><h3>Tài liệu đang dùng</h3><div id="document-list" class="document-list"><p>Chưa có tài liệu nguồn.</p></div>
+    </aside>
+    <section class="chat-panel">
+      <div class="chat-toolbar"><div><h1>Trợ lý AI</h1><p id="chat-mode">LLM gốc · không dùng tài liệu</p></div><label class="switch"><input id="use-source" type="checkbox"><span>Dùng tài liệu</span></label><label class="switch"><input id="use-memory" type="checkbox"><span>Memory</span></label></div>
+      <div id="messages" class="messages" aria-live="polite"><article class="message assistant"><span>AI</span><p>Chào bạn. Hãy hỏi trực tiếp hoặc tải tài liệu nguồn ở cột bên trái.</p></article></div>
+      <form id="chat-form" class="composer"><textarea id="prompt" placeholder="Nhập câu hỏi…" rows="1"></textarea><button class="primary" type="submit">Gửi</button></form>
+    </section>
+    <aside class="preview-panel">
+      <div class="preview-title"><h2>Xem trước</h2><button id="close-preview" title="Đóng xem trước">×</button></div>
+      <div id="preview" class="preview-empty">Chọn một tệp để xem nội dung tại đây.</div>
+    </aside>
+  </main>
+  <script src="/ui/app.js"></script>
+</body></html>

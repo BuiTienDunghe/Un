@@ -1,0 +1,4 @@
+{"id":"router-models","question":"Which model handles code tasks?","document_id":"__BOOTSTRAP__","expected_answer_terms":["qwen2.5-coder:7b"],"expected_source_terms":["coding tasks"]}
+{"id":"pdf-ocr","question":"Does this baseline use OCR fallback for scanned PDFs?","document_id":"__BOOTSTRAP__","expected_answer_terms":["not enabled"],"expected_source_terms":["OCR fallback is not enabled"]}
+{"id":"hybrid-retrieval","question":"How are dense and BM25 results combined?","document_id":"__BOOTSTRAP__","expected_answer_terms":["reciprocal rank fusion"],"expected_source_terms":["Reciprocal rank fusion"]}
+{"id":"memory-chat","question":"How can a chat request include saved memories?","document_id":"__BOOTSTRAP__","expected_answer_terms":["use_memory"],"expected_source_terms":["use_memory to true"]}

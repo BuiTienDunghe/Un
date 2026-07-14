@@ -1,0 +1,48 @@
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ── Virtual environment ──
+.venv/
+venv/
+env/
+ENV/
+
+# ── Testing ──
+.pytest_cache/
+tests/test_*.db*
+tests/test_logs/
+backend/.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# ── IDE / Editor ──
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.agents/
+
+# ── Environment secrets ──
+.env
+
+# ── Runtime data (generated at runtime, never commit) ──
+data/sqlite/*.db*
+data/logs/
+data/uploads/
+data/documents/
+data/ocr_runs/
+data/qdrant/
+data/evaluation/results/
+
+# ── OS generated ──
+Thumbs.db
+Desktop.ini
+.DS_Store

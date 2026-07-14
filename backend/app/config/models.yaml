@@ -1,0 +1,52 @@
+models:
+  general:
+    provider: ollama
+    name: qwen3.5:9b
+    context: 16384
+    temperature: 0.4
+    top_p: 0.9
+    think: false
+    keep_alive: 5m
+  code:
+    provider: ollama
+    name: qwen2.5-coder:7b
+    context: 32768
+    temperature: 0.2
+    top_p: 0.9
+    keep_alive: 5m
+  embedding:
+    provider: ollama
+    name: qwen3-embedding:0.6b
+    context: 32768
+  vision:
+    provider: ollama
+    name: qwen3.5:9b
+    context: 16384
+    temperature: 0.3
+    keep_alive: 5m
+  ocr:
+    provider: ollama
+    name: glm-ocr:latest
+    enabled: true
+    context: 16384
+    temperature: 0.1
+    keep_alive: 5m
+    dpi: 200
+    min_text_characters: 80
+    min_alphanumeric_ratio: 0.45
+rag:
+  chunk_size: 900
+  chunk_overlap: 150
+  top_k: 5
+  max_context_chunks: 5
+  retrieval_mode: hybrid
+  rrf_k: 60
+  reranker:
+    enabled: false
+    provider: sentence-transformers
+    model: cross-encoder/mmarco-mMiniLMv2-L12-H384-v1
+    candidate_limit: 15
+storage:
+  documents_ttl_days: 30
+  ocr_runs_ttl_days: 14
+  logs_ttl_days: 7
