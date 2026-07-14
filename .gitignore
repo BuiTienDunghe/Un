@@ -46,3 +46,17 @@ data/evaluation/results/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+
+
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+test_logs/
+backend/tests/test_logs/
