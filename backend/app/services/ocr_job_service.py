@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import json
 import os
 import shutil
@@ -10,20 +9,29 @@ import zipfile
 from pathlib import Path
 from uuid import uuid4
 
-import fitz
 from fastapi import UploadFile
 
 from app.services.model_router import ModelRouter
+from app.services.ocr_service import OCRService
+
+
+class OcrPromotionError(Exception):
+    """Compatibility error returned when an OCR run cannot be promoted."""
 from app.services.monitoring_service import system_metrics
 from app.services.ocr_metrics_service import evaluate_ocr
-from app.stores.sqlite_store import SQLiteStore
+from app.stores.auxiliary_store import AuxiliaryStore
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.services.postgres_document_service import PostgresDocumentService
 
 
 class OcrJobService:
     allowed = {".pdf", ".png", ".jpg", ".jpeg", ".webp"}
 
-    def __init__(self, router: ModelRouter, runs_path: Path, store: SQLiteStore) -> None:
+    def __init__(self, router: ModelRouter, runs_path: Path, store: AuxiliaryStore, ocr_service: OCRService | None = None) -> None:
         self.router, self.runs_path, self.store = router, runs_path, store
+        self.ocr_service = ocr_service or OCRService(router, store)
         self.jobs: dict[str, dict[str, object]] = {}
         self._lock = threading.Lock()
         self._active: str | None = None
@@ -43,7 +51,7 @@ class OcrJobService:
         (root / "pages").mkdir()
         filename = f"input{suffix}"
         (root / "input" / filename).write_bytes(content)
-        job: dict[str, object] = {"id": job_id, "filename": file.filename or filename, "suffix": suffix, "path": str(root / "input" / filename), "root": str(root), "dpi": dpi, "page_range": page_range, "output_format": output_format, "status": "queued", "stage": "Queued", "progress": 0, "current_page": 0, "total_pages": 0, "events": [], "logs": [], "pages": [], "timings": {}, "cancel": False, "created_at": time.time(), "model": str(self.router.models.get("ocr", {}).get("name", "unconfigured"))}
+        job: dict[str, object] = {"id": job_id, "filename": file.filename or filename, "suffix": suffix, "path": str(root / "input" / filename), "root": str(root), "dpi": dpi, "page_range": page_range, "output_format": output_format, "status": "queued", "stage": "Queued", "progress": 0, "current_page": 0, "total_pages": 0, "events": [], "logs": [], "pages": [], "timings": {}, "cancel": False, "created_at": time.time(), "model": str(self.router.models.get("ocr", {}).get("name", "unconfigured")), "ocr_config_hash": self.ocr_service.config_hash(dpi)}
         self.jobs[job_id] = job
         self._save(job)
         threading.Thread(target=self._run, args=(job_id,), daemon=True).start()
@@ -74,14 +82,13 @@ class OcrJobService:
                 progress = 10 + int((index - 1) / len(pages) * 80)
                 self._event(job, "OCR inference", progress, f"Processing page {number}/{len(pages)}")
                 page_started = time.perf_counter()
-                encoded = base64.b64encode(png).decode("ascii")
-                if os.getenv("MOCK_OCR", "").lower() == "true": text = f"[MOCK OCR] Page {number}: simulated OCR output."
-                else: text, _ = self.router.ocr(encoded)
+                result = self.ocr_service.recognize_png(png, int(job["dpi"]), allow_mock=True)
+                text = f"[MOCK OCR] Page {number}: simulated OCR output." if os.getenv("MOCK_OCR", "").lower() == "true" else result.text
                 page_dir = Path(str(job["root"])) / "pages" / f"page_{number:04d}"; page_dir.mkdir()
                 (page_dir / "original.png").write_bytes(png)
                 (page_dir / "text.txt").write_text(text, encoding="utf-8")
                 (page_dir / "result.md").write_text(text, encoding="utf-8")
-                payload = {"page": number, "text": text, "markdown": text, "extraction_method": "mock" if os.getenv("MOCK_OCR", "").lower() == "true" else "glm-ocr"}
+                payload = {"page": number, "text": text, "markdown": text, "extraction_method": "ocr", "model": result.model, "ocr_config_hash": result.config_hash, "cache_hit": result.cache_hit}
                 (page_dir / "result.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
                 job["pages"].append({**payload, "image_url": f"/api/ocr/jobs/{job_id}/files/pages/page_{number:04d}/original.png", "duration_seconds": round(time.perf_counter() - page_started, 3)})  # type: ignore[index]
             job["status"] = "completed"; self._event(job, "Completed", 100, "All selected pages processed")
@@ -92,15 +99,13 @@ class OcrJobService:
             self._save(job)
             with self._lock: self._active = None
 
-    @staticmethod
-    def _pages(source: Path, suffix: str, dpi: int, page_range: str | None) -> list[tuple[int, bytes]]:
+    def _pages(self, source: Path, suffix: str, dpi: int, page_range: str | None) -> list[tuple[int, bytes]]:
         if suffix != ".pdf": return [(1, source.read_bytes())]
+        import fitz
         document = fitz.open(str(source))
-        try:
-            selected = OcrJobService._select_pages(len(document), page_range)
-            matrix = fitz.Matrix(dpi / 72, dpi / 72)
-            return [(number, document[number - 1].get_pixmap(matrix=matrix, colorspace=fitz.csRGB).tobytes("png")) for number in selected]
+        try: selected = self._select_pages(len(document), page_range)
         finally: document.close()
+        return self.ocr_service.render_pages(source, dpi, selected)
 
     @staticmethod
     def _is_valid_content(suffix: str, content: bytes) -> bool:
@@ -141,6 +146,13 @@ class OcrJobService:
         result = evaluate_ocr(ground_truth, actual); job["evaluation"] = result
         self._save(job)
         return result
+
+    def promote(self, job_id: str, document_service: PostgresDocumentService) -> dict[str, object]:
+        self.view(job_id)  # hydrate an archived job if necessary
+        try:
+            return document_service.promote_ocr_run(self.jobs[job_id])
+        except (ValueError, OverflowError) as error:
+            raise OcrPromotionError(str(error)) from error
 
     def export(self, job_id: str) -> Path:
         job = self.jobs.get(job_id)

@@ -7,12 +7,12 @@ router = APIRouter(prefix="/conversations", tags=["conversations"])
 
 @router.get("", response_model=list[ConversationSummary])
 def list_conversations(request: Request) -> list[ConversationSummary]:
-    return [ConversationSummary(**conversation) for conversation in request.app.state.store.list_conversations()]
+    return [ConversationSummary(**conversation) for conversation in request.app.state.auxiliary_store.list_conversations()]
 
 
 @router.get("/{conversation_id}", response_model=ConversationDetail)
 def get_conversation(conversation_id: str, request: Request) -> ConversationDetail:
-    conversation = request.app.state.store.get_conversation(conversation_id)
+    conversation = request.app.state.auxiliary_store.get_conversation(conversation_id)
     if conversation is None:
         raise HTTPException(status_code=404, detail={"error_code": "CONVERSATION_NOT_FOUND", "message": f"Conversation {conversation_id} does not exist"})
     return ConversationDetail(**conversation)
@@ -20,5 +20,5 @@ def get_conversation(conversation_id: str, request: Request) -> ConversationDeta
 
 @router.delete("/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_conversation(conversation_id: str, request: Request) -> None:
-    if not request.app.state.store.delete_conversation(conversation_id):
+    if not request.app.state.auxiliary_store.delete_conversation(conversation_id):
         raise HTTPException(status_code=404, detail={"error_code": "CONVERSATION_NOT_FOUND", "message": f"Conversation {conversation_id} does not exist"})

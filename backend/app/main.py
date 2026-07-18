@@ -9,58 +9,65 @@ from fastapi.staticfiles import StaticFiles
 from app.config.settings import get_settings
 from app.llm_clients.ollama_client import OllamaClient
 from app.routers import chat, code, conversations, documents, health, memory, models, ocr, rag, vision
-from app.services.bm25_service import Bm25Service
+from app.services.postgres_bm25_service import PostgresBm25Service
 from app.services.chat_service import ChatService
-from app.services.cleanup_service import CleanupService
 from app.services.code_service import CodeService
 from app.services.logging_service import LoggingService
 from app.services.model_router import ModelRouter
-from app.services.document_service import DocumentService
+from app.services.postgres_document_service import PostgresDocumentService
 from app.services.ocr_job_service import OcrJobService
+from app.services.ocr_service import OCRService
 from app.services.rag_service import RagService
 from app.services.memory_service import MemoryService
-from app.services.retrieval_service import RetrievalService
+from app.services.postgres_retrieval_service import PostgresRetrievalService
+from app.services.job_queue_service import JobQueueService
+from app.services.operational_service import OperationalService
 from app.services.reranker_service import RerankerService
 from app.stores.qdrant_store import QdrantStore
-from app.stores.sqlite_store import SQLiteStore
+from app.stores.embedding_cache_store import PostgresEmbeddingCacheStore
+from app.stores.postgres_auxiliary_store import PostgresAuxiliaryStore
+from app.postgres.database import create_postgres_engine, create_session_factory
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
-    store = SQLiteStore(settings.database_path)
-    store.initialize()
     ollama_client = OllamaClient(settings.ollama_base_url, settings.ollama_chat_timeout_seconds, settings.ollama_health_timeout_seconds, settings.ollama_retry_count)
-    logging_service = LoggingService(store, settings.logs_path)
+    # Settings validates the mandatory PostgreSQL URL before this point.
+    postgres_sessions = create_session_factory(create_postgres_engine(str(settings.database_url)))
+    auxiliary_store = PostgresAuxiliaryStore(postgres_sessions)
+    logging_service = LoggingService(auxiliary_store, settings.logs_path)
     router = ModelRouter(ollama_client, settings.load_models())
     config = settings.load_config()
     rag_config = config.get("rag", {})
     storage_config = config.get("storage", {})
     qdrant_store = QdrantStore(settings.qdrant_url, settings.qdrant_timeout_seconds)
-    # --- Cleanup on startup ---
-    cleanup = CleanupService(store, settings.documents_path, settings.ocr_runs_path)
-    cleanup.run_all(
-        documents_ttl_days=int(storage_config.get("documents_ttl_days", 30)),
-        ocr_runs_ttl_days=int(storage_config.get("ocr_runs_ttl_days", 14)),
-        logs_ttl_days=int(storage_config.get("logs_ttl_days", 7)),
-    )
-    app.state.store = store
+    app.state.auxiliary_store = auxiliary_store
     app.state.ollama_client = ollama_client
     app.state.models = settings.load_models()
     app.state.settings = settings
     app.state.qdrant_store = qdrant_store
     app.state.logging_service = logging_service
-    app.state.memory_service = MemoryService(store, qdrant_store, router, logging_service)
-    app.state.chat_service = ChatService(store, router, logging_service, settings.conversation_history_limit, app.state.memory_service)
+    app.state.memory_service = MemoryService(auxiliary_store, qdrant_store, router, logging_service)
+    app.state.chat_service = ChatService(auxiliary_store, router, logging_service, settings.conversation_history_limit, app.state.memory_service)
     app.state.code_service = CodeService(router, logging_service)
-    app.state.document_service = DocumentService(store, qdrant_store, router, logging_service, settings.documents_path, int(rag_config.get("chunk_size", 900)), int(rag_config.get("chunk_overlap", 150)))
-    app.state.ocr_job_service = OcrJobService(router, settings.ocr_runs_path, store)
-    bm25_service = Bm25Service(store)
+    ocr_service = OCRService(router, auxiliary_store)
+    queue = JobQueueService(settings.redis_url, settings.rq_queue_prefix) if settings.ingestion_execution_backend == "rq" else None
+    app.state.document_service = PostgresDocumentService(
+        postgres_sessions, PostgresEmbeddingCacheStore(postgres_sessions), qdrant_store, router, logging_service, settings.documents_path,
+        int(rag_config.get("chunk_tokens", rag_config.get("chunk_size", 480))),
+        int(rag_config.get("chunk_overlap_tokens", rag_config.get("chunk_overlap", 80))), ocr_service, queue, settings.job_max_attempts,
+    )
+    app.state.operational_service = OperationalService(postgres_sessions, settings.redis_url, settings.rq_queue_prefix, qdrant_store, ollama_client, settings.documents_path.parent / "cleanup-worker.heartbeat")
+    app.state.ocr_job_service = OcrJobService(router, settings.ocr_runs_path, auxiliary_store, ocr_service)
     reranker_config = rag_config.get("reranker", {})
     reranker_service = RerankerService(bool(reranker_config.get("enabled", False)), str(reranker_config.get("model", "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1")), int(reranker_config.get("candidate_limit", 15)))
-    retrieval_service = RetrievalService(qdrant_store, router, bm25_service, reranker_service, store, str(rag_config.get("retrieval_mode", "hybrid")), int(rag_config.get("rrf_k", 60)))
+    retrieval_service = PostgresRetrievalService(qdrant_store, router, postgres_sessions, PostgresBm25Service(postgres_sessions), reranker_service, str(rag_config.get("retrieval_mode", "hybrid")), int(rag_config.get("rrf_k", 60)))
     app.state.rag_service = RagService(router, logging_service, retrieval_service)
-    yield
+    try:
+        yield
+    finally:
+        pass
 
 
 app = FastAPI(title="Local AI Core", version="1C", lifespan=lifespan)

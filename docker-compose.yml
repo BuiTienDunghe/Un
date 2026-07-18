@@ -1,4 +1,20 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    profiles: ["postgres"]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-local_ai_core}
+      POSTGRES_USER: ${POSTGRES_USER:-local_ai}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
   qdrant:
     image: qdrant/qdrant:latest
     container_name: local-ai-qdrant
@@ -7,3 +23,59 @@ services:
       - "6334:6334"
     volumes:
       - ./data/qdrant:/qdrant/storage
+  redis:
+    image: redis:7-alpine
+    profiles: ["workers"]
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+  worker-ocr:
+    build: .
+    profiles: ["workers"]
+    command: rq worker --with-scheduler --url redis://redis:6379/0 ${RQ_QUEUE_PREFIX:-local-ai:dev}:ocr
+    environment:
+      INGESTION_EXECUTION_BACKEND: rq
+      DATABASE_URL: ${CONTAINER_DATABASE_URL:-${DATABASE_URL}}
+      REDIS_URL: redis://redis:6379/0
+      RQ_QUEUE_PREFIX: ${RQ_QUEUE_PREFIX:-local-ai:dev}
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+    volumes: ["./data:/app/data"]
+    depends_on: [redis]
+  worker-index:
+    build: .
+    profiles: ["workers"]
+    command: rq worker --with-scheduler --url redis://redis:6379/0 ${RQ_QUEUE_PREFIX:-local-ai:dev}:index
+    environment:
+      INGESTION_EXECUTION_BACKEND: rq
+      DATABASE_URL: ${CONTAINER_DATABASE_URL:-${DATABASE_URL}}
+      REDIS_URL: redis://redis:6379/0
+      RQ_QUEUE_PREFIX: ${RQ_QUEUE_PREFIX:-local-ai:dev}
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+    volumes: ["./data:/app/data"]
+    depends_on: [redis]
+  outbox-dispatcher:
+    build: .
+    profiles: ["workers"]
+    command: python -m scripts.outbox_dispatcher
+    environment:
+      DATABASE_URL: ${CONTAINER_DATABASE_URL:-${DATABASE_URL}}
+      REDIS_URL: redis://redis:6379/0
+      RQ_QUEUE_PREFIX: ${RQ_QUEUE_PREFIX:-local-ai:dev}
+      JOB_MAX_ATTEMPTS: ${JOB_MAX_ATTEMPTS:-3}
+    depends_on: [redis]
+  cleanup-worker:
+    build: .
+    profiles: ["workers"]
+    command: python -m scripts.cleanup_worker --loop
+    environment:
+      DATABASE_URL: ${CONTAINER_DATABASE_URL:-${DATABASE_URL}}
+      QDRANT_URL: http://qdrant:6333
+      REQUEST_LOG_RETENTION_DAYS: ${REQUEST_LOG_RETENTION_DAYS:-7}
+    volumes: ["./data:/app/data"]
+    depends_on: [qdrant]
+
+volumes:
+  postgres_data:

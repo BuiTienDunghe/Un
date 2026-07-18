@@ -6,7 +6,11 @@ from collections.abc import Iterator
 
 from app.services.logging_service import LoggingService
 from app.services.model_router import ModelRouter
-from app.services.retrieval_service import RetrievalService
+from typing import Protocol
+
+
+class RetrievalBackend(Protocol):
+    def retrieve(self, question: str, top_k: int, document_id: str | list[str] | None = None) -> list[dict[str, object]]: ...
 
 
 class InsufficientContextError(Exception):
@@ -14,13 +18,13 @@ class InsufficientContextError(Exception):
 
 
 class RagService:
-    def __init__(self, router: ModelRouter, logging_service: LoggingService, retrieval_service: RetrievalService) -> None:
+    def __init__(self, router: ModelRouter, logging_service: LoggingService, retrieval_service: RetrievalBackend) -> None:
         self.router = router
         self.logging_service = logging_service
         self.retrieval_service = retrieval_service
         self.system_prompt = (Path(__file__).parents[1] / "prompts" / "rag_system.md").read_text(encoding="utf-8")
 
-    def respond(self, question: str, top_k: int, document_id: str | None) -> tuple[str, str, int, list[dict[str, object]]]:
+    def respond(self, question: str, top_k: int, document_id: str | list[str] | None) -> tuple[str, str, int, list[dict[str, object]]]:
         started = perf_counter()
         sources = self.retrieval_service.retrieve(question, top_k, document_id)
         if not sources:
@@ -31,7 +35,7 @@ class RagService:
         self.logging_service.log_request("/rag/chat", model_used, latency_ms, "ok")
         return answer, model_used, latency_ms, sources
 
-    def stream_response(self, question: str, top_k: int, document_id: str | None) -> tuple[Iterator[str], str, list[dict[str, object]]]:
+    def stream_response(self, question: str, top_k: int, document_id: str | list[str] | None) -> tuple[Iterator[str], str, list[dict[str, object]]]:
         sources = self.retrieval_service.retrieve(question, top_k, document_id)
         if not sources:
             raise InsufficientContextError("No indexed document context was found")

@@ -4,13 +4,13 @@ from pathlib import Path
 
 from loguru import logger
 
-from app.stores.sqlite_store import SQLiteStore
+from app.stores.auxiliary_store import AuxiliaryStore
 
 
 class LoggingService:
     _configured_log_files: set[Path] = set()
 
-    def __init__(self, store: SQLiteStore, log_dir: Path) -> None:
+    def __init__(self, store: AuxiliaryStore, log_dir: Path) -> None:
         self.store = store
         log_dir.mkdir(parents=True, exist_ok=True)
         self.log_file = log_dir / "app_{time:YYYY-MM-DD}.log"
@@ -19,7 +19,7 @@ class LoggingService:
                 str(self.log_file),
                 rotation="1 day",
                 retention="30 days",
-                format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {module}:{function}:{line} | {message}",
+                serialize=True,
                 level="INFO",
             )
             self._configured_log_files.add(self.log_file)

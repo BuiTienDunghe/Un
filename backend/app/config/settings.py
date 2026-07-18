@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,7 +16,14 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=PROJECT_ROOT / ".env", extra="ignore")
 
     app_name: str = "local-ai-core"
-    db_path: str = "data/sqlite/local_ai_core.db"
+    database_url: str | None = None
+    request_log_retention_days: int = 7
+    ingestion_execution_backend: str = "thread"
+    redis_url: str = "redis://127.0.0.1:6379/0"
+    rq_queue_prefix: str = "local-ai:dev"
+    job_max_attempts: int = 3
+    job_stale_timeout_seconds: int = 900
+    superseded_version_grace_days: int = 7
     log_dir: str = "data/logs"
     ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_chat_timeout_seconds: float = 120.0
@@ -28,9 +36,15 @@ class Settings(BaseSettings):
     max_code_context_length: int = 50_000
     conversation_history_limit: int = 12
 
-    @property
-    def database_path(self) -> Path:
-        return PROJECT_ROOT / self.db_path
+    @model_validator(mode="after")
+    def validate_runtime_database(self) -> "Settings":
+        if self.request_log_retention_days < 1:
+            raise ValueError("REQUEST_LOG_RETENTION_DAYS must be positive")
+        if not self.database_url:
+            raise ValueError("DATABASE_URL is required for the PostgreSQL runtime")
+        if not str(self.database_url).startswith("postgresql+"):
+            raise ValueError("DATABASE_URL must use a PostgreSQL SQLAlchemy dialect, not SQLite")
+        return self
 
     @property
     def logs_path(self) -> Path:

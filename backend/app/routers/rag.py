@@ -14,10 +14,11 @@ router = APIRouter(prefix="/rag", tags=["rag"])
 @router.post("/chat", response_model=RagChatResponse)
 def rag_chat(payload: RagChatRequest, request: Request) -> RagChatResponse | StreamingResponse:
     try:
+        document_scope = payload.document_ids or ([payload.document_id] if payload.document_id else None)
         if payload.stream:
-            tokens, model_used, sources = request.app.state.rag_service.stream_response(payload.message, payload.top_k, payload.document_id)
+            tokens, model_used, sources = request.app.state.rag_service.stream_response(payload.message, payload.top_k, document_scope)
             response_sources = [
-                {"document_id": str(source["document_id"]), "filename": str(source["filename"]), "chunk_id": int(source["chunk_index"]), "page": source.get("page"), "score": float(source["score"]), "excerpt": str(source["content"])[:300], "extraction_method": str(source.get("extraction_method", "native"))}
+                {"document_id": str(source["document_id"]), "filename": str(source["filename"]), "chunk_id": int(source["chunk_index"]), "index_version": int(source.get("index_version", 0)), "page": source.get("page"), "page_start": source.get("page_start"), "page_end": source.get("page_end"), "locations": source.get("locations", []), "heading_path": source.get("heading_path"), "section_title": source.get("section_title"), "block_type": str(source.get("block_type", "paragraph")), "source_available": bool(source.get("source_available", False)), "verifiable": bool(source.get("verifiable", False)), "score": float(source["score"]), "excerpt": str(source["content"])[:300], "extraction_method": str(source.get("extraction_method", "native"))}
                 for source in sources
             ]
 
@@ -31,13 +32,22 @@ def rag_chat(payload: RagChatRequest, request: Request) -> RagChatResponse | Str
                     yield sse_event("error", {"error_code": "STREAM_FAILED", "message": str(error)})
 
             return StreamingResponse(events(), media_type="text/event-stream")
-        answer, model_used, latency_ms, sources = request.app.state.rag_service.respond(payload.message, payload.top_k, payload.document_id)
+        answer, model_used, latency_ms, sources = request.app.state.rag_service.respond(payload.message, payload.top_k, document_scope)
         response_sources = [
             RagSource(
                 document_id=str(source["document_id"]),
                 filename=str(source["filename"]),
                 chunk_id=int(source["chunk_index"]),
+                index_version=int(source.get("index_version", 0)),
                 page=source.get("page"),
+                page_start=source.get("page_start"),
+                page_end=source.get("page_end"),
+                locations=source.get("locations", []),
+                heading_path=source.get("heading_path"),
+                section_title=source.get("section_title"),
+                block_type=str(source.get("block_type", "paragraph")),
+                source_available=bool(source.get("source_available", False)),
+                verifiable=bool(source.get("verifiable", False)),
                 score=float(source["score"]),
                 excerpt=str(source["content"])[:300],
                 extraction_method=str(source.get("extraction_method", "native")),

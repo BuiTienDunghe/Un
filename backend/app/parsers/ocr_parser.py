@@ -1,56 +1,26 @@
 from __future__ import annotations
 
-import base64
 from pathlib import Path
 
-# pyrefly: ignore [missing-import]
-import fitz  # PyMuPDF — installed alongside pymupdf4llm
+import fitz
 
 from app.parsers.base_parser import BaseParser
-from app.services.model_router import ModelRouter
+from app.services.ocr_service import OCRService
 
 
 class OcrParser(BaseParser):
-    """OCR parser that renders PDF pages to images and sends them to a vision model."""
+    """Thin PDF adapter around the shared OCRService."""
 
-    # Render at 200 DPI — good balance between quality and speed
-    DPI = 200
-
-    def __init__(self, router: ModelRouter) -> None:
-        self.router = router
+    def __init__(self, ocr_service: OCRService, dpi: int = 200) -> None:
+        self.ocr_service, self.dpi = ocr_service, dpi
 
     def parse(self, path: Path) -> list[tuple[int | None, str]]:
-        """Parse a PDF by rendering each page to an image and running OCR."""
         document = fitz.open(str(path))
-        result: list[tuple[int | None, str]] = []
         try:
-            for page_index in range(len(document)):
-                page = document[page_index]
-                image_base64 = self._render_page_base64(page)
-                text, _ = self.router.ocr(image_base64)
-                result.append((page_index + 1, text.strip()))
+            page_numbers = list(range(1, len(document) + 1))
         finally:
             document.close()
-        return result
+        return [(number, result.text) for number, result in self.ocr_service.recognize_pdf_pages(path, self.dpi, page_numbers)]
 
     def parse_pages(self, path: Path, page_numbers: list[int]) -> list[tuple[int, str]]:
-        """OCR only specific pages (1-indexed)."""
-        document = fitz.open(str(path))
-        result: list[tuple[int, str]] = []
-        try:
-            for page_number in page_numbers:
-                page = document[page_number - 1]
-                image_base64 = self._render_page_base64(page)
-                text, _ = self.router.ocr(image_base64)
-                result.append((page_number, text.strip()))
-        finally:
-            document.close()
-        return result
-
-    @classmethod
-    def _render_page_base64(cls, page: fitz.Page) -> str:
-        """Render a fitz page to a PNG image and return as base64 string."""
-        matrix = fitz.Matrix(cls.DPI / 72, cls.DPI / 72)
-        pixmap = page.get_pixmap(matrix=matrix, colorspace=fitz.csRGB)
-        png_bytes = pixmap.tobytes("png")
-        return base64.b64encode(png_bytes).decode("ascii")
+        return [(number, result.text) for number, result in self.ocr_service.recognize_pdf_pages(path, self.dpi, page_numbers)]

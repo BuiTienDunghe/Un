@@ -1,6 +1,6 @@
 # Local AI Core — Milestones 1A and 1B
 
-FastAPI backend for local Ollama chat/code, document RAG, memory, hybrid retrieval, and a lightweight UI. OCR fallback, reranking, and autonomous file-editing agents remain out of scope.
+FastAPI backend for local Ollama chat/code, document RAG, memory, hybrid retrieval, OCR fallback, and a lightweight UI.
 
 ## Models
 
@@ -35,7 +35,7 @@ Double-click `run-local-ai-core.bat`. On its first run, it creates `.venv`, inst
 - `POST /chat` uses the general model.
 - `POST /code/chat` uses the code model.
 - `POST /documents/upload` accepts PDF, DOCX, TXT, or MD (up to 50MB).
-- `POST /documents/index` parses, chunks, embeds, and stores a document in Qdrant.
+- `POST /documents/index` creates a background ingestion run. Poll `GET /documents/ingestions/{ingestion_run_id}` for `queued`, `parsing`, `ocr`, `chunking`, `embedding`, `indexing`, and terminal status.
 - `GET /documents/{document_id}/status` returns `uploaded`, `indexing`, `indexed`, or `failed`.
 - `POST /rag/chat` performs dense retrieval and returns sources.
 - `POST /memory/add`, `POST /memory/search`, `PUT /memory/{id}`, and `DELETE /memory/{id}` manage local memories.
@@ -45,7 +45,13 @@ Double-click `run-local-ai-core.bat`. On its first run, it creates `.venv`, inst
 
 Uploads validate both the filename extension and MIME type. The document-status endpoint returns the original filename, indexing status, chunk count, and any indexing error.
 
-RAG defaults to `hybrid` retrieval: vector search in Qdrant and BM25 search over indexed SQLite chunks are combined using reciprocal-rank fusion. BM25 uses `pyvi` so Vietnamese compound terms such as `học_sinh` are preserved. Change `rag.retrieval_mode` in `backend/app/config/models.yaml` to `dense`, `bm25`, or `hybrid` when needed.
+Source retention is explicit. Original files are retained by default; `DELETE /documents/{document_id}/source` removes only the original artifact while retaining indexed knowledge, and citations then report `source_available: false` and `verifiable: false`. `DELETE /documents/{document_id}` permanently cascades through document chunks, ingestion records, Qdrant vectors, and the document folder. Use `PATCH /documents/{document_id}/retention` with `pinned` and `retention_policy` (`permanent`, `temporary`, or `knowledge_only`) to control cleanup eligibility.
+
+OCR evaluation and RAG use the same `OCRService` for rendering, DPI, prompt, model configuration, post-processing, and cache keys. A completed OCR evaluation run can be promoted with `POST /api/ocr/jobs/{job_id}/promote`; it copies the original source, reuses OCR page text only when the OCR configuration hash still matches, then performs chunking, embedding, and versioned RAG indexing.
+
+RAG defaults to `hybrid` retrieval: vector search in Qdrant and BM25 search over versioned indexed SQLite chunks are combined using reciprocal-rank fusion. SQLite is the source of truth for chunk text; Qdrant stores vectors plus lightweight metadata only. A new index version is only activated after all chunks and vectors succeed, so a failed reindex leaves the prior version available. BM25 uses `pyvi` so Vietnamese compound terms such as `học_sinh` are preserved.
+
+Chunking is structure-first and token-budgeted: heading, paragraph, sentence, then token fallback. Chunks can cross page boundaries and retain `page_start`, `page_end`, per-page offsets, heading path, section title, block type, and extraction method. Markdown tables preserve their header when rows must be split. The configured default is 480 tokenizer-like units with 80 units overlap; benchmark these limits against the selected embedding model before production tuning.
 
 Pass `"use_memory": true` to `POST /chat` to retrieve relevant saved memories and add them as contextual system input. Request logs are retained in SQLite and rotated daily with Loguru under `data/logs/`.
 
