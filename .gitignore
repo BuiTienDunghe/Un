@@ -32,6 +32,8 @@ coverage.xml
 
 # ── Environment secrets ──
 .env
+.env.*
+!.env.example
 
 # ── Runtime data (generated at runtime, never commit) ──
 data/sqlite/*.db*
@@ -41,6 +43,10 @@ data/documents/
 data/ocr_runs/
 data/qdrant/
 data/evaluation/results/
+data/archives/
+data/backups/
+data/benchmarks/
+data/cleanup-worker.heartbeat
 
 # ── OS generated ──
 Thumbs.db
@@ -60,3 +66,10 @@ Desktop.ini
 logs/
 test_logs/
 backend/tests/test_logs/
+
+*.dump
+*.snapshot
+
+data/sqlite/*.db
+data/sqlite/*.sqlite
+data/sqlite/*.sqlite3

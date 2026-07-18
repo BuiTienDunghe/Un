@@ -8,7 +8,7 @@ from collections.abc import Iterator
 from app.services.logging_service import LoggingService
 from app.services.model_router import ModelRouter
 from app.services.memory_service import MemoryService
-from app.stores.sqlite_store import SQLiteStore
+from app.stores.auxiliary_store import AuxiliaryStore
 
 
 class ConversationNotFoundError(Exception):
@@ -16,7 +16,7 @@ class ConversationNotFoundError(Exception):
 
 
 class ChatService:
-    def __init__(self, store: SQLiteStore, router: ModelRouter, logging_service: LoggingService, history_limit: int, memory_service: MemoryService | None = None) -> None:
+    def __init__(self, store: AuxiliaryStore, router: ModelRouter, logging_service: LoggingService, history_limit: int, memory_service: MemoryService | None = None) -> None:
         self.store = store
         self.router = router
         self.logging_service = logging_service

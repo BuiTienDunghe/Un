@@ -1,7 +1,7 @@
 def test_rag_chat_returns_sources(client, mock_ollama, monkeypatch):
     monkeypatch.setattr(
-        "app.stores.qdrant_store.QdrantStore.search",
-        lambda self, vector, top_k, document_id=None: [{"document_id": "doc_demo", "filename": "demo.txt", "chunk_index": 0, "page": None, "score": 0.99, "content": "RAG retrieves context before answering."}],
+        "app.services.postgres_retrieval_service.PostgresRetrievalService.retrieve",
+        lambda self, query, top_k, document_id=None: [{"document_id": "doc_demo", "filename": "demo.txt", "chunk_index": 0, "page": None, "score": 0.99, "content": "RAG retrieves context before answering."}],
     )
 
     response = client.post("/rag/chat", json={"message": "What does RAG do?"})
@@ -14,11 +14,11 @@ def test_rag_chat_returns_sources(client, mock_ollama, monkeypatch):
 
 def test_rag_chat_rejects_missing_context(client, mock_ollama, monkeypatch):
     monkeypatch.setattr(
-        "app.stores.qdrant_store.QdrantStore.search",
-        lambda self, vector, top_k, document_id=None: [],
+        "app.services.postgres_retrieval_service.PostgresRetrievalService.retrieve",
+        lambda self, query, top_k, document_id=None: [],
     )
 
-    response = client.post("/rag/chat", json={"message": "What does RAG do?"})
+    response = client.post("/rag/chat", json={"message": "What does RAG do?", "document_id": "doc_missing"})
 
     assert response.status_code == 422
     assert response.json()["error_code"] == "INSUFFICIENT_CONTEXT"
@@ -26,8 +26,8 @@ def test_rag_chat_rejects_missing_context(client, mock_ollama, monkeypatch):
 
 def test_rag_chat_streams_tokens_and_sources(client, monkeypatch):
     monkeypatch.setattr(
-        "app.stores.qdrant_store.QdrantStore.search",
-        lambda self, vector, top_k, document_id=None: [{"document_id": "doc_demo", "filename": "demo.txt", "chunk_index": 0, "page": None, "score": 0.99, "content": "RAG retrieves context before answering."}],
+        "app.services.postgres_retrieval_service.PostgresRetrievalService.retrieve",
+        lambda self, query, top_k, document_id=None: [{"document_id": "doc_demo", "filename": "demo.txt", "chunk_index": 0, "page": None, "score": 0.99, "content": "RAG retrieves context before answering."}],
     )
     monkeypatch.setattr("app.llm_clients.ollama_client.OllamaClient.embed", lambda self, model, text: [0.1, 0.2, 0.3])
     monkeypatch.setattr("app.llm_clients.ollama_client.OllamaClient.stream_chat", lambda *args, **kwargs: iter(["RAG", " answer"]))

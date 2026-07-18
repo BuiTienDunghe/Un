@@ -5,7 +5,7 @@ from uuid import uuid4
 from app.services.logging_service import LoggingService
 from app.services.model_router import ModelRouter
 from app.stores.qdrant_store import QdrantStore
-from app.stores.sqlite_store import SQLiteStore
+from app.stores.auxiliary_store import AuxiliaryStore
 
 
 class MemoryNotFoundError(Exception):
@@ -13,7 +13,7 @@ class MemoryNotFoundError(Exception):
 
 
 class MemoryService:
-    def __init__(self, store: SQLiteStore, qdrant: QdrantStore, router: ModelRouter, logging_service: LoggingService) -> None:
+    def __init__(self, store: AuxiliaryStore, qdrant: QdrantStore, router: ModelRouter, logging_service: LoggingService) -> None:
         self.store = store
         self.qdrant = qdrant
         self.router = router

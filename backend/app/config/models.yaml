@@ -31,12 +31,15 @@ models:
     context: 16384
     temperature: 0.1
     keep_alive: 5m
+    prompt: "Text Recognition:"
     dpi: 200
     min_text_characters: 80
     min_alphanumeric_ratio: 0.45
 rag:
-  chunk_size: 900
-  chunk_overlap: 150
+  # Token budgets. The built-in Unicode tokenizer is deterministic; benchmark these
+  # values against the selected embedding model before changing them.
+  chunk_tokens: 480
+  chunk_overlap_tokens: 80
   top_k: 5
   max_context_chunks: 5
   retrieval_mode: hybrid
@@ -47,6 +50,11 @@ rag:
     model: cross-encoder/mmarco-mMiniLMv2-L12-H384-v1
     candidate_limit: 15
 storage:
-  documents_ttl_days: 30
+  # Original source files are retained by default. Only documents explicitly marked
+  # `temporary` and not pinned are eligible for source-artifact cleanup.
+  temporary_sources_ttl_days: 0
   ocr_runs_ttl_days: 14
   logs_ttl_days: 7
+  ingestion_ttl_days: 7
+  cleanup_interval_hours: 24
+  superseded_version_grace_days: 7

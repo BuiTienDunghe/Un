@@ -21,16 +21,17 @@ def bootstrap_document(client: httpx.Client, base_url: str, file_path: Path) -> 
     document_id = upload.json()["document_id"]
     index = client.post(f"{base_url}/documents/index", json={"document_id": document_id})
     index.raise_for_status()
-    for _ in range(30):
-        status = client.get(f"{base_url}/documents/{document_id}/status")
+    run_id = index.json()["ingestion_run_id"]
+    for _ in range(180):
+        status = client.get(f"{base_url}/documents/ingestions/{run_id}")
         status.raise_for_status()
         state = status.json()["status"]
         if state == "indexed":
             return document_id
-        if state == "failed":
+        if state in {"failed", "partial", "cancelled"}:
             raise RuntimeError(status.json().get("error_message") or "Document indexing failed")
         sleep(1)
-    raise TimeoutError("Document did not finish indexing within 30 seconds")
+    raise TimeoutError("Document did not finish indexing within 180 seconds")
 
 
 def contains_all(text: str, terms: list[str]) -> bool:

@@ -49,7 +49,7 @@ class ModelRouter:
             think=config.get("think") if isinstance(config.get("think"), bool) else None,
         ), model_name
 
-    def ocr(self, image_base64: str) -> tuple[str, str]:
+    def ocr(self, image_base64: str, prompt: str = "Text Recognition:") -> tuple[str, str]:
         """Extract text from a base64-encoded image using the OCR vision model."""
         config = self.models.get("ocr")
         if config is None or not config.get("enabled", False):
@@ -60,7 +60,6 @@ class ModelRouter:
             options["temperature"] = config["temperature"]
         if "context" in config:
             options["num_ctx"] = config["context"]
-        prompt = "Text Recognition:"
         answer = self.client.vision_chat(
             model=model_name,
             prompt=prompt,

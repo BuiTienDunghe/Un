@@ -3,7 +3,8 @@ def test_health_returns_ok(client, mock_ollama):
 
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
-    assert response.json()["sqlite"] == "ok"
+    assert response.json()["postgres"] == "ok"
+    assert "sqlite" not in response.json()
     assert response.json()["ollama"] == "ok"
 
 
