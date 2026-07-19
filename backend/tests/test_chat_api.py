@@ -9,6 +9,19 @@ def test_chat_returns_response_and_model_used(client, mock_ollama):
     assert isinstance(body["latency_ms"], int)
 
 
+def test_chat_uses_per_request_system_prompt(client, mock_ollama, monkeypatch):
+    captured_messages = []
+
+    def capture_chat(self, model, messages, options, keep_alive, think=None):
+        captured_messages.extend(messages)
+        return "Prompt applied"
+
+    monkeypatch.setattr("app.llm_clients.ollama_client.OllamaClient.chat", capture_chat)
+    response = client.post("/chat", json={"message": "Hello", "system_prompt": "Discord-only personality"})
+    assert response.status_code == 200
+    assert captured_messages[0] == {"role": "system", "content": "Discord-only personality"}
+
+
 def test_chat_rejects_unknown_conversation(client, mock_ollama):
     response = client.post("/chat", json={"message": "Hello", "conversation_id": "unknown"})
 

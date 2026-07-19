@@ -9,6 +9,12 @@ class UploadResponse(BaseModel):
     content_hash: str | None = None
     version_id: str | None = None
     run_id: str | None = None
+    action_required: bool = False
+    conflict: str | None = None
+    available_actions: list[str] = []
+    suggested_filename: str | None = None
+    cancelled: bool = False
+    renamed: bool = False
 
 
 class IndexRequest(BaseModel):

@@ -76,6 +76,23 @@ services:
       REQUEST_LOG_RETENTION_DAYS: ${REQUEST_LOG_RETENTION_DAYS:-7}
     volumes: ["./data:/app/data"]
     depends_on: [qdrant]
+  discord-bot:
+    build: .
+    profiles: ["discord"]
+    command: python -m discord_bot.main
+    environment:
+      DISCORD_TOKEN: ${DISCORD_TOKEN:-}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-1522310732912398527}
+      DISCORD_INVITE_URL: ${DISCORD_INVITE_URL:-https://discord.com/oauth2/authorize?client_id=1522310732912398527}
+      LOCAL_AGENT_BASE_URL: ${LOCAL_AGENT_BASE_URL:-http://api:8000}
+      LOCAL_AGENT_USERNAME: ${LOCAL_AGENT_USERNAME:-}
+      LOCAL_AGENT_PASSWORD: ${LOCAL_AGENT_PASSWORD:-}
+      DISCORD_SYSTEM_PROMPT_PATH: /app/discord_bot/system_prompt.md
+      DISCORD_MEMBER_CONTEXT_LIMIT: ${DISCORD_MEMBER_CONTEXT_LIMIT:-100}
+    extra_hosts:
+      - "api:host-gateway"
+    volumes:
+      - ./discord_bot/system_prompt.md:/app/discord_bot/system_prompt.md:ro
 
 volumes:
   postgres_data:

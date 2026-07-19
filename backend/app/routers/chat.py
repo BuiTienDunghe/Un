@@ -16,7 +16,7 @@ def chat(payload: ChatRequest, request: Request) -> ChatResponse | StreamingResp
     started = perf_counter()
     try:
         if payload.stream:
-            tokens, model_used, conversation_id = request.app.state.chat_service.stream_response(payload.message, payload.conversation_id, payload.use_memory)
+            tokens, model_used, conversation_id = request.app.state.chat_service.stream_response(payload.message, payload.conversation_id, payload.use_memory, payload.system_prompt)
 
             def events():
                 yield sse_event("meta", {"conversation_id": conversation_id, "model_used": model_used})
@@ -29,7 +29,7 @@ def chat(payload: ChatRequest, request: Request) -> ChatResponse | StreamingResp
 
             return StreamingResponse(events(), media_type="text/event-stream")
         answer, model_used, conversation_id, latency_ms = request.app.state.chat_service.respond(
-            payload.message, payload.conversation_id, payload.use_memory
+            payload.message, payload.conversation_id, payload.use_memory, payload.system_prompt
         )
         return ChatResponse(answer=answer, model_used=model_used, conversation_id=conversation_id, latency_ms=latency_ms)
     except ConversationNotFoundError as error:

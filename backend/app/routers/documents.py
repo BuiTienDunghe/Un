@@ -1,4 +1,4 @@
-from fastapi import APIRouter, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 
 from app.schemas.document_schema import DocumentStatusResponse, IndexRequest, IndexResponse, IngestionStatusResponse, ReplaceSourceResponse, RetentionRequest, UploadResponse
 from app.services.postgres_document_service import DocumentAlreadyIndexingError, DocumentNotFoundError, IngestionNotFoundError, SourceUnavailableError
@@ -13,9 +13,9 @@ def list_documents(request: Request) -> list[DocumentStatusResponse]:
 
 
 @router.post("/upload", response_model=UploadResponse, status_code=201)
-async def upload_document(request: Request, file: UploadFile = File(...)) -> UploadResponse:
+async def upload_document(request: Request, file: UploadFile = File(...), decision: str | None = Form(default=None)) -> UploadResponse:
     try:
-        result = await request.app.state.document_service.upload(file, request.app.state.settings.max_upload_size_bytes)
+        result = await request.app.state.document_service.upload(file, request.app.state.settings.max_upload_size_bytes, decision=decision)
         return UploadResponse(**result)
     except ValueError as error:
         raise HTTPException(status_code=415, detail={"error_code": "UNSUPPORTED_FILE_TYPE", "message": "Only PDF, DOCX, TXT, and MD files are supported"}) from error

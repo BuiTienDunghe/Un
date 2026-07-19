@@ -61,8 +61,32 @@ class PostgresDocumentService:
     def _run_payload(run: IngestionRun, version: DocumentVersion | None = None) -> dict[str, object]:
         return {"id": run.id, "document_id": run.document_id, "version_id": run.version_id, "index_version": version.version_number if version else 0, "status": run.status, "stage": run.current_stage, "current_stage": run.current_stage, "total_pages": run.total_pages, "processed_pages": run.processed_pages, "ocr_pages": run.ocr_pages, "chunks_count": run.total_chunks, "total_chunks": run.total_chunks, "vectors_count": run.embedded_chunks, "embedded_chunks": run.embedded_chunks, "progress_percent": run.progress_percent, "cancel_requested": False, "error_code": run.error_code, "error_message": run.error_message}
 
-    async def upload(self, file: UploadFile, max_bytes: int) -> dict[str, object]:
-        filename, suffix = file.filename or "upload", safe_upload_suffix(file.filename or "upload")
+    @staticmethod
+    def _normalized_filename(filename: str) -> str:
+        # Never permit a client-provided path to become a display identity.
+        value = Path(filename).name.strip().casefold()
+        if not value:
+            raise ValueError("INVALID_FILENAME")
+        return value
+
+    @staticmethod
+    def _decision(document: Document, digest: str, conflict: str, actions: list[str], suggested_filename: str | None = None) -> dict[str, object]:
+        return {"document_id": document.id, "filename": document.original_filename, "status": document.status, "duplicate": True, "content_hash": digest, "action_required": True, "conflict": conflict, "available_actions": actions, "suggested_filename": suggested_filename}
+
+    def _next_display_filename(self, filename: str) -> str:
+        path = Path(filename)
+        stem, suffix = path.stem, path.suffix
+        number = 2
+        while True:
+            candidate = f"{stem} ({number}){suffix}"
+            with self.sessions() as session:
+                if not PostgresDocumentRepository(session).find_document_by_display_filename(self._normalized_filename(candidate)):
+                    return candidate
+            number += 1
+
+    async def upload(self, file: UploadFile, max_bytes: int, decision: str | None = None) -> dict[str, object]:
+        filename = Path(file.filename or "upload").name
+        suffix = safe_upload_suffix(filename)
         if suffix not in self.allowed_file_types or file.content_type not in self.allowed_file_types[suffix]:
             raise ValueError("UNSUPPORTED_FILE_TYPE")
         content = await file.read(max_bytes + 1)
@@ -70,9 +94,41 @@ class PostgresDocumentService:
             raise OverflowError("DOCUMENT_TOO_LARGE")
         digest = hashlib.sha256(content).hexdigest()
         with self.sessions() as session:
-            existing = PostgresDocumentRepository(session).find_document_by_hash(digest)
-            if existing:
-                return {"document_id": existing.id, "filename": existing.original_filename, "status": existing.status, "duplicate": True, "content_hash": digest}
+            repository = PostgresDocumentRepository(session)
+            named, hashed = repository.find_document_by_display_filename(self._normalized_filename(filename)), repository.find_document_by_hash(digest)
+
+        if decision == "cancel":
+            target = named or hashed
+            return {"document_id": target.id if target else "", "filename": target.original_filename if target else filename, "status": target.status if target else "cancelled", "duplicate": bool(target), "content_hash": digest, "cancelled": True}
+
+        if named and named.content_hash == digest:
+            if decision == "use_existing":
+                return {"document_id": named.id, "filename": named.original_filename, "status": named.status, "duplicate": True, "content_hash": digest}
+            return self._decision(named, digest, "same_name_same_hash", ["use_existing", "cancel"])
+
+        if not named and hashed:
+            if decision == "rename":
+                with self.sessions.begin() as session:
+                    row = session.get(Document, hashed.id)
+                    if not row:
+                        raise DocumentNotFoundError(hashed.id)
+                    row.original_filename, row.display_filename_normalized = filename, self._normalized_filename(filename)
+                return {"document_id": hashed.id, "filename": filename, "status": hashed.status, "duplicate": True, "content_hash": digest, "renamed": True}
+            return self._decision(hashed, digest, "new_name_existing_hash", ["rename", "cancel"])
+
+        if named and named.content_hash != digest:
+            # A different existing document owns the bytes.  Replacing would
+            # violate the one-document-per-SHA invariant, so do not overwrite.
+            if hashed and hashed.id != named.id:
+                return self._decision(hashed, digest, "content_owned_by_another_document", ["cancel"])
+            if decision == "replace":
+                return self._replace_content(named.id, filename, suffix, file.content_type, content, digest)
+            suggested = self._next_display_filename(filename)
+            if decision == "keep_both":
+                filename = suggested
+            else:
+                return self._decision(named, digest, "same_name_different_hash", ["replace", "keep_both", "cancel"], suggested)
+
         document_id = f"doc_{uuid4().hex}"
         folder = self.documents_path / document_id
         folder.mkdir(parents=True, exist_ok=False)
@@ -81,9 +137,9 @@ class PostgresDocumentService:
             source.write_bytes(content)
             with self.sessions.begin() as session:
                 repository = PostgresDocumentRepository(session)
-                if repository.find_document_by_hash(digest):
+                if repository.find_document_by_hash(digest) or repository.find_document_by_display_filename(self._normalized_filename(filename)):
                     raise FileExistsError("duplicate upload raced")
-                document, version, run = repository.create_upload(document_id, filename, f"{document_id}{suffix}", file.content_type, len(content), digest)
+                document, version, run = repository.create_upload(document_id, filename, f"{document_id}{suffix}", file.content_type, len(content), digest, self._normalized_filename(filename))
             self.logging_service.log_request("/documents/upload", None, 0, "ok")
             return {"document_id": document.id, "version_id": version.id, "run_id": run.id, "filename": filename, "status": "uploaded", "duplicate": False, "content_hash": digest}
         except FileExistsError:
@@ -92,6 +148,26 @@ class PostgresDocumentService:
                 existing = PostgresDocumentRepository(session).find_document_by_hash(digest)
                 if existing:
                     return {"document_id": existing.id, "filename": existing.original_filename, "status": existing.status, "duplicate": True, "content_hash": digest}
+            raise
+
+    def _replace_content(self, document_id: str, filename: str, suffix: str, mime_type: str | None, content: bytes, digest: str) -> dict[str, object]:
+        """Stage a new source for one document; activation remains version-safe."""
+        path = self.documents_path / document_id
+        path.mkdir(parents=True, exist_ok=True)
+        target = path / f"original{suffix}"
+        target.write_bytes(content)
+        try:
+            with self.sessions.begin() as session:
+                row = session.get(Document, document_id)
+                if not row:
+                    raise DocumentNotFoundError(document_id)
+                if row.content_hash == digest:
+                    return {"document_id": row.id, "filename": row.original_filename, "status": row.status, "duplicate": True, "content_hash": digest}
+                row.stored_filename, row.mime_type, row.content_hash, row.file_size, row.source_available = f"{document_id}{suffix}", mime_type, digest, len(content), True
+            run = self.enqueue_index(document_id)
+            return {"document_id": document_id, "filename": filename, "status": "processing", "duplicate": False, "content_hash": digest, "version_id": run["version_id"], "run_id": run["id"], "index_version": run["index_version"], "stage": run["stage"]}
+        except Exception:
+            target.unlink(missing_ok=True)
             raise
         except Exception:
             shutil.rmtree(folder, ignore_errors=True)
@@ -221,7 +297,8 @@ class PostgresDocumentService:
 
     async def replace_source(self, document_id: str, file: UploadFile, max_bytes: int) -> dict[str, object]:
         document, _, _ = self._load(document_id)
-        suffix = safe_upload_suffix(file.filename or "upload")
+        filename = Path(file.filename or document.original_filename).name
+        suffix = safe_upload_suffix(filename)
         if suffix not in self.allowed_file_types or file.content_type not in self.allowed_file_types[suffix]:
             raise ValueError("UNSUPPORTED_FILE_TYPE")
         content = await file.read(max_bytes + 1)
@@ -230,21 +307,12 @@ class PostgresDocumentService:
         digest = hashlib.sha256(content).hexdigest()
         if digest == document.content_hash:
             return {"duplicate": True, "ingestion": None, "content_hash": digest}
-        path = self.documents_path / document_id
-        path.mkdir(parents=True, exist_ok=True)
-        target = path / f"original{suffix}"
-        target.write_bytes(content)
-        try:
-            with self.sessions.begin() as session:
-                row = session.get(Document, document_id)
-                if not row:
-                    raise DocumentNotFoundError(document_id)
-                row.stored_filename, row.mime_type, row.content_hash, row.source_available = f"{document_id}{suffix}", file.content_type, digest, True
-            run = self.enqueue_index(document_id)
-            return {"duplicate": False, "ingestion": run, "content_hash": digest}
-        except Exception:
-            target.unlink(missing_ok=True)
-            raise
+        with self.sessions() as session:
+            owner = PostgresDocumentRepository(session).find_document_by_hash(digest)
+            if owner and owner.id != document_id:
+                raise ValueError("CONTENT_ALREADY_EXISTS")
+        result = self._replace_content(document_id, document.original_filename, suffix, file.content_type, content, digest)
+        return {"duplicate": False, "ingestion": {"id": result["run_id"], "index_version": result["index_version"], "status": "queued", "stage": result["stage"]}, "content_hash": digest}
 
     def delete_document(self, document_id: str) -> None:
         with self.sessions.begin() as session:

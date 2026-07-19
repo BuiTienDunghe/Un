@@ -25,7 +25,7 @@ class ChatService:
         self.system_prompt = (Path(__file__).parents[1] / "prompts" / "general_system.md").read_text(encoding="utf-8")
         self.memory_prompt = (Path(__file__).parents[1] / "prompts" / "memory_system.md").read_text(encoding="utf-8")
 
-    def respond(self, message: str, conversation_id: str | None, use_memory: bool = False) -> tuple[str, str, str, int]:
+    def respond(self, message: str, conversation_id: str | None, use_memory: bool = False, system_prompt: str | None = None) -> tuple[str, str, str, int]:
         if conversation_id is None:
             conversation_id = str(uuid4())
             self.store.create_conversation(conversation_id)
@@ -33,7 +33,7 @@ class ChatService:
             raise ConversationNotFoundError(conversation_id)
 
         history = self.store.get_messages(conversation_id, self.history_limit)
-        messages = [{"role": "system", "content": self.system_prompt}]
+        messages = [{"role": "system", "content": system_prompt or self.system_prompt}]
         if use_memory and self.memory_service is not None:
             memories = self.memory_service.search(message, top_k=5)
             if memories:
@@ -48,7 +48,7 @@ class ChatService:
         self.logging_service.log_request("/chat", model_used, latency_ms, "ok")
         return answer, model_used, conversation_id, latency_ms
 
-    def stream_response(self, message: str, conversation_id: str | None, use_memory: bool = False) -> tuple[Iterator[str], str, str]:
+    def stream_response(self, message: str, conversation_id: str | None, use_memory: bool = False, system_prompt: str | None = None) -> tuple[Iterator[str], str, str]:
         is_new = conversation_id is None
         if conversation_id is None:
             conversation_id = str(uuid4())
@@ -56,7 +56,7 @@ class ChatService:
         elif not self.store.conversation_exists(conversation_id):
             raise ConversationNotFoundError(conversation_id)
         history = self.store.get_messages(conversation_id, self.history_limit)
-        messages = [{"role": "system", "content": self.system_prompt}]
+        messages = [{"role": "system", "content": system_prompt or self.system_prompt}]
         if use_memory and self.memory_service is not None:
             memories = self.memory_service.search(message, top_k=5)
             if memories:

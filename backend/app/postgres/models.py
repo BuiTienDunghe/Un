@@ -22,6 +22,10 @@ class Document(Base):
 
     id: Mapped[str] = mapped_column(String(128), primary_key=True, default=lambda: new_id("doc"))
     original_filename: Mapped[str] = mapped_column(Text)
+    # The user-visible name is a separate identity from the immutable byte
+    # hash.  New uploads populate this normalized key so a name identifies one
+    # live document while the service can present an explicit conflict choice.
+    display_filename_normalized: Mapped[str | None] = mapped_column(String(1024), index=True, nullable=True)
     stored_filename: Mapped[str] = mapped_column(Text)
     mime_type: Mapped[str | None] = mapped_column(String(255))
     file_size: Mapped[int | None] = mapped_column(Integer)

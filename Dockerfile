@@ -3,5 +3,6 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY backend /app/backend
-ENV PYTHONPATH=/app/backend
+COPY discord_bot /app/discord_bot
+ENV PYTHONPATH=/app:/app/backend
 WORKDIR /app/backend

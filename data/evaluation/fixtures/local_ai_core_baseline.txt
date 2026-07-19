@@ -1,7 +1,0 @@
-Local AI Core uses FastAPI as one modular backend. The ModelRouter reads models.yaml and routes general chat to qwen3.5:9b, coding tasks to qwen2.5-coder:7b, and embeddings to qwen3-embedding:0.6b. Ollama is the only local model runtime used by the backend.
-
-Documents are uploaded as PDF, DOCX, TXT, or Markdown files. The document service parses text, cleans it, splits it into overlapping chunks, creates embeddings, and stores vectors in the Qdrant documents collection. SQLite stores document metadata and chunk text. The current PDF pipeline uses PyMuPDF4LLM for native text extraction; OCR fallback is not enabled in this baseline.
-
-RAG uses hybrid retrieval by default. Dense retrieval searches Qdrant vectors, while BM25 searches SQLite chunks after Vietnamese tokenization with PyVi. Reciprocal rank fusion combines the two rankings. If no relevant chunk is found, the system returns INSUFFICIENT_CONTEXT instead of inventing an answer.
-
-Memories are stored in SQLite and in a separate Qdrant memories collection. A chat request can set use_memory to true, which retrieves relevant saved memories and adds them as supporting context. Request summaries, model names, latency, and error codes are recorded through Loguru and SQLite request logs.
