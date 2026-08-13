@@ -52,7 +52,6 @@ class Settings(BaseSettings):
     qdrant_timeout_seconds: float = 10.0
     max_upload_size_bytes: int = 52_428_800
     max_message_length: int = 10_000
-    max_code_context_length: int = 50_000
     conversation_history_limit: int = 12
 
     @model_validator(mode="after")

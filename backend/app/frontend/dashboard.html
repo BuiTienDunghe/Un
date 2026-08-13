@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Bảng điều khiển — Local AI Core</title>
+<link rel="stylesheet" href="/ui/styles.css?v=12">
+</head>
+<body>
+
+<svg class="sprite" aria-hidden="true" focusable="false">
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 2c.7 5.6 3.4 8.3 10 10-6.6 1.7-9.3 4.4-10 10-.7-5.6-3.4-8.3-10-10 6.6-1.7 9.3-4.4 10-10Z"/></symbol>
+  <symbol id="i-retry" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 2.6-6.3L3 8"/><path d="M3 3v5h5"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5m0 0 6-6m-6 6 6 6"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V4a2 2 0 0 0-2-2H6.5A2.5 2.5 0 0 0 4 4.5v15Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></symbol>
+</svg>
+
+<div class="dash">
+  <div class="dash-inner">
+    <div class="dash-top">
+      <a class="btn ghost" href="/ui/" aria-label="Quay lại trò chuyện">
+        <svg width="16" height="16"><use href="#i-back"/></svg> Trò chuyện
+      </a>
+      <h1>Bảng điều khiển</h1>
+      <span class="dash-updated" id="dash-updated">Đang tải…</span>
+      <button class="btn icon ghost" id="dash-refresh" aria-label="Tải lại số liệu" title="Tải lại">
+        <svg width="16" height="16"><use href="#i-retry"/></svg>
+      </button>
+    </div>
+
+    <div class="conv-error" id="dash-error" role="alert" hidden>
+      Không tải được một phần dữ liệu từ backend. <button class="btn ghost" id="dash-retry">Thử lại</button>
+    </div>
+
+    <div class="stat-grid" id="stat-grid">
+      <!-- JS render stat cards -->
+    </div>
+
+    <div class="dash-cols">
+      <section class="panel" aria-labelledby="panel-web">
+        <h2 id="panel-web"><svg width="15" height="15"><use href="#i-spark"/></svg> Agent Web
+          <span class="dot" id="web-dot" data-state="unknown"></span></h2>
+        <div class="kv-list" id="web-kv"><div class="skeleton" style="height:60px"></div></div>
+        <h3 class="panel-sub">Hội thoại gần đây</h3>
+        <table class="dash-table" aria-label="Hội thoại web gần đây">
+          <thead><tr><th>Tiêu đề</th><th>Tin nhắn</th><th>Hoạt động</th></tr></thead>
+          <tbody id="web-recent"><tr><td colspan="3" class="muted">Đang tải…</td></tr></tbody>
+        </table>
+      </section>
+
+      <section class="panel" aria-labelledby="panel-discord">
+        <h2 id="panel-discord"><svg width="15" height="15"><use href="#i-book"/></svg> Agent Discord — Ún
+          <span class="dot" id="discord-dot" data-state="unknown"></span></h2>
+        <div class="kv-list" id="discord-kv"><div class="skeleton" style="height:60px"></div></div>
+        <h3 class="panel-sub">Phiên gần đây</h3>
+        <table class="dash-table" aria-label="Phiên Discord gần đây">
+          <thead><tr><th>Kênh</th><th>Trạng thái</th><th>Lượt</th><th>Hoạt động</th></tr></thead>
+          <tbody id="discord-recent"><tr><td colspan="4" class="muted">Đang tải…</td></tr></tbody>
+        </table>
+      </section>
+    </div>
+
+    <div class="dash-cols">
+      <section class="panel" aria-labelledby="panel-health">
+        <h2 id="panel-health">Sức khỏe hệ thống</h2>
+        <div class="health-grid" id="health-grid"><div class="skeleton" style="height:40px"></div></div>
+      </section>
+
+      <section class="panel" aria-labelledby="panel-ops">
+        <h2 id="panel-ops">Mô hình &amp; tác vụ nền</h2>
+        <div class="kv-list" id="ops-kv"><div class="skeleton" style="height:60px"></div></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script src="/ui/dashboard.js?v=12" defer></script>
+</body>
+</html>

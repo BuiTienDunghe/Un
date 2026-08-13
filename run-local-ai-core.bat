@@ -10,12 +10,6 @@ echo ==========================================
 echo            Local AI Core launcher
 echo ==========================================
 
-where python >nul 2>&1
-if errorlevel 1 (
-    echo [ERROR] Python was not found. Install Python 3.11+ and add it to PATH.
-    goto :error
-)
-
 where docker >nul 2>&1
 if errorlevel 1 (
     echo [ERROR] Docker Desktop was not found. Install and start Docker Desktop first.
@@ -28,26 +22,62 @@ if errorlevel 1 (
     goto :error
 )
 
+REM The project runs entirely from its own .venv via absolute paths, so PATH
+REM does not matter. A system Python (via the py launcher, always present in
+REM C:\Windows for python.org installs) is only needed ONCE to create .venv.
 if not exist ".venv\Scripts\python.exe" (
-    echo [SETUP] Creating Python virtual environment...
-    python -m venv .venv
-    if errorlevel 1 goto :error
+    echo [SETUP] Creating Python virtual environment - first run only...
+    py -3 -m venv .venv
+    if errorlevel 1 (
+        echo [ERROR] Could not create .venv. Install Python 3.11+ from python.org, then run this file again.
+        goto :error
+    )
 )
 
-echo [SETUP] Checking Python dependencies...
-.venv\Scripts\python.exe -m pip install -r requirements.txt
-if errorlevel 1 goto :error
+REM Install dependencies only when requirements.txt actually changed.
+fc /b requirements.txt ".venv\requirements.installed" >nul 2>&1
+if errorlevel 1 (
+    echo [SETUP] Installing Python dependencies...
+    .venv\Scripts\python.exe -m pip install -r requirements.txt
+    if errorlevel 1 goto :error
+    copy /y requirements.txt ".venv\requirements.installed" >nul
+) else (
+    echo [SETUP] Python dependencies are up to date.
+)
 
 if not exist ".env" (
     copy /y ".env.example" ".env" >nul
 )
 
-echo [START] Starting Qdrant...
-docker compose up -d
+echo [START] Starting PostgreSQL, Qdrant and Redis...
+docker compose --profile postgres up -d
 if errorlevel 1 (
-    echo [ERROR] Could not start Qdrant. Ensure Docker Desktop is running.
+    echo [ERROR] Could not start PostgreSQL/Qdrant. Ensure Docker Desktop is running.
     goto :error
 )
+REM Redis alone keeps /health green; heavy worker containers are not built here.
+docker compose --profile workers up -d redis
+if errorlevel 1 (
+    echo [ERROR] Could not start Redis. Ensure Docker Desktop is running.
+    goto :error
+)
+
+echo [SETUP] Applying database migrations...
+set MIGRATE_TRIES=0
+:migrate
+.venv\Scripts\python.exe -m alembic upgrade head >nul 2>&1
+if not errorlevel 1 goto :migrated
+set /a MIGRATE_TRIES+=1
+if %MIGRATE_TRIES% GEQ 15 (
+    echo [ERROR] Database migration failed. Details:
+    .venv\Scripts\python.exe -m alembic upgrade head
+    goto :error
+)
+REM PostgreSQL may still be warming up; retry shortly.
+timeout /t 2 /nobreak >nul
+goto :migrate
+:migrated
+echo [SETUP] Database schema is up to date.
 
 ollama list >nul 2>&1
 if errorlevel 1 (
@@ -57,8 +87,6 @@ if errorlevel 1 (
 )
 
 call :ensure_model "qwen3.5:9b"
-if errorlevel 1 goto :error
-call :ensure_model "qwen2.5-coder:7b"
 if errorlevel 1 goto :error
 call :ensure_model "qwen3-embedding:0.6b"
 if errorlevel 1 goto :error

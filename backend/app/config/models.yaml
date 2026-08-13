@@ -49,13 +49,6 @@ models:
     top_p: 0.9
     think: false
     keep_alive: 5m
-  code:
-    provider: ollama
-    name: qwen2.5-coder:7b
-    context: 32768
-    temperature: 0.2
-    top_p: 0.9
-    keep_alive: 5m
   embedding:
     # Embedding only works with provider: ollama
     provider: ollama

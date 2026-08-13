@@ -7,6 +7,8 @@ class RagChatRequest(BaseModel):
     document_ids: list[str] | None = Field(default=None, max_length=100)
     # None defers to the server-side default from models.yaml (rag.top_k).
     top_k: int | None = Field(default=None, ge=1, le=20)
+    # RAG turns persist into an ordinary conversation; omit to start a new one.
+    conversation_id: str | None = Field(default=None, max_length=64)
     stream: bool = False
 
 
@@ -39,4 +41,5 @@ class RagChatResponse(BaseModel):
     answer: str
     model_used: str
     latency_ms: int
+    conversation_id: str | None = None
     sources: list[RagSource]

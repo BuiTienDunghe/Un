@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request, status
 
-from app.schemas.conversation_schema import ConversationDetail, ConversationSummary
+from app.schemas.conversation_schema import ConversationDetail, ConversationRenameRequest, ConversationSummary
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
@@ -16,6 +16,12 @@ def get_conversation(conversation_id: str, request: Request) -> ConversationDeta
     if conversation is None:
         raise HTTPException(status_code=404, detail={"error_code": "CONVERSATION_NOT_FOUND", "message": f"Conversation {conversation_id} does not exist"})
     return ConversationDetail(**conversation)
+
+
+@router.patch("/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
+def rename_conversation(conversation_id: str, payload: ConversationRenameRequest, request: Request) -> None:
+    if not request.app.state.auxiliary_store.set_conversation_title(conversation_id, payload.title.strip()):
+        raise HTTPException(status_code=404, detail={"error_code": "CONVERSATION_NOT_FOUND", "message": f"Conversation {conversation_id} does not exist"})
 
 
 @router.delete("/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -72,7 +72,7 @@ class ModelRouter:
     # ------------------------------------------------------------------
 
     def chat(self, mode: str, messages: list[dict[str, str]]) -> tuple[str, str]:
-        if mode not in {"general", "code"}:
+        if mode != "general":
             raise ValueError(f"Unsupported model mode: {mode}")
         config = self.models[mode]
         model_name = str(config["name"])
@@ -106,7 +106,7 @@ class ModelRouter:
         return ollama.embed(model_name, text), model_name
 
     def stream_chat(self, mode: str, messages: list[dict[str, str]]) -> tuple[Iterator[str], str]:
-        if mode not in {"general", "code"}:
+        if mode != "general":
             raise ValueError(f"Unsupported model mode: {mode}")
         config = self.models[mode]
         model_name = str(config["name"])

@@ -38,3 +38,26 @@ def test_rag_chat_streams_tokens_and_sources(client, monkeypatch):
     assert "sources" in response.text
     assert '"content": "RAG"' in response.text
     assert '"content": " answer"' in response.text
+
+
+def test_rag_chat_persists_turn_into_conversation(client, mock_ollama, monkeypatch):
+    monkeypatch.setattr(
+        "app.services.postgres_retrieval_service.PostgresRetrievalService.retrieve",
+        lambda self, query, top_k, document_id=None: [{"document_id": "doc_demo", "filename": "demo.txt", "chunk_id": "chunk_1", "chunk_index": 0, "page": None, "score": 0.99, "content": "RAG context."}],
+    )
+
+    first = client.post("/rag/chat", json={"message": "Câu hỏi RAG đầu tiên"})
+    conversation_id = first.json()["conversation_id"]
+    second = client.post("/rag/chat", json={"message": "Câu tiếp theo", "conversation_id": conversation_id})
+    detail = client.get(f"/conversations/{conversation_id}")
+    missing = client.post("/rag/chat", json={"message": "x", "conversation_id": "unknown-conv"})
+
+    assert first.status_code == 200 and conversation_id
+    assert second.status_code == 200
+    assert second.json()["conversation_id"] == conversation_id
+    assert detail.status_code == 200
+    assert [m["role"] for m in detail.json()["messages"]] == ["user", "assistant", "user", "assistant"]
+    assert detail.json()["title"] == "Câu hỏi RAG đầu tiên"
+    assert missing.status_code == 404
+    assert missing.json()["error_code"] == "CONVERSATION_NOT_FOUND"
+    client.delete(f"/conversations/{conversation_id}")

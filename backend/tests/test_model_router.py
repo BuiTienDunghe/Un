@@ -1,8 +1,11 @@
+import pytest
+
+from app.llm_clients.ollama_client import OllamaClient
 from app.services.model_router import ModelRouter
 
 
-class FakeClient:
-    def __init__(self):
+class FakeOllama(OllamaClient):
+    def __init__(self):  # no HTTP setup; only the chat surface is exercised
         self.model = None
         self.options = None
         self.think = None
@@ -15,8 +18,8 @@ class FakeClient:
 
 
 def test_model_router_uses_general_model():
-    client = FakeClient()
-    router = ModelRouter(client, {"general": {"name": "qwen3.5:9b", "context": 123, "temperature": 0.4}, "code": {"name": "qwen2.5-coder:7b"}})
+    client = FakeOllama()
+    router = ModelRouter({"ollama": client}, {"general": {"name": "qwen3.5:9b", "context": 123, "temperature": 0.4}})
 
     answer, model_used = router.chat("general", [{"role": "user", "content": "Hello"}])
 
@@ -27,18 +30,16 @@ def test_model_router_uses_general_model():
 
 
 def test_model_router_disables_thinking_when_configured():
-    client = FakeClient()
-    router = ModelRouter(client, {"general": {"name": "qwen3.5:9b", "think": False}, "code": {"name": "qwen2.5-coder:7b"}})
+    client = FakeOllama()
+    router = ModelRouter({"ollama": client}, {"general": {"name": "qwen3.5:9b", "think": False}})
 
     router.chat("general", [{"role": "user", "content": "Hello"}])
 
     assert client.think is False
 
 
-def test_model_router_uses_code_model():
-    client = FakeClient()
-    router = ModelRouter(client, {"general": {"name": "qwen3.5:9b"}, "code": {"name": "qwen2.5-coder:7b"}})
+def test_model_router_rejects_removed_code_mode():
+    router = ModelRouter({"ollama": FakeOllama()}, {"general": {"name": "qwen3.5:9b"}})
 
-    _, model_used = router.chat("code", [{"role": "user", "content": "Hello"}])
-
-    assert model_used == "qwen2.5-coder:7b"
+    with pytest.raises(ValueError):
+        router.chat("code", [{"role": "user", "content": "Hello"}])

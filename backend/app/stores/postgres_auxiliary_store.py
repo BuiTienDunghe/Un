@@ -37,10 +37,18 @@ class PostgresAuxiliaryStore:
         with self._sessions() as session:
             return session.get(Conversation, conversation_id) is not None
 
-    def create_conversation(self, conversation_id: str) -> None:
+    def create_conversation(self, conversation_id: str, title: str | None = None) -> None:
         now = _utc_now()
         with self._sessions.begin() as session:
-            session.add(Conversation(id=conversation_id, created_at=now, updated_at=now))
+            session.add(Conversation(id=conversation_id, title=title, created_at=now, updated_at=now))
+
+    def set_conversation_title(self, conversation_id: str, title: str) -> bool:
+        with self._sessions.begin() as session:
+            conversation = session.get(Conversation, conversation_id)
+            if conversation is None:
+                return False
+            conversation.title = title
+            return True
 
     def add_message(self, conversation_id: str, role: str, content: str, model_used: str | None = None) -> None:
         now = _utc_now()
@@ -59,7 +67,7 @@ class PostgresAuxiliaryStore:
     def list_conversations(self) -> list[dict[str, object]]:
         with self._sessions() as session:
             rows = session.execute(
-                select(Conversation.id, Conversation.created_at, Conversation.updated_at, func.count(Message.id).label("message_count"))
+                select(Conversation.id, Conversation.title, Conversation.created_at, Conversation.updated_at, func.count(Message.id).label("message_count"))
                 .outerjoin(Message, Message.conversation_id == Conversation.id)
                 .where(
                     ~exists(
@@ -69,10 +77,10 @@ class PostgresAuxiliaryStore:
                         )
                     )
                 )
-                .group_by(Conversation.id, Conversation.created_at, Conversation.updated_at)
+                .group_by(Conversation.id, Conversation.title, Conversation.created_at, Conversation.updated_at)
                 .order_by(Conversation.updated_at.desc())
             ).all()
-        return [{"id": row.id, "created_at": row.created_at.isoformat(), "updated_at": row.updated_at.isoformat(), "message_count": row.message_count} for row in rows]
+        return [{"id": row.id, "title": row.title, "created_at": row.created_at.isoformat(), "updated_at": row.updated_at.isoformat(), "message_count": row.message_count} for row in rows]
 
     def get_conversation(self, conversation_id: str) -> dict[str, object] | None:
         with self._sessions() as session:
@@ -82,6 +90,7 @@ class PostgresAuxiliaryStore:
             messages = list(session.scalars(select(Message).where(Message.conversation_id == conversation_id).order_by(Message.id)))
             return {
                 "id": conversation.id,
+                "title": conversation.title,
                 "created_at": conversation.created_at.isoformat(),
                 "updated_at": conversation.updated_at.isoformat(),
                 "messages": [{"role": row.role, "content": row.content, "model_used": row.model_used, "created_at": row.created_at.isoformat()} for row in messages],

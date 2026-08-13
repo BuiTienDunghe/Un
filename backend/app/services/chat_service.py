@@ -15,6 +15,12 @@ class ConversationNotFoundError(Exception):
     pass
 
 
+def derive_conversation_title(message: str) -> str | None:
+    """First user message, whitespace-collapsed, as the server-side title."""
+    title = " ".join(message.split())[:80].strip()
+    return title or None
+
+
 class ChatService:
     def __init__(self, store: AuxiliaryStore, router: ModelRouter, logging_service: LoggingService, history_limit: int, memory_service: MemoryService | None = None) -> None:
         self.store = store
@@ -77,7 +83,7 @@ class ChatService:
     ) -> tuple[str, str, str, int]:
         if conversation_id is None:
             conversation_id = str(uuid4())
-            self.store.create_conversation(conversation_id)
+            self.store.create_conversation(conversation_id, derive_conversation_title(message))
         elif not self.store.conversation_exists(conversation_id):
             raise ConversationNotFoundError(conversation_id)
 
@@ -112,7 +118,7 @@ class ChatService:
         is_new = conversation_id is None
         if conversation_id is None:
             conversation_id = str(uuid4())
-            self.store.create_conversation(conversation_id)
+            self.store.create_conversation(conversation_id, derive_conversation_title(message))
         elif not self.store.conversation_exists(conversation_id):
             raise ConversationNotFoundError(conversation_id)
         history = self.store.get_messages(conversation_id, self.history_limit)
@@ -135,13 +141,17 @@ class ChatService:
                     yield token
                 completed = True
             finally:
-                if completed:
+                if completed or answer_parts:
+                    # A turn the user stopped mid-stream is still a real turn:
+                    # persist the partial answer so history matches what the
+                    # user saw on screen.
                     answer = "".join(answer_parts)
                     latency_ms = int((perf_counter() - started) * 1000)
                     self.store.add_message(conversation_id, "user", message)
                     self.store.add_message(conversation_id, "assistant", answer, model_used)
                     self.logging_service.log_request("/chat", model_used, latency_ms, "ok")
                 elif is_new:
+                    # No token ever arrived; drop the conversation shell.
                     self.store.delete_conversation(conversation_id)
 
         return generate(), model_used, conversation_id

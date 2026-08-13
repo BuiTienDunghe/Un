@@ -65,6 +65,10 @@ def main() -> int:
             selected_document_id = document_id if case.get("document_id") == "__BOOTSTRAP__" else case.get("document_id")
             response = client.post(f"{args.base_url}/rag/chat", json={"message": case["question"], "document_id": selected_document_id})
             payload = response.json()
+            # Each eval question persists a conversation now; clean it up so
+            # benchmark runs do not pollute the user's conversation list.
+            if payload.get("conversation_id"):
+                client.delete(f"{args.base_url}/conversations/{payload['conversation_id']}")
             sources = payload.get("sources", [])
             answer_ok = response.is_success and contains_all(str(payload.get("answer", "")), case.get("expected_answer_terms", []))
             rr = reciprocal_rank(sources, case.get("expected_source_terms", []))

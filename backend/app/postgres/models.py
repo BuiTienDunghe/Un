@@ -210,6 +210,7 @@ class Conversation(Base):
     # String preserves legacy opaque IDs without assuming every historical ID is
     # a valid UUID.
     id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    title: Mapped[str | None] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
 

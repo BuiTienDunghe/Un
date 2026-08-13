@@ -13,9 +13,8 @@ Các tính năng cốt lõi đã sẵn sàng để vận hành gồm chat AI, do
 ### Trợ lý AI cục bộ
 
 - Trò chuyện tổng quát với mô hình cục bộ.
-- Chế độ hỗ trợ công việc lập trình.
 - Quản lý hội thoại và lịch sử phiên chat.
-- Cấu hình model chat, code, embedding, vision và OCR theo môi trường triển khai.
+- Cấu hình model chat, embedding, vision và OCR theo môi trường triển khai.
 - Giao diện web và API FastAPI dùng chung một backend.
 
 ### Quản lý và khai thác tài liệu
@@ -89,14 +88,13 @@ Runtime chỉ truy vấn Qdrant point có đầy đủ `version_id` và `chunk_i
 - Thay thế tài liệu không ghi đè version đang hoạt động trước khi version mới hoàn tất.
 - SQLite archive lịch sử chỉ dành cho migration/audit read-only, không được đưa lại vào runtime path.
 
-Alembic head hiện tại là `20260728_18`.
+Alembic head hiện tại là `20260813_19`.
 
 ## Model mặc định
 
 | Vai trò | Model mặc định |
 | --- | --- |
 | Chat tổng quát và RAG | qwen3.5:9b |
-| Hỗ trợ code | qwen2.5-coder:7b |
 | Embedding | qwen3-embedding:0.6b |
 | Vision | qwen3.5:9b |
 | OCR | glm-ocr:latest |

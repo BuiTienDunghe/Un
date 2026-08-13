@@ -16,6 +16,15 @@ from app.postgres.models import Base  # noqa: E402
 
 config = context.config
 database_url = os.getenv("DATABASE_URL")
+if not database_url:
+    # Fall back to the project .env exactly like the runtime does, so
+    # `alembic upgrade head` works from a plain shell and the launcher.
+    try:
+        from app.config.settings import get_settings
+
+        database_url = str(get_settings().database_url or "")
+    except Exception:
+        database_url = ""
 if database_url:
     config.set_main_option("sqlalchemy.url", database_url)
 

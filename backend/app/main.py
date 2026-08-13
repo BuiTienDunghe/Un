@@ -10,10 +10,9 @@ from app.config.settings import get_settings
 from app.llm_clients.ollama_client import OllamaClient
 from app.llm_clients.gemini_client import GeminiClient
 from app.llm_clients.deepseek_client import DeepSeekClient
-from app.routers import chat, code, conversations, discord_sessions, documents, health, memory, models, ocr, rag, vision
+from app.routers import chat, conversations, dashboard, discord_sessions, documents, health, memory, models, ocr, rag, vision
 from app.services.postgres_bm25_service import PostgresBm25Service
 from app.services.chat_service import ChatService
-from app.services.code_service import CodeService
 from app.services.logging_service import LoggingService
 from app.services.model_router import ModelRouter
 from app.services.postgres_document_service import PostgresDocumentService
@@ -68,6 +67,7 @@ async def lifespan(app: FastAPI):
 
     # Settings validates the mandatory PostgreSQL URL before this point.
     postgres_sessions = create_session_factory(create_postgres_engine(str(settings.database_url)))
+    app.state.postgres_sessions = postgres_sessions
     auxiliary_store = PostgresAuxiliaryStore(postgres_sessions)
     logging_service = LoggingService(auxiliary_store, settings.logs_path)
     router = ModelRouter(llm_clients, settings.load_models())
@@ -96,7 +96,6 @@ async def lifespan(app: FastAPI):
             max_attempts=settings.job_max_attempts,
         ),
     )
-    app.state.code_service = CodeService(router, logging_service)
     ocr_service = OCRService(router, auxiliary_store)
     queue = (
         JobQueueService(
@@ -132,6 +131,7 @@ async def lifespan(app: FastAPI):
         retrieval_service,
         default_top_k=int(rag_config.get("top_k", 5)),
         max_context_chunks=int(rag_config.get("max_context_chunks", 5)),
+        store=auxiliary_store,
     )
     try:
         yield
@@ -143,12 +143,12 @@ app = FastAPI(title="Local AI Core", version="1C", lifespan=lifespan)
 app.include_router(health.router)
 app.include_router(models.router)
 app.include_router(chat.router)
-app.include_router(code.router)
 app.include_router(documents.router)
 app.include_router(ocr.router)
 app.include_router(rag.router)
 app.include_router(memory.router)
 app.include_router(conversations.router)
+app.include_router(dashboard.router)
 app.include_router(discord_sessions.router)
 app.include_router(vision.router)
 app.mount("/ui", StaticFiles(directory=str(Path(__file__).parent / "frontend"), html=True), name="ui")
