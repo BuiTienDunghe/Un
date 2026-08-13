@@ -45,7 +45,8 @@ data/qdrant/
 data/evaluation/results/
 data/archives/
 data/backups/
-data/benchmarks/
+# data/benchmarks/ → TRACKED intentionally (JSON test cases & results synced between machines)
+data/benchmarks/**/*.tmp
 data/cleanup-worker.heartbeat
 data/discord_bot_control/
 
@@ -53,9 +54,6 @@ data/discord_bot_control/
 Thumbs.db
 Desktop.ini
 .DS_Store
-
-
-
 
 # Database
 *.db

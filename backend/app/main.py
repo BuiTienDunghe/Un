@@ -8,6 +8,8 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config.settings import get_settings
 from app.llm_clients.ollama_client import OllamaClient
+from app.llm_clients.gemini_client import GeminiClient
+from app.llm_clients.deepseek_client import DeepSeekClient
 from app.routers import chat, code, conversations, discord_sessions, documents, health, memory, models, ocr, rag, vision
 from app.services.postgres_bm25_service import PostgresBm25Service
 from app.services.chat_service import ChatService
@@ -37,12 +39,38 @@ from app.postgres.database import create_postgres_engine, create_session_factory
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
-    ollama_client = OllamaClient(settings.ollama_base_url, settings.ollama_chat_timeout_seconds, settings.ollama_health_timeout_seconds, settings.ollama_retry_count)
+
+    # ── Local Ollama client (always initialised) ──────────────────────────
+    ollama_client = OllamaClient(
+        settings.ollama_base_url,
+        settings.ollama_chat_timeout_seconds,
+        settings.ollama_health_timeout_seconds,
+        settings.ollama_retry_count,
+    )
+
+    # ── Cloud LLM client registry ─────────────────────────────────────────
+    # Only clients whose API key is present in .env are registered.
+    # Add the key to .env then set the matching `provider:` in models.yaml.
+    llm_clients: dict = {"ollama": ollama_client}
+    if settings.gemini_api_key:
+        llm_clients["gemini"] = GeminiClient(
+            api_key=settings.gemini_api_key,
+            chat_timeout=settings.gemini_chat_timeout_seconds,
+            retry_count=settings.gemini_retry_count,
+        )
+    if settings.deepseek_api_key:
+        llm_clients["deepseek"] = DeepSeekClient(
+            api_key=settings.deepseek_api_key,
+            base_url=settings.deepseek_base_url,
+            chat_timeout=settings.deepseek_chat_timeout_seconds,
+            retry_count=settings.deepseek_retry_count,
+        )
+
     # Settings validates the mandatory PostgreSQL URL before this point.
     postgres_sessions = create_session_factory(create_postgres_engine(str(settings.database_url)))
     auxiliary_store = PostgresAuxiliaryStore(postgres_sessions)
     logging_service = LoggingService(auxiliary_store, settings.logs_path)
-    router = ModelRouter(ollama_client, settings.load_models())
+    router = ModelRouter(llm_clients, settings.load_models())
     config = settings.load_config()
     rag_config = config.get("rag", {})
     storage_config = config.get("storage", {})
@@ -118,6 +146,8 @@ app.include_router(conversations.router)
 app.include_router(discord_sessions.router)
 app.include_router(vision.router)
 app.mount("/ui", StaticFiles(directory=str(Path(__file__).parent / "frontend"), html=True), name="ui")
+
+
 @app.exception_handler(HTTPException)
 async def http_error_handler(_: Request, error: HTTPException) -> JSONResponse:
     detail = error.detail if isinstance(error.detail, dict) else {}

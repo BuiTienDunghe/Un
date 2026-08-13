@@ -1,4 +1,46 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# models.yaml  –  LLM model configuration
+#
+# SWITCHING PROVIDERS
+# -------------------
+# Each model slot has a `provider` field. Change it (and the `name`) to route
+# that slot to a different backend. Restart the server after any change.
+#
+#   provider: ollama    → local Ollama server (OLLAMA_BASE_URL in .env)
+#   provider: gemini    → Google Gemini API   (GEMINI_API_KEY in .env)
+#   provider: deepseek  → DeepSeek API        (DEEPSEEK_API_KEY in .env)
+#
+# QUICK-SWITCH EXAMPLES (copy one block over the active `general` slot):
+#
+#   # --- Gemini ---
+#   general:
+#     provider: gemini
+#     name: gemini-2.0-flash         # or gemini-2.5-pro, gemini-2.5-flash
+#     temperature: 0.4
+#     top_p: 0.9
+#     max_tokens: 8192
+#
+#   # --- DeepSeek ---
+#   general:
+#     provider: deepseek
+#     name: deepseek-chat            # or deepseek-reasoner (R1/V4 reasoning model)
+#     temperature: 0.4
+#     top_p: 0.9
+#     max_tokens: 8192
+#
+#   # --- Ollama (local) ---
+#   general:
+#     provider: ollama
+#     name: qwen3.5:9b
+#     context: 16384
+#     temperature: 0.4
+#     top_p: 0.9
+#     think: false
+#     keep_alive: 5m
+# ──────────────────────────────────────────────────────────────────────────────
+
 models:
+  # ── ACTIVE CONFIGURATION ─────────────────────────────────────────────────
   general:
     provider: ollama
     name: qwen3.5:9b
@@ -15,6 +57,7 @@ models:
     top_p: 0.9
     keep_alive: 5m
   embedding:
+    # Embedding only works with provider: ollama
     provider: ollama
     name: qwen3-embedding:0.6b
     context: 32768
@@ -25,6 +68,7 @@ models:
     temperature: 0.3
     keep_alive: 5m
   ocr:
+    # OCR only works with provider: ollama (vision_chat API)
     provider: ollama
     name: glm-ocr:latest
     enabled: true
@@ -35,6 +79,7 @@ models:
     dpi: 200
     min_text_characters: 80
     min_alphanumeric_ratio: 0.45
+
 rag:
   # Token budgets. The built-in Unicode tokenizer is deterministic; benchmark these
   # values against the selected embedding model before changing them.
@@ -49,6 +94,7 @@ rag:
     provider: sentence-transformers
     model: cross-encoder/mmarco-mMiniLMv2-L12-H384-v1
     candidate_limit: 15
+
 storage:
   # Original source files are retained by default. Only documents explicitly marked
   # `temporary` and not pinned are eligible for source-artifact cleanup.

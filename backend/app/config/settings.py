@@ -40,6 +40,14 @@ class Settings(BaseSettings):
     ollama_chat_timeout_seconds: float = 120.0
     ollama_health_timeout_seconds: float = 5.0
     ollama_retry_count: int = 2
+    # ── Cloud LLM providers ──
+    gemini_api_key: str | None = None
+    gemini_chat_timeout_seconds: float = 60.0
+    gemini_retry_count: int = 2
+    deepseek_api_key: str | None = None
+    deepseek_base_url: str = "https://api.deepseek.com"
+    deepseek_chat_timeout_seconds: float = 90.0
+    deepseek_retry_count: int = 2
     qdrant_url: str = "http://127.0.0.1:6333"
     qdrant_timeout_seconds: float = 10.0
     max_upload_size_bytes: int = 52_428_800

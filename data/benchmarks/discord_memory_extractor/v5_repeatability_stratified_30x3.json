@@ -1,0 +1,437 @@
+{
+  "dataset_version": "discord_memory_extractor_benchmark_v1",
+  "model": "qwen3.5:2b",
+  "prompt_version": "discord_memory_extractor_prompt_v5",
+  "schema_mode": "ollama_json_schema_object",
+  "summary": {
+    "repeatability_rate": 1.0
+  },
+  "repeatability": {
+    "case_count": 30,
+    "runs_per_case": 3,
+    "repeatability_rate": 1.0,
+    "details": [
+      {
+        "id": "remember-01",
+        "exact_normalized_stable": true,
+        "operations": [
+          "create",
+          "create",
+          "create"
+        ],
+        "latencies_ms": [
+          14327,
+          10709,
+          10664
+        ]
+      },
+      {
+        "id": "remember-06",
+        "exact_normalized_stable": true,
+        "operations": [
+          "create",
+          "create",
+          "create"
+        ],
+        "latencies_ms": [
+          14232,
+          10891,
+          10959
+        ]
+      },
+      {
+        "id": "hardware-01",
+        "exact_normalized_stable": true,
+        "operations": [
+          "create",
+          "create",
+          "create"
+        ],
+        "latencies_ms": [
+          15507,
+          12025,
+          11976
+        ]
+      },
+      {
+        "id": "hardware-06",
+        "exact_normalized_stable": true,
+        "operations": [
+          "create",
+          "create",
+          "create"
+        ],
+        "latencies_ms": [
+          15009,
+          11578,
+          11615
+        ]
+      },
+      {
+        "id": "software-02",
+        "exact_normalized_stable": true,
+        "operations": [
+          "create",
+          "create",
+          "create"
+        ],
+        "latencies_ms": [
+          15399,
+          11735,
+          11563
+        ]
+      },
+      {
+        "id": "software-07",
+        "exact_normalized_stable": true,
+        "operations": [
+          "create",
+          "create",
+          "create"
+        ],
+        "latencies_ms": [
+          15181,
+          11652,
+          11692
+        ]
+      },
+      {
+        "id": "identity-02",
+        "exact_normalized_stable": true,
+        "operations": [
+          "create",
+          "create",
+          "create"
+        ],
+        "latencies_ms": [
+          14531,
+          11041,
+          11104
+        ]
+      },
+      {
+        "id": "identity-07",
+        "exact_normalized_stable": true,
+        "operations": [
+          "create",
+          "create",
+          "create"
+        ],
+        "latencies_ms": [
+          14485,
+          10785,
+          11522
+        ]
+      },
+      {
+        "id": "workflow-02",
+        "exact_normalized_stable": true,
+        "operations": [
+          "create",
+          "create",
+          "create"
+        ],
+        "latencies_ms": [
+          14707,
+          11175,
+          11095
+        ]
+      },
+      {
+        "id": "workflow-07",
+        "exact_normalized_stable": true,
+        "operations": [
+          "create",
+          "create",
+          "create"
+        ],
+        "latencies_ms": [
+          14911,
+          11554,
+          11771
+        ]
+      },
+      {
+        "id": "mixed-question-02",
+        "exact_normalized_stable": true,
+        "operations": [
+          "create",
+          "create",
+          "create"
+        ],
+        "latencies_ms": [
+          15299,
+          11396,
+          11140
+        ]
+      },
+      {
+        "id": "mixed-question-08",
+        "exact_normalized_stable": true,
+        "operations": [
+          "create",
+          "create",
+          "create"
+        ],
+        "latencies_ms": [
+          14114,
+          11018,
+          11347
+        ]
+      },
+      {
+        "id": "no-accent-typo-03",
+        "exact_normalized_stable": true,
+        "operations": [
+          "create",
+          "create",
+          "create"
+        ],
+        "latencies_ms": [
+          15155,
+          11148,
+          11214
+        ]
+      },
+      {
+        "id": "no-accent-typo-08",
+        "exact_normalized_stable": true,
+        "operations": [
+          "create",
+          "create",
+          "create"
+        ],
+        "latencies_ms": [
+          14076,
+          10950,
+          10853
+        ]
+      },
+      {
+        "id": "ambiguous-03",
+        "exact_normalized_stable": true,
+        "operations": [
+          "no_op",
+          "no_op",
+          "no_op"
+        ],
+        "latencies_ms": [
+          12258,
+          8912,
+          8972
+        ]
+      },
+      {
+        "id": "ambiguous-08",
+        "exact_normalized_stable": true,
+        "operations": [
+          "create",
+          "create",
+          "create"
+        ],
+        "latencies_ms": [
+          14389,
+          10758,
+          10811
+        ]
+      },
+      {
+        "id": "untrusted-shared-03",
+        "exact_normalized_stable": true,
+        "operations": [
+          null,
+          null,
+          null
+        ],
+        "latencies_ms": [
+          14912,
+          10487,
+          10697
+        ]
+      },
+      {
+        "id": "untrusted-shared-08",
+        "exact_normalized_stable": true,
+        "operations": [
+          "no_op",
+          "no_op",
+          "no_op"
+        ],
+        "latencies_ms": [
+          11132,
+          8824,
+          9077
+        ]
+      },
+      {
+        "id": "adversarial-03",
+        "exact_normalized_stable": true,
+        "operations": [
+          null,
+          null,
+          null
+        ],
+        "latencies_ms": [
+          11283,
+          11089,
+          10962
+        ]
+      },
+      {
+        "id": "adversarial-09",
+        "exact_normalized_stable": true,
+        "operations": [
+          "create",
+          "create",
+          "create"
+        ],
+        "latencies_ms": [
+          13419,
+          13457,
+          13436
+        ]
+      },
+      {
+        "id": "malformed-content-04",
+        "exact_normalized_stable": true,
+        "operations": [
+          "no_op",
+          "no_op",
+          "no_op"
+        ],
+        "latencies_ms": [
+          9240,
+          9237,
+          9296
+        ]
+      },
+      {
+        "id": "malformed-content-09",
+        "exact_normalized_stable": true,
+        "operations": [
+          "no_op",
+          "no_op",
+          "no_op"
+        ],
+        "latencies_ms": [
+          11898,
+          10043,
+          9612
+        ]
+      },
+      {
+        "id": "target-selection-04",
+        "exact_normalized_stable": true,
+        "operations": [
+          "update",
+          "update",
+          "update"
+        ],
+        "latencies_ms": [
+          12806,
+          13077,
+          13035
+        ]
+      },
+      {
+        "id": "target-selection-09",
+        "exact_normalized_stable": true,
+        "operations": [
+          "update",
+          "update",
+          "update"
+        ],
+        "latencies_ms": [
+          13007,
+          12749,
+          12768
+        ]
+      },
+      {
+        "id": "third-party-reply-04",
+        "exact_normalized_stable": true,
+        "operations": [
+          "create",
+          "create",
+          "create"
+        ],
+        "latencies_ms": [
+          12963,
+          10749,
+          10826
+        ]
+      },
+      {
+        "id": "third-party-reply-09",
+        "exact_normalized_stable": true,
+        "operations": [
+          "create",
+          "create",
+          "create"
+        ],
+        "latencies_ms": [
+          14488,
+          10997,
+          10972
+        ]
+      },
+      {
+        "id": "same-display-rename-05",
+        "exact_normalized_stable": true,
+        "operations": [
+          "create",
+          "create",
+          "create"
+        ],
+        "latencies_ms": [
+          15092,
+          11496,
+          11258
+        ]
+      },
+      {
+        "id": "same-display-rename-10",
+        "exact_normalized_stable": true,
+        "operations": [
+          "create",
+          "create",
+          "create"
+        ],
+        "latencies_ms": [
+          14474,
+          11720,
+          11937
+        ]
+      },
+      {
+        "id": "source-echo-05",
+        "exact_normalized_stable": true,
+        "operations": [
+          "create",
+          "create",
+          "create"
+        ],
+        "latencies_ms": [
+          14898,
+          11154,
+          11071
+        ]
+      },
+      {
+        "id": "source-echo-10",
+        "exact_normalized_stable": true,
+        "operations": [
+          null,
+          null,
+          null
+        ],
+        "latencies_ms": [
+          93001,
+          80272,
+          82356
+        ]
+      }
+    ]
+  },
+  "results": []
+}
