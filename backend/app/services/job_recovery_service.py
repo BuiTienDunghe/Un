@@ -6,6 +6,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.postgres.models import DocumentVersion, IngestionRun, Job
 from app.postgres.repositories import PostgresDocumentRepository
+from app.services.job_routing import DOCUMENT_JOB_TYPES
 
 
 class JobRecoveryService:
@@ -41,7 +42,16 @@ class JobRecoveryService:
     def recover_stale(self, dry_run: bool = False) -> int:
         now, count = datetime.now(UTC), 0
         with self.sessions.begin() as session:
-            jobs = session.scalars(select(Job).where(Job.status == "running", Job.lease_expires_at < now, Job.heartbeat_at < now).with_for_update(skip_locked=True)).all()
+            jobs = session.scalars(
+                select(Job)
+                .where(
+                    Job.job_type.in_(DOCUMENT_JOB_TYPES),
+                    Job.status == "running",
+                    Job.lease_expires_at < now,
+                    Job.heartbeat_at < now,
+                )
+                .with_for_update(skip_locked=True)
+            ).all()
             for job in jobs:
                 if job.attempts >= job.max_attempts:
                     if dry_run: count += 1; continue

@@ -9,11 +9,11 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import String, cast, exists, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import sessionmaker
 
-from app.postgres.models import Conversation, Memory, Message, OcrCache, OcrRun, RequestLog
+from app.postgres.models import Conversation, DiscordConversationSession, Memory, Message, OcrCache, OcrRun, RequestLog
 
 
 def _utc_now() -> datetime:
@@ -61,6 +61,14 @@ class PostgresAuxiliaryStore:
             rows = session.execute(
                 select(Conversation.id, Conversation.created_at, Conversation.updated_at, func.count(Message.id).label("message_count"))
                 .outerjoin(Message, Message.conversation_id == Conversation.id)
+                .where(
+                    ~exists(
+                        select(DiscordConversationSession.id).where(
+                            cast(DiscordConversationSession.backend_conversation_id, String) == Conversation.id,
+                            DiscordConversationSession.origin == "discord",
+                        )
+                    )
+                )
                 .group_by(Conversation.id, Conversation.created_at, Conversation.updated_at)
                 .order_by(Conversation.updated_at.desc())
             ).all()

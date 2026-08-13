@@ -1,0 +1,119 @@
+from __future__ import annotations
+
+"""Immutable Sprint 2B Discord-memory domain vocabulary.
+
+Alembic revision ``20260728_16`` imports these V1 tuples when constructing
+TEXT-based CHECK constraints.  Treat the tuples as migration history: add a
+new version instead of changing their meaning after deployment.
+"""
+
+DISCORD_MEMORY_OPERATIONS_V1 = (
+    "create",
+    "update",
+    "delete",
+    "no_op",
+)
+
+DISCORD_MEMORY_SCOPES_V1 = (
+    "member_in_guild",
+    "guild",
+    "channel",
+    "thread",
+)
+
+DISCORD_MEMORY_FILTER_DECISIONS_V1 = (
+    "candidate",
+    "no_op",
+)
+
+# Sprint 2B.3 needs an honest durable receipt before any rule filter runs.
+# V1 remains immutable because revision 20260728_16 is already complete.
+DISCORD_MEMORY_FILTER_DECISIONS_V2 = (
+    *DISCORD_MEMORY_FILTER_DECISIONS_V1,
+    "not_run",
+)
+
+DISCORD_MEMORY_FILTER_DECISIONS_V3 = (
+    *DISCORD_MEMORY_FILTER_DECISIONS_V2,
+    "rejected_policy",
+)
+
+DISCORD_MEMORY_FILTER_REASON_CODES_V1 = (
+    "foundation_receipt_only",
+    "explicit_remember",
+    "explicit_forget",
+    "explicit_correction",
+    "durable_preference",
+    "hardware_configuration",
+    "software_configuration",
+    "project_decision",
+    "identity_preference",
+    "workflow_rule",
+    "explicit_shared_fact",
+    "greeting",
+    "thanks",
+    "question_only",
+    "transient_state",
+    "joke_or_smalltalk",
+    "no_durable_fact",
+    "missing_trusted_author",
+    "memory_policy_disabled",
+    "duplicate_source",
+    "unsupported_scope",
+    "bot_or_system_message",
+    "empty_content",
+)
+
+DISCORD_MEMORY_FILTER_STRENGTHS_V1 = (
+    "strong",
+    "normal",
+    "none",
+)
+
+DISCORD_MEMORY_VALIDATION_STATUSES_V1 = (
+    "pending",
+    "accepted",
+    "rejected",
+    "error",
+)
+
+DISCORD_MEMORY_CANDIDATE_VALIDATION_STATUSES_V2 = (
+    *DISCORD_MEMORY_VALIDATION_STATUSES_V1,
+    "not_required",
+)
+
+DISCORD_MEMORY_CANDIDATE_DECISIONS_V1 = (
+    "pending",
+    "deferred",
+    "approved",
+    "rejected",
+    "applied",
+    "no_op",
+    "expired",
+    "failed",
+)
+
+DISCORD_MEMORY_STATUSES_V1 = (
+    "active",
+    "superseded",
+    "disputed",
+    "expired",
+    "deleted",
+)
+
+DISCORD_MEMORY_INDEX_STATUSES_V1 = (
+    "pending",
+    "indexed",
+    "pending_reindex",
+    "failed",
+    "not_required",
+)
+
+DISCORD_MEMORY_SOURCE_ROLES_V1 = (
+    "primary",
+    "supporting",
+    "confirmation",
+    "contradiction",
+    "correction",
+    "forget_request",
+)

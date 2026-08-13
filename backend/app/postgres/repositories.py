@@ -327,7 +327,15 @@ class PostgresDocumentRepository:
         return True
 
     def queued_jobs_without_redis(self) -> list[Job]:
-        return list(self.session.scalars(select(Job).where(Job.status.in_(("queued", "retrying")), Job.redis_job_id.is_(None))))
+        return list(
+            self.session.scalars(
+                select(Job).where(
+                    Job.job_type.in_(("extract_document", "index_document")),
+                    Job.status.in_(("queued", "retrying")),
+                    Job.redis_job_id.is_(None),
+                )
+            )
+        )
 
     def request_cancel(self, run_id: str) -> None:
         for job in self.session.scalars(select(Job).where(Job.ingestion_run_id == run_id, Job.status.in_(("queued", "running", "retrying")))):

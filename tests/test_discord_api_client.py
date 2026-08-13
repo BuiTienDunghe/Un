@@ -6,7 +6,7 @@ import json
 import httpx
 import pytest
 
-from discord_bot.api_client import BackendAuthenticationError, BackendConversationNotFoundError, BackendTimeoutError, LocalAgentClient, LocalAgentSettings
+from discord_bot.api_client import BackendAuthenticationError, BackendConversationNotFoundError, BackendDiscordDeliveryConflictError, BackendResponseError, BackendTimeoutError, LocalAgentClient, LocalAgentSettings
 from discord_bot.client import DISCORD_MESSAGE_LIMIT, split_for_discord
 from discord_bot.main import conversation_key, guild_context
 
@@ -111,5 +111,192 @@ def test_missing_backend_conversation_is_detectable_for_safe_retry() -> None:
             client = LocalAgentClient(LocalAgentSettings("http://backend"), http)
             with pytest.raises(BackendConversationNotFoundError):
                 await client.ask_with_conversation("Hello", conversation_id="old-conversation")
+
+    asyncio.run(scenario())
+
+
+def test_discord_client_resolves_backend_owned_session() -> None:
+    seen: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["path"] = request.url.path
+        seen["payload"] = json.loads(request.content)
+        return httpx.Response(
+            200,
+            json={
+                "session_id": "11111111-1111-1111-1111-111111111111",
+                "backend_conversation_id": "22222222-2222-2222-2222-222222222222",
+                "created": True,
+                "status": "active",
+            },
+        )
+
+    async def scenario() -> None:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler), base_url="http://backend") as http:
+            client = LocalAgentClient(LocalAgentSettings("http://backend"), http)
+            result = await client.resolve_discord_session("guild", "parent", "thread")
+            assert result.created is True
+            assert result.backend_conversation_id == "22222222-2222-2222-2222-222222222222"
+
+    asyncio.run(scenario())
+    assert seen == {
+        "path": "/api/discord/sessions/resolve",
+        "payload": {"guild_id": "guild", "channel_id": "parent", "thread_id": "thread"},
+    }
+
+
+def test_discord_client_rejects_empty_session_identifiers() -> None:
+    async def scenario() -> None:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(lambda _: httpx.Response(500)), base_url="http://backend") as http:
+            client = LocalAgentClient(LocalAgentSettings("http://backend"), http)
+            with pytest.raises(BackendResponseError):
+                await client.resolve_discord_session("guild", " ")
+
+    asyncio.run(scenario())
+
+
+def test_discord_client_turn_workflow_uses_server_owned_fifo_contract() -> None:
+    seen: list[tuple[str, dict[str, object]]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        payload = json.loads(request.content)
+        seen.append((request.url.path, payload))
+        if request.url.path.endswith("/turns"):
+            return httpx.Response(
+                200,
+                json={
+                    "turn_id": "turn-1",
+                    "session_id": "session-1",
+                    "sequence_number": 1,
+                    "status": "queued",
+                    "created": True,
+                },
+            )
+        if request.url.path.endswith("/execute"):
+            return httpx.Response(
+                200,
+                json={
+                    "turn_id": "turn-1",
+                    "session_id": "session-1",
+                    "sequence_number": 1,
+                    "status": "running",
+                    "answer": "answer",
+                    "model_used": "model",
+                    "execution_token": "server-token",
+                    "replacement_turn_id": None,
+                },
+            )
+        return httpx.Response(200, json={"turn_id": "turn-1", "status": "completed"})
+
+    async def scenario() -> None:
+        async with httpx.AsyncClient(
+            transport=httpx.MockTransport(handler),
+            base_url="http://backend",
+        ) as http:
+            client = LocalAgentClient(LocalAgentSettings("http://backend"), http)
+            turn = await client.enqueue_discord_turn(
+                "session-1",
+                "message-1",
+                "question",
+                author_id="author-1",
+                author_display_name="Dũng",
+                reply_to_discord_message_id="parent-message",
+                system_prompt="prompt",
+            )
+            execution = await client.execute_discord_turn(turn.turn_id)
+            assert execution.answer == "answer"
+            assert execution.execution_token == "server-token"
+            assert await client.complete_discord_turn(
+                turn.turn_id,
+                execution.execution_token,
+                ["discord-response-1"],
+            ) == "completed"
+
+    asyncio.run(scenario())
+    assert seen == [
+        (
+            "/api/discord/sessions/session-1/turns",
+            {
+                "discord_message_id": "message-1",
+                "message": "question",
+                "author_id": "author-1",
+                "author_display_name": "Dũng",
+                "reply_to_discord_message_id": "parent-message",
+                "system_prompt": "prompt",
+            },
+        ),
+        ("/api/discord/sessions/turns/turn-1/execute", {}),
+        (
+            "/api/discord/sessions/turns/turn-1/complete",
+            {
+                "execution_token": "server-token",
+                "discord_response_message_ids": ["discord-response-1"],
+            },
+        ),
+    ]
+
+
+def test_discord_turn_execute_uses_long_model_timeout() -> None:
+    observed_timeout: dict[str, float] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        observed_timeout.update(request.extensions["timeout"])
+        return httpx.Response(
+            200,
+            json={
+                "turn_id": "turn-1",
+                "session_id": "session-1",
+                "sequence_number": 1,
+                "status": "running",
+                "answer": "answer",
+                "model_used": "model",
+                "execution_token": "server-token",
+                "replacement_turn_id": None,
+            },
+        )
+
+    async def scenario() -> None:
+        async with httpx.AsyncClient(
+            transport=httpx.MockTransport(handler),
+            base_url="http://backend",
+            timeout=45,
+        ) as http:
+            client = LocalAgentClient(
+                LocalAgentSettings(
+                    "http://backend",
+                    turn_execute_timeout_seconds=180,
+                ),
+                http,
+            )
+            await client.execute_discord_turn("turn-1")
+
+    asyncio.run(scenario())
+    assert observed_timeout["read"] == 180
+    assert observed_timeout["write"] == 180
+
+
+def test_discord_completion_surfaces_delivery_conflict() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            409,
+            json={
+                "error": True,
+                "error_code": "DISCORD_TURN_DELIVERY_CONFLICT",
+                "message": "Turn completion conflicts with persisted delivery IDs.",
+            },
+        )
+
+    async def scenario() -> None:
+        async with httpx.AsyncClient(
+            transport=httpx.MockTransport(handler),
+            base_url="http://backend",
+        ) as http:
+            client = LocalAgentClient(LocalAgentSettings("http://backend"), http)
+            with pytest.raises(BackendDiscordDeliveryConflictError):
+                await client.complete_discord_turn(
+                    "turn-1",
+                    "token",
+                    ["response-2"],
+                )
 
     asyncio.run(scenario())

@@ -29,18 +29,52 @@ class BackendConversationNotFoundError(BackendResponseError):
     pass
 
 
+class BackendDiscordDeliveryConflictError(BackendResponseError):
+    pass
+
+
 @dataclass(frozen=True)
 class LocalAgentSettings:
     base_url: str
     username: str = ""
     password: str = ""
     timeout_seconds: float = 45.0
+    turn_execute_timeout_seconds: float = 180.0
 
 
 @dataclass(frozen=True)
 class BackendAnswer:
     answer: str
     conversation_id: str
+
+
+@dataclass(frozen=True)
+class BackendDiscordSession:
+    session_id: str
+    backend_conversation_id: str
+    created: bool
+    status: str
+
+
+@dataclass(frozen=True)
+class BackendDiscordTurn:
+    turn_id: str
+    session_id: str
+    sequence_number: int
+    status: str
+    created: bool
+
+
+@dataclass(frozen=True)
+class BackendDiscordTurnExecution:
+    turn_id: str
+    session_id: str
+    sequence_number: int
+    status: str
+    answer: str | None
+    model_used: str | None
+    execution_token: str | None
+    replacement_turn_id: str | None
 
 
 class LocalAgentClient:
@@ -88,6 +122,161 @@ class LocalAgentClient:
             raise BackendResponseError("Backend returned no conversation ID.")
         return BackendAnswer(answer.strip(), returned_conversation_id)
 
+    async def resolve_discord_session(
+        self,
+        guild_id: str,
+        channel_id: str,
+        thread_id: str | None = None,
+    ) -> BackendDiscordSession:
+        guild_id, channel_id = guild_id.strip(), channel_id.strip()
+        thread_id = thread_id.strip() if thread_id is not None else None
+        if not guild_id or not channel_id or (thread_id is not None and not thread_id):
+            raise BackendResponseError("Discord session identifiers cannot be empty.")
+        response = await self._discord_session_request(guild_id, channel_id, thread_id)
+        if response.status_code == 401:
+            self._jwt = None
+            await self._refresh_jwt()
+            response = await self._discord_session_request(guild_id, channel_id, thread_id)
+        if response.status_code == 401:
+            raise BackendAuthenticationError("Backend authentication was rejected.")
+        if response.status_code >= 500:
+            raise BackendUnavailableError("Backend is unavailable. Please try again later.")
+        if response.status_code >= 400:
+            raise BackendResponseError(self._error_message(response))
+        try:
+            payload = response.json()
+            session_id = payload.get("session_id")
+            backend_conversation_id = payload.get("backend_conversation_id")
+            created = payload.get("created")
+            status = payload.get("status")
+        except ValueError as error:
+            raise BackendResponseError("Backend returned an invalid session response.") from error
+        if not isinstance(session_id, str) or not session_id:
+            raise BackendResponseError("Backend returned no Discord session ID.")
+        if not isinstance(backend_conversation_id, str) or not backend_conversation_id:
+            raise BackendResponseError("Backend returned no conversation ID.")
+        if not isinstance(created, bool) or status != "active":
+            raise BackendResponseError("Backend returned an invalid Discord session state.")
+        return BackendDiscordSession(session_id, backend_conversation_id, created, status)
+
+    async def enqueue_discord_turn(
+        self,
+        session_id: str,
+        discord_message_id: str,
+        message: str,
+        *,
+        author_id: str,
+        author_display_name: str,
+        reply_to_discord_message_id: str | None = None,
+        system_prompt: str | None = None,
+    ) -> BackendDiscordTurn:
+        payload: dict[str, object] = {
+            "discord_message_id": discord_message_id,
+            "message": message,
+            "author_id": author_id,
+            "author_display_name": author_display_name,
+        }
+        if reply_to_discord_message_id:
+            payload["reply_to_discord_message_id"] = reply_to_discord_message_id
+        if system_prompt:
+            payload["system_prompt"] = system_prompt
+        response = await self._authorized_post(
+            f"/api/discord/sessions/{session_id}/turns",
+            payload,
+            "Discord turn enqueue",
+        )
+        body = self._json_object(response, "turn enqueue")
+        turn_id, returned_session_id = body.get("turn_id"), body.get("session_id")
+        sequence, status, created = body.get("sequence_number"), body.get("status"), body.get("created")
+        if (
+            not isinstance(turn_id, str)
+            or not isinstance(returned_session_id, str)
+            or not isinstance(sequence, int)
+            or not isinstance(status, str)
+            or not isinstance(created, bool)
+        ):
+            raise BackendResponseError("Backend returned an invalid Discord turn.")
+        return BackendDiscordTurn(turn_id, returned_session_id, sequence, status, created)
+
+    async def execute_discord_turn(self, turn_id: str) -> BackendDiscordTurnExecution:
+        response = await self._authorized_post(
+            f"/api/discord/sessions/turns/{turn_id}/execute",
+            {},
+            "Discord turn execution",
+            timeout=self.settings.turn_execute_timeout_seconds,
+        )
+        body = self._json_object(response, "turn execution")
+        returned_turn_id, session_id = body.get("turn_id"), body.get("session_id")
+        sequence, status = body.get("sequence_number"), body.get("status")
+        answer, model_used = body.get("answer"), body.get("model_used")
+        token, replacement = body.get("execution_token"), body.get("replacement_turn_id")
+        if (
+            not isinstance(returned_turn_id, str)
+            or not isinstance(session_id, str)
+            or not isinstance(sequence, int)
+            or not isinstance(status, str)
+            or (answer is not None and not isinstance(answer, str))
+            or (model_used is not None and not isinstance(model_used, str))
+            or (token is not None and not isinstance(token, str))
+            or (replacement is not None and not isinstance(replacement, str))
+        ):
+            raise BackendResponseError("Backend returned an invalid Discord turn execution.")
+        return BackendDiscordTurnExecution(
+            returned_turn_id,
+            session_id,
+            sequence,
+            status,
+            answer,
+            model_used,
+            token,
+            replacement,
+        )
+
+    async def complete_discord_turn(
+        self,
+        turn_id: str,
+        execution_token: str,
+        discord_response_message_ids: list[str],
+    ) -> str:
+        response = await self._authorized_post(
+            f"/api/discord/sessions/turns/{turn_id}/complete",
+            {
+                "execution_token": execution_token,
+                "discord_response_message_ids": (
+                    discord_response_message_ids
+                ),
+            },
+            "Discord turn completion",
+        )
+        body = self._json_object(response, "turn completion")
+        status = body.get("status")
+        if status != "completed":
+            raise BackendResponseError("Backend did not complete the Discord turn.")
+        return status
+
+    async def fail_discord_turn(
+        self,
+        turn_id: str,
+        execution_token: str,
+        error: str,
+        *,
+        retryable: bool,
+    ) -> str:
+        response = await self._authorized_post(
+            f"/api/discord/sessions/turns/{turn_id}/fail",
+            {
+                "execution_token": execution_token,
+                "error": error[:4_000],
+                "retryable": retryable,
+            },
+            "Discord turn failure",
+        )
+        body = self._json_object(response, "turn failure")
+        status = body.get("status")
+        if status not in {"queued", "failed"}:
+            raise BackendResponseError("Backend returned an invalid Discord turn failure state.")
+        return status
+
     async def _chat_request(self, question: str, conversation_id: str | None, system_prompt: str | None) -> httpx.Response:
         headers = {"Authorization": f"Bearer {self._jwt}"} if self._jwt else {}
         payload: dict[str, object] = {"message": question, "stream": False}
@@ -101,6 +290,78 @@ class LocalAgentClient:
             raise BackendTimeoutError("Backend request timed out. Please try again later.") from error
         except httpx.HTTPError as error:
             raise BackendUnavailableError("Backend is unavailable. Please try again later.") from error
+
+    async def _discord_session_request(
+        self,
+        guild_id: str,
+        channel_id: str,
+        thread_id: str | None,
+    ) -> httpx.Response:
+        headers = {"Authorization": f"Bearer {self._jwt}"} if self._jwt else {}
+        payload: dict[str, object] = {
+            "guild_id": guild_id,
+            "channel_id": channel_id,
+            "thread_id": thread_id,
+        }
+        try:
+            return await self._http.post("/api/discord/sessions/resolve", json=payload, headers=headers)
+        except httpx.TimeoutException as error:
+            raise BackendTimeoutError("Backend session resolver timed out. Please try again later.") from error
+        except httpx.HTTPError as error:
+            raise BackendUnavailableError("Backend is unavailable. Please try again later.") from error
+
+    async def _authorized_post(
+        self,
+        path: str,
+        payload: dict[str, object],
+        operation: str,
+        *,
+        timeout: float | None = None,
+    ) -> httpx.Response:
+        async def send() -> httpx.Response:
+            headers = {"Authorization": f"Bearer {self._jwt}"} if self._jwt else {}
+            try:
+                request_options: dict[str, object] = {
+                    "json": payload,
+                    "headers": headers,
+                }
+                if timeout is not None:
+                    request_options["timeout"] = timeout
+                return await self._http.post(path, **request_options)
+            except httpx.TimeoutException as error:
+                raise BackendTimeoutError(f"{operation} timed out. Please try again later.") from error
+            except httpx.HTTPError as error:
+                raise BackendUnavailableError("Backend is unavailable. Please try again later.") from error
+
+        response = await send()
+        if response.status_code == 401:
+            self._jwt = None
+            await self._refresh_jwt()
+            response = await send()
+        if response.status_code == 401:
+            raise BackendAuthenticationError("Backend authentication was rejected.")
+        if response.status_code >= 500:
+            raise BackendUnavailableError("Backend is unavailable. Please try again later.")
+        if (
+            response.status_code == 409
+            and self._error_code(response) == "DISCORD_TURN_DELIVERY_CONFLICT"
+        ):
+            raise BackendDiscordDeliveryConflictError(
+                self._error_message(response)
+            )
+        if response.status_code >= 400:
+            raise BackendResponseError(self._error_message(response))
+        return response
+
+    @staticmethod
+    def _json_object(response: httpx.Response, operation: str) -> dict[str, object]:
+        try:
+            payload = response.json()
+        except ValueError as error:
+            raise BackendResponseError(f"Backend returned invalid JSON for {operation}.") from error
+        if not isinstance(payload, dict):
+            raise BackendResponseError(f"Backend returned an invalid response for {operation}.")
+        return payload
 
     async def _refresh_jwt(self) -> None:
         if not self.settings.username or not self.settings.password:

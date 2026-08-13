@@ -12,7 +12,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
     settings = get_settings()
     if not settings.database_url: raise RuntimeError("DATABASE_URL is required")
-    dispatcher = OutboxDispatcherService(create_session_factory(create_postgres_engine(settings.database_url)), JobQueueService(settings.redis_url, settings.rq_queue_prefix), settings.job_max_attempts)
+    dispatcher = OutboxDispatcherService(
+        create_session_factory(create_postgres_engine(settings.database_url)),
+        JobQueueService(
+            settings.redis_url,
+            settings.rq_queue_prefix,
+            memory_queue_name=settings.discord_memory_queue_name,
+        ),
+        settings.job_max_attempts,
+    )
     while True:
         count = dispatcher.dispatch_pending()
         logger.info("outbox dispatcher published {} event(s)", count)

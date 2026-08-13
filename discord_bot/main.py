@@ -10,8 +10,19 @@ from pathlib import Path
 import discord
 from discord import app_commands
 
-from discord_bot.api_client import BackendClientError, BackendConversationNotFoundError, LocalAgentClient, LocalAgentSettings
+from discord_bot.api_client import (
+    BackendClientError,
+    BackendConversationNotFoundError,
+    BackendTimeoutError,
+    BackendUnavailableError,
+    LocalAgentClient,
+    LocalAgentSettings,
+)
 from discord_bot.client import LocalAgentDiscordBot, split_for_discord
+from discord_bot.session_location import (
+    UnsupportedDiscordLocationError,
+    canonical_discord_location,
+)
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -26,6 +37,7 @@ class DiscordSettings:
     local_agent: LocalAgentSettings
     system_prompt_path: Path
     member_context_limit: int
+    persistent_sessions_enabled: bool = False
 
     @classmethod
     def from_env(cls) -> "DiscordSettings":
@@ -40,9 +52,26 @@ class DiscordSettings:
                 base_url=os.environ.get("LOCAL_AGENT_BASE_URL", "http://api:8000"),
                 username=os.environ.get("LOCAL_AGENT_USERNAME", ""),
                 password=os.environ.get("LOCAL_AGENT_PASSWORD", ""),
+                timeout_seconds=max(
+                    1.0,
+                    float(os.environ.get("DISCORD_BACKEND_TIMEOUT_SECONDS", "45")),
+                ),
+                turn_execute_timeout_seconds=max(
+                    1.0,
+                    float(
+                        os.environ.get(
+                            "DISCORD_TURN_EXECUTE_TIMEOUT_SECONDS",
+                            "180",
+                        )
+                    ),
+                ),
             ),
             system_prompt_path=Path(os.environ.get("DISCORD_SYSTEM_PROMPT_PATH", "discord_bot/system_prompt.md")),
             member_context_limit=max(0, min(int(os.environ.get("DISCORD_MEMBER_CONTEXT_LIMIT", "100")), 500)),
+            persistent_sessions_enabled=os.environ.get(
+                "DISCORD_PERSISTENT_SESSIONS_ENABLED",
+                "false",
+            ).strip().lower() in {"1", "true", "yes", "on"},
         )
 
 
@@ -70,34 +99,186 @@ def conversation_key(guild_id: int | None, channel_id: int, user_id: int) -> str
     return f"discord_{hashlib.sha256(raw).hexdigest()[:48]}"
 
 
-def create_bot(api_client: LocalAgentClient, system_prompt: str, member_context_limit: int) -> LocalAgentDiscordBot:
-    bot = LocalAgentDiscordBot()
-    conversations: dict[str, str] = {}
+def discord_author_metadata(author) -> tuple[str, str]:
+    """Read stable identity and display snapshot from the Discord object."""
+    return str(author.id), str(author.display_name)
 
-    def prompt_for(guild: discord.Guild | None) -> str:
+
+def discord_reply_message_id(message: discord.Message) -> str | None:
+    reference = getattr(message, "reference", None)
+    message_id = getattr(reference, "message_id", None)
+    return str(message_id) if message_id is not None else None
+
+
+@dataclass(frozen=True)
+class PreparedDiscordAnswer:
+    answer: str
+    turn_id: str | None = None
+    execution_token: str | None = None
+
+
+async def send_discord_answer(
+    channel,
+    answer: str,
+    *,
+    reply_to: discord.Message | None = None,
+) -> list[discord.Message]:
+    """Send every response chunk once and retain Discord's returned objects."""
+
+    chunks = split_for_discord(answer)
+    sent: list[discord.Message] = []
+    if reply_to is not None:
+        sent.append(await reply_to.reply(chunks[0], mention_author=False))
+    else:
+        sent.append(await channel.send(chunks[0]))
+    for chunk in chunks[1:]:
+        sent.append(await channel.send(chunk))
+    return sent
+
+
+class DiscordConversationGateway:
+    """Feature-gated bridge; the legacy RAM path remains the default."""
+
+    def __init__(
+        self,
+        api_client: LocalAgentClient,
+        system_prompt: str,
+        member_context_limit: int,
+        persistent_sessions_enabled: bool,
+    ) -> None:
+        self.api_client = api_client
+        self.system_prompt = system_prompt
+        self.member_context_limit = member_context_limit
+        self.persistent_sessions_enabled = persistent_sessions_enabled
+        self.conversations: dict[str, str] = {}
+
+    def prompt_for(self, guild: discord.Guild | None) -> str:
+        system_prompt = self.system_prompt
+        member_context_limit = self.member_context_limit
         return f"{system_prompt}\n\n{guild_context(guild, member_context_limit)}"
 
-    async def send_answer(channel, answer: str, *, reply_to: discord.Message | None = None) -> None:
-        chunks = split_for_discord(answer)
-        if reply_to is not None:
-            await reply_to.reply(chunks[0], mention_author=False)
-        else:
-            await channel.send(chunks[0])
-        for chunk in chunks[1:]:
-            await channel.send(chunk)
+    async def prepare(
+        self,
+        question: str,
+        guild: discord.Guild | None,
+        channel,
+        user_id: int,
+        author_display_name: str,
+        discord_message_id: str,
+        reply_to_discord_message_id: str | None = None,
+    ) -> PreparedDiscordAnswer | None:
+        if not self.persistent_sessions_enabled:
+            key = conversation_key(guild.id if guild else None, channel.id, user_id)
+            try:
+                result = await self.api_client.ask_with_conversation(
+                    question,
+                    conversation_id=self.conversations.get(key),
+                    system_prompt=self.prompt_for(guild),
+                )
+            except BackendConversationNotFoundError:
+                self.conversations.pop(key, None)
+                result = await self.api_client.ask_with_conversation(
+                    question,
+                    system_prompt=self.prompt_for(guild),
+                )
+            self.conversations[key] = result.conversation_id
+            return PreparedDiscordAnswer(result.answer)
 
-    async def ask_backend(question: str, guild: discord.Guild | None, channel_id: int, user_id: int) -> str:
-        key = conversation_key(guild.id if guild else None, channel_id, user_id)
         try:
-            result = await api_client.ask_with_conversation(question, conversation_id=conversations.get(key), system_prompt=prompt_for(guild))
-        except BackendConversationNotFoundError:
-            # PostgreSQL may have been reset or retention may have removed an
-            # old conversation. Drop only this mapping and let the backend
-            # create a fresh conversation on the retry.
-            conversations.pop(key, None)
-            result = await api_client.ask_with_conversation(question, system_prompt=prompt_for(guild))
-        conversations[key] = result.conversation_id
-        return result.answer
+            location = canonical_discord_location(guild, channel)
+        except UnsupportedDiscordLocationError as error:
+            raise BackendClientError(str(error)) from error
+        session = await self.api_client.resolve_discord_session(
+            location.guild_id,
+            location.channel_id,
+            location.thread_id,
+        )
+        turn = await self.api_client.enqueue_discord_turn(
+            session.session_id,
+            discord_message_id,
+            question,
+            author_id=str(user_id),
+            author_display_name=author_display_name,
+            reply_to_discord_message_id=reply_to_discord_message_id,
+            system_prompt=self.prompt_for(guild),
+        )
+        turn_id = turn.turn_id
+        for _ in range(600):
+            execution = await self.api_client.execute_discord_turn(turn_id)
+            if execution.status == "requeued" and execution.replacement_turn_id:
+                turn_id = execution.replacement_turn_id
+                continue
+            if (
+                execution.status == "running"
+                and execution.answer
+                and execution.execution_token
+            ):
+                return PreparedDiscordAnswer(
+                    execution.answer,
+                    execution.turn_id,
+                    execution.execution_token,
+                )
+            if execution.status == "completed":
+                # An idempotent duplicate delivery has already been handled.
+                return None
+            if execution.status in {"failed", "cancelled"}:
+                raise BackendClientError(
+                    f"Discord turn ended with status {execution.status}."
+                )
+            await asyncio.sleep(0.1)
+        raise BackendClientError("Discord turn did not become ready before the polling deadline.")
+
+    async def delivered(
+        self,
+        prepared: PreparedDiscordAnswer,
+        discord_response_message_ids: list[str],
+    ) -> None:
+        if prepared.turn_id and prepared.execution_token:
+            # Discord has already accepted the messages. Retry only the
+            # idempotent backend acknowledgement; never send Discord content
+            # again merely because the completion response was lost.
+            for attempt in range(3):
+                try:
+                    await self.api_client.complete_discord_turn(
+                        prepared.turn_id,
+                        prepared.execution_token,
+                        discord_response_message_ids,
+                    )
+                    return
+                except (BackendTimeoutError, BackendUnavailableError):
+                    if attempt == 2:
+                        raise
+                    await asyncio.sleep(0.1 * (attempt + 1))
+
+    async def delivery_failed(
+        self,
+        prepared: PreparedDiscordAnswer,
+        error: str,
+        *,
+        retryable: bool,
+    ) -> None:
+        if prepared.turn_id and prepared.execution_token:
+            await self.api_client.fail_discord_turn(
+                prepared.turn_id,
+                prepared.execution_token,
+                error,
+                retryable=retryable,
+            )
+
+
+def create_bot(
+    api_client: LocalAgentClient,
+    system_prompt: str,
+    member_context_limit: int,
+    persistent_sessions_enabled: bool = False,
+) -> LocalAgentDiscordBot:
+    bot = LocalAgentDiscordBot()
+    gateway = DiscordConversationGateway(
+        api_client,
+        system_prompt,
+        member_context_limit,
+        persistent_sessions_enabled,
+    )
 
     @bot.event
     async def on_ready() -> None:
@@ -115,16 +296,45 @@ def create_bot(api_client: LocalAgentClient, system_prompt: str, member_context_
             return
         await interaction.response.defer(thinking=True)
         try:
-            answer = await ask_backend(
+            author_id, author_display_name = discord_author_metadata(
+                interaction.user
+            )
+            prepared = await gateway.prepare(
                 question,
                 interaction.guild,
-                interaction.channel_id,
-                interaction.user.id,
+                interaction.channel,
+                int(author_id),
+                author_display_name,
+                str(interaction.id),
             )
         except BackendClientError as error:
             await interaction.followup.send(str(error), ephemeral=True)
             return
-        await send_answer(interaction.followup, answer)
+        if prepared is None:
+            return
+        try:
+            sent_messages = await send_discord_answer(
+                interaction.followup,
+                prepared.answer,
+            )
+        except discord.NotFound:
+            await gateway.delivery_failed(
+                prepared,
+                "Discord interaction was deleted or no longer exists.",
+                retryable=False,
+            )
+            return
+        except Exception as error:
+            await gateway.delivery_failed(
+                prepared,
+                f"Discord delivery failed: {type(error).__name__}",
+                retryable=True,
+            )
+            raise
+        await gateway.delivered(
+            prepared,
+            [str(message.id) for message in sent_messages],
+        )
 
     @bot.event
     async def on_message(message: discord.Message) -> None:
@@ -136,16 +346,47 @@ def create_bot(api_client: LocalAgentClient, system_prompt: str, member_context_
             return
         async with message.channel.typing():
             try:
-                answer = await ask_backend(
+                author_id, author_display_name = discord_author_metadata(
+                    message.author
+                )
+                prepared = await gateway.prepare(
                     question,
                     message.guild,
-                    message.channel.id,
-                    message.author.id,
+                    message.channel,
+                    int(author_id),
+                    author_display_name,
+                    str(message.id),
+                    discord_reply_message_id(message),
                 )
             except BackendClientError as error:
                 await message.reply(str(error), mention_author=False)
                 return
-        await send_answer(message.channel, answer, reply_to=message)
+        if prepared is None:
+            return
+        try:
+            sent_messages = await send_discord_answer(
+                message.channel,
+                prepared.answer,
+                reply_to=message,
+            )
+        except discord.NotFound:
+            await gateway.delivery_failed(
+                prepared,
+                "Discord source message was deleted before response delivery.",
+                retryable=False,
+            )
+            return
+        except Exception as error:
+            await gateway.delivery_failed(
+                prepared,
+                f"Discord delivery failed: {type(error).__name__}",
+                retryable=True,
+            )
+            raise
+        await gateway.delivered(
+            prepared,
+            [str(sent_message.id) for sent_message in sent_messages],
+        )
 
     return bot
 
@@ -153,7 +394,12 @@ def create_bot(api_client: LocalAgentClient, system_prompt: str, member_context_
 async def run() -> None:
     settings = DiscordSettings.from_env()
     api_client = LocalAgentClient(settings.local_agent)
-    bot = create_bot(api_client, load_system_prompt(settings.system_prompt_path), settings.member_context_limit)
+    bot = create_bot(
+        api_client,
+        load_system_prompt(settings.system_prompt_path),
+        settings.member_context_limit,
+        settings.persistent_sessions_enabled,
+    )
     try:
         # Never log settings.token or any password.
         logger.info("Starting Discord bot client_id=%s backend=%s", settings.client_id, settings.local_agent.base_url)

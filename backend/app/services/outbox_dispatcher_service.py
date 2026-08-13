@@ -7,6 +7,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.postgres.models import Job, OutboxEvent
 from app.services.job_errors import retry_delay
+from app.services.job_routing import UnknownJobTypeError
 
 
 class OutboxDispatcherService:
@@ -43,7 +44,9 @@ class OutboxDispatcherService:
                 with self.sessions.begin() as session:
                     event = session.get(OutboxEvent, event_id)
                     if event and event.status == "processing":
-                        if event.attempts >= self.max_attempts:
+                        if isinstance(error, UnknownJobTypeError):
+                            event.status = "failed"
+                        elif event.attempts >= self.max_attempts:
                             event.status = "failed"
                         else:
                             event.status = "retrying"; event.available_at = datetime.now(UTC) + timedelta(seconds=retry_delay(event.attempts))

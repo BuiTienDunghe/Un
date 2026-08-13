@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config.settings import get_settings
 from app.llm_clients.ollama_client import OllamaClient
-from app.routers import chat, code, conversations, documents, health, memory, models, ocr, rag, vision
+from app.routers import chat, code, conversations, discord_sessions, documents, health, memory, models, ocr, rag, vision
 from app.services.postgres_bm25_service import PostgresBm25Service
 from app.services.chat_service import ChatService
 from app.services.code_service import CodeService
@@ -23,6 +23,11 @@ from app.services.postgres_retrieval_service import PostgresRetrievalService
 from app.services.job_queue_service import JobQueueService
 from app.services.operational_service import OperationalService
 from app.services.reranker_service import RerankerService
+from app.services.discord_session_service import DiscordSessionService
+from app.services.discord_memory_completion_service import (
+    DiscordMemoryCompletionService,
+)
+from app.services.discord_turn_service import DiscordTurnService
 from app.stores.qdrant_store import QdrantStore
 from app.stores.embedding_cache_store import PostgresEmbeddingCacheStore
 from app.stores.postgres_auxiliary_store import PostgresAuxiliaryStore
@@ -50,15 +55,45 @@ async def lifespan(app: FastAPI):
     app.state.logging_service = logging_service
     app.state.memory_service = MemoryService(auxiliary_store, qdrant_store, router, logging_service)
     app.state.chat_service = ChatService(auxiliary_store, router, logging_service, settings.conversation_history_limit, app.state.memory_service)
+    app.state.discord_session_service = DiscordSessionService(postgres_sessions)
+    app.state.discord_turn_service = DiscordTurnService(
+        postgres_sessions,
+        app.state.discord_session_service,
+        app.state.chat_service,
+        memory_completion_service=DiscordMemoryCompletionService(
+            enabled=settings.discord_memory_ingestion_enabled,
+            extractor_schema_version=(
+                settings.discord_memory_extractor_schema_version
+            ),
+            max_attempts=settings.job_max_attempts,
+        ),
+    )
     app.state.code_service = CodeService(router, logging_service)
     ocr_service = OCRService(router, auxiliary_store)
-    queue = JobQueueService(settings.redis_url, settings.rq_queue_prefix) if settings.ingestion_execution_backend == "rq" else None
+    queue = (
+        JobQueueService(
+            settings.redis_url,
+            settings.rq_queue_prefix,
+            memory_queue_name=settings.discord_memory_queue_name,
+        )
+        if settings.ingestion_execution_backend == "rq"
+        else None
+    )
     app.state.document_service = PostgresDocumentService(
         postgres_sessions, PostgresEmbeddingCacheStore(postgres_sessions), qdrant_store, router, logging_service, settings.documents_path,
         int(rag_config.get("chunk_tokens", rag_config.get("chunk_size", 480))),
         int(rag_config.get("chunk_overlap_tokens", rag_config.get("chunk_overlap", 80))), ocr_service, queue, settings.job_max_attempts,
     )
-    app.state.operational_service = OperationalService(postgres_sessions, settings.redis_url, settings.rq_queue_prefix, qdrant_store, ollama_client, settings.documents_path.parent / "cleanup-worker.heartbeat")
+    app.state.operational_service = OperationalService(
+        postgres_sessions,
+        settings.redis_url,
+        settings.rq_queue_prefix,
+        qdrant_store,
+        ollama_client,
+        settings.documents_path.parent / "cleanup-worker.heartbeat",
+        memory_ingestion_enabled=settings.discord_memory_ingestion_enabled,
+        memory_queue_name=settings.discord_memory_queue_name,
+    )
     app.state.ocr_job_service = OcrJobService(router, settings.ocr_runs_path, auxiliary_store, ocr_service)
     reranker_config = rag_config.get("reranker", {})
     reranker_service = RerankerService(bool(reranker_config.get("enabled", False)), str(reranker_config.get("model", "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1")), int(reranker_config.get("candidate_limit", 15)))
@@ -80,6 +115,7 @@ app.include_router(ocr.router)
 app.include_router(rag.router)
 app.include_router(memory.router)
 app.include_router(conversations.router)
+app.include_router(discord_sessions.router)
 app.include_router(vision.router)
 app.mount("/ui", StaticFiles(directory=str(Path(__file__).parent / "frontend"), html=True), name="ui")
 @app.exception_handler(HTTPException)

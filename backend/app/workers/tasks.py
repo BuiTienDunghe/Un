@@ -73,7 +73,15 @@ def _service() -> tuple[PostgresDocumentService, object, JobQueueService]:
     # embedding cache.  SQLite remains isolated to the cleanup process.
     auxiliary_store = PostgresAuxiliaryStore(sessions)
     service = PostgresDocumentService(sessions, PostgresEmbeddingCacheStore(sessions), QdrantStore(settings.qdrant_url, settings.qdrant_timeout_seconds), router, LoggingService(auxiliary_store, settings.logs_path), settings.documents_path, int(settings.load_config().get("rag", {}).get("chunk_tokens", 480)), int(settings.load_config().get("rag", {}).get("chunk_overlap_tokens", 80)), OCRService(router, auxiliary_store))
-    return service, sessions, JobQueueService(settings.redis_url, settings.rq_queue_prefix)
+    return (
+        service,
+        sessions,
+        JobQueueService(
+            settings.redis_url,
+            settings.rq_queue_prefix,
+            memory_queue_name=settings.discord_memory_queue_name,
+        ),
+    )
 
 
 def extract_document(job_id: str) -> None:

@@ -23,6 +23,17 @@ class Settings(BaseSettings):
     rq_queue_prefix: str = "local-ai:dev"
     job_max_attempts: int = 3
     job_stale_timeout_seconds: int = 900
+    discord_memory_ingestion_enabled: bool = False
+    discord_memory_extractor_enabled: bool = False
+    discord_memory_extractor_model: str = "qwen3.5:2b"
+    discord_memory_extractor_schema_version: str = "v1"
+    discord_memory_extractor_num_ctx: int = 4096
+    discord_memory_extractor_temperature: float = 0.0
+    discord_memory_extractor_seed: int = 424242
+    discord_memory_extractor_json_fallback: bool = False
+    discord_memory_extractor_timeout_seconds: float = 60.0
+    discord_memory_extractor_retry_count: int = 1
+    discord_memory_queue_name: str = "memory_extract"
     superseded_version_grace_days: int = 7
     log_dir: str = "data/logs"
     ollama_base_url: str = "http://127.0.0.1:11434"
@@ -44,6 +55,26 @@ class Settings(BaseSettings):
             raise ValueError("DATABASE_URL is required for the PostgreSQL runtime")
         if not str(self.database_url).startswith("postgresql+"):
             raise ValueError("DATABASE_URL must use a PostgreSQL SQLAlchemy dialect, not SQLite")
+        if not self.discord_memory_extractor_schema_version.strip():
+            raise ValueError("DISCORD_MEMORY_EXTRACTOR_SCHEMA_VERSION must not be empty")
+        if not self.discord_memory_extractor_model.strip():
+            raise ValueError("DISCORD_MEMORY_EXTRACTOR_MODEL must not be empty")
+        if self.discord_memory_extractor_num_ctx < 512:
+            raise ValueError("DISCORD_MEMORY_EXTRACTOR_NUM_CTX must be at least 512")
+        if self.discord_memory_extractor_temperature != 0.0:
+            raise ValueError(
+                "DISCORD_MEMORY_EXTRACTOR_TEMPERATURE must be 0.0 in strict mode"
+            )
+        if self.discord_memory_extractor_timeout_seconds <= 0:
+            raise ValueError(
+                "DISCORD_MEMORY_EXTRACTOR_TIMEOUT_SECONDS must be positive"
+            )
+        if self.discord_memory_extractor_retry_count < 0:
+            raise ValueError(
+                "DISCORD_MEMORY_EXTRACTOR_RETRY_COUNT must not be negative"
+            )
+        if not self.discord_memory_queue_name.strip():
+            raise ValueError("DISCORD_MEMORY_QUEUE_NAME must not be empty")
         return self
 
     @property

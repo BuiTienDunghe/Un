@@ -47,6 +47,7 @@ data/archives/
 data/backups/
 data/benchmarks/
 data/cleanup-worker.heartbeat
+data/discord_bot_control/
 
 # ── OS generated ──
 Thumbs.db

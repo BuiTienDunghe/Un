@@ -1,16 +1,34 @@
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import BigInteger, Boolean, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, func, text
+from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+from app.postgres.discord_memory_constants import (
+    DISCORD_MEMORY_CANDIDATE_VALIDATION_STATUSES_V2,
+    DISCORD_MEMORY_CANDIDATE_DECISIONS_V1,
+    DISCORD_MEMORY_FILTER_DECISIONS_V3,
+    DISCORD_MEMORY_FILTER_REASON_CODES_V1,
+    DISCORD_MEMORY_INDEX_STATUSES_V1,
+    DISCORD_MEMORY_OPERATIONS_V1,
+    DISCORD_MEMORY_SCOPES_V1,
+    DISCORD_MEMORY_SOURCE_ROLES_V1,
+    DISCORD_MEMORY_STATUSES_V1,
+    DISCORD_MEMORY_VALIDATION_STATUSES_V1,
+)
 
 
 def new_id(prefix: str) -> str:
     return f"{prefix}_{uuid4().hex}"
+
+
+def sql_values(values: tuple[str, ...]) -> str:
+    return ",".join(f"'{value}'" for value in values)
 
 
 class Base(DeclarativeBase):
@@ -194,6 +212,462 @@ class Conversation(Base):
     id: Mapped[str] = mapped_column(String(128), primary_key=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
+
+
+class DiscordConversationSession(Base):
+    __tablename__ = "discord_conversation_sessions"
+    __table_args__ = (
+        CheckConstraint("status IN ('active','closed','expired','orphaned','deleted')", name="ck_discord_conversation_sessions_status"),
+        CheckConstraint("origin = 'discord'", name="ck_discord_conversation_sessions_origin"),
+        CheckConstraint("visibility IN ('internal','admin')", name="ck_discord_conversation_sessions_visibility"),
+        Index(
+            "uq_discord_active_channel_session",
+            "guild_id",
+            "channel_id",
+            unique=True,
+            postgresql_where=text("status = 'active' AND thread_id IS NULL"),
+        ),
+        Index(
+            "uq_discord_active_thread_session",
+            "guild_id",
+            "channel_id",
+            "thread_id",
+            unique=True,
+            postgresql_where=text("status = 'active' AND thread_id IS NOT NULL"),
+        ),
+        Index("ix_discord_session_canonical_lookup", "guild_id", "channel_id", "thread_id", "status"),
+        Index("ix_discord_session_backend_conversation", "backend_conversation_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    guild_id: Mapped[str] = mapped_column(Text, nullable=False)
+    channel_id: Mapped[str] = mapped_column(Text, nullable=False)
+    thread_id: Mapped[str | None] = mapped_column(Text)
+    # conversations.id remains VARCHAR(128) to preserve legacy opaque IDs.
+    # The resolver stores UUID conversations as canonical strings and checks
+    # their existence transactionally; a cross-type foreign key is therefore
+    # intentionally not declared here.
+    backend_conversation_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), nullable=False)
+    origin: Mapped[str] = mapped_column(Text, nullable=False, default="discord", server_default="discord")
+    visibility: Mapped[str] = mapped_column(Text, nullable=False, default="internal", server_default="internal")
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="active", server_default="active")
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    last_active_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    orphaned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+class DiscordSessionTurn(Base):
+    __tablename__ = "discord_session_turns"
+    __table_args__ = (
+        CheckConstraint("status IN ('queued','running','completed','failed','cancelled')", name="ck_discord_session_turns_status"),
+        CheckConstraint("sequence_number > 0", name="ck_discord_session_turns_positive_sequence"),
+        CheckConstraint("attempt_count >= 0", name="ck_discord_session_turns_attempt_count"),
+        CheckConstraint("max_attempts > 0", name="ck_discord_session_turns_max_attempts"),
+        UniqueConstraint("session_id", "discord_message_id", name="uq_discord_session_turn_message"),
+        UniqueConstraint("session_id", "sequence_number", name="uq_discord_session_turn_sequence"),
+        Index(
+            "uq_discord_session_turn_one_running",
+            "session_id",
+            unique=True,
+            postgresql_where=text("status = 'running'"),
+        ),
+        Index("ix_discord_session_turn_dispatch", "status", "available_at", "session_id", "sequence_number"),
+        Index(
+            "ix_discord_session_turn_stale_lease",
+            "lease_expires_at",
+            postgresql_where=text("status = 'running'"),
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    session_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("discord_conversation_sessions.id", ondelete="CASCADE"), nullable=False)
+    discord_message_id: Mapped[str] = mapped_column(Text, nullable=False)
+    sequence_number: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    request_text: Mapped[str] = mapped_column(Text, nullable=False)
+    # Nullable only for turns created before Sprint 2A. New API input requires
+    # both author fields and treats author_id as the stable identity.
+    author_id: Mapped[str | None] = mapped_column(Text)
+    author_display_name: Mapped[str | None] = mapped_column(Text)
+    reply_to_discord_message_id: Mapped[str | None] = mapped_column(Text)
+    system_prompt: Mapped[str | None] = mapped_column(Text)
+    response_text: Mapped[str | None] = mapped_column(Text)
+    model_used: Mapped[str | None] = mapped_column(String(255))
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="queued", server_default="queued")
+    available_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    error: Mapped[str | None] = mapped_column(Text)
+    worker_id: Mapped[str | None] = mapped_column(Text)
+    lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    max_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=3, server_default="3")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+class DiscordTurnDelivery(Base):
+    __tablename__ = "discord_turn_deliveries"
+    __table_args__ = (
+        CheckConstraint(
+            "chunk_index >= 0",
+            name="ck_discord_turn_deliveries_chunk_index",
+        ),
+        UniqueConstraint(
+            "turn_id",
+            "chunk_index",
+            name="uq_discord_turn_delivery_chunk",
+        ),
+        UniqueConstraint(
+            "discord_message_id",
+            name="uq_discord_turn_delivery_message",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        primary_key=True,
+        default=uuid4,
+    )
+    turn_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("discord_session_turns.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    discord_message_id: Mapped[str] = mapped_column(Text, nullable=False)
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+
+class DiscordMemoryCandidate(Base):
+    __tablename__ = "discord_memory_candidates"
+    __table_args__ = (
+        CheckConstraint(
+            "confidence IS NULL OR (confidence >= 0 AND confidence <= 1)",
+            name="ck_discord_memory_candidates_confidence",
+        ),
+        CheckConstraint(
+            f"operation IS NULL OR operation IN ({sql_values(DISCORD_MEMORY_OPERATIONS_V1)})",
+            name="ck_discord_memory_candidates_operation",
+        ),
+        CheckConstraint(
+            f"scope IS NULL OR scope IN ({sql_values(DISCORD_MEMORY_SCOPES_V1)})",
+            name="ck_discord_memory_candidates_scope",
+        ),
+        CheckConstraint(
+            f"filter_decision IN ({sql_values(DISCORD_MEMORY_FILTER_DECISIONS_V3)})",
+            name="ck_discord_memory_candidates_filter_decision",
+        ),
+        CheckConstraint(
+            f"filter_reason_code IN ({sql_values(DISCORD_MEMORY_FILTER_REASON_CODES_V1)})",
+            name="ck_discord_memory_candidates_filter_reason_code",
+        ),
+        CheckConstraint(
+            f"validation_status IN ({sql_values(DISCORD_MEMORY_CANDIDATE_VALIDATION_STATUSES_V2)})",
+            name="ck_discord_memory_candidates_validation_status",
+        ),
+        CheckConstraint(
+            f"decision IN ({sql_values(DISCORD_MEMORY_CANDIDATE_DECISIONS_V1)})",
+            name="ck_discord_memory_candidates_decision",
+        ),
+        UniqueConstraint(
+            "source_turn_id",
+            "extractor_schema_version",
+            name="uq_discord_memory_candidate_turn_schema",
+        ),
+        UniqueConstraint(
+            "source_discord_message_id",
+            "extractor_schema_version",
+            name="uq_discord_memory_candidate_message_schema",
+        ),
+        Index(
+            "ix_discord_memory_candidates_decision_not_before",
+            "decision",
+            "not_before",
+        ),
+        Index(
+            "ix_discord_memory_candidates_conflict_decision_created",
+            "conflict_key",
+            "decision",
+            "created_at",
+        ),
+        Index(
+            "ix_discord_memory_candidates_expires_at",
+            "expires_at",
+        ),
+        Index(
+            "ix_discord_memory_candidates_guild_author_created",
+            "guild_id",
+            "source_author_id",
+            "created_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    source_turn_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("discord_session_turns.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    session_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("discord_conversation_sessions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    source_discord_message_id: Mapped[str] = mapped_column(Text, nullable=False)
+    source_author_id: Mapped[str] = mapped_column(Text, nullable=False)
+    source_author_display_name: Mapped[str | None] = mapped_column(Text)
+    guild_id: Mapped[str] = mapped_column(Text, nullable=False)
+    channel_id: Mapped[str] = mapped_column(Text, nullable=False)
+    thread_id: Mapped[str | None] = mapped_column(Text)
+    extractor_schema_version: Mapped[str] = mapped_column(Text, nullable=False)
+    extractor_model: Mapped[str | None] = mapped_column(Text)
+    filter_decision: Mapped[str] = mapped_column(Text, nullable=False)
+    filter_reason_code: Mapped[str] = mapped_column(Text, nullable=False)
+    raw_output: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    normalized_output: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    operation: Mapped[str | None] = mapped_column(Text)
+    memory_type: Mapped[str | None] = mapped_column(Text)
+    subject_type: Mapped[str | None] = mapped_column(Text)
+    subject_id: Mapped[str | None] = mapped_column(Text)
+    scope: Mapped[str | None] = mapped_column(Text)
+    fact_key: Mapped[str | None] = mapped_column(Text)
+    canonical_fact: Mapped[str | None] = mapped_column(Text)
+    evidence_text: Mapped[str | None] = mapped_column(Text)
+    confidence: Mapped[Decimal | None] = mapped_column(Numeric(4, 3))
+    target_memory_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("discord_memories.id", ondelete="RESTRICT"),
+    )
+    validation_status: Mapped[str] = mapped_column(Text, nullable=False)
+    decision: Mapped[str] = mapped_column(Text, nullable=False)
+    conflict_key: Mapped[str | None] = mapped_column(Text)
+    proposed_value_hash: Mapped[str | None] = mapped_column(Text)
+    not_before: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    error_code: Mapped[str | None] = mapped_column(Text)
+    error_message: Mapped[str | None] = mapped_column(Text)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reviewed_by: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class DiscordMemory(Base):
+    __tablename__ = "discord_memories"
+    __table_args__ = (
+        CheckConstraint("version >= 1", name="ck_discord_memories_version"),
+        CheckConstraint(
+            f"status IN ({sql_values(DISCORD_MEMORY_STATUSES_V1)})",
+            name="ck_discord_memories_status",
+        ),
+        CheckConstraint(
+            f"scope IN ({sql_values(DISCORD_MEMORY_SCOPES_V1)})",
+            name="ck_discord_memories_scope",
+        ),
+        CheckConstraint(
+            f"index_status IN ({sql_values(DISCORD_MEMORY_INDEX_STATUSES_V1)})",
+            name="ck_discord_memories_index_status",
+        ),
+        CheckConstraint(
+            f"validation_status IN ({sql_values(DISCORD_MEMORY_VALIDATION_STATUSES_V1)})",
+            name="ck_discord_memories_validation_status",
+        ),
+        CheckConstraint(
+            "("
+            "(scope IN ('member_in_guild','guild') AND channel_id IS NULL AND thread_id IS NULL)"
+            " OR (scope = 'channel' AND channel_id IS NOT NULL AND thread_id IS NULL)"
+            " OR (scope = 'thread' AND channel_id IS NOT NULL AND thread_id IS NOT NULL)"
+            ")",
+            name="ck_discord_memories_scope_location",
+        ),
+        UniqueConstraint(
+            "origin_candidate_id",
+            name="uq_discord_memories_origin_candidate",
+        ),
+        Index(
+            "uq_discord_memory_active_member",
+            "guild_id",
+            "subject_type",
+            "subject_id",
+            "fact_key",
+            unique=True,
+            postgresql_where=text("status = 'active' AND scope = 'member_in_guild'"),
+        ),
+        Index(
+            "uq_discord_memory_active_guild",
+            "guild_id",
+            "subject_type",
+            "subject_id",
+            "fact_key",
+            unique=True,
+            postgresql_where=text("status = 'active' AND scope = 'guild'"),
+        ),
+        Index(
+            "uq_discord_memory_active_channel",
+            "guild_id",
+            "channel_id",
+            "subject_type",
+            "subject_id",
+            "fact_key",
+            unique=True,
+            postgresql_where=text("status = 'active' AND scope = 'channel'"),
+        ),
+        Index(
+            "uq_discord_memory_active_thread",
+            "guild_id",
+            "channel_id",
+            "thread_id",
+            "subject_type",
+            "subject_id",
+            "fact_key",
+            unique=True,
+            postgresql_where=text("status = 'active' AND scope = 'thread'"),
+        ),
+        Index(
+            "uq_discord_memory_member_version",
+            "guild_id",
+            "subject_type",
+            "subject_id",
+            "fact_key",
+            "version",
+            unique=True,
+            postgresql_where=text("scope = 'member_in_guild'"),
+        ),
+        Index(
+            "uq_discord_memory_guild_version",
+            "guild_id",
+            "subject_type",
+            "subject_id",
+            "fact_key",
+            "version",
+            unique=True,
+            postgresql_where=text("scope = 'guild'"),
+        ),
+        Index(
+            "uq_discord_memory_channel_version",
+            "guild_id",
+            "channel_id",
+            "subject_type",
+            "subject_id",
+            "fact_key",
+            "version",
+            unique=True,
+            postgresql_where=text("scope = 'channel'"),
+        ),
+        Index(
+            "uq_discord_memory_thread_version",
+            "guild_id",
+            "channel_id",
+            "thread_id",
+            "subject_type",
+            "subject_id",
+            "fact_key",
+            "version",
+            unique=True,
+            postgresql_where=text("scope = 'thread'"),
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    guild_id: Mapped[str] = mapped_column(Text, nullable=False)
+    scope: Mapped[str] = mapped_column(Text, nullable=False)
+    subject_type: Mapped[str] = mapped_column(Text, nullable=False)
+    subject_id: Mapped[str] = mapped_column(Text, nullable=False)
+    channel_id: Mapped[str | None] = mapped_column(Text)
+    thread_id: Mapped[str | None] = mapped_column(Text)
+    memory_type: Mapped[str] = mapped_column(Text, nullable=False)
+    fact_key: Mapped[str] = mapped_column(Text, nullable=False)
+    canonical_fact: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(Text, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    origin_candidate_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("discord_memory_candidates.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    supersedes_memory_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("discord_memories.id", ondelete="RESTRICT"),
+    )
+    valid_from: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    valid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    extractor_model: Mapped[str] = mapped_column(Text, nullable=False)
+    extractor_schema_version: Mapped[str] = mapped_column(Text, nullable=False)
+    validation_status: Mapped[str] = mapped_column(Text, nullable=False)
+    index_status: Mapped[str] = mapped_column(Text, nullable=False)
+    indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    index_error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class DiscordMemorySource(Base):
+    __tablename__ = "discord_memory_sources"
+    __table_args__ = (
+        CheckConstraint(
+            f"source_role IN ({sql_values(DISCORD_MEMORY_SOURCE_ROLES_V1)})",
+            name="ck_discord_memory_sources_role",
+        ),
+        UniqueConstraint(
+            "memory_id",
+            "source_turn_id",
+            "source_role",
+            name="uq_discord_memory_source_role",
+        ),
+    )
+
+    memory_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("discord_memories.id", ondelete="RESTRICT"),
+        primary_key=True,
+    )
+    candidate_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("discord_memory_candidates.id", ondelete="RESTRICT"),
+        primary_key=True,
+    )
+    source_turn_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("discord_session_turns.id", ondelete="RESTRICT"),
+        primary_key=True,
+    )
+    source_discord_message_id: Mapped[str] = mapped_column(Text, nullable=False)
+    source_author_id: Mapped[str] = mapped_column(Text, nullable=False)
+    source_role: Mapped[str] = mapped_column(Text, primary_key=True)
+    evidence_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
 
 
 class Message(Base):

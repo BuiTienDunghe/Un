@@ -25,21 +25,81 @@ class ChatService:
         self.system_prompt = (Path(__file__).parents[1] / "prompts" / "general_system.md").read_text(encoding="utf-8")
         self.memory_prompt = (Path(__file__).parents[1] / "prompts" / "memory_system.md").read_text(encoding="utf-8")
 
-    def respond(self, message: str, conversation_id: str | None, use_memory: bool = False, system_prompt: str | None = None) -> tuple[str, str, str, int]:
+    def respond(
+        self,
+        message: str,
+        conversation_id: str | None,
+        use_memory: bool = False,
+        system_prompt: str | None = None,
+    ) -> tuple[str, str, str, int]:
+        return self._respond(
+            message,
+            conversation_id,
+            use_memory,
+            system_prompt,
+        )
+
+    def respond_with_context(
+        self,
+        message: str,
+        conversation_id: str,
+        *,
+        model_history: list[dict[str, str]],
+        current_model_message: dict[str, str],
+        context_system_prompt: str,
+        system_prompt: str | None = None,
+    ) -> tuple[str, str, str, int]:
+        """Run chat with caller-built trusted context while persisting raw text.
+
+        The ordinary Web UI path continues through ``respond`` and therefore
+        retains its existing store-backed history behavior.
+        """
+        return self._respond(
+            message,
+            conversation_id,
+            False,
+            system_prompt,
+            model_history=model_history,
+            current_model_message=current_model_message,
+            context_system_prompt=context_system_prompt,
+        )
+
+    def _respond(
+        self,
+        message: str,
+        conversation_id: str | None,
+        use_memory: bool,
+        system_prompt: str | None,
+        *,
+        model_history: list[dict[str, str]] | None = None,
+        current_model_message: dict[str, str] | None = None,
+        context_system_prompt: str | None = None,
+    ) -> tuple[str, str, str, int]:
         if conversation_id is None:
             conversation_id = str(uuid4())
             self.store.create_conversation(conversation_id)
         elif not self.store.conversation_exists(conversation_id):
             raise ConversationNotFoundError(conversation_id)
 
-        history = self.store.get_messages(conversation_id, self.history_limit)
+        history = (
+            self.store.get_messages(conversation_id, self.history_limit)
+            if model_history is None
+            else model_history
+        )
         messages = [{"role": "system", "content": system_prompt or self.system_prompt}]
+        if context_system_prompt:
+            messages.append({"role": "system", "content": context_system_prompt})
         if use_memory and self.memory_service is not None:
             memories = self.memory_service.search(message, top_k=5)
             if memories:
                 context = "\n".join(f"- {memory['content']}" for memory in memories)
                 messages.append({"role": "system", "content": f"{self.memory_prompt}\n\nRelevant memories:\n{context}"})
-        messages.extend([*history, {"role": "user", "content": message}])
+        messages.extend(
+            [
+                *history,
+                current_model_message or {"role": "user", "content": message},
+            ]
+        )
         started = perf_counter()
         answer, model_used = self.router.chat("general", messages)
         latency_ms = int((perf_counter() - started) * 1000)
