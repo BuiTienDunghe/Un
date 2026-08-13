@@ -61,6 +61,13 @@ models:
     provider: ollama
     name: qwen3-embedding:0.6b
     context: 32768
+    # Cache identity — all three keys are required for the PostgreSQL
+    # embedding cache to engage. Bump `revision` whenever the underlying
+    # model weights change; cached vectors are then safely invalidated.
+    # `dimensions` must match the model's output size or lookups miss.
+    revision: qwen3-embedding-0.6b-r1
+    normalization: raw
+    dimensions: 1024
   vision:
     provider: ollama
     name: qwen3.5:9b

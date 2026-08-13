@@ -220,6 +220,32 @@ class PostgresDocumentRepository:
             statement = statement.where(Document.id.in_(document_ids))
         return list(self.session.execute(statement).tuples())
 
+    def active_chunk_fingerprint(self) -> tuple[tuple[object, ...], ...]:
+        """Cheap aggregate identity of the active retrieval corpus.
+
+        One grouped query replaces scanning every chunk row. ``updated_at`` is
+        deliberately excluded: retrieval touches bump it via ``onupdate`` and
+        must never invalidate the sparse index. Renames and source removal are
+        covered by ``original_filename``/``source_available``.
+        """
+        statement = (
+            select(
+                Document.id,
+                DocumentVersion.id,
+                Document.original_filename,
+                Document.source_available,
+                DocumentVersion.activated_at,
+                func.count(DocumentChunk.id),
+                func.max(DocumentChunk.created_at),
+            )
+            .join(DocumentVersion, DocumentVersion.id == Document.active_version_id)
+            .join(DocumentChunk, and_(DocumentChunk.document_id == Document.id, DocumentChunk.version_id == DocumentVersion.id))
+            .where(Document.status == "indexed", DocumentVersion.status == "active")
+            .group_by(Document.id, DocumentVersion.id, Document.original_filename, Document.source_available, DocumentVersion.activated_at)
+            .order_by(Document.id, DocumentVersion.id)
+        )
+        return tuple(tuple(row) for row in self.session.execute(statement))
+
     def active_chunks_by_ids(self, chunk_ids: list[str]) -> dict[str, tuple[Document, DocumentVersion, DocumentChunk]]:
         if not chunk_ids:
             return {}
@@ -239,6 +265,20 @@ class PostgresDocumentRepository:
         key = f"{job_type}:{version_id}:{run_id}"
         existing = self.session.scalar(select(Job).where(Job.idempotency_key == key))
         if existing:
+            if existing.status in {"failed", "cancelled", "completed"}:
+                # An explicit retry of the same run reuses the durable job
+                # identity: reset it to queued with a fresh attempt budget and
+                # republish its outbox event so the dispatcher picks it up.
+                existing.status, existing.attempts = "queued", 0
+                existing.error_code = existing.error_message = None
+                existing.worker_id = existing.redis_job_id = None
+                existing.lease_expires_at = existing.heartbeat_at = None
+                existing.started_at = existing.completed_at = existing.available_at = None
+                event = self.session.scalar(select(OutboxEvent).where(OutboxEvent.idempotency_key == f"job_enqueue:{key}"))
+                if event:
+                    event.status, event.available_at, event.last_error = "pending", None, None
+                else:
+                    self.create_job_outbox_event(existing)
             return existing
         job = Job(id=new_id("job"), job_type=job_type, document_id=document_id, version_id=version_id, ingestion_run_id=run_id, status="queued", max_attempts=max_attempts, idempotency_key=key, payload={})
         self.session.add(job)

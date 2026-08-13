@@ -26,9 +26,9 @@ def bootstrap_document(client: httpx.Client, base_url: str, file_path: Path) -> 
         status = client.get(f"{base_url}/documents/ingestions/{run_id}")
         status.raise_for_status()
         state = status.json()["status"]
-        if state == "indexed":
+        if state == "completed":
             return document_id
-        if state in {"failed", "partial", "cancelled"}:
+        if state in {"failed", "cancelled"}:
             raise RuntimeError(status.json().get("error_message") or "Document indexing failed")
         sleep(1)
     raise TimeoutError("Document did not finish indexing within 180 seconds")
@@ -41,7 +41,9 @@ def contains_all(text: str, terms: list[str]) -> bool:
 
 def reciprocal_rank(sources: list[dict[str, object]], expected_terms: list[str]) -> float:
     for rank, source in enumerate(sources, start=1):
-        if contains_all(str(source.get("excerpt", "")), expected_terms):
+        # Match against the full chunk text; the 300-char excerpt is a display
+        # preview and misses most of a 480-token chunk.
+        if contains_all(str(source.get("content") or source.get("excerpt", "")), expected_terms):
             return 1 / rank
     return 0.0
 

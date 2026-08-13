@@ -18,7 +18,7 @@ def rag_chat(payload: RagChatRequest, request: Request) -> RagChatResponse | Str
         if payload.stream:
             tokens, model_used, sources = request.app.state.rag_service.stream_response(payload.message, payload.top_k, document_scope)
             response_sources = [
-                {"document_id": str(source["document_id"]), "filename": str(source["filename"]), "chunk_id": int(source["chunk_index"]), "index_version": int(source.get("index_version", 0)), "page": source.get("page"), "page_start": source.get("page_start"), "page_end": source.get("page_end"), "locations": source.get("locations", []), "heading_path": source.get("heading_path"), "section_title": source.get("section_title"), "block_type": str(source.get("block_type", "paragraph")), "source_available": bool(source.get("source_available", False)), "verifiable": bool(source.get("verifiable", False)), "score": float(source["score"]), "excerpt": str(source["content"])[:300], "extraction_method": str(source.get("extraction_method", "native"))}
+                {"document_id": str(source["document_id"]), "filename": str(source["filename"]), "chunk_id": str(source.get("chunk_id", source.get("chunk_index", ""))), "chunk_index": int(source.get("chunk_index", 0)), "index_version": int(source.get("index_version", 0)), "page": source.get("page"), "page_start": source.get("page_start"), "page_end": source.get("page_end"), "locations": source.get("locations", []), "heading_path": source.get("heading_path"), "section_title": source.get("section_title"), "block_type": str(source.get("block_type", "paragraph")), "source_available": bool(source.get("source_available", False)), "verifiable": bool(source.get("verifiable", False)), "score": float(source["score"]), "excerpt": str(source["content"])[:300], "content": str(source["content"]), "extraction_method": str(source.get("extraction_method", "native"))}
                 for source in sources
             ]
 
@@ -37,7 +37,8 @@ def rag_chat(payload: RagChatRequest, request: Request) -> RagChatResponse | Str
             RagSource(
                 document_id=str(source["document_id"]),
                 filename=str(source["filename"]),
-                chunk_id=int(source["chunk_index"]),
+                chunk_id=str(source.get("chunk_id", source.get("chunk_index", ""))),
+                chunk_index=int(source.get("chunk_index", 0)),
                 index_version=int(source.get("index_version", 0)),
                 page=source.get("page"),
                 page_start=source.get("page_start"),
@@ -50,6 +51,7 @@ def rag_chat(payload: RagChatRequest, request: Request) -> RagChatResponse | Str
                 verifiable=bool(source.get("verifiable", False)),
                 score=float(source["score"]),
                 excerpt=str(source["content"])[:300],
+                content=str(source["content"]),
                 extraction_method=str(source.get("extraction_method", "native")),
             )
             for source in sources

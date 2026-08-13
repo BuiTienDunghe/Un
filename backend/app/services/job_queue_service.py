@@ -28,10 +28,23 @@ class JobQueueService:
             memory_queue_name=self.memory_queue_name,
         )
         try:
-            Job.fetch(job_id, connection=self.redis)
-            return job_id
+            existing = Job.fetch(job_id, connection=self.redis)
         except Exception:
-            pass
+            existing = None
+        if existing is not None:
+            try:
+                status = str(existing.get_status(refresh=False))
+            except Exception:
+                status = ""
+            # Only a still-live transport counts as already enqueued. A failed
+            # or finished RQ job lingering in a registry (failure_ttl) must not
+            # swallow a durable re-enqueue of the same job ID.
+            if status in {"queued", "started", "scheduled", "deferred"}:
+                return job_id
+            try:
+                existing.delete()
+            except Exception:
+                pass
         queue = Queue(
             f"{self.prefix}:{route.queue_name}",
             connection=self.redis,

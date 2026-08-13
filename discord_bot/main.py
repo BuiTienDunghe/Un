@@ -6,6 +6,7 @@ import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from time import monotonic
 
 import discord
 from discord import app_commands
@@ -145,11 +146,25 @@ class DiscordConversationGateway:
         system_prompt: str,
         member_context_limit: int,
         persistent_sessions_enabled: bool,
+        poll_budget_seconds: float | None = None,
     ) -> None:
         self.api_client = api_client
         self.system_prompt = system_prompt
         self.member_context_limit = member_context_limit
         self.persistent_sessions_enabled = persistent_sessions_enabled
+        # Waiting behind earlier FIFO turns must survive at least one full
+        # model execution, so the budget follows the execute timeout.
+        self.poll_budget_seconds = (
+            poll_budget_seconds
+            if poll_budget_seconds is not None
+            else float(
+                getattr(
+                    getattr(api_client, "settings", None),
+                    "turn_execute_timeout_seconds",
+                    180.0,
+                )
+            )
+        )
         self.conversations: dict[str, str] = {}
 
     def prompt_for(self, guild: discord.Guild | None) -> str:
@@ -203,10 +218,13 @@ class DiscordConversationGateway:
             system_prompt=self.prompt_for(guild),
         )
         turn_id = turn.turn_id
-        for _ in range(600):
+        deadline = monotonic() + self.poll_budget_seconds
+        while True:
             execution = await self.api_client.execute_discord_turn(turn_id)
             if execution.status == "requeued" and execution.replacement_turn_id:
                 turn_id = execution.replacement_turn_id
+                if monotonic() >= deadline:
+                    break
                 continue
             if (
                 execution.status == "running"
@@ -225,7 +243,9 @@ class DiscordConversationGateway:
                 raise BackendClientError(
                     f"Discord turn ended with status {execution.status}."
                 )
-            await asyncio.sleep(0.1)
+            if monotonic() >= deadline:
+                break
+            await asyncio.sleep(0.5)
         raise BackendClientError("Discord turn did not become ready before the polling deadline.")
 
     async def delivered(

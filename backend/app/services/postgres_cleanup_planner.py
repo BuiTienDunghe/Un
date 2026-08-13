@@ -19,7 +19,7 @@ from app.postgres.models import Document, DocumentChunk, DocumentPage, DocumentV
 
 
 BUSY_JOB_STATUSES = ("queued", "running", "retrying", "cancel_requested")
-BUSY_RUN_STATUSES = ("queued", "processing", "partial")
+BUSY_RUN_STATUSES = ("queued", "processing")
 
 
 @dataclass(frozen=True)

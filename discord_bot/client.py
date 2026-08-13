@@ -22,7 +22,9 @@ def split_for_discord(message: str, limit: int = SAFE_MESSAGE_LIMIT) -> list[str
         parts.append(remaining[:split_at].rstrip())
         remaining = remaining[split_at:].lstrip()
     parts.append(remaining)
-    return parts
+    # Discord rejects empty/whitespace-only message content.
+    cleaned = [part for part in parts if part.strip()]
+    return cleaned or ["(No response.)"]
 
 
 class LocalAgentDiscordBot(discord.Client):

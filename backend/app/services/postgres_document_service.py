@@ -155,8 +155,14 @@ class PostgresDocumentService:
         path = self.documents_path / document_id
         path.mkdir(parents=True, exist_ok=True)
         target = path / f"original{suffix}"
-        target.write_bytes(content)
+        staged = path / f"original{suffix}.incoming"
+        backup = path / f"original{suffix}.previous"
+        staged.write_bytes(content)
+        database_committed = False
         try:
+            if target.exists():
+                target.replace(backup)
+            staged.replace(target)
             with self.sessions.begin() as session:
                 row = session.get(Document, document_id)
                 if not row:
@@ -164,14 +170,18 @@ class PostgresDocumentService:
                 if row.content_hash == digest:
                     return {"document_id": row.id, "filename": row.original_filename, "status": row.status, "duplicate": True, "content_hash": digest}
                 row.stored_filename, row.mime_type, row.content_hash, row.file_size, row.source_available = f"{document_id}{suffix}", mime_type, digest, len(content), True
+            database_committed = True
             run = self.enqueue_index(document_id)
             return {"document_id": document_id, "filename": filename, "status": "processing", "duplicate": False, "content_hash": digest, "version_id": run["version_id"], "run_id": run["id"], "index_version": run["index_version"], "stage": run["stage"]}
         except Exception:
-            target.unlink(missing_ok=True)
+            # Once the row carries the new hash, the new bytes must stay: the
+            # database and the disk may never disagree about the source.
+            if not database_committed and backup.exists():
+                backup.replace(target)
+            staged.unlink(missing_ok=True)
             raise
-        except Exception:
-            shutil.rmtree(folder, ignore_errors=True)
-            raise
+        finally:
+            backup.unlink(missing_ok=True)
 
     def _load(self, document_id: str) -> tuple[Document, IngestionRun | None, DocumentVersion | None]:
         with self.sessions() as session:
@@ -291,8 +301,16 @@ class PostgresDocumentService:
             except InvalidStateTransition as error:
                 raise ValueError(str(error)) from error
             version = session.get(DocumentVersion, run.version_id)
+            document = session.get(Document, run.document_id)
+            if document is not None:
+                document.status = "processing"
+            job = repo.create_job("extract_document", run.document_id, run.version_id, run.id, self.job_max_attempts) if self.job_queue else None
+            session.flush()
             payload = self._run_payload(run, version)
-        threading.Thread(target=self._run_index, args=(run_id, str(payload["document_id"]), str(payload["version_id"]), None), daemon=True).start()
+            if job:
+                payload["job_id"], payload["queue_pending"] = job.id, True
+        if not self.job_queue:
+            threading.Thread(target=self._run_index, args=(run_id, str(payload["document_id"]), str(payload["version_id"]), None), daemon=True).start()
         return payload
 
     async def replace_source(self, document_id: str, file: UploadFile, max_bytes: int) -> dict[str, object]:

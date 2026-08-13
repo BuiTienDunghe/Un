@@ -64,16 +64,13 @@ class PostgresBm25Service:
             ]
 
     def _current_fingerprint(self) -> tuple[tuple[object, ...], ...]:
+        # A single aggregate query: the previous per-chunk scan made every
+        # /rag/chat pay O(corpus) just to detect "nothing changed".
         with self.sessions() as session:
-            rows = PostgresDocumentRepository(session).active_chunk_snapshot()
-            grouped: dict[tuple[str, str], list[object]] = {}
-            for document, version, chunk in rows:
-                key = (document.id, version.id)
-                state = grouped.setdefault(key, [document.updated_at, version.activated_at, 0, None])
-                state[2] = int(state[2]) + 1
-                stamps = [item for item in (state[3], chunk.created_at) if item is not None]
-                state[3] = max(stamps) if stamps else None
-            return tuple(sorted((doc_id, version_id, self._stamp(values[0]), self._stamp(values[1]), values[2], self._stamp(values[3])) for (doc_id, version_id), values in grouped.items()))
+            return tuple(
+                (doc_id, version_id, filename, source_available, self._stamp(activated_at), int(chunk_count), self._stamp(newest_chunk))
+                for doc_id, version_id, filename, source_available, activated_at, chunk_count, newest_chunk in PostgresDocumentRepository(session).active_chunk_fingerprint()
+            )
 
     def invalidate(self) -> None:
         with self._lock:

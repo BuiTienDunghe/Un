@@ -56,6 +56,27 @@ services:
       OLLAMA_BASE_URL: http://host.docker.internal:11434
     volumes: ["./data:/app/data"]
     depends_on: [redis]
+  worker-memory:
+    build: .
+    profiles: ["workers"]
+    command: rq worker --with-scheduler --url redis://redis:6379/0 ${RQ_QUEUE_PREFIX:-local-ai:dev}:${DISCORD_MEMORY_QUEUE_NAME:-memory_extract}
+    environment:
+      INGESTION_EXECUTION_BACKEND: rq
+      DATABASE_URL: ${CONTAINER_DATABASE_URL:-${DATABASE_URL}}
+      REDIS_URL: redis://redis:6379/0
+      RQ_QUEUE_PREFIX: ${RQ_QUEUE_PREFIX:-local-ai:dev}
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      DISCORD_MEMORY_INGESTION_ENABLED: ${DISCORD_MEMORY_INGESTION_ENABLED:-false}
+      DISCORD_MEMORY_EXTRACTOR_ENABLED: ${DISCORD_MEMORY_EXTRACTOR_ENABLED:-false}
+      DISCORD_MEMORY_EXTRACTOR_MODEL: ${DISCORD_MEMORY_EXTRACTOR_MODEL:-qwen3.5:2b}
+      DISCORD_MEMORY_EXTRACTOR_SCHEMA_VERSION: ${DISCORD_MEMORY_EXTRACTOR_SCHEMA_VERSION:-v1}
+      DISCORD_MEMORY_EXTRACTOR_NUM_CTX: ${DISCORD_MEMORY_EXTRACTOR_NUM_CTX:-4096}
+      DISCORD_MEMORY_EXTRACTOR_TIMEOUT_SECONDS: ${DISCORD_MEMORY_EXTRACTOR_TIMEOUT_SECONDS:-60}
+      DISCORD_MEMORY_EXTRACTOR_RETRY_COUNT: ${DISCORD_MEMORY_EXTRACTOR_RETRY_COUNT:-1}
+      DISCORD_MEMORY_QUEUE_NAME: ${DISCORD_MEMORY_QUEUE_NAME:-memory_extract}
+      JOB_STALE_TIMEOUT_SECONDS: ${JOB_STALE_TIMEOUT_SECONDS:-900}
+    volumes: ["./data:/app/data"]
+    depends_on: [redis]
   outbox-dispatcher:
     build: .
     profiles: ["workers"]

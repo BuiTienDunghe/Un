@@ -5,14 +5,18 @@ class RagChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=10_000)
     document_id: str | None = Field(default=None, max_length=64)
     document_ids: list[str] | None = Field(default=None, max_length=100)
-    top_k: int = Field(default=5, ge=1, le=20)
+    # None defers to the server-side default from models.yaml (rag.top_k).
+    top_k: int | None = Field(default=None, ge=1, le=20)
     stream: bool = False
 
 
 class RagSource(BaseModel):
     document_id: str
     filename: str
-    chunk_id: int
+    # Real ``document_chunks.id`` row identity; ``chunk_index`` is the ordinal
+    # position inside the version and is kept for display only.
+    chunk_id: str
+    chunk_index: int
     index_version: int
     page: int | None = None
     page_start: int | None = None
@@ -25,6 +29,9 @@ class RagSource(BaseModel):
     verifiable: bool = False
     score: float
     excerpt: str
+    # Full chunk text as placed in the model context; the excerpt above is a
+    # display preview. Consumers verifying citations should use this field.
+    content: str
     extraction_method: str
 
 

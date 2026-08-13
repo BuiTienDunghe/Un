@@ -89,7 +89,7 @@ Runtime chỉ truy vấn Qdrant point có đầy đủ `version_id` và `chunk_i
 - Thay thế tài liệu không ghi đè version đang hoạt động trước khi version mới hoàn tất.
 - SQLite archive lịch sử chỉ dành cho migration/audit read-only, không được đưa lại vào runtime path.
 
-Alembic head hiện tại là `20260719_11`.
+Alembic head hiện tại là `20260728_18`.
 
 ## Model mặc định
 

@@ -126,7 +126,13 @@ async def lifespan(app: FastAPI):
     reranker_config = rag_config.get("reranker", {})
     reranker_service = RerankerService(bool(reranker_config.get("enabled", False)), str(reranker_config.get("model", "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1")), int(reranker_config.get("candidate_limit", 15)))
     retrieval_service = PostgresRetrievalService(qdrant_store, router, postgres_sessions, PostgresBm25Service(postgres_sessions), reranker_service, str(rag_config.get("retrieval_mode", "hybrid")), int(rag_config.get("rrf_k", 60)))
-    app.state.rag_service = RagService(router, logging_service, retrieval_service)
+    app.state.rag_service = RagService(
+        router,
+        logging_service,
+        retrieval_service,
+        default_top_k=int(rag_config.get("top_k", 5)),
+        max_context_chunks=int(rag_config.get("max_context_chunks", 5)),
+    )
     try:
         yield
     finally:
