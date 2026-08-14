@@ -131,6 +131,8 @@ Không commit file `.env`, token Discord, JWT secret, mật khẩu database, bac
 
 ## Định hướng phát triển
 
+Kế hoạch phát triển tổng thể (phase, KPI, đối chiếu thị trường) nằm tại `docs/DEVELOPMENT_PLAN.md` — đây là tài liệu định hướng chính thức, thay cho danh sách dưới đây.
+
 - Mở rộng chính sách retention và backup theo môi trường triển khai.
 - Nâng độ bền vững của mapping hội thoại Discord qua lần khởi động lại bot.
 - Bổ sung đánh giá retrieval/model theo bộ tài liệu thực tế.
