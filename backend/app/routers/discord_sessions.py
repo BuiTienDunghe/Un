@@ -1,6 +1,8 @@
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
+
+from app.security.api_key import require_api_key
 
 from app.schemas.discord_schema import (
     DiscordSessionResolveRequest,
@@ -24,7 +26,9 @@ from app.services.discord_turn_service import (
 )
 
 
-router = APIRouter(prefix="/api/discord/sessions", tags=["discord-sessions"])
+# Every route here enqueues, claims, completes or cancels a Discord turn, so the
+# guard belongs on the router rather than repeated on each decorator.
+router = APIRouter(prefix="/api/discord/sessions", tags=["discord-sessions"], dependencies=[Depends(require_api_key)])
 
 
 @router.post("/resolve", response_model=DiscordSessionResolveResponse)

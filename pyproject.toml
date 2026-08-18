@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "local-ai-core"
+description = "Trợ lý AI tự lưu trữ: chat, hỏi đáp tài liệu có dẫn nguồn kiểm chứng được, kênh Discord — toàn bộ dữ liệu nằm trên máy của bạn."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Bui Tien Dung" }]
+keywords = ["rag", "fastapi", "postgresql", "qdrant", "ollama", "discord"]
+classifiers = [
+    # This distribution is for editable installs inside this repository only.
+    # `app` and `tools` are far too generic to ever claim on a public index.
+    "Private :: Do Not Upload",
+    "Framework :: FastAPI",
+    "Programming Language :: Python :: 3.11",
+]
+dynamic = ["version", "dependencies"]
+
+[project.urls]
+Homepage = "https://github.com/BuiTienDunghe/Un"
+Changelog = "https://github.com/BuiTienDunghe/Un/blob/main/CHANGELOG.md"
+
+[tool.setuptools]
+# Two import roots on purpose: `app` lives under backend/ (the test suite,
+# uvicorn and the worker scripts all run with cwd=backend), while discord_bot
+# and tools are imported from the repository root. Top-level names only — the
+# editable finder resolves sub-packages through the parent path, so a new
+# package under backend/app needs no edit here.
+packages = ["app", "discord_bot", "tools"]
+
+[tool.setuptools.package-dir]
+app = "backend/app"
+discord_bot = "discord_bot"
+tools = "tools"
+
+[tool.setuptools.dynamic]
+# One version, one home: backend/app/__init__.py. Read statically, so building
+# does not import the application.
+version = { attr = "app.__version__" }
+# requirements.txt stays the single source of truth for dependencies: both the
+# CI workflow and run-local-ai-core.bat install from it and must keep working.
+dependencies = { file = ["requirements.txt"] }

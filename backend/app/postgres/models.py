@@ -37,6 +37,15 @@ class Base(DeclarativeBase):
 
 class Document(Base):
     __tablename__ = "documents"
+    __table_args__ = (
+        # Named after what PostgreSQL actually created from the inline
+        # `unique=True` in 20260717_01, so the declaration and the database
+        # agree on one canonical form.
+        UniqueConstraint("content_hash", name="documents_content_hash_key"),
+        # Exists in the database since 20260717_01 but was never declared.
+        # Kept rather than dropped: migrations here are additive only.
+        Index("ix_documents_cleanup_status", "status", "deleted_requested_at"),
+    )
 
     id: Mapped[str] = mapped_column(String(128), primary_key=True, default=lambda: new_id("doc"))
     original_filename: Mapped[str] = mapped_column(Text)
@@ -50,15 +59,17 @@ class Document(Base):
     # A legacy source-less document has no trustworthy byte hash.  Phase 5B
     # preserves that fact instead of inventing a value; upload/reindex paths
     # still supply a real hash for normal documents.
-    content_hash: Mapped[str | None] = mapped_column(String(64), unique=True, index=True, nullable=True)
+    content_hash: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
     status: Mapped[str] = mapped_column(String(32), index=True, default="uploaded")
     active_version_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     source_available: Mapped[bool] = mapped_column(Boolean, default=True)
     source_removed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     pinned: Mapped[bool] = mapped_column(Boolean, default=False)
     retention_policy: Mapped[str] = mapped_column(String(32), default="permanent")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    # `nullable=True` matches the database: these were created with a server
+    # default and no NOT NULL, so the annotation alone was claiming otherwise.
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=True)
     indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_accessed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     error_message: Mapped[str | None] = mapped_column(Text)
@@ -79,7 +90,7 @@ class DocumentVersion(Base):
     ocr_model: Mapped[str | None] = mapped_column(String(255))
     embedding_model: Mapped[str | None] = mapped_column(String(255))
     chunking_config: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=True)
     activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     superseded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -133,12 +144,15 @@ class DocumentChunk(Base):
     )
 
     id: Mapped[str] = mapped_column(String(128), primary_key=True, default=lambda: new_id("chunk"))
-    chunk_uid: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    # Uniqueness comes from uq_document_chunk_uid above, which is the form the
+    # database has; the column flags asked for a second index nobody created.
+    chunk_uid: Mapped[str] = mapped_column(String(128))
     document_id: Mapped[str] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"), index=True)
     version_id: Mapped[str] = mapped_column(ForeignKey("document_versions.id", ondelete="CASCADE"), index=True)
     chunk_index: Mapped[int] = mapped_column(Integer)
     content: Mapped[str] = mapped_column(Text)
-    content_hash: Mapped[str] = mapped_column(String(64), index=True)
+    # Written on insert, never used as a query predicate anywhere in backend/.
+    content_hash: Mapped[str] = mapped_column(String(64))
     page_start: Mapped[int | None] = mapped_column(Integer)
     page_end: Mapped[int | None] = mapped_column(Integer)
     # Phase 5B preserves the citation positions and semantic heading path that
@@ -152,18 +166,28 @@ class DocumentChunk(Base):
     token_count: Mapped[int | None] = mapped_column(Integer)
     extraction_method: Mapped[str] = mapped_column(String(16), default="native")
     status: Mapped[str] = mapped_column(String(32), default="staging")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=True)
 
 
 class Job(Base):
     __tablename__ = "jobs"
+    __table_args__ = (
+        # These constraints exist in the database under these names since
+        # 20260717_03. Declaring them by name (instead of a bare `unique=True`)
+        # is what lets Alembic compare them at all.
+        UniqueConstraint("idempotency_key", name="uq_jobs_idempotency_key"),
+        UniqueConstraint("redis_job_id", name="uq_jobs_redis_job_id"),
+        Index("ix_jobs_status_available", "status", "available_at"),
+    )
 
     id: Mapped[str] = mapped_column(String(128), primary_key=True, default=lambda: new_id("job"))
     job_type: Mapped[str] = mapped_column(String(64), index=True)
     document_id: Mapped[str | None] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"), index=True)
     version_id: Mapped[str | None] = mapped_column(ForeignKey("document_versions.id", ondelete="CASCADE"), index=True)
     ingestion_run_id: Mapped[str | None] = mapped_column(ForeignKey("ingestion_runs.id", ondelete="CASCADE"), index=True)
-    status: Mapped[str] = mapped_column(String(32), index=True, default="queued")
+    # ix_jobs_status_available above already covers every status predicate;
+    # a standalone index here would be a new redundant one.
+    status: Mapped[str] = mapped_column(String(32), default="queued")
     priority: Mapped[int] = mapped_column(Integer, default=0)
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     max_attempts: Mapped[int] = mapped_column(Integer, default=3)
@@ -171,8 +195,8 @@ class Job(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     worker_id: Mapped[str | None] = mapped_column(String(128))
-    idempotency_key: Mapped[str | None] = mapped_column(String(255), unique=True)
-    redis_job_id: Mapped[str | None] = mapped_column(String(128), unique=True)
+    idempotency_key: Mapped[str | None] = mapped_column(String(255))
+    redis_job_id: Mapped[str | None] = mapped_column(String(128))
     error_code: Mapped[str | None] = mapped_column(String(64))
     error_message: Mapped[str | None] = mapped_column(Text)
     heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -183,12 +207,15 @@ class Job(Base):
 
 class OutboxEvent(Base):
     __tablename__ = "outbox_events"
+    __table_args__ = (UniqueConstraint("idempotency_key", name="uq_outbox_events_idempotency_key"),)
 
     id: Mapped[str] = mapped_column(String(128), primary_key=True, default=lambda: new_id("outbox"))
-    event_type: Mapped[str] = mapped_column(String(64), index=True)
+    # Neither of these is a query predicate in application code; the dedup
+    # lookups go through the unique constraint's own index.
+    event_type: Mapped[str] = mapped_column(String(64))
     aggregate_type: Mapped[str] = mapped_column(String(64))
-    aggregate_id: Mapped[str] = mapped_column(String(128), index=True)
-    idempotency_key: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    aggregate_id: Mapped[str] = mapped_column(String(128))
+    idempotency_key: Mapped[str] = mapped_column(String(255))
     job_id: Mapped[str | None] = mapped_column(String(128), index=True)
     redis_job_id: Mapped[str | None] = mapped_column(String(128))
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
@@ -198,7 +225,7 @@ class OutboxEvent(Base):
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_error: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=True)
 
 
 # Auxiliary-domain schema added in SQLite-to-PostgreSQL Phase 2.  These models

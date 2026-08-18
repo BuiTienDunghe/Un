@@ -5,7 +5,8 @@ Date: 2026-07-19
 ## Health and runtime boundaries
 
 `GET /health` must report PostgreSQL, Redis, Qdrant, Ollama, OCR/index worker
-discovery, outbox state, and the cleanup heartbeat. SQLite is not a health
+discovery, outbox state, the cleanup heartbeat, and the PostgreSQL backup
+freshness (`backup`, `backup_age_hours`, `backup_worker`). SQLite is not a health
 component and its appearance in the response is a release blocker.
 
 `DATABASE_URL` must be PostgreSQL. FastAPI, RQ workers, the cleanup worker, and

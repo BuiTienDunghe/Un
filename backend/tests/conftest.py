@@ -3,6 +3,11 @@ from pathlib import Path
 from uuid import uuid4
 
 os.environ["LOG_DIR"] = str(Path(__file__).parent / "test_logs")
+# Settings reads the project .env, so an operator who configures a real API key
+# would otherwise make every write-endpoint test 401 on their machine but not in
+# CI. The auth tests set the key explicitly on app.state instead.
+os.environ["LOCAL_AI_API_KEY"] = ""
+os.environ["LOCAL_AI_PROTECT_READS"] = "false"
 if os.getenv("POSTGRES_TEST_URL"):
     # Normal API tests use the isolated PostgreSQL database, never a local
     # SQLite file or the runtime PostgreSQL database.

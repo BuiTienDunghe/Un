@@ -25,11 +25,38 @@ class OperationalService:
         *,
         memory_ingestion_enabled: bool = False,
         memory_queue_name: str = "memory_extract",
+        backups_path: Path | None = None,
+        backup_heartbeat_path: Path | None = None,
+        backup_max_age_hours: float = 24.0,
     ) -> None:
         self.sessions, self.redis_url, self.prefix, self.qdrant, self.ollama = sessions, redis_url, prefix, qdrant, ollama
         self.cleanup_heartbeat_path = cleanup_heartbeat_path
         self.memory_ingestion_enabled = memory_ingestion_enabled
         self.memory_queue_name = memory_queue_name
+        self.backups_path = backups_path
+        self.backup_heartbeat_path = backup_heartbeat_path
+        self.backup_max_age_hours = backup_max_age_hours
+
+    def _backup_status(self) -> tuple[str, float | None]:
+        """Report the newest recovery point, not whether a worker is running.
+
+        A backup worker that is alive but failing every dump is not a backup,
+        so freshness is judged from the dump files on disk.  The vocabulary is
+        the one the other components already use: `pending` means no dump has
+        been taken yet, `unavailable` means the newest one is too old to count.
+        """
+        if self.backups_path is None:
+            return "disabled", None
+        try:
+            dumps = [item for item in self.backups_path.glob("local-ai-*.dump") if item.is_file()]
+            if not dumps:
+                return "pending", None
+            age_hours = (datetime.now(UTC).timestamp() - max(item.stat().st_mtime for item in dumps)) / 3600
+        except Exception:
+            return "unavailable", None
+        # Half an interval of slack keeps a backup that ran a little late from
+        # reading as a missing recovery point.
+        return ("ok" if age_hours <= self.backup_max_age_hours * 1.5 else "unavailable"), round(age_hours, 2)
 
     def health(self) -> dict[str, object]:
         components: dict[str, str] = {"ollama": "ok" if self.ollama.healthcheck() else "unavailable", "qdrant": "ok" if self.qdrant.healthcheck() else "unavailable"}
@@ -93,6 +120,21 @@ class OperationalService:
                     components["cleanup_worker"] = "ok" if age < 48 * 3600 else "unavailable"
             except Exception:
                 components["cleanup_worker"] = "unavailable"
+            backup_status, backup_age_hours = self._backup_status()
+            components["backup"] = backup_status
+            if backup_age_hours is not None:
+                components["backup_age_hours"] = str(backup_age_hours)
+            # The dumps answer "is there a recovery point"; the heartbeat answers
+            # "is anything still trying" — a stopped worker is worth seeing before
+            # the newest dump ages out.
+            try:
+                if not self.backup_heartbeat_path or not self.backup_heartbeat_path.is_file():
+                    components["backup_worker"] = "unavailable"
+                else:
+                    heartbeat_age = datetime.now(UTC).timestamp() - self.backup_heartbeat_path.stat().st_mtime
+                    components["backup_worker"] = "ok" if heartbeat_age < self.backup_max_age_hours * 3600 * 1.5 else "unavailable"
+            except Exception:
+                components["backup_worker"] = "unavailable"
         required = ("postgres", "redis", "qdrant", "ollama")
         base_ok = all(components[item] == "ok" for item in required)
         memory_ok = (

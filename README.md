@@ -84,14 +84,15 @@ Runtime chỉ truy vấn Qdrant point có đầy đủ `version_id` và `chunk_i
 
 ## Vận hành và độ tin cậy
 
-- Endpoint `/health` theo dõi FastAPI, PostgreSQL, Redis, Qdrant, Ollama và các worker chính.
+- Endpoint `/health` theo dõi FastAPI, PostgreSQL, Redis, Qdrant, Ollama, các worker chính và độ tươi của bản backup PostgreSQL.
+- Backup PostgreSQL chạy tự động cùng launcher (mặc định 24 giờ một bản, giữ 14 ngày). Xem `docs/backup_restore.md` cho bài diễn tập restore hàng quý.
 - PostgreSQL backup và Qdrant snapshot là các điểm phục hồi trước thay đổi quan trọng.
 - Restore phải được kiểm chứng trong môi trường cô lập trước khi áp dụng vào môi trường vận hành.
 - Cleanup tuân theo retention policy; không được dùng cleanup thường kỳ để xóa dữ liệu có giá trị khôi phục.
 - Thay thế tài liệu không ghi đè version đang hoạt động trước khi version mới hoàn tất.
 - SQLite archive lịch sử chỉ dành cho migration/audit read-only, không được đưa lại vào runtime path.
 
-Alembic head hiện tại là `20260818_20`.
+Alembic head hiện tại là `20260818_21`.
 
 ## Model mặc định
 
@@ -113,6 +114,29 @@ RAG mặc định sử dụng chunk khoảng 480 tokens, overlap 80 tokens và t
 - Nếu dùng Discord: `DISCORD_TOKEN`, thông tin backend và privileged intents đã được cấp trên Discord Developer Portal.
 
 Không commit file `.env`, token Discord, JWT secret, mật khẩu database, backup riêng tư hoặc dữ liệu upload thực tế.
+
+## Truy cập và bảo mật
+
+Mặc định hệ thống **không bật xác thực**: mọi endpoint đều mở với ai truy cập được cổng 8000.
+Đó là lựa chọn có chủ đích cho máy cá nhân — đường "một cú click" không thể bắt bạn dán khóa
+trước khi gửi tin nhắn đầu tiên.
+
+Khi chia sẻ trong LAN, hãy bật khóa truy cập:
+
+1. Sinh khóa: `python -c "import secrets; print(secrets.token_urlsafe(32))"`
+2. Đặt vào `.env`: `LOCAL_AI_API_KEY=<khóa vừa sinh>`
+3. Khởi động lại backend.
+4. Trên web: **Cài đặt → Bảo mật → Khóa truy cập**, dán khóa rồi bấm Lưu.
+
+Từ lúc đó mọi endpoint **ghi và xóa** yêu cầu header `X-API-Key`; thiếu hoặc sai key trả về 401.
+Endpoint đọc vẫn mở để giao diện hoạt động ngay; đặt `LOCAL_AI_PROTECT_READS=true` để khóa
+luôn cả endpoint đọc (`/health` và `/models` vẫn mở vì launcher và smoke test cần chúng).
+
+Bot Discord đọc cùng biến `LOCAL_AI_API_KEY`; `docker-compose.yml` đã truyền sẵn vào container.
+Nếu bật khóa mà quên cấu hình cho bot thì mọi lượt Discord sẽ bị từ chối.
+
+Đây là xác thực **lớp 1**: một khóa dùng chung, không phải phân quyền nhiều người dùng.
+Tài khoản riêng và phân quyền thuộc phase P2 trong `docs/DEVELOPMENT_PLAN.md`.
 
 ## Giới hạn cần biết
 
@@ -152,6 +176,8 @@ Ba test migration cố ý hạ cấp database để kiểm tra một revision th
 - `docs/versioned_ingestion.md`: vòng đời ingest và version tài liệu.
 - `docs/postgres_migration.md`: migration và vận hành PostgreSQL.
 - `docs/phase6_operations.md`: vận hành, kiểm tra và khắc phục sự cố.
+- `docs/backup_restore.md`: backup tự động và bài diễn tập restore.
+- `CHANGELOG.md`: lịch sử phát hành theo Keep a Changelog và quy ước version.
 - `docs/sqlite_to_postgres_final_report.md`: tổng kết migration SQLite sang PostgreSQL.
 - `backend/tests/` và `tests/`: regression test cho API, persistence, workers, RAG và Discord API client.
 

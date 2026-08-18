@@ -21,12 +21,29 @@ const ERROR_HINTS = {
   DOCUMENT_TOO_LARGE: "Tệp vượt quá giới hạn 50 MB.",
   UNSUPPORTED_FILE_TYPE: "Chỉ hỗ trợ PDF, DOCX, TXT và Markdown.",
   DOCUMENT_ALREADY_INDEXING: "Tài liệu đang được lập chỉ mục. Vui lòng chờ hoàn tất.",
+  API_KEY_REQUIRED: "Máy chủ này yêu cầu khóa truy cập. Mở Cài đặt → Bảo mật để nhập khóa.",
+  API_KEY_INVALID: "Khóa truy cập không đúng. Kiểm tra lại trong Cài đặt → Bảo mật.",
 };
+
+/* Khóa truy cập tùy chọn: chỉ những máy chủ có cấu hình khóa mới cần. */
+const getApiKey = () => localStorage.getItem("lac.apikey") || "";
+const setApiKey = (value) => {
+  const key = value.trim();
+  if (key) localStorage.setItem("lac.apikey", key);
+  else localStorage.removeItem("lac.apikey");
+};
+
+/* Gắn khóa vào mọi request; header rỗng thì bỏ hẳn để không đổi hành vi khi
+   máy chủ không bật xác thực. */
+function withApiKey(headers = {}) {
+  const key = getApiKey();
+  return key ? { ...headers, "X-API-Key": key } : headers;
+}
 
 async function api(path, options = {}) {
   let response;
   try {
-    response = await fetch(path, options);
+    response = await fetch(path, { ...options, headers: withApiKey(options.headers) });
   } catch {
     throw new Error("Không kết nối được máy chủ. Kiểm tra backend đang chạy.");
   }
@@ -405,7 +422,7 @@ function renderHistory(messages) {
 async function streamChat(path, payload, { onMeta, onToken }, signal) {
   const response = await fetch(path, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: withApiKey({ "Content-Type": "application/json" }),
     body: JSON.stringify({ ...payload, stream: true }),
     signal,
   });
@@ -911,9 +928,21 @@ function openSettings() {
   }
   $("set-enter").checked = prefs.enterToSend;
   $("set-memory").checked = prefs.memoryDefault;
+  syncApiKeyState();
   dialog.showModal();
   loadModelsInfo();
   loadSystemInfo();
+}
+
+/* Không hiển thị lại khóa đã lưu: ô nhập luôn trống, dòng trạng thái cho biết
+   đã có khóa hay chưa. */
+function syncApiKeyState() {
+  const stored = getApiKey();
+  $("set-api-key").value = "";
+  $("set-api-key").placeholder = stored ? "Đã lưu — dán khóa mới để thay" : "Dán khóa truy cập";
+  $("api-key-state").textContent = stored
+    ? "Đã lưu khóa trong trình duyệt này. Để trống rồi bấm Lưu để xóa."
+    : "Chưa nhập khóa. Chỉ cần khi máy chủ bật xác thực.";
 }
 
 async function loadModelsInfo() {
@@ -1201,6 +1230,14 @@ function bindEvents() {
       ? "Enter để gửi · Shift+Enter xuống dòng" : "Bấm nút gửi · Enter xuống dòng";
   };
   $("set-memory").onchange = (event) => { prefs.memoryDefault = event.target.checked; savePrefs(); };
+  $("api-key-save").onclick = () => {
+    setApiKey($("set-api-key").value);
+    syncApiKeyState();
+    toast(getApiKey() ? "Đã lưu khóa truy cập." : "Đã xóa khóa truy cập.", "ok");
+  };
+  $("set-api-key").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") { event.preventDefault(); $("api-key-save").click(); }
+  });
   $("mem-search").addEventListener("input", debounce((event) => searchMemories(event.target.value), 400));
 }
 

@@ -13,6 +13,9 @@ echo ==========================================
 echo [STOP] Dung backend FastAPI (cong 8000)...
 powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }"
 
+echo [STOP] Dung worker backup dinh ky...
+taskkill /fi "windowtitle eq LocalAICoreBackup*" /t /f >nul 2>&1
+
 echo [STOP] Dung cac container PostgreSQL, Qdrant, Redis (giu nguyen du lieu)...
 docker compose --profile postgres --profile workers --profile discord stop
 

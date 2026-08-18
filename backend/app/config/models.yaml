@@ -104,3 +104,9 @@ storage:
   ingestion_ttl_days: 7
   cleanup_interval_hours: 24
   superseded_version_grace_days: 7
+  # PostgreSQL backups: how often the backup worker dumps, how long dumps are
+  # kept, and how many newest dumps survive rotation regardless of age (an
+  # installation left idle must never rotate down to zero recovery points).
+  backup_interval_hours: 24
+  backups_ttl_days: 14
+  backups_keep_minimum: 3

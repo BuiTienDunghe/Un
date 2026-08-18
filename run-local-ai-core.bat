@@ -86,6 +86,17 @@ if errorlevel 1 (
     timeout /t 3 /nobreak >nul
 )
 
+REM Periodic PostgreSQL backup. It runs on the host because the dump is taken by
+REM the PostgreSQL container's own pg_dump, so no image needs a database client.
+REM The window is titled so stop-local-ai-core.bat can close exactly this one.
+REM `start /d` sets the working directory directly. Wrapping this in `cmd /c "..."`
+REM would nest quotes inside an already quoted string, which cmd mis-parses.
+tasklist /v /fi "windowtitle eq LocalAICoreBackup*" 2>nul | find /i "python.exe" >nul
+if errorlevel 1 (
+    echo [START] Starting the periodic backup worker...
+    start "LocalAICoreBackup" /min /d "%~dp0backend" "%~dp0.venv\Scripts\python.exe" -m scripts.backup_worker --loop
+)
+
 call :ensure_model "qwen3.5:9b"
 if errorlevel 1 goto :error
 call :ensure_model "qwen3-embedding:0.6b"

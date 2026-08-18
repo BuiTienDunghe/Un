@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from app.llm_clients.ollama_client import OllamaModelNotLoadedError, OllamaTimeoutError, OllamaUnavailableError
@@ -9,10 +9,12 @@ from app.services.reranker_service import RerankerUnavailableError
 from app.stores.qdrant_store import QdrantUnavailableError
 from app.utils.sse import sse_event
 
+from app.security.api_key import require_api_key
+
 router = APIRouter(prefix="/rag", tags=["rag"])
 
 
-@router.post("/chat", response_model=RagChatResponse)
+@router.post("/chat", response_model=RagChatResponse, dependencies=[Depends(require_api_key)])
 def rag_chat(payload: RagChatRequest, request: Request) -> RagChatResponse | StreamingResponse:
     try:
         document_scope = payload.document_ids or ([payload.document_id] if payload.document_id else None)

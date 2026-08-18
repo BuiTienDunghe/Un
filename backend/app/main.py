@@ -1,16 +1,18 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from app import __version__
 from app.config.settings import get_settings
 from app.llm_clients.ollama_client import OllamaClient
 from app.llm_clients.gemini_client import GeminiClient
 from app.llm_clients.deepseek_client import DeepSeekClient
 from app.routers import chat, conversations, dashboard, discord_sessions, documents, health, memory, models, ocr, rag, vision
+from app.security.api_key import require_api_key_for_read
 from app.services.postgres_bm25_service import PostgresBm25Service
 from app.services.chat_service import ChatService
 from app.services.logging_service import LoggingService
@@ -120,6 +122,9 @@ async def lifespan(app: FastAPI):
         settings.documents_path.parent / "cleanup-worker.heartbeat",
         memory_ingestion_enabled=settings.discord_memory_ingestion_enabled,
         memory_queue_name=settings.discord_memory_queue_name,
+        backups_path=settings.postgres_backups_path,
+        backup_heartbeat_path=settings.documents_path.parent / "backup-worker.heartbeat",
+        backup_max_age_hours=float(storage_config.get("backup_interval_hours", 24)),
     )
     app.state.ocr_job_service = OcrJobService(router, settings.ocr_runs_path, auxiliary_store, ocr_service)
     reranker_config = rag_config.get("reranker", {})
@@ -139,18 +144,23 @@ async def lifespan(app: FastAPI):
         pass
 
 
-app = FastAPI(title="Local AI Core", version="1C", lifespan=lifespan)
+app = FastAPI(title="Local AI Core", version=__version__, lifespan=lifespan)
+# /health and /models stay public unconditionally: the launcher, the smoke test
+# and the Settings dialog all read them before anyone can supply a key.
 app.include_router(health.router)
 app.include_router(models.router)
-app.include_router(chat.router)
-app.include_router(documents.router)
-app.include_router(ocr.router)
-app.include_router(rag.router)
-app.include_router(memory.router)
-app.include_router(conversations.router)
-app.include_router(dashboard.router)
-app.include_router(discord_sessions.router)
-app.include_router(vision.router)
+# Write routes carry their own `require_api_key`. This adds the opt-in read
+# guard on top, so `LOCAL_AI_PROTECT_READS=true` closes the whole surface.
+read_guard = [Depends(require_api_key_for_read)]
+app.include_router(chat.router, dependencies=read_guard)
+app.include_router(documents.router, dependencies=read_guard)
+app.include_router(ocr.router, dependencies=read_guard)
+app.include_router(rag.router, dependencies=read_guard)
+app.include_router(memory.router, dependencies=read_guard)
+app.include_router(conversations.router, dependencies=read_guard)
+app.include_router(dashboard.router, dependencies=read_guard)
+app.include_router(discord_sessions.router, dependencies=read_guard)
+app.include_router(vision.router, dependencies=read_guard)
 app.mount("/ui", StaticFiles(directory=str(Path(__file__).parent / "frontend"), html=True), name="ui")
 
 

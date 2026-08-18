@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 from time import sleep
@@ -58,7 +59,11 @@ def main() -> int:
     args = parser.parse_args()
 
     cases = [json.loads(line) for line in Path(args.dataset).read_text(encoding="utf-8").splitlines() if line.strip()]
-    with httpx.Client(timeout=180) as client:
+    # The harness drives write endpoints, so it needs the key whenever the
+    # backend has one configured.
+    api_key = os.environ.get("LOCAL_AI_API_KEY", "").strip()
+    headers = {"X-API-Key": api_key} if api_key else {}
+    with httpx.Client(timeout=180, headers=headers) as client:
         document_id = args.document_id or bootstrap_document(client, args.base_url, Path(args.fixture))
         results: list[dict[str, object]] = []
         for case in cases:

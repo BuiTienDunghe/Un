@@ -1,6 +1,6 @@
 from time import perf_counter
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from app.llm_clients.ollama_client import OllamaModelNotLoadedError, OllamaTimeoutError, OllamaUnavailableError
@@ -8,10 +8,12 @@ from app.schemas.chat_schema import ChatRequest, ChatResponse
 from app.services.chat_service import ConversationNotFoundError
 from app.utils.sse import sse_event
 
+from app.security.api_key import require_api_key
+
 router = APIRouter(tags=["chat"])
 
 
-@router.post("/chat", response_model=ChatResponse)
+@router.post("/chat", response_model=ChatResponse, dependencies=[Depends(require_api_key)])
 def chat(payload: ChatRequest, request: Request) -> ChatResponse | StreamingResponse:
     started = perf_counter()
     try:

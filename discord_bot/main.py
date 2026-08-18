@@ -53,6 +53,7 @@ class DiscordSettings:
                 base_url=os.environ.get("LOCAL_AGENT_BASE_URL", "http://api:8000"),
                 username=os.environ.get("LOCAL_AGENT_USERNAME", ""),
                 password=os.environ.get("LOCAL_AGENT_PASSWORD", ""),
+                api_key=os.environ.get("LOCAL_AI_API_KEY", ""),
                 timeout_seconds=max(
                     1.0,
                     float(os.environ.get("DISCORD_BACKEND_TIMEOUT_SECONDS", "45")),

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <title>Local AI Core — Trợ lý AI</title>
-<link rel="stylesheet" href="/ui/styles.css?v=12">
+<link rel="stylesheet" href="/ui/styles.css?v=13">
 </head>
 <body>
 
@@ -214,6 +214,22 @@
       </div>
     </section>
     <section>
+      <h3>Bảo mật</h3>
+      <p class="section-note">
+        Máy chủ có thể yêu cầu một khóa truy cập cho mọi thao tác ghi và xóa
+        (<code>LOCAL_AI_API_KEY</code> trong <code>.env</code>). Nếu máy chủ của bạn không đặt khóa
+        thì để trống. Khóa chỉ lưu trong trình duyệt này.
+      </p>
+      <div class="setting-row">
+        <div><strong>Khóa truy cập</strong><p id="api-key-state">Chưa nhập khóa.</p></div>
+        <div class="api-key-row">
+          <input id="set-api-key" type="password" autocomplete="off" spellcheck="false"
+                 placeholder="Dán khóa truy cập" aria-label="Khóa truy cập">
+          <button class="btn ghost" id="api-key-save" type="button">Lưu</button>
+        </div>
+      </div>
+    </section>
+    <section>
       <h3>Mô hình đang phục vụ</h3>
       <p class="section-note">Đọc từ cấu hình máy chủ (<code>models.yaml</code>). Đổi mô hình bằng cách sửa tệp cấu hình rồi khởi động lại backend.</p>
       <div class="models-info" id="models-info"><div class="skeleton" style="height:72px"></div></div>
@@ -273,6 +289,6 @@
 
 <div class="toast-root" id="toast-root" popover="manual" aria-live="polite" aria-atomic="false"></div>
 
-<script src="/ui/app.js?v=13" defer></script>
+<script src="/ui/app.js?v=14" defer></script>
 </body>
 </html>

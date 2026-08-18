@@ -1,9 +1,11 @@
-from fastapi import APIRouter, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 
 from app.schemas.ocr_schema import OcrEvaluationRequest
 from app.services.ocr_job_service import OcrPromotionError
 from app.services.monitoring_service import system_metrics
+
+from app.security.api_key import require_api_key
 
 router = APIRouter(prefix="/api/ocr", tags=["ocr-console"])
 
@@ -11,7 +13,7 @@ def _job(request: Request, job_id: str):
     try: return request.app.state.ocr_job_service.view(job_id)
     except KeyError as error: raise HTTPException(404, detail={"error_code":"OCR_JOB_NOT_FOUND", "message":"OCR job was not found"}) from error
 
-@router.post("/jobs", status_code=201)
+@router.post("/jobs", status_code=201, dependencies=[Depends(require_api_key)])
 async def create_job(request: Request, file: UploadFile = File(...), dpi: int = 200, page_range: str | None = None, output_format: str = "all"):
     try: return await request.app.state.ocr_job_service.create(file, dpi, page_range, output_format)
     except ValueError as error: raise HTTPException(422, detail={"error_code":"INVALID_OCR_INPUT", "message":str(error)}) from error
@@ -22,17 +24,17 @@ def get_job(job_id: str, request: Request): return _job(request, job_id)
 @router.get("/jobs/{job_id}/events")
 def get_events(job_id: str, request: Request): return {"events": _job(request, job_id)["events"]}
 
-@router.post("/jobs/{job_id}/cancel")
+@router.post("/jobs/{job_id}/cancel", dependencies=[Depends(require_api_key)])
 def cancel(job_id: str, request: Request):
     try: return request.app.state.ocr_job_service.cancel(job_id)
     except KeyError as error: raise HTTPException(404, detail={"error_code":"OCR_JOB_NOT_FOUND", "message":"OCR job was not found"}) from error
 
-@router.post("/jobs/{job_id}/evaluate")
+@router.post("/jobs/{job_id}/evaluate", dependencies=[Depends(require_api_key)])
 def evaluate(job_id: str, payload: OcrEvaluationRequest, request: Request):
     try: return request.app.state.ocr_job_service.evaluate(job_id, payload.ground_truth)
     except KeyError as error: raise HTTPException(404, detail={"error_code":"OCR_JOB_NOT_FOUND", "message":"OCR job was not found"}) from error
 
-@router.post("/jobs/{job_id}/promote", status_code=202)
+@router.post("/jobs/{job_id}/promote", status_code=202, dependencies=[Depends(require_api_key)])
 def promote(job_id: str, request: Request):
     try:
         result = request.app.state.ocr_job_service.promote(job_id, request.app.state.document_service)
@@ -61,5 +63,5 @@ def metrics(): return system_metrics()
 @router.get("/history")
 def history(request: Request): return {"runs": request.app.state.ocr_job_service.list_history()}
 
-@router.delete("/history/{job_id}", status_code=204)
+@router.delete("/history/{job_id}", status_code=204, dependencies=[Depends(require_api_key)])
 def delete_history(job_id: str, request: Request): request.app.state.ocr_job_service.delete(job_id)

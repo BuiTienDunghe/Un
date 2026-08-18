@@ -40,6 +40,9 @@ class LocalAgentSettings:
     password: str = ""
     timeout_seconds: float = 45.0
     turn_execute_timeout_seconds: float = 180.0
+    # Layer-1 shared key. Empty when the backend has no key configured, which
+    # is the default single-user setup.
+    api_key: str = ""
 
 
 @dataclass(frozen=True)
@@ -278,7 +281,7 @@ class LocalAgentClient:
         return status
 
     async def _chat_request(self, question: str, conversation_id: str | None, system_prompt: str | None) -> httpx.Response:
-        headers = {"Authorization": f"Bearer {self._jwt}"} if self._jwt else {}
+        headers = self._headers()
         payload: dict[str, object] = {"message": question, "stream": False}
         if conversation_id:
             payload["conversation_id"] = conversation_id
@@ -297,7 +300,7 @@ class LocalAgentClient:
         channel_id: str,
         thread_id: str | None,
     ) -> httpx.Response:
-        headers = {"Authorization": f"Bearer {self._jwt}"} if self._jwt else {}
+        headers = self._headers()
         payload: dict[str, object] = {
             "guild_id": guild_id,
             "channel_id": channel_id,
@@ -319,7 +322,7 @@ class LocalAgentClient:
         timeout: float | None = None,
     ) -> httpx.Response:
         async def send() -> httpx.Response:
-            headers = {"Authorization": f"Bearer {self._jwt}"} if self._jwt else {}
+            headers = self._headers()
             try:
                 request_options: dict[str, object] = {
                     "json": payload,
@@ -362,6 +365,15 @@ class LocalAgentClient:
         if not isinstance(payload, dict):
             raise BackendResponseError(f"Backend returned an invalid response for {operation}.")
         return payload
+
+    def _headers(self) -> dict[str, str]:
+        """Layer-1 API key and (future) layer-2 JWT ride on separate headers."""
+        headers: dict[str, str] = {}
+        if self.settings.api_key:
+            headers["X-API-Key"] = self.settings.api_key
+        if self._jwt:
+            headers["Authorization"] = f"Bearer {self._jwt}"
+        return headers
 
     async def _refresh_jwt(self) -> None:
         if not self.settings.username or not self.settings.password:

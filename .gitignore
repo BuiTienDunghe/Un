@@ -45,9 +45,12 @@ data/qdrant/
 data/evaluation/results/
 data/archives/
 data/backups/
+# Half-written dumps. `*.dump` below does not match them: the name ends in .part.
+*.part
 # data/benchmarks/ → TRACKED intentionally (JSON test cases & results synced between machines)
 data/benchmarks/**/*.tmp
 data/cleanup-worker.heartbeat
+data/backup-worker.heartbeat
 data/discord_bot_control/
 
 # ── OS generated ──

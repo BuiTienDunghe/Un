@@ -17,6 +17,12 @@ class Settings(BaseSettings):
 
     app_name: str = "local-ai-core"
     database_url: str | None = None
+    # Layer-1 access control. Empty means "no key configured": writes stay open,
+    # which is what a single-user machine wants and what the one-click launcher
+    # depends on. Set it to close write endpoints to anyone without the header.
+    local_ai_api_key: str = ""
+    # Only meaningful once a key is set; closes read endpoints too.
+    local_ai_protect_reads: bool = False
     request_log_retention_days: int = 7
     ingestion_execution_backend: str = "thread"
     redis_url: str = "redis://127.0.0.1:6379/0"
@@ -35,6 +41,7 @@ class Settings(BaseSettings):
     discord_memory_extractor_retry_count: int = 1
     discord_memory_queue_name: str = "memory_extract"
     superseded_version_grace_days: int = 7
+    backup_dir: str = "data/backups"
     log_dir: str = "data/logs"
     ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_chat_timeout_seconds: float = 120.0
@@ -99,6 +106,16 @@ class Settings(BaseSettings):
     @property
     def ocr_runs_path(self) -> Path:
         return PROJECT_ROOT / "data" / "ocr_runs"
+
+    @property
+    def backups_path(self) -> Path:
+        return PROJECT_ROOT / self.backup_dir
+
+    @property
+    def postgres_backups_path(self) -> Path:
+        # Keeps the layout the manual script has always written to, so old and
+        # new backups sit in one directory.
+        return self.backups_path / "postgres"
 
     def load_config(self) -> dict[str, Any]:
         with self.models_path.open("r", encoding="utf-8") as handle:

@@ -50,6 +50,10 @@ jobs:
       - name: Check the YAML configuration files parse
         run: python -c "import yaml;[yaml.safe_load(open(p,encoding='utf-8')) for p in ('backend/app/config/models.yaml','docker-compose.yml','.github/workflows/ci.yml')]"
 
+      # tomllib is stdlib on 3.11, so this costs no dependency.
+      - name: Check pyproject.toml parses
+        run: python -c "import tomllib;tomllib.load(open('pyproject.toml','rb'))"
+
   backend-tests:
     name: Backend tests (PostgreSQL + Redis)
     runs-on: ubuntu-latest
@@ -116,13 +120,19 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      # `--no-deps` keeps the CPU-only torch installed above in place; the point
+      # here is that the two-root package mapping still resolves.
+      - name: Verify the editable install
+        run: pip install -e . --no-deps
+
       - name: Apply migrations to the test database
         run: python -m alembic upgrade head
 
-      # `alembic check` is deliberately not run yet: it currently reports real
-      # drift (indexes declared on the models that no migration ever created).
-      # Closing that gap changes the production schema, so it belongs in its own
-      # migration rather than in the commit that introduces CI.
+      # Schema regression gate: a model that gains an index, a nullable change
+      # or a constraint without a matching migration fails here, not in
+      # production. DATABASE_URL is already set at job level for env.py.
+      - name: Check the models match the migrated schema
+        run: python -m alembic check
 
       # Polled from the runner because the container cannot health-check itself.
       - name: Wait for Qdrant to accept requests
@@ -171,7 +181,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Verify the editable install
+        run: pip install -e . --no-deps
+
+      # Proves the two import roots resolve from outside the repository, which
+      # is the only thing `pip install -e .` is actually promising here.
+      - name: Verify the package mapping resolves
+        working-directory: ${{ runner.temp }}
+        run: python -c "import app, discord_bot, tools.discord_bot_control; print(app.__version__)"
+
       # These tests need no service: they cover the Discord API client, the bot
-      # control policy and the canonical Discord location rules.
+      # control policy, the canonical Discord location rules and the packaging
+      # contract.
       - name: Run the bot and tools test suite
         run: python -m pytest tests -q

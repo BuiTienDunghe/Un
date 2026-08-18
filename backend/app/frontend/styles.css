@@ -616,6 +616,9 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round
 }
 .kv b { font-weight: 600; }
 .kv span { color: var(--text-2); overflow-wrap: anywhere; text-align: right; }
+.api-key-row { display: flex; align-items: center; gap: 8px; }
+.api-key-row input { width: 210px; padding: 7px 10px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--bg-2); color: var(--text-1); font-size: 13px; font-family: var(--mono); }
+.api-key-row input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .mem-manager { display: flex; flex-direction: column; gap: 10px; }
 .mem-results { display: flex; flex-direction: column; gap: 8px; }
 .mem-item {
