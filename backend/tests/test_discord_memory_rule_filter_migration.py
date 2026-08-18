@@ -9,6 +9,8 @@ import pytest
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import make_url
 
+from tests.migration_support import head_revision
+
 
 ROOT = Path(__file__).resolve().parents[2]
 URL = os.getenv("POSTGRES_TEST_URL")
@@ -74,8 +76,10 @@ def test_revision_18_upgrade_downgrade_reupgrade_isolated_database():
         ]
         assert "ck_discord_memory_candidates_filter_reason_code" not in checks
     finally:
-        _alembic("upgrade", "20260728_18")
+        # Restore the head of the day, not the head this test was written
+        # against, so a new revision does not strand the test database.
+        _alembic("upgrade", "head")
     with engine.connect() as connection:
         assert connection.scalar(
             text("SELECT version_num FROM alembic_version")
-        ) == "20260728_18"
+        ) == head_revision()

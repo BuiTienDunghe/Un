@@ -1,0 +1,151 @@
+name: CI
+
+# Every pull request and every push to main. `workflow_dispatch` allows a
+# manual re-run from the Actions tab without an empty commit.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A newer push to the same branch supersedes the run in progress.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  static:
+    name: Static checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # No dependencies needed: compileall only parses and byte-compiles.
+      - name: Byte-compile every Python source
+        run: python -m compileall -q backend/app backend/alembic backend/tests discord_bot tests tools
+
+      # The web UI has no build step, so a parser is the only thing standing
+      # between a typo and a blank page in the browser.
+      - name: Syntax-check the frontend scripts
+        run: |
+          for file in backend/app/frontend/*.js; do
+            node --check "$file"
+          done
+
+      - name: Check the YAML configuration files parse
+        run: python -c "import yaml,sys;[yaml.safe_load(open(p,encoding='utf-8')) for p in ('backend/app/config/models.yaml','docker-compose.yml','.github/workflows/ci.yml')]"
+
+  backend-tests:
+    name: Backend tests (PostgreSQL + Redis)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: local_ai_core_test
+          POSTGRES_USER: local_ai
+          POSTGRES_PASSWORD: local_ai
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U local_ai -d local_ai_core_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      # conftest.py refuses any database whose name does not end in `_test`.
+      POSTGRES_TEST_URL: postgresql+psycopg://local_ai:local_ai@127.0.0.1:5432/local_ai_core_test
+      DATABASE_URL: postgresql+psycopg://local_ai:local_ai@127.0.0.1:5432/local_ai_core_test
+      # Redis database 15 is the test namespace, exactly as in docs/integration_testing.md.
+      REDIS_TEST_URL: redis://127.0.0.1:6379/15
+      REDIS_URL: redis://127.0.0.1:6379/15
+      RQ_QUEUE_PREFIX: local-ai:ci
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      # sentence-transformers pulls PyTorch, and the default Linux wheel bundles
+      # ~2.5 GB of CUDA libraries this runner can never use. Installing the CPU
+      # build first satisfies the requirement without that download.
+      - name: Install CPU-only PyTorch
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Apply migrations to the test database
+        run: python -m alembic upgrade head
+
+      # `alembic check` is deliberately not run yet: it currently reports real
+      # drift (indexes declared on the models that no migration ever created).
+      # Closing that gap changes the production schema, so it belongs in its own
+      # migration rather than in the commit that introduces CI.
+
+      - name: Run the backend test suite
+        # `python -m pytest` from backend/ puts the app package on sys.path,
+        # which is how the suite is run everywhere else (docs/integration_testing.md).
+        working-directory: backend
+        run: python -m pytest tests -q
+
+      # Migration tests walk the database backwards; a teardown that restores a
+      # pinned revision instead of head leaves every later test running against
+      # a stale schema. Fail loudly here rather than in an unrelated test.
+      - name: Assert the test database is back at head
+        run: python -m alembic current | grep -q "(head)"
+
+  bot-tests:
+    name: Bot and tools tests (Windows)
+    # Windows is the deployment target for the launcher and the control panel,
+    # and this job also proves requirements.txt still installs cleanly there.
+    runs-on: windows-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # These tests need no service: they cover the Discord API client, the bot
+      # control policy and the canonical Discord location rules.
+      - name: Run the bot and tools test suite
+        run: python -m pytest tests -q

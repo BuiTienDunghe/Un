@@ -4,6 +4,7 @@ import asyncio
 import io
 import os
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from fastapi import UploadFile
@@ -22,7 +23,11 @@ class _Log:
     def log_request(self, *args: object, **kwargs: object) -> None: pass
 
 
-class _Ocr: pass
+class _Ocr:
+    # SmartParser reads the OCR slot from the router while it is constructed.
+    # This test only uploads .txt files, so an empty model map is the honest
+    # stub: no OCR slot is configured and no OCR path can be taken.
+    router = SimpleNamespace(models={})
 
 
 def _file(name: str, content: bytes) -> UploadFile:

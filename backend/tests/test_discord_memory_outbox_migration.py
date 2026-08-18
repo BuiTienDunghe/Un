@@ -9,6 +9,8 @@ import pytest
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import make_url
 
+from tests.migration_support import head_revision
+
 
 ROOT = Path(__file__).resolve().parents[2]
 URL = os.getenv("POSTGRES_TEST_URL")
@@ -51,9 +53,11 @@ def test_revision_17_adds_and_reverses_not_run_vocabulary():
         _alembic("downgrade", "20260728_16")
         assert "not_run" not in _filter_check(engine)
     finally:
-        _alembic("upgrade", "20260728_18")
+        # Restore the head of the day, not the head this test was written
+        # against, so a new revision does not strand the test database.
+        _alembic("upgrade", "head")
     with engine.connect() as connection:
         assert (
             connection.scalar(text("SELECT version_num FROM alembic_version"))
-            == "20260728_18"
+            == head_revision()
         )

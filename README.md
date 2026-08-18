@@ -1,5 +1,7 @@
 # Local AI Core
 
+[![CI](https://github.com/BuiTienDunghe/Un/actions/workflows/ci.yml/badge.svg)](https://github.com/BuiTienDunghe/Un/actions/workflows/ci.yml)
+
 **Local AI Core** là nền tảng trợ lý AI tự lưu trữ dành cho trò chuyện, hỏi đáp tài liệu và hỗ trợ công việc với mô hình chạy cục bộ. Hệ thống kết hợp quản lý tài liệu có version, OCR, tìm kiếm ngữ nghĩa và RAG để tạo câu trả lời có dẫn nguồn. Bot Discord **Ún** là kênh sử dụng tùy chọn, kết nối trực tiếp với cùng backend này.
 
 ## Trạng thái sản phẩm
@@ -119,6 +121,29 @@ Không commit file `.env`, token Discord, JWT secret, mật khẩu database, bac
 - Bot Ún cần Discord gateway, token hợp lệ, privileged intents và backend hoạt động.
 - Ngữ cảnh thành viên Discord cần được sử dụng phù hợp với chính sách riêng tư của từng server.
 - Mapping hội thoại Discord hiện nằm trong bộ nhớ tiến trình bot; sau khi bot khởi động lại, tin nhắn tiếp theo sẽ bắt đầu một phiên backend mới.
+
+## Kiểm thử và CI
+
+Mỗi pull request và mỗi lần push vào `main` đều chạy `.github/workflows/ci.yml` với ba job:
+
+| Job | Chạy trên | Nội dung |
+| --- | --- | --- |
+| Static checks | Ubuntu | `compileall` toàn bộ Python, `node --check` cho script giao diện, kiểm tra các file YAML cấu hình parse được |
+| Backend tests | Ubuntu + service container PostgreSQL 16 và Redis 7 | `alembic upgrade head` rồi `pytest backend/tests`, cuối cùng khẳng định database vẫn ở head |
+| Bot and tools tests | Windows | `pytest tests` cho Discord API client, control panel và quy tắc định danh kênh; đồng thời chứng minh `requirements.txt` cài được sạch trên Windows |
+
+Chạy đúng bộ kiểm thử đó tại máy cần một database cô lập có tên kết thúc bằng `_test` và Redis DB 15 — `backend/tests/conftest.py` từ chối mọi database khác:
+
+```powershell
+$env:POSTGRES_TEST_URL='postgresql+psycopg://local_ai:<mật khẩu>@127.0.0.1:5432/local_ai_core_test'
+$env:REDIS_TEST_URL='redis://127.0.0.1:6379/15'
+$env:DATABASE_URL=$env:POSTGRES_TEST_URL
+.\.venv\Scripts\python.exe -m alembic upgrade head
+cd backend; ..\.venv\Scripts\python.exe -m pytest tests -q; cd ..
+.\.venv\Scripts\python.exe -m pytest tests -q
+```
+
+Ba test migration cố ý hạ cấp database để kiểm tra một revision theo cả hai chiều, rồi khôi phục về `head` trong `finally`. Nếu một test mới hạ cấp mà không khôi phục, bước cuối của job backend sẽ báo lỗi ngay thay vì để các test sau thất bại vì schema cũ.
 
 ## Tài liệu bổ sung
 

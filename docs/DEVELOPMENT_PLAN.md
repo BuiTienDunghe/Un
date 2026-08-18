@@ -82,11 +82,12 @@ Khảo sát 15/08/2026 trên các dự án mã nguồn mở uy tín nhất phân
 
 | ID | Hạng mục | Tiêu chí nghiệm thu | Ước lượng |
 | --- | --- | --- | --- |
-| P0-1 | **CI GitHub Actions**: pytest (kèm Postgres+Redis service container), compileall, chạy trên PR + main | Badge xanh; test Postgres chạy mỗi commit thay vì "khi nhớ ra" | 2 buổi |
+| P0-1 ✅ | **CI GitHub Actions**: pytest (kèm Postgres+Redis service container), compileall, chạy trên PR + main | Badge xanh; test Postgres chạy mỗi commit thay vì "khi nhớ ra" | 2 buổi |
 | P0-2 | **Xác thực lớp 1**: API key qua header cho mọi endpoint ghi/xóa (endpoint đọc công khai trong LAN tùy config); bot dùng luồng JWT có sẵn khi nâng cấp lớp 2 | Không có key → 401 ở endpoint ghi; UI tự đính key từ Settings | 2–3 buổi |
 | P0-3 | **Lưu citation vào lịch sử**: bảng `message_sources` (message_id, chunk_id, filename, page, excerpt, score) | Mở lại hội thoại RAG vẫn thấy đủ nguồn như lúc trả lời | 2 buổi |
 | P0-4 | **Backup tự động**: task định kỳ gọi `backup_postgres.py` + xoay vòng; hướng dẫn restore drill | Bản backup mới nhất < 24h tuổi; restore thử thành công 1 lần/quý | 1 buổi |
-| P0-5 | `pyproject.toml` (requires-python, metadata) + CHANGELOG.md khởi tạo | `pip install -e .` hoạt động;版本 đầu tag `v1.0.0` | 1 buổi |
+| P0-5 | `pyproject.toml` (requires-python, metadata) + CHANGELOG.md khởi tạo | `pip install -e .` hoạt động; phiên bản đầu tag `v1.0.0` | 1 buổi |
+| P0-6 | **Đồng bộ model ↔ migration**: `alembic check` hiện báo drift thật (một loạt index khai báo trên model nhưng chưa migration nào tạo, vài lệch `nullable`/unique-constraint). Cần một migration bù rồi bật lại bước `alembic check` trong CI | `alembic check` xanh và chạy trong CI mỗi commit | 1–2 buổi |
 
 ### P1 — Một agent, hai kênh *(2–3 tuần · giá trị người dùng lớn nhất)*
 
@@ -175,9 +176,10 @@ Discord ─┘    │                            └─ FTS (tsvector, P3-4)
 
 ## 9. Việc bắt đầu ngay (tuần tới)
 
-1. **P0-1 CI** — giá trị/công sức tốt nhất toàn kế hoạch.
+1. ~~**P0-1 CI**~~ — ✅ xong (`.github/workflows/ci.yml`, 3 job: static / backend+PostgreSQL+Redis / bot trên Windows).
 2. **P0-3 lưu citation** — nhỏ, người dùng thấy ngay, gỡ G4.
 3. **P0-2 API key** — mở khóa mọi kế hoạch nhóm.
+4. **P0-6 đồng bộ migration** — phát sinh khi làm P0-1; nhỏ nhưng chặn việc bật `alembic check` làm cửa hồi quy schema.
 
 ---
 

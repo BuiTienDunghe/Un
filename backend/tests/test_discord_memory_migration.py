@@ -9,6 +9,8 @@ import pytest
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import make_url
 
+from tests.migration_support import head_revision
+
 
 ROOT = Path(__file__).resolve().parents[2]
 URL = os.getenv("POSTGRES_TEST_URL")
@@ -94,12 +96,15 @@ def test_revision_16_upgrade_downgrade_reupgrade_isolated_database():
             column["name"] for column in inspector.get_columns("memories")
         } == legacy_columns_before
     finally:
-        _run_alembic("upgrade", "20260728_18")
+        # Restore the head of the day, not the head this test was written
+        # against, so a new revision does not strand the test database.
+        _run_alembic("upgrade", "head")
+    head = head_revision()
     with engine.connect() as connection:
         assert (
             connection.scalar(text("SELECT version_num FROM alembic_version"))
-            == "20260728_18"
+            == head
         )
     heads = _run_alembic("heads").stdout
     assert heads.count("(head)") == 1
-    assert "20260728_18 (head)" in heads
+    assert f"{head} (head)" in heads
