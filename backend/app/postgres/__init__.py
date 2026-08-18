@@ -1,5 +1,6 @@
-"""PostgreSQL foundation for the modular worker architecture.
+"""PostgreSQL persistence layer — the application's sole runtime database.
 
-The live application remains on SQLite until the explicit migration verification
-is completed. This package is deliberately not wired into FastAPI yet.
+`models.py` declares the schema (kept in lockstep with Alembic by the CI
+`alembic check` gate), `repositories.py` holds per-unit-of-work data access for
+the document/job pipeline, and `database.py` builds engines/session factories.
 """

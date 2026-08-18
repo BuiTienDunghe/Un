@@ -35,8 +35,9 @@ phiên bản client luôn khớp server. Nếu đóng gói vào image ứng dụ
 curl -s http://127.0.0.1:8000/health
 ```
 
-Trường `backup` có ba giá trị: `ok` (bản mới nhất trong hạn), `stale` (quá 1.5 lần chu kỳ),
-`unavailable` (chưa có bản nào). Kèm theo là `backup_age_hours`. Trường này **không** làm
+Trường `backup` có bốn giá trị: `ok` (bản mới nhất trong hạn), `pending` (chưa có bản nào),
+`unavailable` (bản mới nhất quá 1.5 lần chu kỳ, hoặc không đọc được thư mục), `disabled`
+(không cấu hình). Kèm theo là `backup_age_hours`, và `backup_worker` báo heartbeat của worker. Trường này **không** làm
 `/health` chuyển sang `degraded` — thiếu backup là vấn đề vận hành, không phải sự cố phục vụ.
 
 ### Chạy tay một bản backup

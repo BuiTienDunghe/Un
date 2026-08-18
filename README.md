@@ -47,7 +47,7 @@ Khi thay nội dung, version cũ vẫn active cho tới khi version mới OCR/in
 | Thành phần | Trách nhiệm |
 | --- | --- |
 | Web UI | Chat, quản lý tài liệu, theo dõi tác vụ và tình trạng hệ thống. |
-| FastAPI | API, JWT, hội thoại, upload, RAG và nghiệp vụ ứng dụng. |
+| FastAPI | API, khóa truy cập X-API-Key (lớp 1), hội thoại, upload, RAG và nghiệp vụ ứng dụng. |
 | PostgreSQL 16 | Dữ liệu chuẩn: users, conversations, documents, versions, chunks, jobs, outbox và metadata. |
 | Redis + RQ | Hàng đợi và điều phối tác vụ nền. |
 | OCR worker | Trích xuất/OCR nội dung tài liệu. |
@@ -110,10 +110,10 @@ RAG mặc định sử dụng chunk khoảng 480 tokens, overlap 80 tokens và t
 - Docker Desktop hoặc môi trường Docker Compose tương thích.
 - Ollama và các model được cấu hình cho hệ thống.
 - PostgreSQL, Redis và Qdrant thông qua stack Docker Compose.
-- File `.env` cục bộ với thông số database, JWT, model và các service cần thiết.
+- File `.env` cục bộ với thông số database, khóa truy cập (tùy chọn), model và các service cần thiết.
 - Nếu dùng Discord: `DISCORD_TOKEN`, thông tin backend và privileged intents đã được cấp trên Discord Developer Portal.
 
-Không commit file `.env`, token Discord, JWT secret, mật khẩu database, backup riêng tư hoặc dữ liệu upload thực tế.
+Không commit file `.env`, token Discord, khóa `LOCAL_AI_API_KEY`, mật khẩu database, backup riêng tư hoặc dữ liệu upload thực tế.
 
 ## Truy cập và bảo mật
 
@@ -145,7 +145,7 @@ Tài khoản riêng và phân quyền thuộc phase P2 trong `docs/DEVELOPMENT_P
 - Citation phản ánh phần nội dung đã trích xuất được từ tài liệu nguồn.
 - Bot Ún cần Discord gateway, token hợp lệ, privileged intents và backend hoạt động.
 - Ngữ cảnh thành viên Discord cần được sử dụng phù hợp với chính sách riêng tư của từng server.
-- Mapping hội thoại Discord hiện nằm trong bộ nhớ tiến trình bot; sau khi bot khởi động lại, tin nhắn tiếp theo sẽ bắt đầu một phiên backend mới.
+- Phiên hội thoại Discord lưu bền trong PostgreSQL theo mặc định (`DISCORD_PERSISTENT_SESSIONS_ENABLED=true`); bot khởi động lại vẫn giữ ngữ cảnh. Tắt cờ này thì mapping rơi về bộ nhớ tiến trình bot.
 
 ## Kiểm thử và CI
 
@@ -154,7 +154,7 @@ Mỗi pull request và mỗi lần push vào `main` đều chạy `.github/workf
 | Job | Chạy trên | Nội dung |
 | --- | --- | --- |
 | Static checks | Ubuntu | `compileall` toàn bộ Python, `node --check` cho script giao diện, kiểm tra các file YAML cấu hình parse được |
-| Backend tests | Ubuntu + service container PostgreSQL 16 và Redis 7 | `alembic upgrade head` rồi `pytest backend/tests`, cuối cùng khẳng định database vẫn ở head |
+| Backend tests | Ubuntu + service container PostgreSQL 16, Redis 7 và Qdrant | `alembic upgrade head` → `alembic check` (cửa chặn schema) → `pytest backend/tests`, cuối cùng khẳng định database vẫn ở head |
 | Bot and tools tests | Windows | `pytest tests` cho Discord API client, control panel và quy tắc định danh kênh; đồng thời chứng minh `requirements.txt` cài được sạch trên Windows |
 
 Chạy đúng bộ kiểm thử đó tại máy cần một database cô lập có tên kết thúc bằng `_test` và Redis DB 15 — `backend/tests/conftest.py` từ chối mọi database khác:

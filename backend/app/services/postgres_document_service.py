@@ -59,7 +59,7 @@ class PostgresDocumentService:
 
     @staticmethod
     def _run_payload(run: IngestionRun, version: DocumentVersion | None = None) -> dict[str, object]:
-        return {"id": run.id, "document_id": run.document_id, "version_id": run.version_id, "index_version": version.version_number if version else 0, "status": run.status, "stage": run.current_stage, "current_stage": run.current_stage, "total_pages": run.total_pages, "processed_pages": run.processed_pages, "ocr_pages": run.ocr_pages, "chunks_count": run.total_chunks, "total_chunks": run.total_chunks, "vectors_count": run.embedded_chunks, "embedded_chunks": run.embedded_chunks, "progress_percent": run.progress_percent, "cancel_requested": False, "error_code": run.error_code, "error_message": run.error_message}
+        return {"id": run.id, "document_id": run.document_id, "version_id": run.version_id, "index_version": version.version_number if version else 0, "status": run.status, "stage": run.current_stage, "current_stage": run.current_stage, "total_pages": run.total_pages, "processed_pages": run.processed_pages, "ocr_pages": run.ocr_pages, "chunks_count": run.total_chunks, "total_chunks": run.total_chunks, "vectors_count": run.embedded_chunks, "embedded_chunks": run.embedded_chunks, "progress_percent": run.progress_percent, "cancel_requested": run.cancel_requested, "error_code": run.error_code, "error_message": run.error_message}
 
     @staticmethod
     def _normalized_filename(filename: str) -> str:

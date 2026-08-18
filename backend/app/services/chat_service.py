@@ -81,33 +81,42 @@ class ChatService:
         current_model_message: dict[str, str] | None = None,
         context_system_prompt: str | None = None,
     ) -> tuple[str, str, str, int]:
+        is_new = conversation_id is None
         if conversation_id is None:
             conversation_id = str(uuid4())
             self.store.create_conversation(conversation_id, derive_conversation_title(message))
         elif not self.store.conversation_exists(conversation_id):
             raise ConversationNotFoundError(conversation_id)
 
-        history = (
-            self.store.get_messages(conversation_id, self.history_limit)
-            if model_history is None
-            else model_history
-        )
-        messages = [{"role": "system", "content": system_prompt or self.system_prompt}]
-        if context_system_prompt:
-            messages.append({"role": "system", "content": context_system_prompt})
-        if use_memory and self.memory_service is not None:
-            memories = self.memory_service.search(message, top_k=5)
-            if memories:
-                context = "\n".join(f"- {memory['content']}" for memory in memories)
-                messages.append({"role": "system", "content": f"{self.memory_prompt}\n\nRelevant memories:\n{context}"})
-        messages.extend(
-            [
-                *history,
-                current_model_message or {"role": "user", "content": message},
-            ]
-        )
-        started = perf_counter()
-        answer, model_used = self.router.chat("general", messages)
+        try:
+            history = (
+                self.store.get_messages(conversation_id, self.history_limit)
+                if model_history is None
+                else model_history
+            )
+            messages = [{"role": "system", "content": system_prompt or self.system_prompt}]
+            if context_system_prompt:
+                messages.append({"role": "system", "content": context_system_prompt})
+            if use_memory and self.memory_service is not None:
+                memories = self.memory_service.search(message, top_k=5)
+                if memories:
+                    context = "\n".join(f"- {memory['content']}" for memory in memories)
+                    messages.append({"role": "system", "content": f"{self.memory_prompt}\n\nRelevant memories:\n{context}"})
+            messages.extend(
+                [
+                    *history,
+                    current_model_message or {"role": "user", "content": message},
+                ]
+            )
+            started = perf_counter()
+            answer, model_used = self.router.chat("general", messages)
+        except Exception:
+            # The turn produced nothing durable; a failed model call must not
+            # leave an empty conversation shell in the sidebar. Mirrors the
+            # stream path below and RagService.respond.
+            if is_new:
+                self.store.delete_conversation(conversation_id)
+            raise
         latency_ms = int((perf_counter() - started) * 1000)
         self.store.add_message(conversation_id, "user", message)
         self.store.add_message(conversation_id, "assistant", answer, model_used)

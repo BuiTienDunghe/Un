@@ -56,7 +56,10 @@ function statCard(value, label) {
 }
 
 async function fetchJson(path) {
-  const response = await fetch(path);
+  // Cùng khóa với trang chat (lac.apikey): khi LOCAL_AI_PROTECT_READS bật,
+  // dashboard cũng phải trình khóa, nếu không mọi panel sẽ 401.
+  const key = localStorage.getItem("lac.apikey") || "";
+  const response = await fetch(path, key ? { headers: { "X-API-Key": key } } : undefined);
   if (!response.ok) throw new Error(String(response.status));
   return response.json();
 }

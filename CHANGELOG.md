@@ -38,6 +38,21 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 ### Fixed
 - Ba test migration khôi phục database về revision ghim cứng thay vì `head`, khiến toàn bộ
   test chạy sau đó thất bại khi có migration mới.
+- Từ audit toàn dự án 18/08 (58 phát hiện, xác minh đối kháng): dashboard gửi kèm
+  `X-API-Key` (trước đó vỡ hoàn toàn khi bật `LOCAL_AI_PROTECT_READS`); ô nhập khóa dùng
+  đúng design token (trước đó tham chiếu 5 biến CSS không tồn tại); race khi chuyển hội
+  thoại giữa lúc đang stream không còn ghi đè/xóa nhầm ID và kẹt skeleton; cache tiêu đề
+  cục bộ được dọn theo danh sách server và không còn che tên đã đổi trên server; launcher
+  khởi động cleanup worker (trước đó xóa tài liệu kẹt `deleting` vĩnh viễn ở bản cài mặc
+  định); trạng thái `cancel_requested` trả về giá trị thật thay vì luôn `false`;
+  `enqueue_in` dùng `timedelta` đúng chuẩn RQ 2.x; chat thường không còn rò vỏ hội thoại
+  rỗng khi model lỗi ở lượt đầu; hai nhánh stream/non-stream của `/rag/chat` dùng chung
+  một mapping nguồn qua schema.
+
+### Removed
+- Chuyển 29 báo cáo lịch sử (migration SQLite→PostgreSQL, sprint Discord memory) vào
+  `docs/archive/`; xóa 1 tài liệu prompt đã thực thi và 2 script one-shot hết nhiệm vụ.
+  `docs/` giờ chỉ còn tài liệu sống mô tả hệ thống hiện tại.
 
 ## [1.0.0] - 2026-08-18
 

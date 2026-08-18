@@ -11,7 +11,7 @@ import shutil
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, select
 from sqlalchemy.orm import sessionmaker
 
 from app.postgres.models import Document, DocumentChunk, DocumentPage, DocumentVersion, Job, OcrRun, OutboxEvent, RequestLog

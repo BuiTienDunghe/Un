@@ -114,7 +114,6 @@ const state = {
   conversationsError: false,
   documents: [],
   selectedDocs: new Set(JSON.parse(localStorage.getItem("lac.docsel") || "[]")),
-  lastPrompt: null,
 };
 const saveDocSelection = () =>
   localStorage.setItem("lac.docsel", JSON.stringify([...state.selectedDocs]));
@@ -471,7 +470,6 @@ async function sendPrompt(prompt) {
     openDocs(true);
     return;
   }
-  state.lastPrompt = prompt;
   addUserMessage(prompt);
 
   const handle = addAssistantMessage();
@@ -482,6 +480,12 @@ async function sendPrompt(prompt) {
   let model = null;
   let firstToken = false;
   const isNewConversation = !state.conversationId;
+  // ID mà LƯỢT NÀY sở hữu. Người dùng có thể mở hội thoại khác giữa chừng
+  // (openConversation abort lượt đang chạy) — mọi cập nhật state.conversationId
+  // ở dưới phải kiểm tra mình còn là lượt hiện hành, nếu không sẽ ghi đè
+  // hội thoại người dùng vừa mở hoặc xóa nhầm ID của nó.
+  const startingConversationId = state.conversationId;
+  let streamConversationId = startingConversationId;
 
   const payload =
     state.mode === "general"
@@ -493,7 +497,10 @@ async function sendPrompt(prompt) {
     await streamChat(state.mode === "general" ? "/chat" : "/rag/chat", payload, {
       onMeta: (meta) => {
         model = meta.model_used || null;
-        if (meta.conversation_id) state.conversationId = meta.conversation_id;
+        if (meta.conversation_id) {
+          streamConversationId = meta.conversation_id;
+          if (state.conversationId === startingConversationId) state.conversationId = meta.conversation_id;
+        }
         if (state.mode === "rag") handle.setSources(meta.sources || []);
       },
       onToken: (token) => {
@@ -506,12 +513,13 @@ async function sendPrompt(prompt) {
       seconds: ((performance.now() - started) / 1000).toFixed(1),
       retry,
     });
-    if (isNewConversation && state.conversationId) {
+    if (isNewConversation && streamConversationId) {
       // Backend tự đặt title từ tin nhắn đầu; giữ bản localStorage làm
-      // hiển thị tức thời cho tới khi danh sách tải lại.
-      titles[state.conversationId] = prompt.slice(0, 60);
+      // hiển thị tức thời cho tới khi danh sách tải lại. Ghi theo ID của
+      // lượt này, không phải state — người dùng có thể đã chuyển đi nơi khác.
+      titles[streamConversationId] = prompt.slice(0, 60);
       saveTitles();
-      setTopbarTitle();
+      if (state.conversationId === streamConversationId) setTopbarTitle();
       loadConversations();
     } else {
       loadConversations(true);
@@ -520,7 +528,11 @@ async function sendPrompt(prompt) {
     if (error.name === "AbortError") {
       // Lượt bị dừng: backend giữ phần đã stream; chỉ khi CHƯA có token nào
       // thì conversation mới tạo bị xóa phía server — bỏ ID để tránh 404.
-      if (isNewConversation && !handle.text) state.conversationId = null;
+      // Chỉ đụng vào state khi ID vẫn là của lượt này: abort do chuyển sang
+      // hội thoại khác mà xóa ID sẽ khiến openConversation bỏ dở, kẹt skeleton.
+      if (isNewConversation && !handle.text && state.conversationId === streamConversationId) {
+        state.conversationId = null;
+      }
       handle.finish({ model, stopped: true });
       loadConversations(true);
     } else if (error.code === "CONVERSATION_NOT_FOUND") {
@@ -646,6 +658,14 @@ async function loadConversations(quiet = false) {
   try {
     state.conversations = await api("/conversations");
     state.conversationsError = false;
+    // Cache title cục bộ chỉ có nghĩa cho hội thoại còn tồn tại; không dọn thì
+    // localStorage giữ vĩnh viễn tên của mọi hội thoại đã xóa.
+    const alive = new Set(state.conversations.map((conversation) => conversation.id));
+    let pruned = false;
+    for (const id of Object.keys(titles)) {
+      if (!alive.has(id)) { delete titles[id]; pruned = true; }
+    }
+    if (pruned) saveTitles();
   } catch {
     state.conversationsError = true;
   }
@@ -704,8 +724,10 @@ function newChat() {
 
 function setTopbarTitle() {
   const conversation = state.conversations.find((item) => item.id === state.conversationId);
+  // Cùng thứ tự ưu tiên với titleFor: title server trước, cache cục bộ sau —
+  // nếu không, đổi tên trên server xong topbar vẫn hiện tên cũ trong cache.
   $("topbar-title").textContent = state.conversationId
-    ? (titles[state.conversationId] || (conversation ? titleFor(conversation) : "Hội thoại"))
+    ? (conversation ? titleFor(conversation) : (titles[state.conversationId] || "Hội thoại"))
     : "Cuộc trò chuyện mới";
 }
 

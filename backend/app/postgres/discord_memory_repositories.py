@@ -20,7 +20,6 @@ from app.postgres.discord_memory_constants import (
     DISCORD_MEMORY_OPERATIONS_V1,
     DISCORD_MEMORY_SCOPES_V1,
     DISCORD_MEMORY_SOURCE_ROLES_V1,
-    DISCORD_MEMORY_VALIDATION_STATUSES_V1,
 )
 from app.postgres.models import (
     DiscordConversationSession,

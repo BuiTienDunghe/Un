@@ -1,12 +1,21 @@
-"""Structural contract shared by SQLite and PostgreSQL auxiliary adapters."""
+"""Structural contract for the auxiliary store (conversations, memories, OCR
+console, request log).
+
+PostgresAuxiliaryStore is the only implementation — the SQLite adapter this
+Protocol once abstracted over was removed in the PostgreSQL cutover. The
+Protocol is kept because services type against it, but it must mirror the real
+adapter exactly; letting it drift hides signature errors from every checker.
+"""
 from __future__ import annotations
 
 from typing import Protocol
 
 
 class AuxiliaryStore(Protocol):
+    def healthcheck(self) -> bool: ...
     def conversation_exists(self, conversation_id: str) -> bool: ...
-    def create_conversation(self, conversation_id: str) -> None: ...
+    def create_conversation(self, conversation_id: str, title: str | None = None) -> None: ...
+    def set_conversation_title(self, conversation_id: str, title: str) -> bool: ...
     # Returns the new message id; `sources` are the citations of a RAG answer
     # and are written in the same transaction as the message itself.
     def add_message(self, conversation_id: str, role: str, content: str, model_used: str | None = None, sources: list[dict[str, object]] | None = None) -> int: ...

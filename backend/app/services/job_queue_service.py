@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import timedelta
+
 from rq import Queue, Retry
 from rq.job import Job
 from redis import Redis
@@ -58,8 +60,9 @@ class JobQueueService:
             "retry": Retry(max=len(self.retry_intervals), interval=self.retry_intervals),
         }
         return (
+            # RQ 2.x requires a timedelta here; a bare int raises TypeError.
             queue.enqueue_in(
-                delay_seconds,
+                timedelta(seconds=delay_seconds),
                 route.task_path,
                 job_id,
                 **kwargs,

@@ -97,6 +97,15 @@ if errorlevel 1 (
     start "LocalAICoreBackup" /min /d "%~dp0backend" "%~dp0.venv\Scripts\python.exe" -m scripts.backup_worker --loop
 )
 
+REM Without the cleanup worker, deleted documents stay in status 'deleting'
+REM forever: the API only marks them, this worker does the actual removal.
+REM The compose cleanup-worker service is not started by this launcher.
+tasklist /v /fi "windowtitle eq LocalAICoreCleanup*" 2>nul | find /i "python.exe" >nul
+if errorlevel 1 (
+    echo [START] Starting the cleanup worker...
+    start "LocalAICoreCleanup" /min /d "%~dp0backend" "%~dp0.venv\Scripts\python.exe" -m scripts.cleanup_worker --loop
+)
+
 call :ensure_model "qwen3.5:9b"
 if errorlevel 1 goto :error
 call :ensure_model "qwen3-embedding:0.6b"

@@ -14,16 +14,41 @@ from app.security.api_key import require_api_key
 router = APIRouter(prefix="/rag", tags=["rag"])
 
 
+def _response_sources(sources: list[dict[str, object]]) -> list[RagSource]:
+    """One mapping for both branches, so stream and non-stream citations can
+    never drift apart, and the SSE payload passes RagSource validation too."""
+    return [
+        RagSource(
+            document_id=str(source["document_id"]),
+            filename=str(source["filename"]),
+            chunk_id=str(source.get("chunk_id", source.get("chunk_index", ""))),
+            chunk_index=int(source.get("chunk_index", 0)),
+            index_version=int(source.get("index_version", 0)),
+            page=source.get("page"),
+            page_start=source.get("page_start"),
+            page_end=source.get("page_end"),
+            locations=source.get("locations", []),
+            heading_path=source.get("heading_path"),
+            section_title=source.get("section_title"),
+            block_type=str(source.get("block_type", "paragraph")),
+            source_available=bool(source.get("source_available", False)),
+            verifiable=bool(source.get("verifiable", False)),
+            score=float(source["score"]),
+            excerpt=str(source["content"])[:300],
+            content=str(source["content"]),
+            extraction_method=str(source.get("extraction_method", "native")),
+        )
+        for source in sources
+    ]
+
+
 @router.post("/chat", response_model=RagChatResponse, dependencies=[Depends(require_api_key)])
 def rag_chat(payload: RagChatRequest, request: Request) -> RagChatResponse | StreamingResponse:
     try:
         document_scope = payload.document_ids or ([payload.document_id] if payload.document_id else None)
         if payload.stream:
             tokens, model_used, sources, conversation_id = request.app.state.rag_service.stream_response(payload.message, payload.top_k, document_scope, payload.conversation_id)
-            response_sources = [
-                {"document_id": str(source["document_id"]), "filename": str(source["filename"]), "chunk_id": str(source.get("chunk_id", source.get("chunk_index", ""))), "chunk_index": int(source.get("chunk_index", 0)), "index_version": int(source.get("index_version", 0)), "page": source.get("page"), "page_start": source.get("page_start"), "page_end": source.get("page_end"), "locations": source.get("locations", []), "heading_path": source.get("heading_path"), "section_title": source.get("section_title"), "block_type": str(source.get("block_type", "paragraph")), "source_available": bool(source.get("source_available", False)), "verifiable": bool(source.get("verifiable", False)), "score": float(source["score"]), "excerpt": str(source["content"])[:300], "content": str(source["content"]), "extraction_method": str(source.get("extraction_method", "native"))}
-                for source in sources
-            ]
+            response_sources = [source.model_dump() for source in _response_sources(sources)]
 
             def events():
                 yield sse_event("meta", {"model_used": model_used, "conversation_id": conversation_id, "sources": response_sources})
@@ -36,30 +61,7 @@ def rag_chat(payload: RagChatRequest, request: Request) -> RagChatResponse | Str
 
             return StreamingResponse(events(), media_type="text/event-stream")
         answer, model_used, latency_ms, sources, conversation_id = request.app.state.rag_service.respond(payload.message, payload.top_k, document_scope, payload.conversation_id)
-        response_sources = [
-            RagSource(
-                document_id=str(source["document_id"]),
-                filename=str(source["filename"]),
-                chunk_id=str(source.get("chunk_id", source.get("chunk_index", ""))),
-                chunk_index=int(source.get("chunk_index", 0)),
-                index_version=int(source.get("index_version", 0)),
-                page=source.get("page"),
-                page_start=source.get("page_start"),
-                page_end=source.get("page_end"),
-                locations=source.get("locations", []),
-                heading_path=source.get("heading_path"),
-                section_title=source.get("section_title"),
-                block_type=str(source.get("block_type", "paragraph")),
-                source_available=bool(source.get("source_available", False)),
-                verifiable=bool(source.get("verifiable", False)),
-                score=float(source["score"]),
-                excerpt=str(source["content"])[:300],
-                content=str(source["content"]),
-                extraction_method=str(source.get("extraction_method", "native")),
-            )
-            for source in sources
-        ]
-        return RagChatResponse(answer=answer, model_used=model_used, latency_ms=latency_ms, conversation_id=conversation_id, sources=response_sources)
+        return RagChatResponse(answer=answer, model_used=model_used, latency_ms=latency_ms, conversation_id=conversation_id, sources=_response_sources(sources))
     except ConversationNotFoundError as error:
         raise HTTPException(status_code=404, detail={"error_code": "CONVERSATION_NOT_FOUND", "message": f"Conversation {error} does not exist"}) from error
     except InsufficientContextError as error:

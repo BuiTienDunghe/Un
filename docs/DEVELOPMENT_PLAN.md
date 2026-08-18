@@ -1,7 +1,7 @@
 # Kế hoạch phát triển tổng thể — Local AI Core
 
 **Phiên bản:** 1.0 · **Ngày:** 15/08/2026 · **Trạng thái:** Đang hiệu lực
-**Thay thế:** các định hướng rải rác trong README và `discord_memory_workflow_plan_v5_final.md` (phần roadmap)
+**Thay thế:** các định hướng rải rác trong README và `docs/discord_memory_workflow_plan_v5_final.md` (phần roadmap; phần thiết kế memory của tài liệu đó vẫn là spec cho P1-3..P1-5)
 
 ---
 
@@ -36,7 +36,7 @@ So với các sản phẩm cùng phân khúc (Open WebUI, AnythingLLM, LibreChat
 | Độ bền dữ liệu | Versioned ingestion + SHA-256 dedup + transactional outbox + lease/heartbeat worker |
 | Discord pipeline | FIFO durable per-session, idempotent delivery, speaker attribution, đã bật persistent sessions |
 | UI/UX | App chat hiện đại + dashboard quản trị, đã qua 2 vòng review đối kháng (17 lỗi xác nhận đã sửa) |
-| Kiểm thử | 178 test backend + 45 test bot + bộ integration RQ; eval harness tự động |
+| Kiểm thử | ~489 test backend + 50 test bot/tools chạy trong CI mỗi commit (Ubuntu + Windows); eval harness tự động |
 
 ### Khoảng trống chính (xếp theo độ đau)
 
@@ -88,6 +88,25 @@ Khảo sát 15/08/2026 trên các dự án mã nguồn mở uy tín nhất phân
 | P0-4 ✅ | **Backup tự động**: task định kỳ gọi `backup_postgres.py` + xoay vòng; hướng dẫn restore drill | Bản backup mới nhất < 24h tuổi; restore thử thành công 1 lần/quý | 1 buổi |
 | P0-5 ✅ | `pyproject.toml` (requires-python, metadata) + CHANGELOG.md khởi tạo | `pip install -e .` hoạt động; phiên bản đầu tag `v1.0.0` | 1 buổi |
 | P0-6 ✅ | **Đồng bộ model ↔ migration**: `alembic check` hiện báo drift thật (một loạt index khai báo trên model nhưng chưa migration nào tạo, vài lệch `nullable`/unique-constraint). Cần một migration bù rồi bật lại bước `alembic check` trong CI | `alembic check` xanh và chạy trong CI mỗi commit | 1–2 buổi |
+
+### P0.5 — Nợ kỹ thuật từ audit 18/08 *(xen kẽ với P1 · mỗi mục độc lập)*
+
+> Nguồn: audit toàn dự án 6 hướng + phản biện đối kháng (58 phát hiện, đã xác minh).
+> Các lỗi nhỏ đã sửa ngay trong ngày; bảng này là phần **chưa sửa** vì cần migration
+> hoặc refactor có kiểm soát. Xếp theo độ đau thực tế.
+
+| ID | Hạng mục | Bản chất | Ước lượng |
+| --- | --- | --- | --- |
+| T1 | **Upload lại nội dung của tài liệu đã xóa → 500 vĩnh viễn**: unique `content_hash` vẫn giữ hash của bản ghi `deleted`; kèm rò thư mục trên đĩa | Migration: partial unique index `WHERE status != 'deleted'` (+ xử lý IntegrityError thành conflict decision); hoặc xóa hash khi cleanup chốt xóa | 2 buổi |
+| T2 | **Hủy ingestion ở chế độ RQ khi job còn queued → kẹt vĩnh viễn** (run `queued`, document `processing`, không đường retry) | Cho phép cancel chốt ngay khi job chưa được claim; thêm đường thoát reindex cho document kẹt | 2 buổi |
+| T3 | **`_replace_content` commit hash mới trước khi biết reindex enqueue được** → hash lệch nội dung đã index | Chặn replace bằng 409 khi còn run active (cùng predicate với `create_reindex`); enqueue thất bại thì tạo run `queued` bền | 1–2 buổi |
+| T4 | **Outbox event kẹt `processing` vĩnh viễn** nếu dispatcher chết giữa mark và publish | Thêm mệnh đề reclaim theo tuổi vào `dispatch_pending` (an toàn vì enqueue đã dedupe) | 1 buổi |
+| T5 | **Discord turn retry sau mất lease giữa chừng → gọi model 2 lần, ghi trùng cặp message** | Chỉ persist message sau khi `save_response` xác nhận ownership | 2 buổi |
+| T6 | **`sentence-transformers` (~650MB–2.5GB) trong install bắt buộc cho reranker đang tắt** | Chuyển sang `[project.optional-dependencies] rerank`; CI bỏ bước torch CPU; Docker image nhẹ đi tương ứng | 1–2 buổi |
+| T7 | **`PostgresDocumentService` chứa 2 bản sao pipeline ingestion đồng bộ tay** (thread vs RQ, đã có micro-drift) | Tách `IngestionPipeline` một bản duy nhất tham số hóa bằng checkpoint hook; tách upload-conflict thành service riêng | 4–5 buổi |
+| T8 | **Frontend fork đôi helper** (app.js/dashboard.js) — nguồn gốc lỗi dashboard thiếu API key vừa sửa | Tách `/ui/common.js` ($, el, withApiKey, api, theme/prefs) — script tag thường, không cần build | 1 buổi |
+| T9 | Gom các mục nhỏ đã xác nhận: DashboardService thay SQL trong router; đảo phụ thuộc parsers→services; `ConversationLifecycle` chung cho chat/rag; gom wiring OCR router; race trùng tên file khi upload đồng thời (cần partial unique index, gộp với T1); fencing ownership cho `fail_job`/`mark_cancelled` | Dọn dần khi đụng vào từng vùng, không cần đợt riêng | rải rác |
+| T10 | **Script migration SQLite hết nhiệm vụ 07/2027**: `migrate_sqlite_to_postgres.py`, `migrate_sqlite_documents_to_postgres.py`, `migrate_document_storage.py`, `audit_sqlite_readonly.py` + 2 test đi kèm bị ghim bởi cam kết giữ SQLite archive read-only 1 năm | Gỡ sau review xóa archive (sớm nhất 19/07/2027) | 1 buổi (2027) |
 
 ### P1 — Một agent, hai kênh *(2–3 tuần · giá trị người dùng lớn nhất)*
 
