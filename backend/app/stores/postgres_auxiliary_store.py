@@ -13,7 +13,7 @@ from sqlalchemy import String, cast, exists, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import sessionmaker
 
-from app.postgres.models import Conversation, DiscordConversationSession, Memory, Message, OcrCache, OcrRun, RequestLog
+from app.postgres.models import Conversation, DiscordConversationSession, Memory, Message, MessageSource, OcrCache, OcrRun, RequestLog
 
 
 def _utc_now() -> datetime:
@@ -50,13 +50,37 @@ class PostgresAuxiliaryStore:
             conversation.title = title
             return True
 
-    def add_message(self, conversation_id: str, role: str, content: str, model_used: str | None = None) -> None:
+    def add_message(self, conversation_id: str, role: str, content: str, model_used: str | None = None, sources: list[dict[str, object]] | None = None) -> int:
+        """Store one message and, in the same transaction, the sources it cited.
+
+        Keeping both writes in one transaction is the point: a persisted answer
+        must never appear later without the citations it was grounded in.
+        """
         now = _utc_now()
         with self._sessions.begin() as session:
-            session.add(Message(conversation_id=conversation_id, role=role, content=content, model_used=model_used, created_at=now))
+            message = Message(conversation_id=conversation_id, role=role, content=content, model_used=model_used, created_at=now)
+            session.add(message)
+            session.flush()  # assigns message.id for the source rows below
+            for position, source in enumerate(sources or [], start=1):
+                session.add(
+                    MessageSource(
+                        message_id=message.id,
+                        position=position,
+                        document_id=str(source.get("document_id", "")),
+                        chunk_id=str(source.get("chunk_id", "")),
+                        filename=str(source.get("filename", "")),
+                        page_start=source.get("page_start"),
+                        page_end=source.get("page_end"),
+                        heading_path=source.get("heading_path"),
+                        score=float(source.get("score", 0.0)),
+                        excerpt=str(source.get("excerpt", "")),
+                        created_at=now,
+                    )
+                )
             conversation = session.get(Conversation, conversation_id)
             if conversation is not None:
                 conversation.updated_at = now
+            return message.id
 
     def get_messages(self, conversation_id: str, limit: int) -> list[dict[str, str]]:
         with self._sessions() as session:
@@ -88,12 +112,42 @@ class PostgresAuxiliaryStore:
             if conversation is None:
                 return None
             messages = list(session.scalars(select(Message).where(Message.conversation_id == conversation_id).order_by(Message.id)))
+            # One query for every citation in the conversation, not one per message.
+            citations: dict[int, list[dict[str, object]]] = {}
+            if messages:
+                rows = session.scalars(
+                    select(MessageSource)
+                    .where(MessageSource.message_id.in_([message.id for message in messages]))
+                    .order_by(MessageSource.message_id, MessageSource.position)
+                )
+                for row in rows:
+                    citations.setdefault(row.message_id, []).append(
+                        {
+                            "document_id": row.document_id,
+                            "chunk_id": row.chunk_id,
+                            "filename": row.filename,
+                            "page_start": row.page_start,
+                            "page_end": row.page_end,
+                            "heading_path": row.heading_path,
+                            "score": row.score,
+                            "excerpt": row.excerpt,
+                        }
+                    )
             return {
                 "id": conversation.id,
                 "title": conversation.title,
                 "created_at": conversation.created_at.isoformat(),
                 "updated_at": conversation.updated_at.isoformat(),
-                "messages": [{"role": row.role, "content": row.content, "model_used": row.model_used, "created_at": row.created_at.isoformat()} for row in messages],
+                "messages": [
+                    {
+                        "role": row.role,
+                        "content": row.content,
+                        "model_used": row.model_used,
+                        "created_at": row.created_at.isoformat(),
+                        "sources": citations.get(row.id, []),
+                    }
+                    for row in messages
+                ],
             }
 
     def delete_conversation(self, conversation_id: str) -> bool:

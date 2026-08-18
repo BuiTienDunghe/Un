@@ -47,11 +47,34 @@ class RagService:
             raise ConversationNotFoundError(conversation_id)
         return conversation_id, False
 
-    def _persist_turn(self, conversation_id: str | None, question: str, answer: str, model_used: str) -> None:
+    def _persist_turn(self, conversation_id: str | None, question: str, answer: str, model_used: str, sources: list[dict[str, object]] | None = None) -> None:
         if self.store is None or conversation_id is None:
             return
         self.store.add_message(conversation_id, "user", question)
-        self.store.add_message(conversation_id, "assistant", answer, model_used)
+        self.store.add_message(conversation_id, "assistant", answer, model_used, self._citations(sources or []))
+
+    @staticmethod
+    def _citations(sources: list[dict[str, object]]) -> list[dict[str, object]]:
+        """Reduce retrieval hits to what a reopened conversation needs to show.
+
+        The excerpt is stored as a snapshot rather than re-read from the chunk
+        at display time: a citation must keep showing the text the answer was
+        actually based on, even after the document is replaced or removed.
+        """
+        return [
+            {
+                "document_id": source.get("document_id", ""),
+                "chunk_id": source.get("chunk_id", source.get("chunk_index", "")),
+                "filename": source.get("filename", ""),
+                # The retrieval payload carries `page` for single-page chunks.
+                "page_start": source.get("page_start", source.get("page")),
+                "page_end": source.get("page_end"),
+                "heading_path": source.get("heading_path"),
+                "score": source.get("score", 0.0),
+                "excerpt": str(source.get("content", ""))[:300],
+            }
+            for source in sources
+        ]
 
     def _retrieve_context(self, question: str, top_k: int | None, document_id: str | list[str] | None) -> tuple[list[dict[str, object]], str]:
         """Retrieve and format context; returned sources are exactly the cited ones."""
@@ -83,7 +106,7 @@ class RagService:
                 self.store.delete_conversation(conversation_id)
             raise
         latency_ms = int((perf_counter() - started) * 1000)
-        self._persist_turn(conversation_id, question, answer, model_used)
+        self._persist_turn(conversation_id, question, answer, model_used, sources)
         self.logging_service.log_request("/rag/chat", model_used, latency_ms, "ok")
         return answer, model_used, latency_ms, sources, conversation_id
 
@@ -108,7 +131,9 @@ class RagService:
                 completed = True
             finally:
                 if completed or answer_parts:
-                    self._persist_turn(conversation_id, question, "".join(answer_parts), model_used)
+                    # A stopped stream keeps its partial answer, and the
+                    # citations it was already grounded in go with it.
+                    self._persist_turn(conversation_id, question, "".join(answer_parts), model_used, sources)
                     if completed:
                         self.logging_service.log_request("/rag/chat", model_used, int((perf_counter() - started) * 1000), "ok")
                 elif created and self.store is not None:

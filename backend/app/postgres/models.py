@@ -683,6 +683,35 @@ class Message(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
+class MessageSource(Base):
+    """The citations that were actually placed in the prompt for one answer.
+
+    Written in the same transaction as the assistant message, so a stored
+    answer never exists without the sources it was grounded in.  Rows are a
+    snapshot: the filename and excerpt stay as they were when the answer was
+    given, even if the document is later replaced or deleted.  ``chunk_id``
+    keeps the link to the chunk that produced it for verification.
+    """
+
+    __tablename__ = "message_sources"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    message_id: Mapped[int] = mapped_column(ForeignKey("messages.id", ondelete="CASCADE"), nullable=False, index=True)
+    # Citation order as shown to the user; [Source 1] is position 1.
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    document_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    chunk_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    filename: Mapped[str] = mapped_column(String(512), nullable=False)
+    page_start: Mapped[int | None] = mapped_column(Integer)
+    page_end: Mapped[int | None] = mapped_column(Integer)
+    heading_path: Mapped[str | None] = mapped_column(Text)
+    score: Mapped[float] = mapped_column(Float, nullable=False)
+    excerpt: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    __table_args__ = (UniqueConstraint("message_id", "position", name="uq_message_sources_position"),)
+
+
 class Memory(Base):
     __tablename__ = "memories"
 

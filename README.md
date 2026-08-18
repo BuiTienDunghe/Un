@@ -25,6 +25,7 @@ Các tính năng cốt lõi đã sẵn sàng để vận hành gồm chat AI, do
 - Lưu bản gốc, trích xuất nội dung, OCR khi tài liệu scan hoặc thiếu text layer.
 - Chia nội dung thành chunk, tạo embedding và index bất đồng bộ.
 - Hỏi đáp RAG theo tài liệu đã index, trả về citation theo đoạn nguồn.
+- Citation được lưu cùng câu trả lời, nên mở lại hội thoại cũ vẫn thấy đủ nguồn như lúc trả lời.
 - Tìm kiếm lai kết hợp vector search và BM25 để cải thiện độ liên quan.
 - Theo dõi trạng thái upload, OCR và indexing.
 
@@ -90,7 +91,7 @@ Runtime chỉ truy vấn Qdrant point có đầy đủ `version_id` và `chunk_i
 - Thay thế tài liệu không ghi đè version đang hoạt động trước khi version mới hoàn tất.
 - SQLite archive lịch sử chỉ dành cho migration/audit read-only, không được đưa lại vào runtime path.
 
-Alembic head hiện tại là `20260813_19`.
+Alembic head hiện tại là `20260818_20`.
 
 ## Model mặc định
 

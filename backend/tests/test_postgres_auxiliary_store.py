@@ -13,7 +13,7 @@ from sqlalchemy.exc import OperationalError
 from app.config.settings import Settings, get_settings
 from app.main import app
 from app.postgres.database import create_postgres_engine, create_session_factory
-from app.postgres.models import Conversation, Memory, Message, OcrCache, OcrRun, RequestLog
+from app.postgres.models import Conversation, Memory, Message, MessageSource, OcrCache, OcrRun, RequestLog
 from app.services.ocr_service import OCRService
 from app.services.memory_service import MemoryService
 from app.services.logging_service import LoggingService
@@ -52,6 +52,40 @@ def test_conversation_messages_order_and_cascade(store):
     assert adapter.delete_conversation(conversation_id)
     with factory() as session:
         assert session.scalar(select(Message).where(Message.conversation_id == conversation_id)) is None
+
+
+def test_message_sources_are_stored_ordered_and_cascade_with_the_message(store):
+    adapter, factory, prefix = store
+    conversation_id = f"{prefix}-cited"
+    adapter.create_conversation(conversation_id)
+    adapter.add_message(conversation_id, "user", "câu hỏi")
+    message_id = adapter.add_message(
+        conversation_id,
+        "assistant",
+        "câu trả lời",
+        "model",
+        [
+            {"document_id": "doc_a", "chunk_id": "chunk_a", "filename": "a.pdf", "page_start": 3, "page_end": 4, "heading_path": "Chương 1", "score": 0.9, "excerpt": "đoạn A"},
+            {"document_id": "doc_b", "chunk_id": "chunk_b", "filename": "b.txt", "page_start": None, "page_end": None, "heading_path": None, "score": 0.5, "excerpt": "đoạn B"},
+        ],
+    )
+
+    detail = adapter.get_conversation(conversation_id)
+    assert detail is not None
+    question, answer = detail["messages"]
+    # A question cites nothing; the answer keeps its citations in prompt order.
+    assert question["sources"] == []
+    assert [source["chunk_id"] for source in answer["sources"]] == ["chunk_a", "chunk_b"]
+    assert answer["sources"][0] == {
+        "document_id": "doc_a", "chunk_id": "chunk_a", "filename": "a.pdf",
+        "page_start": 3, "page_end": 4, "heading_path": "Chương 1", "score": 0.9, "excerpt": "đoạn A",
+    }
+    assert answer["sources"][1]["page_start"] is None
+
+    with factory.begin() as session:
+        session.execute(delete(Message).where(Message.id == message_id))
+    with factory() as session:
+        assert session.scalar(select(MessageSource).where(MessageSource.message_id == message_id)) is None
 
 
 def test_memory_ocr_run_request_log_and_cache_contract(store):

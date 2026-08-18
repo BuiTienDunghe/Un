@@ -393,6 +393,8 @@ function renderHistory(messages) {
     } else {
       const handle = addAssistantMessage();
       handle.append(message.content);
+      // Nguồn được lưu cùng câu trả lời, nên hội thoại RAG mở lại vẫn đủ dẫn chứng.
+      handle.setSources(message.sources || []);
       handle.finish({ model: message.model_used || null });
     }
   }

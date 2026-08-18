@@ -40,6 +40,33 @@ def test_rag_chat_streams_tokens_and_sources(client, monkeypatch):
     assert '"content": " answer"' in response.text
 
 
+def test_reopened_rag_conversation_still_carries_its_sources(client, mock_ollama, monkeypatch):
+    monkeypatch.setattr(
+        "app.services.postgres_retrieval_service.PostgresRetrievalService.retrieve",
+        lambda self, query, top_k, document_id=None: [
+            {"document_id": "doc_a", "filename": "sổ tay.pdf", "chunk_id": "chunk_a", "chunk_index": 0, "page_start": 7, "page_end": 8, "heading_path": "Chương 2", "score": 0.91, "content": "Nội dung được trích dẫn A."},
+            {"document_id": "doc_b", "filename": "ghi chú.txt", "chunk_id": "chunk_b", "chunk_index": 3, "page": 2, "score": 0.42, "content": "Nội dung được trích dẫn B."},
+        ],
+    )
+
+    answered = client.post("/rag/chat", json={"message": "Quy trình in ấn thế nào?"})
+    conversation_id = answered.json()["conversation_id"]
+    reopened = client.get(f"/conversations/{conversation_id}")
+
+    assert answered.status_code == 200 and reopened.status_code == 200
+    question, answer = reopened.json()["messages"]
+    assert question["sources"] == []
+    # Reopening shows the same citations, in the same order, as the live answer.
+    assert [source["chunk_id"] for source in answer["sources"]] == ["chunk_a", "chunk_b"]
+    assert [source["filename"] for source in answer["sources"]] == ["sổ tay.pdf", "ghi chú.txt"]
+    assert (answer["sources"][0]["page_start"], answer["sources"][0]["page_end"]) == (7, 8)
+    assert answer["sources"][0]["heading_path"] == "Chương 2"
+    # A chunk carrying only `page` still renders a page number after reload.
+    assert answer["sources"][1]["page_start"] == 2
+    assert answer["sources"][1]["excerpt"] == "Nội dung được trích dẫn B."
+    client.delete(f"/conversations/{conversation_id}")
+
+
 def test_rag_chat_persists_turn_into_conversation(client, mock_ollama, monkeypatch):
     monkeypatch.setattr(
         "app.services.postgres_retrieval_service.PostgresRetrievalService.retrieve",
