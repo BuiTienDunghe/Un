@@ -43,8 +43,12 @@ jobs:
             node --check "$file"
           done
 
+      # The only dependency this job needs, and only for the step below.
+      - name: Install PyYAML
+        run: pip install "PyYAML>=6.0,<7.0"
+
       - name: Check the YAML configuration files parse
-        run: python -c "import yaml,sys;[yaml.safe_load(open(p,encoding='utf-8')) for p in ('backend/app/config/models.yaml','docker-compose.yml','.github/workflows/ci.yml')]"
+        run: python -c "import yaml;[yaml.safe_load(open(p,encoding='utf-8')) for p in ('backend/app/config/models.yaml','docker-compose.yml','.github/workflows/ci.yml')]"
 
   backend-tests:
     name: Backend tests (PostgreSQL + Redis)
@@ -74,6 +78,13 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
+      # /health counts Qdrant among its required components, so the suite needs
+      # a real one. Same image as docker-compose.yml, and no --health-cmd: the
+      # Qdrant image ships no shell tools to run one with.
+      qdrant:
+        image: qdrant/qdrant:latest
+        ports:
+          - 6333:6333
 
     env:
       # conftest.py refuses any database whose name does not end in `_test`.
@@ -83,6 +94,7 @@ jobs:
       REDIS_TEST_URL: redis://127.0.0.1:6379/15
       REDIS_URL: redis://127.0.0.1:6379/15
       RQ_QUEUE_PREFIX: local-ai:ci
+      QDRANT_URL: http://127.0.0.1:6333
 
     steps:
       - uses: actions/checkout@v4
@@ -111,6 +123,20 @@ jobs:
       # drift (indexes declared on the models that no migration ever created).
       # Closing that gap changes the production schema, so it belongs in its own
       # migration rather than in the commit that introduces CI.
+
+      # Polled from the runner because the container cannot health-check itself.
+      - name: Wait for Qdrant to accept requests
+        run: |
+          for _ in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:6333/readyz > /dev/null \
+              || curl -sf http://127.0.0.1:6333/ > /dev/null; then
+              echo "Qdrant is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Qdrant did not become ready in 120s" >&2
+          exit 1
 
       - name: Run the backend test suite
         # `python -m pytest` from backend/ puts the app package on sys.path,
