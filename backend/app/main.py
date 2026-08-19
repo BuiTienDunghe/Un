@@ -11,7 +11,7 @@ from app.config.settings import get_settings
 from app.llm_clients.ollama_client import OllamaClient
 from app.llm_clients.gemini_client import GeminiClient
 from app.llm_clients.deepseek_client import DeepSeekClient
-from app.routers import chat, conversations, dashboard, discord_sessions, documents, health, memory, models, ocr, rag, vision
+from app.routers import chat, conversations, dashboard, discord_sessions, documents, health, memory, memory_review, models, ocr, rag, vision
 from app.security.api_key import require_api_key_for_read
 from app.services.postgres_bm25_service import PostgresBm25Service
 from app.services.chat_service import ChatService
@@ -27,6 +27,7 @@ from app.services.job_queue_service import JobQueueService
 from app.services.operational_service import OperationalService
 from app.services.reranker_service import RerankerService
 from app.services.discord_session_service import DiscordSessionService
+from app.services.discord_memory_review_service import DiscordMemoryReviewService
 from app.services.discord_memory_completion_service import (
     DiscordMemoryCompletionService,
 )
@@ -76,7 +77,7 @@ async def lifespan(app: FastAPI):
     config = settings.load_config()
     rag_config = config.get("rag", {})
     storage_config = config.get("storage", {})
-    qdrant_store = QdrantStore(settings.qdrant_url, settings.qdrant_timeout_seconds)
+    qdrant_store = QdrantStore(settings.qdrant_url, settings.qdrant_timeout_seconds, settings.qdrant_memories_collection)
     app.state.auxiliary_store = auxiliary_store
     app.state.ollama_client = ollama_client
     app.state.models = settings.load_models()
@@ -86,6 +87,7 @@ async def lifespan(app: FastAPI):
     app.state.memory_service = MemoryService(auxiliary_store, qdrant_store, router, logging_service)
     app.state.chat_service = ChatService(auxiliary_store, router, logging_service, settings.conversation_history_limit, app.state.memory_service)
     app.state.discord_session_service = DiscordSessionService(postgres_sessions)
+    app.state.memory_review_service = DiscordMemoryReviewService(postgres_sessions, app.state.memory_service)
     app.state.discord_turn_service = DiscordTurnService(
         postgres_sessions,
         app.state.discord_session_service,
@@ -159,6 +161,7 @@ app.include_router(documents.router, dependencies=read_guard)
 app.include_router(ocr.router, dependencies=read_guard)
 app.include_router(rag.router, dependencies=read_guard)
 app.include_router(memory.router, dependencies=read_guard)
+app.include_router(memory_review.router, dependencies=read_guard)
 app.include_router(conversations.router, dependencies=read_guard)
 app.include_router(dashboard.router, dependencies=read_guard)
 app.include_router(discord_sessions.router, dependencies=read_guard)

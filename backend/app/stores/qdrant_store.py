@@ -26,8 +26,10 @@ class QdrantStore:
     collection_name = "documents"
     memories_collection_name = "memories"
 
-    def __init__(self, url: str, timeout: float) -> None:
+    def __init__(self, url: str, timeout: float, memories_collection: str | None = None) -> None:
         self.client = QdrantClient(url=url, timeout=timeout)
+        if memories_collection:
+            self.memories_collection_name = memories_collection
         self.retry_count = 2
 
     def healthcheck(self) -> bool:

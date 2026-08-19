@@ -23,6 +23,8 @@ WRITE_REQUESTS = [
     ("post", "/chat"),
     ("post", "/rag/chat"),
     ("post", "/api/discord/sessions/resolve"),
+    ("post", "/api/memory-review/candidates/00000000-0000-0000-0000-000000000000/approve"),
+    ("post", "/api/memory-review/candidates/00000000-0000-0000-0000-000000000000/reject"),
 ]
 
 READ_REQUESTS = [

@@ -31,6 +31,24 @@ class MemoryService:
         self.logging_service.log_request("/memory/add", None, 0, "ok")
         return self._require(memory_id)
 
+    def upsert_with_id(self, memory_id: str, content: str, memory_type: str, importance: float) -> dict[str, object]:
+        """Idempotent add under a caller-chosen id.
+
+        The Discord review bridge derives the id from the canonical Discord
+        memory, so retrying a failed mirror overwrites the same entry instead
+        of stacking duplicates. Qdrant upsert is naturally idempotent; the
+        relational row falls back to update when the insert already happened.
+        """
+        vector, _ = self.router.embed(content)
+        self.qdrant.upsert_memory(memory_id, content, memory_type, importance, vector)
+        try:
+            if not self.store.update_memory(memory_id, content, memory_type, importance):
+                self.store.create_memory(memory_id, content, memory_type, importance)
+        except Exception:
+            self.qdrant.delete_memory(memory_id)
+            raise
+        return self._require(memory_id)
+
     def search(self, query: str, top_k: int) -> list[dict[str, object]]:
         vector, _ = self.router.embed(query)
         return self.qdrant.search_memories(vector, top_k)

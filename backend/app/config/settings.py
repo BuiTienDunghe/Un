@@ -57,6 +57,11 @@ class Settings(BaseSettings):
     deepseek_retry_count: int = 2
     qdrant_url: str = "http://127.0.0.1:6333"
     qdrant_timeout_seconds: float = 10.0
+    # Memory vectors live in their own named collection. Tests point this at a
+    # test-only collection so a mocked low-dimension embed can never create or
+    # poison the runtime collection (a 3-dim collection makes every real
+    # 1024-dim memory write fail with a dimension mismatch).
+    qdrant_memories_collection: str = "memories"
     max_upload_size_bytes: int = 52_428_800
     max_message_length: int = 10_000
     conversation_history_limit: int = 12

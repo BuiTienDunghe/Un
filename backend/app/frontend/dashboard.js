@@ -208,14 +208,93 @@ function render(stats, health, metrics, models, conversations) {
   }
 }
 
+/* ── Duyệt đề xuất ghi nhớ (P1-4) ────────────────────────────────── */
+async function postJson(path) {
+  const key = localStorage.getItem("lac.apikey") || "";
+  const response = await fetch(path, {
+    method: "POST",
+    headers: key ? { "X-API-Key": key } : {},
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const hint = data.error_code === "API_KEY_REQUIRED" || data.error_code === "API_KEY_INVALID"
+      ? " Mở trang trò chuyện → Cài đặt → Bảo mật để nhập khóa."
+      : "";
+    throw new Error((data.message || `Lỗi ${response.status}`) + hint);
+  }
+  return data;
+}
+
+function renderReview(candidates) {
+  const tbody = $("review-list");
+  const badge = $("review-count");
+  if (candidates === null) {
+    tableNotice(tbody, "Không tải được danh sách đề xuất.", 4);
+    badge.hidden = true;
+    return;
+  }
+  badge.textContent = String(candidates.length);
+  badge.hidden = candidates.length === 0;
+  if (!candidates.length) {
+    tableNotice(tbody, "Không có đề xuất nào chờ duyệt.", 4);
+    return;
+  }
+  tbody.replaceChildren(...candidates.map((candidate) => {
+    const row = document.createElement("tr");
+
+    const factCell = document.createElement("td");
+    const fact = document.createElement("div");
+    fact.textContent = candidate.canonical_fact || "";
+    const evidence = document.createElement("div");
+    evidence.className = "muted";
+    evidence.textContent = candidate.evidence_text ? `«${candidate.evidence_text}»` : "";
+    factCell.append(fact, evidence);
+
+    const sourceCell = document.createElement("td");
+    sourceCell.textContent = `${candidate.author_display_name || candidate.author_id} · ${candidate.memory_type || "?"}`;
+
+    const confidenceCell = document.createElement("td");
+    confidenceCell.textContent = candidate.confidence != null ? `${Math.round(candidate.confidence * 100)}%` : "–";
+
+    const actionCell = document.createElement("td");
+    const approve = document.createElement("button");
+    approve.className = "btn ghost";
+    approve.textContent = "Duyệt";
+    const reject = document.createElement("button");
+    reject.className = "btn ghost";
+    reject.textContent = "Từ chối";
+    const act = (button, verb) => async () => {
+      approve.disabled = reject.disabled = true;
+      button.textContent = "Đang xử lý…";
+      try {
+        await postJson(`/api/memory-review/candidates/${encodeURIComponent(candidate.candidate_id)}/${verb}`);
+        refresh();
+      } catch (error) {
+        approve.disabled = reject.disabled = false;
+        approve.textContent = "Duyệt";
+        reject.textContent = "Từ chối";
+        tableNotice($("review-list"), error.message, 4);
+      }
+    };
+    approve.onclick = act(approve, "approve");
+    reject.onclick = act(reject, "reject");
+    actionCell.append(approve, document.createTextNode(" "), reject);
+
+    row.append(factCell, sourceCell, confidenceCell, actionCell);
+    return row;
+  }));
+}
+
 async function refresh() {
-  const [stats, health, metrics, models, conversations] = await Promise.allSettled([
+  const [stats, health, metrics, models, conversations, reviewCandidates] = await Promise.allSettled([
     fetchJson("/api/dashboard/stats"),
     fetchJson("/health"),
     fetchJson("/metrics"),
     fetchJson("/models"),
     fetchJson("/conversations"),
+    fetchJson("/api/memory-review/candidates"),
   ]).then((results) => results.map((result) => (result.status === "fulfilled" ? result.value : null)));
+  renderReview(reviewCandidates);
 
   // Banner hiện khi BẤT KỲ nguồn cốt lõi nào lỗi; render luôn chạy để
   // skeleton được thay bằng trạng thái lỗi thay vì nhấp nháy mãi.

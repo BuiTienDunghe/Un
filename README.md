@@ -73,7 +73,7 @@ Runtime chỉ truy vấn Qdrant point có đầy đủ `version_id` và `chunk_i
 
 - `/ping` kiểm tra bot có phản hồi.
 - `/ask` gửi câu hỏi tới backend Local AI Core.
-- `/hoi` hỏi đáp theo tài liệu đã index (RAG): chọn tài liệu bằng autocomplete hoặc bỏ trống để tìm trong tất cả; câu trả lời kèm nguồn theo tên tệp và số trang.
+- `/docs` hỏi đáp theo tài liệu đã index (RAG): chọn tài liệu bằng autocomplete hoặc bỏ trống để tìm trong tất cả; câu trả lời kèm nguồn theo tên tệp và số trang.
 - Mention `@Ún` trong kênh rồi đặt câu hỏi để chat tự nhiên.
 - Tính cách bot được cấu hình riêng trong `discord_bot/system_prompt.md`.
 - Bot có thể gửi ngữ cảnh server gồm tên server, số thành viên và tối đa 100 display name của thành viên không phải bot. Giới hạn này điều chỉnh được qua `DISCORD_MEMBER_CONTEXT_LIMIT`.

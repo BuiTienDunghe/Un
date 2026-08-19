@@ -12,7 +12,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 ## [Unreleased]
 
 ### Added
-- **Discord RAG — lệnh `/hoi`** (P1-1): hỏi đáp tài liệu ngay trong Discord, chọn tài liệu
+- **Discord RAG — lệnh `/docs`** (P1-1, ra mắt với tên `/hoi`): hỏi đáp tài liệu ngay trong Discord, chọn tài liệu
   bằng autocomplete hoặc bỏ trống để tìm tất cả; câu trả lời kèm footer nguồn gọn
   (`[1,3] file.pdf · trang 5`) giữ nguyên ánh xạ `[Source n]`. Gọi thẳng `/rag/chat` với
   timeout dài; lượt hỏi persist vào hội thoại session của kênh nên sidebar web không rác.
@@ -25,6 +25,13 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   `qwen3.5:2b`, khởi động outbox dispatcher + memory worker trên host
   (`scripts/memory_worker.py`, SimpleWorker vì Windows không fork). Candidate nằm ở
   `pending/deferred` chờ duyệt — không tồn tại đường code nào tự áp dụng memory.
+- **Duyệt memory trên dashboard** (P1-4): panel "Đề xuất ghi nhớ chờ duyệt" với nút
+  Duyệt/Từ chối; API `/api/memory-review/*` (approve/reject là endpoint ghi, cần
+  `X-API-Key` khi bật khóa); audit trail đầy đủ (`reviewed_at`, `reviewed_by`,
+  decision) — từ chối chỉ ghi lại, không xóa gì.
+- **Hợp nhất kho memory** (P1-5): duyệt một đề xuất Discord thì `canonical_fact`
+  được mirror (idempotent, id `mem_dc_*`) vào kho `/memory` mà web chat «Ghi nhớ»
+  sử dụng — trợ lý web dùng được điều học từ Discord. Phase P1 đóng.
 - Nhật ký thi công P1 kèm lý do từng quyết định: `docs/p1_progress.md`.
 - CI GitHub Actions chạy trên mọi pull request và push vào `main`: static check,
   bộ test backend với service container PostgreSQL 16 + Redis 7 + Qdrant, và bộ
@@ -43,6 +50,10 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   bot Discord, bộ eval và smoke test đều gửi khóa (P0-2).
 
 ### Changed
+- **Định hướng agent-first** (19/08, plan bản 1.1): thêm phase P2 «Agent tự hành» — memory
+  tự áp dụng theo ngưỡng tin cậy (người giám sát + thu hồi thay vì duyệt tay), vòng lặp
+  tool-use, nhật ký hành động agent. Lệnh Discord `/hoi` đổi tên **`/docs`** (tham số
+  `document`) cho bộ lệnh tiếng Anh nhất quán với `/ask`, `/ping`.
 - Outbox dispatcher đòi lại event kẹt `processing` quá hạn (T4): dispatcher chết giữa
   mark và publish không còn làm kẹt job vĩnh viễn; re-publish an toàn nhờ dedupe.
 - Model SQLAlchemy và migration đã khớp nhau: tạo 13 index mà model khai báo nhưng chưa
@@ -52,6 +63,10 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 - Phiên bản ứng dụng đọc từ `app.__version__` thay cho chuỗi cứng.
 
 ### Fixed
+- Bộ test không còn làm bẩn Qdrant dùng chung: collection memory của test tách riêng
+  (`QDRANT_MEMORIES_COLLECTION=memories_test`); trước đó embed mock 3 chiều đã tạo
+  collection `memories` sai chiều, khiến mọi thao tác ghi memory thật (1024 chiều)
+  thất bại với dimension mismatch. Collection bẩn đã được xác minh toàn rác test và xóa.
 - Ba test migration khôi phục database về revision ghim cứng thay vì `head`, khiến toàn bộ
   test chạy sau đó thất bại khi có migration mới.
 - Từ audit toàn dự án 18/08 (58 phát hiện, xác minh đối kháng): dashboard gửi kèm

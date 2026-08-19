@@ -13,6 +13,10 @@ os.environ["LOCAL_AI_PROTECT_READS"] = "false"
 # the pipeline enable it explicitly on their own service instances.
 os.environ["DISCORD_MEMORY_INGESTION_ENABLED"] = "false"
 os.environ["DISCORD_MEMORY_EXTRACTOR_ENABLED"] = "false"
+# Tests embed with tiny mocked vectors; giving them their own Qdrant collection
+# keeps the runtime `memories` collection from being created at the wrong
+# dimension (which would 500 every real memory write afterwards).
+os.environ["QDRANT_MEMORIES_COLLECTION"] = "memories_test"
 if os.getenv("POSTGRES_TEST_URL"):
     # Normal API tests use the isolated PostgreSQL database, never a local
     # SQLite file or the runtime PostgreSQL database.

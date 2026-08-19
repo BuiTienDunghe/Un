@@ -1,19 +1,19 @@
 # Kế hoạch phát triển tổng thể — Local AI Core
 
-**Phiên bản:** 1.0 · **Ngày:** 15/08/2026 · **Trạng thái:** Đang hiệu lực
+**Phiên bản:** 1.1 · **Ngày:** 15/08/2026 · **Cập nhật:** 19/08/2026 (định hướng agent-first) · **Trạng thái:** Đang hiệu lực
 **Thay thế:** các định hướng rải rác trong README và `docs/discord_memory_workflow_plan_v5_final.md` (phần roadmap; phần thiết kế memory của tài liệu đó vẫn là spec cho P1-3..P1-5)
 
 ---
 
 ## 1. Tầm nhìn & định vị
 
-> **Local AI Core là "AI workspace cục bộ" cho cá nhân và nhóm nhỏ: mọi dữ liệu ở trên máy của bạn, mọi câu trả lời có nguồn kiểm chứng được, vận hành bằng một cú click.**
+> **Local AI Core là một agent AI cục bộ tự hành cho cá nhân và nhóm nhỏ: mọi dữ liệu ở trên máy của bạn, mọi câu trả lời có nguồn kiểm chứng được, các quy trình (ghi nhớ, index, dọn dẹp) do agent tự vận hành — con người giám sát thay vì duyệt tay. Vận hành bằng một cú click.**
 
 So với các sản phẩm cùng phân khúc (Open WebUI, AnythingLLM, LibreChat), khác biệt chúng ta chọn để giữ và đào sâu:
 
 1. **Tiếng Việt là công dân hạng nhất** — BM25 với pyvi, bộ eval tiếng Việt riêng, UI thuần Việt. Không dự án lớn nào làm tốt điều này.
 2. **Citation-grounded triệt để** — câu trả lời tài liệu luôn có nguồn theo trang/đoạn; version tài liệu bất biến (Postgres là source of truth duy nhất).
-3. **Hai kênh, một agent** — Web và Discord dùng chung backend, tiến tới chung một bộ nhớ.
+3. **Một agent tự hành, nhiều bề mặt** — sản phẩm là agent có trí nhớ và công cụ, tự vận hành quy trình học/ghi nhớ; web và Discord là hai cửa truy cập cùng một agent (chung backend + bộ nhớ từ P1, Discord là kênh đồng hành chính).
 4. **Vận hành tối giản** — một máy Windows + Docker + Ollama; không dịch vụ cloud bắt buộc.
 
 ### Nguyên tắc bất biến (không thương lượng khi thêm tính năng)
@@ -23,6 +23,20 @@ So với các sản phẩm cùng phân khúc (Open WebUI, AnythingLLM, LibreChat
 - Migration chỉ additive; version tài liệu cũ sống tới khi version mới thành công.
 - Mọi thay đổi chất lượng RAG phải qua bộ eval trước khi thành mặc định.
 - Tính năng mới không phá đường "một cú click" (`run-local-ai-core.bat`).
+- Hành động tự hành của agent (ghi nhớ, index, dọn dẹp) phải để lại audit trail và thu hồi được (bổ sung 19/08).
+
+### Điều chỉnh định hướng 19/08/2026 — agent-first
+
+Dự án chuyển trọng tâm từ "workspace hai kênh" sang **một agent tự hành**: các quy trình
+(ghi nhớ, index, dọn dẹp) do agent tự thực hiện; con người **giám sát và thu hồi** thay vì
+duyệt tay từng mục. Hệ quả trong plan:
+
+- Thêm phase **P2 — Agent tự hành** (mới); các phase cũ lùi số: đa người dùng → P3,
+  RAG nâng cao → P4, năng lực mở rộng → P5.
+- Bộ lệnh Discord chuyển sang tên tiếng Anh chuyên nghiệp: `/hoi` → `/docs` (✅ 19/08);
+  `/ask` sẽ thành cửa vào agent tự chọn tool ở P2-2.
+- Nền human-review xây ở P1-4 **không bỏ đi** — nó trở thành lưới giám sát: hàng chờ cho
+  candidate dưới ngưỡng tin cậy và nút thu hồi cho memory đã tự áp dụng.
 
 ---
 
@@ -42,9 +56,9 @@ So với các sản phẩm cùng phân khúc (Open WebUI, AnythingLLM, LibreChat
 
 | # | Khoảng trống | Hệ quả |
 | --- | --- | --- |
-| ~~G1~~ ✅ | ~~**Không có xác thực**~~ — đã đóng lớp 1 bằng P0-2 (API key cho endpoint ghi/xóa); phân quyền nhiều người dùng vẫn thuộc P2 | ~~Ai trong LAN cũng xóa được dữ liệu~~ |
-| G2 | **Trí nhớ hai hệ rời** (web `/memory` thủ công · Discord pipeline dry-run) | "Agent có trí nhớ" mới chỉ tồn tại trên giấy |
-| ~~G3~~ ✅ | ~~**Discord chưa dùng được tài liệu**~~ — đã đóng bằng P1-1 (lệnh `/hoi` kèm nguồn) | ~~Nửa giá trị RAG không đến được kênh chat chính~~ |
+| ~~G1~~ ✅ | ~~**Không có xác thực**~~ — đã đóng lớp 1 bằng P0-2 (API key cho endpoint ghi/xóa); phân quyền nhiều người dùng vẫn thuộc P3 | ~~Ai trong LAN cũng xóa được dữ liệu~~ |
+| ~~G2~~ ✅ | ~~**Trí nhớ hai hệ rời**~~ — đã đóng bằng P1-3..P1-5: extractor đề xuất → người duyệt trên dashboard → memory đổ vào kho chung mà web chat dùng | ~~"Agent có trí nhớ" mới chỉ tồn tại trên giấy~~ |
+| ~~G3~~ ✅ | ~~**Discord chưa dùng được tài liệu**~~ — đã đóng bằng P1-1 (lệnh `/hoi`, nay là `/docs`, kèm nguồn) | ~~Nửa giá trị RAG không đến được kênh chat chính~~ |
 | ~~G4~~ ✅ | ~~**Citation không lưu vào lịch sử**~~ — đã đóng bằng P0-3 (bảng `message_sources`) | ~~Mở lại hội thoại là mất nguồn~~ |
 | ~~G5~~ ✅ | ~~**Câu hỏi nối tiếp không được viết lại**~~ — đã đóng bằng P1-2 (condense, eval 10/10, MRR 0.950 vs 0.787 baseline) | ~~RAG hụt hơi trong hội thoại thật~~ |
 | ~~G6~~ ✅ | ~~**Không CI**~~ — đã đóng bằng P0-1 (`.github/workflows/ci.yml`) | ~~test Postgres ít khi được chạy~~ |
@@ -106,40 +120,56 @@ Khảo sát 15/08/2026 trên các dự án mã nguồn mở uy tín nhất phân
 | T7 | **`PostgresDocumentService` chứa 2 bản sao pipeline ingestion đồng bộ tay** (thread vs RQ, đã có micro-drift) | Tách `IngestionPipeline` một bản duy nhất tham số hóa bằng checkpoint hook; tách upload-conflict thành service riêng | 4–5 buổi |
 | T8 | **Frontend fork đôi helper** (app.js/dashboard.js) — nguồn gốc lỗi dashboard thiếu API key vừa sửa | Tách `/ui/common.js` ($, el, withApiKey, api, theme/prefs) — script tag thường, không cần build | 1 buổi |
 | T9 | Gom các mục nhỏ đã xác nhận: DashboardService thay SQL trong router; đảo phụ thuộc parsers→services; `ConversationLifecycle` chung cho chat/rag; gom wiring OCR router; race trùng tên file khi upload đồng thời (cần partial unique index, gộp với T1); fencing ownership cho `fail_job`/`mark_cancelled` | Dọn dần khi đụng vào từng vùng, không cần đợt riêng | rải rác |
+| T11 | **Test và runtime dùng chung Qdrant**: collection `memories` đã cô lập bằng `QDRANT_MEMORIES_COLLECTION` (19/08, sau khi test 3-dim làm hỏng đường ghi memory thật); collection `documents` hiện chỉ an toàn nhờ test dùng fake store — chưa có guard tường minh | Cô lập tên collection `documents` cho test giống memories, hoặc guard chiều vector khi tạo | 1 buổi |
 | T10 | **Script migration SQLite hết nhiệm vụ 07/2027**: `migrate_sqlite_to_postgres.py`, `migrate_sqlite_documents_to_postgres.py`, `migrate_document_storage.py`, `audit_sqlite_readonly.py` + 2 test đi kèm bị ghim bởi cam kết giữ SQLite archive read-only 1 năm | Gỡ sau review xóa archive (sớm nhất 19/07/2027) | 1 buổi (2027) |
 
-### P1 — Một agent, hai kênh *(2–3 tuần · giá trị người dùng lớn nhất)*
+### P1 — Một agent, hai kênh *(2–3 tuần · giá trị người dùng lớn nhất)* — **ĐÃ ĐÓNG 19/08** (nhật ký: `docs/p1_progress.md`)
 
 | ID | Hạng mục | Tiêu chí nghiệm thu | Ước lượng |
 | --- | --- | --- | --- |
-| P1-1 ✅ | **Discord RAG**: lệnh `/hoi` (câu hỏi + chọn tài liệu hoặc all) gọi `/rag/chat`, trả lời kèm nguồn rút gọn | Hỏi tài liệu trong Discord nhận câu trả lời có `[Source]` + tên file/trang | 2–3 buổi |
+| P1-1 ✅ | **Discord RAG**: lệnh `/hoi` — 19/08 đổi tên `/docs` (câu hỏi + chọn tài liệu hoặc all) gọi `/rag/chat`, trả lời kèm nguồn rút gọn | Hỏi tài liệu trong Discord nhận câu trả lời có `[Source]` + tên file/trang | 2–3 buổi |
 | P1-2 ✅ | **Condense-question**: trước retrieval, dùng model general viết lại câu hỏi nối tiếp thành câu độc lập (bỏ qua khi là lượt đầu) | Bộ eval hội thoại mới (10 cặp câu nối tiếp) đạt ≥ 80% recall | 2 buổi |
 | P1-3 ✅ | **Bật memory extractor Discord** (`DISCORD_MEMORY_EXTRACTOR_ENABLED=true`) ở chế độ đề xuất | Candidate xuất hiện trong DB với proposal; không memory nào tự áp dụng | 1 buổi |
-| P1-4 | **Duyệt memory trên dashboard**: bảng candidate (nội dung đề xuất, nguồn, độ tin) + nút duyệt/từ chối | Admin duyệt được từ UI; audit trail đầy đủ | 3 buổi |
-| P1-5 | **Hợp nhất kho memory**: memory duyệt từ Discord đổ vào kho `/memory` (Qdrant) mà web chat dùng | Bật "Ghi nhớ" ở web → trợ lý dùng được điều học từ Discord | 2 buổi |
+| P1-4 ✅ | **Duyệt memory trên dashboard**: bảng candidate (nội dung đề xuất, nguồn, độ tin) + nút duyệt/từ chối | Admin duyệt được từ UI; audit trail đầy đủ | 3 buổi |
+| P1-5 ✅ | **Hợp nhất kho memory**: memory duyệt từ Discord đổ vào kho `/memory` (Qdrant) mà web chat dùng | Bật "Ghi nhớ" ở web → trợ lý dùng được điều học từ Discord | 2 buổi |
 
-### P2 — Đa người dùng & quản trị *(3–4 tuần · khi mở cho nhóm)*
+### P2 — Agent tự hành *(định hướng 19/08 · agent là sản phẩm, kênh chat là bề mặt)*
+
+> Chuyển từ "người duyệt tay" sang "agent tự vận hành, người giám sát". Đổi lại là bất biến
+> mới ở §1: mọi hành động tự hành phải audit được và thu hồi được. Hạ tầng P1 giữ nguyên vai
+> trò: đường approve của P1-4 thành đường auto-apply, dashboard thành màn giám sát.
 
 | ID | Hạng mục | Tiêu chí nghiệm thu | Ước lượng |
 | --- | --- | --- | --- |
-| P2-1 | **Tài khoản + RBAC tối giản** (admin/member — học mô hình Open WebUI, không sao chép độ phức tạp): JWT + refresh theo chuẩn FastAPI production | Hội thoại thuộc user; member không xóa được tài liệu chung | 5–6 buổi |
-| P2-2 | **Điều khiển bot từ dashboard**: start/stop/status (thay control panel Tkinter) | Nút hoạt động; trạng thái đúng với thực tế process | 3 buổi |
-| P2-3 | **Biểu đồ thời gian trên dashboard**: câu hỏi/ngày, latency p50/p95, lỗi — từ `request_logs` có sẵn | 2 chart 14 ngày, cập nhật cùng auto-refresh | 2 buổi |
-| P2-4 | **OCR console UI** (backend API đã đủ từ lâu) | Upload → theo dõi job → xem kết quả → promote thành tài liệu, không cần curl | 3–4 buổi |
+| P2-1 | **Memory tự áp dụng theo ngưỡng tin cậy**: candidate có confidence ≥ τ (mặc định 0.8, chỉnh qua `.env`) được tự approve qua đúng đường `create_active_version` hiện có (`reviewed_by="agent"`, audit giữ nguyên); dưới ngưỡng vẫn vào hàng chờ duyệt | Memory học từ Discord dùng được ở web không cần cú click nào; mọi memory tự áp dụng có provenance và thu hồi được 1 click từ dashboard | 2–3 buổi |
+| P2-2 | **Vòng lặp agent + tool use** (function calling qua Ollama): `/ask` và web chat thành cửa vào agent; tools = tìm tài liệu (RAG), đọc memory, trạng thái hệ thống; trace từng bước lưu Postgres | Câu hỏi cần cả tài liệu lẫn memory: agent tự chọn tool, trả lời đúng, trace xem lại được | 5–6 buổi |
+| P2-3 | **Bộ lệnh Discord chuyên nghiệp**: ~~`/hoi`~~ → `/docs` (✅ 19/08, tham số `document`); thêm `/memory` (điều agent đã nhớ về kênh/người hỏi), `/status` (health rút gọn) — tên lệnh tiếng Anh chuẩn, mô tả tiếng Việt | Bộ lệnh nhất quán `/ask` `/docs` `/memory` `/status` `/ping`; `/memory` liệt kê đúng memory liên quan | 2 buổi |
+| P2-4 | **Nhật ký hành động agent**: gom hành động tự hành (memory apply, index, cleanup, backup) về một dòng thời gian trên dashboard | Mọi hành động tự hành tra được một chỗ: việc gì, lúc nào, kết quả, kèm nút thu hồi nếu áp dụng | 2 buổi |
 
-### P3 — RAG nâng cao, có đo lường *(chạy nền liên tục, mỗi mục một thí nghiệm)*
+### P3 — Đa người dùng & quản trị *(3–4 tuần · khi mở cho nhóm)*
+
+| ID | Hạng mục | Tiêu chí nghiệm thu | Ước lượng |
+| --- | --- | --- | --- |
+| P3-1 | **Tài khoản + RBAC tối giản** (admin/member — học mô hình Open WebUI, không sao chép độ phức tạp): JWT + refresh theo chuẩn FastAPI production | Hội thoại thuộc user; member không xóa được tài liệu chung | 5–6 buổi |
+| P3-2 | **Điều khiển bot từ dashboard**: start/stop/status (thay control panel Tkinter) | Nút hoạt động; trạng thái đúng với thực tế process | 3 buổi |
+| P3-3 | **Biểu đồ thời gian trên dashboard**: câu hỏi/ngày, latency p50/p95, lỗi — từ `request_logs` có sẵn | 2 chart 14 ngày, cập nhật cùng auto-refresh | 2 buổi |
+| P3-4 | **OCR console UI** (backend API đã đủ từ lâu) | Upload → theo dõi job → xem kết quả → promote thành tài liệu, không cần curl | 3–4 buổi |
+
+### P4 — RAG nâng cao, có đo lường *(chạy nền liên tục, mỗi mục một thí nghiệm)*
 
 | ID | Hạng mục | Giả thuyết cần kiểm chứng bằng eval | Ước lượng |
 | --- | --- | --- | --- |
-| P3-1 | **Mở rộng bộ eval**: 3–5 tài liệu thật + 30 câu đa tài liệu + eval trong CI (gate: không tụt quá 2 điểm) | Baseline mới thay bộ 1-tài-liệu đã bão hòa | 2 buổi |
-| P3-2 | **Contextual retrieval** (Anthropic): sinh 50–100 token ngữ cảnh/chunk lúc index bằng model local | MRR đa tài liệu tăng ≥ 5 điểm (kỳ vọng theo paper: −49% failure) | 3 buổi |
-| P3-3 | **Bật reranker** (đã có sẵn `RerankerService`, warmup lúc startup) | Kết hợp P3-2 hướng tới mức −67% failure của paper | 1–2 buổi |
-| P3-4 | **Postgres FTS thay BM25 in-process** (tsvector + GIN + unaccent) | Không tụt chất lượng; RAM không tăng theo corpus; nhất quán đa process | 3–4 buổi |
-| P3-5 | **Chunk visualization** (học RAGFlow): xem chunk của tài liệu trong UI, đánh dấu chunk kém | Người dùng tự chẩn đoán được "tại sao trả lời sai" | 3 buổi |
+| P4-1 | **Mở rộng bộ eval**: 3–5 tài liệu thật + 30 câu đa tài liệu + eval trong CI (gate: không tụt quá 2 điểm) | Baseline mới thay bộ 1-tài-liệu đã bão hòa | 2 buổi |
+| P4-2 | **Contextual retrieval** (Anthropic): sinh 50–100 token ngữ cảnh/chunk lúc index bằng model local | MRR đa tài liệu tăng ≥ 5 điểm (kỳ vọng theo paper: −49% failure) | 3 buổi |
+| P4-3 | **Bật reranker** (đã có sẵn `RerankerService`, warmup lúc startup) | Kết hợp P4-2 hướng tới mức −67% failure của paper | 1–2 buổi |
+| P4-4 | **Postgres FTS thay BM25 in-process** (tsvector + GIN + unaccent) | Không tụt chất lượng; RAM không tăng theo corpus; nhất quán đa process | 3–4 buổi |
+| P4-5 | **Chunk visualization** (học RAGFlow): xem chunk của tài liệu trong UI, đánh dấu chunk kém | Người dùng tự chẩn đoán được "tại sao trả lời sai" | 3 buổi |
 
-### P4 — Năng lực agent mở rộng *(tương lai, chọn lọc theo nhu cầu thật)*
+### P5 — Năng lực mở rộng *(tương lai, chọn lọc theo nhu cầu thật)*
 
-- **Tool use / function calling** qua Ollama (thời tiết nội bộ? tra cứu ERP xưởng?) — chỉ khi có use case cụ thể.
+> Tool use cơ bản đã chuyển lên P2-2 (trở thành lõi agent). Ở đây còn các mở rộng chọn lọc.
+
+- **Tool bên ngoài cho agent** (thời tiết nội bộ? tra cứu ERP xưởng?) — chỉ khi có use case cụ thể.
 - **Vision attachments**: đính ảnh vào chat (nền `vision_chat` đã có; endpoint `/vision/chat` đang 501).
 - **Web search opt-in** cho câu hỏi ngoài tài liệu (học Open WebUI, mặc định tắt vì định vị riêng tư).
 - **MCP client** nếu hệ sinh thái nội bộ cần nối tool ngoài (LibreChat là tham chiếu tốt).
@@ -152,13 +182,15 @@ Khảo sát 15/08/2026 trên các dự án mã nguồn mở uy tín nhất phân
 ```
 Web UI ─┐                                  ┌─ Qdrant (vector index)
         ├─ FastAPI ── services ── Postgres ┤
-Discord ─┘    │                            └─ FTS (tsvector, P3-4)
-              ├─ Auth layer (P0-2 → P2-1)
+Discord ─┘    │                            └─ FTS (tsvector, P4-4)
+              ├─ Auth layer (P0-2 → P3-1)
               ├─ Memory hub (P1-5): một kho, hai kênh đọc/ghi
+              ├─ Agent core (P2-2): planner + tools (RAG/memory/status), trace từng bước
               └─ RQ workers (ocr/index/memory) + outbox + cleanup
 ```
 
-- **API versioning**: giữ endpoint hiện tại; breaking change đầu tiên (P2-1) mở namespace `/api/v1/`, alias cũ giữ 1 minor version.
+- **API versioning**: giữ endpoint hiện tại; breaking change đầu tiên (P3-1) mở namespace `/api/v1/`, alias cũ giữ 1 minor version.
+- **Agent core (P2)**: vòng lặp plan→act→observe đặt trong `services/`, dùng lại retrieval/memory/health có sẵn làm tool — không thêm framework agent ngoài; trace từng bước ghi Postgres.
 - **Cấu trúc code**: giữ `routers → services → repositories/stores` (đã khớp chuẩn FastAPI production); không thêm framework.
 - **Plugin-lite**: chưa làm hệ plugin tổng quát (Pipes kiểu Open WebUI) cho tới khi có ≥ 2 nhu cầu mở rộng thật — tránh over-engineering.
 
@@ -174,14 +206,14 @@ Discord ─┘    │                            └─ FTS (tsvector, P3-4)
 
 ## 7. KPI theo dõi (đo trên dashboard + eval)
 
-| KPI | Hiện tại | Mục tiêu cuối P1 | Mục tiêu cuối P3 |
+| KPI | Hiện tại | Mục tiêu cuối P1 | Mục tiêu cuối P4 |
 | --- | --- | --- | --- |
 | Answer pass rate (eval) | 1.00 (1 tài liệu — bão hòa) | ≥ 0.90 bộ đa tài liệu mới | ≥ 0.95 |
 | MRR | 0.933 | ≥ 0.85 (bộ mới, khó hơn) | ≥ 0.90 |
-| Câu hỏi nối tiếp đạt (bộ eval hội thoại) | chưa đo | ≥ 0.80 | ≥ 0.90 |
-| Kênh Discord dùng tài liệu | 0% | có, kèm nguồn | — |
-| Memory được duyệt đưa vào dùng | 0 | pipeline chạy end-to-end | tự đề xuất chất lượng ≥ 70% được duyệt |
-| CI | không có | xanh trên main | eval gate trong CI |
+| Câu hỏi nối tiếp đạt (bộ eval hội thoại) | 10/10, MRR 0.950 ✅ | ≥ 0.80 ✅ | ≥ 0.90 |
+| Kênh Discord dùng tài liệu | ✅ `/docs` kèm nguồn (P1-1) | có, kèm nguồn ✅ | — |
+| Memory đưa vào dùng | pipeline người-duyệt end-to-end ✅ (P1) | pipeline chạy end-to-end ✅ | tự áp dụng theo ngưỡng (P2-1), tỷ lệ bị thu hồi < 30% |
+| CI | ✅ 3 job (P0-1) | xanh trên main ✅ | eval gate trong CI |
 
 ## 8. Rủi ro & đối sách
 
@@ -190,8 +222,8 @@ Discord ─┘    │                            └─ FTS (tsvector, P3-4)
 | Model 9B chạy nhiều trên CPU (máy phụ) → latency ~45s/câu RAG | Chấp nhận (quyết định 15/08) | Kiến trúc không giả định latency thấp; nếu chuyển máy chính: chỉ cần đổi `models.yaml` |
 | Một người bảo trì | Cao | P0 dồn vào automation (CI, backup, eval gate) trước tính năng |
 | Scope creep từ cảm hứng dự án lớn | Trung | Mục "cố tình KHÔNG theo" ở §3; mỗi mục P4 cần use case thật mới làm |
-| Bảo mật khi mở LAN cho nhóm | Cao nếu bỏ qua | P0-2 là điều kiện tiên quyết của P2; không mở nhóm trước khi có auth |
-| Chất lượng extractor memory (model 2B) | Trung | Chế độ đề xuất + người duyệt (P1-3/P1-4); benchmark 150 case đã có sẵn để đo |
+| Bảo mật khi mở LAN cho nhóm | Cao nếu bỏ qua | P0-2 là điều kiện tiên quyết của P3; không mở nhóm trước khi có auth |
+| Extractor 2B tự áp dụng memory sai → trí nhớ bẩn | Trung | Chỉ auto-apply khi confidence ≥ τ (P2-1), còn lại vào hàng chờ duyệt; thu hồi 1 click + dashboard giám sát; benchmark 150 case đo trước khi chỉnh τ |
 
 ## 9. Việc bắt đầu ngay (tuần tới)
 
@@ -200,7 +232,7 @@ Discord ─┘    │                            └─ FTS (tsvector, P3-4)
 3. ~~**P0-2 API key**~~ — ✅ xong (header `X-API-Key`, mặc định tắt để không phá đường một cú click).
 4. ~~**P0-6 đồng bộ migration**~~ — ✅ xong (migration `20260818_21`, `alembic check` đã là cửa chặn trong CI).
 
-**Phase P0 đã đóng.** Việc tiếp theo là P1 — một agent, hai kênh.
+**P0 và P1 đã đóng.** Việc tiếp theo là **P2 — Agent tự hành** (định hướng 19/08): bắt đầu bằng P2-1 (memory tự áp dụng theo ngưỡng tin cậy) rồi P2-2 (vòng lặp agent + tool use).
 
 ---
 

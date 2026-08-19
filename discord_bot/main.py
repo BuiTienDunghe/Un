@@ -426,7 +426,7 @@ def create_bot(
             documents_cache["at"] = monotonic()
         return list(documents_cache["items"])
 
-    async def tailieu_autocomplete(interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+    async def document_autocomplete(interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
         needle = current.strip().casefold()
         documents = await indexed_documents()
         matches = [d for d in documents if needle in d.filename.casefold()] if needle else documents
@@ -453,21 +453,21 @@ def create_bot(
             return None, f"Có nhiều tài liệu khớp «{text}»: {names}. Hãy chọn cụ thể hơn."
         return None, f"Không tìm thấy tài liệu «{text}» trong danh sách đã index."
 
-    @bot.tree.command(name="hoi", description="Hỏi đáp theo tài liệu đã index (RAG), trả lời kèm nguồn.")
+    @bot.tree.command(name="docs", description="Hỏi đáp theo tài liệu đã index (RAG), trả lời kèm nguồn.")
     @app_commands.describe(
         question="Câu hỏi về nội dung tài liệu",
-        tailieu="Tài liệu muốn hỏi; bỏ trống để tìm trong tất cả",
+        document="Tài liệu muốn hỏi; bỏ trống để tìm trong tất cả",
     )
-    @app_commands.autocomplete(tailieu=tailieu_autocomplete)
-    async def hoi(interaction, question: str, tailieu: str | None = None):
+    @app_commands.autocomplete(document=document_autocomplete)
+    async def docs(interaction, question: str, document: str | None = None):
         if len(question) > 10_000:
             await interaction.response.send_message("Câu hỏi quá dài (tối đa 10.000 ký tự).", ephemeral=True)
             return
         await interaction.response.defer(thinking=True)
         document_ids: list[str] | None = None
-        if tailieu:
+        if document:
             documents = await indexed_documents()
-            document_ids, problem = resolve_document(tailieu, documents)
+            document_ids, problem = resolve_document(document, documents)
             if problem:
                 await interaction.followup.send(problem, ephemeral=True)
                 return

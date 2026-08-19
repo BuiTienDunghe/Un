@@ -1,4 +1,4 @@
-"""P1-1: the /hoi document-QA path — client method, source footer, resolution."""
+"""P1-1: the /docs (né /hoi 19/08) document-QA path — client method, source footer, resolution."""
 from __future__ import annotations
 
 import asyncio

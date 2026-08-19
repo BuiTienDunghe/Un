@@ -61,6 +61,16 @@
       </section>
     </div>
 
+    <section class="panel" aria-labelledby="panel-review">
+      <h2 id="panel-review"><svg width="15" height="15"><use href="#i-spark"/></svg> Đề xuất ghi nhớ chờ duyệt
+        <span class="badge" id="review-count" hidden>0</span></h2>
+      <p class="muted" id="review-note">Mỗi đề xuất do extractor tạo từ hội thoại Discord; chỉ được dùng sau khi bạn duyệt. Từ chối chỉ ghi lại quyết định, không xóa gì.</p>
+      <table class="dash-table" aria-label="Đề xuất ghi nhớ chờ duyệt">
+        <thead><tr><th>Nội dung đề xuất</th><th>Nguồn</th><th>Độ tin</th><th></th></tr></thead>
+        <tbody id="review-list"><tr><td colspan="4" class="muted">Đang tải…</td></tr></tbody>
+      </table>
+    </section>
+
     <div class="dash-cols">
       <section class="panel" aria-labelledby="panel-health">
         <h2 id="panel-health">Sức khỏe hệ thống</h2>
@@ -75,6 +85,6 @@
   </div>
 </div>
 
-<script src="/ui/dashboard.js?v=13" defer></script>
+<script src="/ui/dashboard.js?v=14" defer></script>
 </body>
 </html>

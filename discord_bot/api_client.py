@@ -219,7 +219,7 @@ class LocalAgentClient:
         )
 
     async def list_documents(self) -> list[BackendDocument]:
-        """Indexed-document inventory for the /hoi autocomplete."""
+        """Indexed-document inventory for the /docs autocomplete."""
 
         async def send() -> httpx.Response:
             try:

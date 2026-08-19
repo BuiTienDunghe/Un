@@ -1,6 +1,6 @@
 # Nhật ký thi công P1 — Một agent, hai kênh
 
-**Phạm vi:** P1-1 (Discord RAG), P1-2 (condense-question), P1-3 (memory extractor chế độ đề xuất) theo `docs/DEVELOPMENT_PLAN.md`.
+**Phạm vi:** P1-1 (Discord RAG), P1-2 (condense-question), P1-3 (memory extractor chế độ đề xuất), P1-4 (duyệt memory trên dashboard), P1-5 (hợp nhất kho memory) theo `docs/DEVELOPMENT_PLAN.md`.
 **Cách làm:** mỗi hạng mục qua ba bước — thiết kế bằng agent đọc code thật, phản biện đối kháng độc lập, rồi mới thi công. Mọi quyết định dưới đây ghi kèm **lý do**, vì sáu tháng nữa lý do quan trọng hơn diff.
 
 ---
@@ -57,6 +57,10 @@ Chất lượng viết lại đọc được bằng mắt trong report: "Gọi c
 ---
 
 ## P1-1 — Lệnh `/hoi` trên Discord
+
+> **Cập nhật 19/08 (định hướng agent-first, P2-3):** lệnh đổi tên `/hoi` → `/docs`, tham số
+> `tailieu` → `document` — bộ lệnh tiếng Anh nhất quán với `/ask`, `/ping`. Bảng dưới ghi
+> lý do chọn tên gốc tại thời điểm P1-1, giữ nguyên làm sử liệu.
 
 **Vấn đề:** bot chỉ gọi `/chat` — nửa giá trị RAG (hỏi tài liệu, có dẫn nguồn) không đến được kênh chat chính. Đây là khoảng trống G3.
 
@@ -124,6 +128,66 @@ Khẳng định bằng SQL:
 | `discord_memory_candidates` bản ghi mới nhất | `filter_decision=candidate`, `reason_code=explicit_remember`, `validation_status=pending`, `decision=deferred` |
 | `normalized_output` | có `extractor_proposal` + audit đầy đủ (latency 26.4s — trong hạn 120s; prompt v5, json_schema mode) |
 | `select count(*) from discord_memories` | **0** — không memory nào tự áp dụng |
+
+---
+
+## P1-4 — Duyệt memory trên dashboard
+
+**Vấn đề:** proposal mode (P1-3) sinh candidate nhưng không ai duyệt được — thiếu đúng cái cổng con người.
+
+### Quyết định và lý do
+
+| Quyết định | Lý do |
+| --- | --- |
+| Service riêng `DiscordMemoryReviewService`, không nhét vào worker service | Duyệt là hành động của con người qua HTTP, worker là pipeline nền — trộn hai vòng đời vào một class là mầm god-object (bài học T7) |
+| Approve dùng lại `create_active_version` có sẵn trong repository | Hàm này được viết sẵn cho đúng việc này (idempotent theo payload, tự đặt `decision='applied'`, tự `attach_source` audit) và đã có test foundation — viết lại là vứt bằng chứng |
+| Reject chỉ ghi `decision='rejected'` + `reviewed_at/reviewed_by`, không xóa gì | Audit trail là mục đích của proposal mode; bảng candidate có sẵn hai cột reviewed_* từ thiết kế gốc |
+| Hai phase trong approve: DB commit trước, mirror (có gọi model embed) chạy NGOÀI transaction | Bất biến "không transaction nào ôm qua lời gọi model". Mirror hỏng → `index_status='failed'`, approve lại chỉ chạy lại mirror (create_active_version idempotent) |
+| UI đặt ngay trong dashboard, dùng `postJson` kèm X-API-Key | Approve/reject là endpoint ghi → bị guard P0-2; lỗi 401 chỉ dẫn người dùng sang Cài đặt → Bảo mật |
+
+## P1-5 — Hợp nhất kho memory
+
+**Cầu nối:** khi duyệt, `canonical_fact` được mirror vào kho `/memory` (Qdrant + bảng `memories`) — đúng kho mà web chat «Ghi nhớ» tìm kiếm.
+
+| Quyết định | Lý do |
+| --- | --- |
+| ID mirror định danh `mem_dc_<uuid discord memory>` | Retry sau lỗi ghi đè cùng một entry thay vì chồng bản sao; nhìn ID biết ngay nguồn gốc Discord |
+| `MemoryService.upsert_with_id` mới (embed → qdrant upsert → create-or-update row) | Giữ tri thức Qdrant/store trong MemoryService; upsert Qdrant tự idempotent, row rơi về update khi đã tồn tại |
+| `importance` = `confidence` của extractor | Không bịa thang mới; confidence 0.93 của extractor chính là mức tin của đề xuất |
+
+### Bằng chứng nghiệm thu (P1-4 + P1-5)
+
+- 7 test API mới (`backend/tests/test_memory_review_api.py`): list chỉ hiện candidate có proposal; approve → memory active + `index_status='indexed'` + candidate `applied/accepted` + reviewed_at/by; **mirror xuất hiện trong `/memory/search`**; approve idempotent (2 lần → 1 memory); reject ghi quyết định không xóa và chặn approve về sau; 404 cho id lạ; **test nghiệm thu P1-5 nguyên văn**: `/chat` với `use_memory=true` inject đúng điều học từ Discord vào ngữ cảnh model.
+- Hai endpoint approve/reject vào danh sách WRITE_REQUESTS của test guard API key.
+- Bằng chứng sống: xem mục "Kiểm tra lại toàn bộ P1" bên dưới.
+
+---
+
+## Kiểm tra lại toàn bộ P1 — end-to-end sống 19/08
+
+Chạy lại **toàn chuỗi production bằng model thật** trên backend sống (DB test, Qdrant thật, Ollama thật):
+
+| Bước | Hạng mục | Kết quả |
+| --- | --- | --- |
+| 1 | Turn Discord qua API (resolve → enqueue "Hãy nhớ rằng tôi ưu tiên câu trả lời ngắn gọn bằng tiếng Việt" → execute 9b → complete + ack) | `completed` |
+| 2 | `outbox_dispatcher --once` → `memory_worker --burst` (extractor **qwen3.5:2b thật**, 23.9s) | Candidate `pending/deferred`, proposal "User prefers Vietnamese.", confidence 1.0 |
+| 3 | **P1-4**: mở dashboard thật, panel "Đề xuất ghi nhớ chờ duyệt" hiện đúng candidate (nội dung + evidence + nguồn + độ tin), bấm nút **Duyệt** | Xong sau 7s (gồm embed thật), panel tự refresh về rỗng, badge ẩn |
+| 4 | **P1-5**: kho memory sau duyệt | `discord_memories`: `active/indexed`; mirror `mem_dc_*` trong bảng `memories`; collection Qdrant `memories` 1024-dim |
+| 5 | `/memory/search` với câu hỏi **khác hẳn văn bản lưu** ("Người dùng muốn tôi dùng ngôn ngữ gì khi trả lời?") | Trả về đúng memory, score 0.509 — semantic thật, không phải khớp chuỗi |
+| 6 | `/chat` với `use_memory=true`, hỏi "Tôi từng dặn bạn điều gì về cách trả lời?" — **9b thật** | Trả lời: *"…hãy sử dụng tiếng Việt vì đó là ngôn ngữ bạn ưu tiên"* — trợ lý web dùng đúng điều học từ Discord |
+| 7 | Suite chốt (tuần tự, không chạy chồng) | Backend **506 passed, 1 skipped, 0 failed** · root **59 passed** · compileall/node sạch |
+
+Artifact của lần kiểm được dọn ngay sau đó (conversation + memory mirror + điểm Qdrant), riêng collection `memories` giữ lại ở trạng thái rỗng 1024-dim — đúng chiều cho runtime.
+
+### Phát hiện quan trọng trong lúc kiểm: test làm bẩn Qdrant dùng chung
+
+Vòng kiểm này phát hiện collection `memories` đang ở **3 chiều với 13 điểm rác test** — do bộ test (embed mock 3 chiều) và runtime dùng **chung một Qdrant với cùng tên collection**. Hệ quả thật: mọi `/memory/add` với model thật (1024 chiều) sẽ 500 `QdrantDimensionMismatchError` vĩnh viễn. Đã sửa tận gốc:
+
+- Setting mới `qdrant_memories_collection` (mặc định `memories`), truyền vào `QdrantStore`.
+- `conftest.py` ép `QDRANT_MEMORIES_COLLECTION=memories_test` — test không bao giờ chạm collection runtime nữa.
+- Xóa collection bẩn (xác minh 13/13 điểm là nội dung test trước khi xóa).
+
+Bài học vận hành tự rút: **không chạy hai bộ test đồng thời trên một DB test** (test migration hạ cấp schema sẽ đá nhau — hai lần chạy chồng cho 1 và 14 failure ảo; chạy tuần tự: 0 failure).
 
 ---
 
