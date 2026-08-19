@@ -33,6 +33,10 @@ class BackendDiscordDeliveryConflictError(BackendResponseError):
     pass
 
 
+class BackendInsufficientContextError(BackendResponseError):
+    """No indexed document context matched the question (HTTP 422)."""
+
+
 @dataclass(frozen=True)
 class LocalAgentSettings:
     base_url: str
@@ -49,6 +53,28 @@ class LocalAgentSettings:
 class BackendAnswer:
     answer: str
     conversation_id: str
+
+
+@dataclass(frozen=True)
+class BackendRagSource:
+    filename: str
+    page_start: int | None = None
+    page_end: int | None = None
+
+
+@dataclass(frozen=True)
+class BackendRagAnswer:
+    answer: str
+    # /rag/chat may run storeless, so unlike /chat this can be None.
+    conversation_id: str | None
+    sources: tuple[BackendRagSource, ...]
+
+
+@dataclass(frozen=True)
+class BackendDocument:
+    document_id: str
+    filename: str
+    status: str
 
 
 @dataclass(frozen=True)
@@ -124,6 +150,104 @@ class LocalAgentClient:
         if not isinstance(returned_conversation_id, str) or not returned_conversation_id:
             raise BackendResponseError("Backend returned no conversation ID.")
         return BackendAnswer(answer.strip(), returned_conversation_id)
+
+    async def rag_ask(self, question: str, *, document_ids: list[str] | None = None, conversation_id: str | None = None) -> BackendRagAnswer:
+        """Ask the document-QA endpoint; sources come back for the citation footer.
+
+        Uses the long execute timeout: retrieval plus a full local-model answer
+        routinely exceeds the ordinary 45s request budget.
+        """
+        if not question or not question.strip():
+            raise BackendResponseError("Question cannot be empty.")
+        if len(question) > 10_000:
+            raise BackendResponseError("Question is too long for the backend.")
+        payload: dict[str, object] = {"message": question, "stream": False}
+        if document_ids:
+            payload["document_ids"] = document_ids
+        if conversation_id:
+            payload["conversation_id"] = conversation_id
+
+        async def send() -> httpx.Response:
+            try:
+                return await self._http.post(
+                    "/rag/chat",
+                    json=payload,
+                    headers=self._headers(),
+                    timeout=self.settings.turn_execute_timeout_seconds,
+                )
+            except httpx.TimeoutException as error:
+                raise BackendTimeoutError("Câu hỏi tài liệu chạy quá thời gian. Hãy thử lại với câu ngắn hơn.") from error
+            except httpx.HTTPError as error:
+                raise BackendUnavailableError("Backend is unavailable. Please try again later.") from error
+
+        response = await send()
+        if response.status_code == 401:
+            self._jwt = None
+            await self._refresh_jwt()
+            response = await send()
+        if response.status_code == 401:
+            raise BackendAuthenticationError("Backend authentication was rejected.")
+        if response.status_code == 422 and self._error_code(response) == "INSUFFICIENT_CONTEXT":
+            raise BackendInsufficientContextError(
+                "Không tìm thấy nội dung phù hợp trong tài liệu đã index. Hãy thử tài liệu khác hoặc kiểm tra tài liệu đã index xong chưa."
+            )
+        if response.status_code == 503 and self._error_code(response) == "QDRANT_UNAVAILABLE":
+            raise BackendUnavailableError("Kho tìm kiếm (Qdrant) đang không sẵn sàng. Hãy thử lại sau.")
+        if response.status_code == 404 and self._error_code(response) == "CONVERSATION_NOT_FOUND":
+            raise BackendConversationNotFoundError("Conversation is no longer available.")
+        if response.status_code >= 500:
+            raise BackendUnavailableError("Backend is unavailable. Please try again later.")
+        if response.status_code >= 400:
+            raise BackendResponseError(self._error_message(response))
+        payload_out = self._json_object(response, "rag chat")
+        answer = payload_out.get("answer")
+        if not isinstance(answer, str) or not answer.strip():
+            raise BackendResponseError("Backend returned no answer.")
+        conversation = payload_out.get("conversation_id")
+        raw_sources = payload_out.get("sources")
+        sources: list[BackendRagSource] = []
+        for item in raw_sources if isinstance(raw_sources, list) else []:
+            if not isinstance(item, dict) or not isinstance(item.get("filename"), str):
+                continue
+            page_start = item.get("page_start") if isinstance(item.get("page_start"), int) else None
+            page_end = item.get("page_end") if isinstance(item.get("page_end"), int) else None
+            sources.append(BackendRagSource(item["filename"], page_start, page_end))
+        return BackendRagAnswer(
+            answer.strip(),
+            conversation if isinstance(conversation, str) and conversation else None,
+            tuple(sources),
+        )
+
+    async def list_documents(self) -> list[BackendDocument]:
+        """Indexed-document inventory for the /hoi autocomplete."""
+
+        async def send() -> httpx.Response:
+            try:
+                return await self._http.get("/documents", headers=self._headers())
+            except httpx.TimeoutException as error:
+                raise BackendTimeoutError("Backend request timed out. Please try again later.") from error
+            except httpx.HTTPError as error:
+                raise BackendUnavailableError("Backend is unavailable. Please try again later.") from error
+
+        response = await send()
+        if response.status_code == 401:
+            self._jwt = None
+            await self._refresh_jwt()
+            response = await send()
+        if response.status_code >= 400:
+            raise BackendResponseError(self._error_message(response))
+        try:
+            payload = response.json()
+        except ValueError as error:
+            raise BackendResponseError("Backend returned an invalid response for documents.") from error
+        documents: list[BackendDocument] = []
+        for item in payload if isinstance(payload, list) else []:
+            if not isinstance(item, dict):
+                continue
+            document_id, filename = item.get("document_id"), item.get("filename")
+            if isinstance(document_id, str) and isinstance(filename, str):
+                documents.append(BackendDocument(document_id, filename, str(item.get("status", ""))))
+        return documents
 
     async def resolve_discord_session(
         self,

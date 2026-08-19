@@ -21,14 +21,17 @@ class InsufficientContextError(Exception):
 
 
 class RagService:
-    def __init__(self, router: ModelRouter, logging_service: LoggingService, retrieval_service: RetrievalBackend, default_top_k: int = 5, max_context_chunks: int = 5, store: AuxiliaryStore | None = None) -> None:
+    def __init__(self, router: ModelRouter, logging_service: LoggingService, retrieval_service: RetrievalBackend, default_top_k: int = 5, max_context_chunks: int = 5, store: AuxiliaryStore | None = None, history_limit: int = 12, condense_enabled: bool = True) -> None:
         self.router = router
         self.logging_service = logging_service
         self.retrieval_service = retrieval_service
         self.default_top_k = max(1, default_top_k)
         self.max_context_chunks = max(1, max_context_chunks)
         self.store = store
+        self.history_limit = max(1, history_limit)
+        self.condense_enabled = condense_enabled
         self.system_prompt = (Path(__file__).parents[1] / "prompts" / "rag_system.md").read_text(encoding="utf-8")
+        self.condense_prompt = (Path(__file__).parents[1] / "prompts" / "rag_condense.md").read_text(encoding="utf-8")
 
     def _resolve_conversation(self, question: str, conversation_id: str | None) -> tuple[str | None, bool]:
         """Create or validate the conversation this RAG turn belongs to.
@@ -76,6 +79,44 @@ class RagService:
             for source in sources
         ]
 
+    def _condense_question(self, question: str, conversation_id: str | None, created: bool) -> str | None:
+        """Rewrite a follow-up into a standalone question for retrieval.
+
+        Returns None whenever the original question should be used as-is: on
+        the first turn (a conversation created this call has no history yet),
+        when disabled, and on ANY failure — a dead model must degrade this to
+        ordinary single-question RAG, never break the turn. Runs before any
+        DB write for the turn, so no transaction spans the model call.
+        """
+        if not self.condense_enabled or self.store is None or conversation_id is None or created:
+            return None
+        # Three exchanges resolve any realistic pronoun; RAG answers are long,
+        # so each message is clipped to keep the prompt-eval cost bounded.
+        history = self.store.get_messages(conversation_id, min(self.history_limit, 6))
+        if not history:
+            return None
+        transcript = "\n".join(
+            f"{'Người dùng' if message['role'] == 'user' else 'Trợ lý'}: {str(message['content'])[:500]}"
+            for message in history
+        )
+        try:
+            rewritten, _ = self.router.chat(
+                "general",
+                [
+                    {"role": "system", "content": self.condense_prompt},
+                    {"role": "user", "content": f"Hội thoại:\n{transcript}\n\nCâu hỏi nối tiếp: {question}"},
+                ],
+                options={"num_predict": 128, "temperature": 0.0},
+            )
+        except Exception:
+            self.logging_service.log_request("/rag/chat", None, 0, "error", "CONDENSE_FAILED")
+            return None
+        rewritten = " ".join(rewritten.strip().strip('"\u201c\u201d').split())
+        # A degenerate rewrite (empty, runaway, or identical) buys nothing.
+        if not rewritten or len(rewritten) > 512 or rewritten == question.strip():
+            return None
+        return rewritten
+
     def _retrieve_context(self, question: str, top_k: int | None, document_id: str | list[str] | None) -> tuple[list[dict[str, object]], str]:
         """Retrieve and format context; returned sources are exactly the cited ones."""
         sources = self.retrieval_service.retrieve(question, top_k or self.default_top_k, document_id)
@@ -95,26 +136,34 @@ class RagService:
             origin += f", page {page}" if source.get("page_end") in {None, page} else f", pages {page}-{source['page_end']}"
         return f"[Source {index + 1}] ({origin})\n{source['content']}"
 
-    def respond(self, question: str, top_k: int | None, document_id: str | list[str] | None, conversation_id: str | None = None) -> tuple[str, str, int, list[dict[str, object]], str | None]:
+    def respond(self, question: str, top_k: int | None, document_id: str | list[str] | None, conversation_id: str | None = None) -> tuple[str, str, int, list[dict[str, object]], str | None, str | None]:
         started = perf_counter()
         conversation_id, created = self._resolve_conversation(question, conversation_id)
+        # On follow-up turns the standalone rewrite feeds BOTH retrieval and the
+        # Question: line — the answer model sees no history, so an unresolved
+        # pronoun there would spoil the answer even with perfect retrieval.
+        retrieval_question = self._condense_question(question, conversation_id, created)
+        effective_question = retrieval_question or question
         try:
-            sources, context = self._retrieve_context(question, top_k, document_id)
-            answer, model_used = self.router.chat("general", [{"role": "system", "content": self.system_prompt}, {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {question}"}])
+            sources, context = self._retrieve_context(effective_question, top_k, document_id)
+            answer, model_used = self.router.chat("general", [{"role": "system", "content": self.system_prompt}, {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {effective_question}"}])
         except Exception:
             if created and self.store is not None:
                 self.store.delete_conversation(conversation_id)
             raise
         latency_ms = int((perf_counter() - started) * 1000)
+        # The transcript keeps what the user actually typed.
         self._persist_turn(conversation_id, question, answer, model_used, sources)
         self.logging_service.log_request("/rag/chat", model_used, latency_ms, "ok")
-        return answer, model_used, latency_ms, sources, conversation_id
+        return answer, model_used, latency_ms, sources, conversation_id, retrieval_question
 
-    def stream_response(self, question: str, top_k: int | None, document_id: str | list[str] | None, conversation_id: str | None = None) -> tuple[Iterator[str], str, list[dict[str, object]], str | None]:
+    def stream_response(self, question: str, top_k: int | None, document_id: str | list[str] | None, conversation_id: str | None = None) -> tuple[Iterator[str], str, list[dict[str, object]], str | None, str | None]:
         conversation_id, created = self._resolve_conversation(question, conversation_id)
+        retrieval_question = self._condense_question(question, conversation_id, created)
+        effective_question = retrieval_question or question
         try:
-            sources, context = self._retrieve_context(question, top_k, document_id)
-            tokens, model_used = self.router.stream_chat("general", [{"role": "system", "content": self.system_prompt}, {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {question}"}])
+            sources, context = self._retrieve_context(effective_question, top_k, document_id)
+            tokens, model_used = self.router.stream_chat("general", [{"role": "system", "content": self.system_prompt}, {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {effective_question}"}])
         except Exception:
             if created and self.store is not None:
                 self.store.delete_conversation(conversation_id)
@@ -139,4 +188,4 @@ class RagService:
                 elif created and self.store is not None:
                     self.store.delete_conversation(conversation_id)
 
-        return generate(), model_used, sources, conversation_id
+        return generate(), model_used, sources, conversation_id, retrieval_question

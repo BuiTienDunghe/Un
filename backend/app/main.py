@@ -137,6 +137,8 @@ async def lifespan(app: FastAPI):
         default_top_k=int(rag_config.get("top_k", 5)),
         max_context_chunks=int(rag_config.get("max_context_chunks", 5)),
         store=auxiliary_store,
+        history_limit=settings.conversation_history_limit,
+        condense_enabled=bool(rag_config.get("condense_enabled", True)),
     )
     try:
         yield

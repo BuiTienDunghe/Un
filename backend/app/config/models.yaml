@@ -89,6 +89,10 @@ rag:
   max_context_chunks: 5
   retrieval_mode: hybrid
   rrf_k: 60
+  # Rewrite follow-up questions into standalone form before retrieval.
+  # Costs one extra (short, capped) general-model call per follow-up turn;
+  # first turns and single-question calls never condense.
+  condense_enabled: true
   reranker:
     enabled: false
     provider: sentence-transformers

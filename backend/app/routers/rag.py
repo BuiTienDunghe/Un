@@ -47,11 +47,11 @@ def rag_chat(payload: RagChatRequest, request: Request) -> RagChatResponse | Str
     try:
         document_scope = payload.document_ids or ([payload.document_id] if payload.document_id else None)
         if payload.stream:
-            tokens, model_used, sources, conversation_id = request.app.state.rag_service.stream_response(payload.message, payload.top_k, document_scope, payload.conversation_id)
+            tokens, model_used, sources, conversation_id, retrieval_question = request.app.state.rag_service.stream_response(payload.message, payload.top_k, document_scope, payload.conversation_id)
             response_sources = [source.model_dump() for source in _response_sources(sources)]
 
             def events():
-                yield sse_event("meta", {"model_used": model_used, "conversation_id": conversation_id, "sources": response_sources})
+                yield sse_event("meta", {"model_used": model_used, "conversation_id": conversation_id, "retrieval_question": retrieval_question, "sources": response_sources})
                 try:
                     for token in tokens:
                         yield sse_event("token", {"content": token})
@@ -60,8 +60,8 @@ def rag_chat(payload: RagChatRequest, request: Request) -> RagChatResponse | Str
                     yield sse_event("error", {"error_code": "STREAM_FAILED", "message": str(error)})
 
             return StreamingResponse(events(), media_type="text/event-stream")
-        answer, model_used, latency_ms, sources, conversation_id = request.app.state.rag_service.respond(payload.message, payload.top_k, document_scope, payload.conversation_id)
-        return RagChatResponse(answer=answer, model_used=model_used, latency_ms=latency_ms, conversation_id=conversation_id, sources=_response_sources(sources))
+        answer, model_used, latency_ms, sources, conversation_id, retrieval_question = request.app.state.rag_service.respond(payload.message, payload.top_k, document_scope, payload.conversation_id)
+        return RagChatResponse(answer=answer, model_used=model_used, latency_ms=latency_ms, conversation_id=conversation_id, retrieval_question=retrieval_question, sources=_response_sources(sources))
     except ConversationNotFoundError as error:
         raise HTTPException(status_code=404, detail={"error_code": "CONVERSATION_NOT_FOUND", "message": f"Conversation {error} does not exist"}) from error
     except InsufficientContextError as error:

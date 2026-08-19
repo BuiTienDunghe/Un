@@ -73,6 +73,7 @@ Runtime chỉ truy vấn Qdrant point có đầy đủ `version_id` và `chunk_i
 
 - `/ping` kiểm tra bot có phản hồi.
 - `/ask` gửi câu hỏi tới backend Local AI Core.
+- `/hoi` hỏi đáp theo tài liệu đã index (RAG): chọn tài liệu bằng autocomplete hoặc bỏ trống để tìm trong tất cả; câu trả lời kèm nguồn theo tên tệp và số trang.
 - Mention `@Ún` trong kênh rồi đặt câu hỏi để chat tự nhiên.
 - Tính cách bot được cấu hình riêng trong `discord_bot/system_prompt.md`.
 - Bot có thể gửi ngữ cảnh server gồm tên server, số thành viên và tối đa 100 display name của thành viên không phải bot. Giới hạn này điều chỉnh được qua `DISCORD_MEMBER_CONTEXT_LIMIT`.
@@ -85,6 +86,7 @@ Runtime chỉ truy vấn Qdrant point có đầy đủ `version_id` và `chunk_i
 ## Vận hành và độ tin cậy
 
 - Endpoint `/health` theo dõi FastAPI, PostgreSQL, Redis, Qdrant, Ollama, các worker chính và độ tươi của bản backup PostgreSQL.
+- Khi bật memory đề xuất (`DISCORD_MEMORY_INGESTION_ENABLED=true`), launcher khởi động thêm outbox dispatcher và memory worker; candidate memory chờ duyệt, không gì tự áp dụng.
 - Backup PostgreSQL chạy tự động cùng launcher (mặc định 24 giờ một bản, giữ 14 ngày). Xem `docs/backup_restore.md` cho bài diễn tập restore hàng quý.
 - PostgreSQL backup và Qdrant snapshot là các điểm phục hồi trước thay đổi quan trọng.
 - Restore phải được kiểm chứng trong môi trường cô lập trước khi áp dụng vào môi trường vận hành.

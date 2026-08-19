@@ -49,14 +49,94 @@ def reciprocal_rank(sources: list[dict[str, object]], expected_terms: list[str])
     return 0.0
 
 
+def run_conversation_case(client: httpx.Client, base_url: str, case: dict, document_id: str) -> dict[str, object]:
+    """One follow-up pair, measured twice.
+
+    The baseline posts turn2 WITHOUT a conversation: a fresh conversation has
+    no history, so the condense step structurally skips and retrieval sees the
+    raw follow-up. The real run posts turn1 then turn2 in one conversation.
+    The delta between the two is what proves the condense step itself works,
+    rather than BM25 getting lucky on leftover keywords in turn2.
+    """
+    selected = document_id if case.get("document_id") == "__BOOTSTRAP__" else case.get("document_id")
+    expected = case.get("expected_source_terms", [])
+
+    baseline = client.post(f"{base_url}/rag/chat", json={"message": case["turn2"], "document_id": selected})
+    baseline_payload = baseline.json() if baseline.status_code != 204 else {}
+    if baseline_payload.get("conversation_id"):
+        client.delete(f"{base_url}/conversations/{baseline_payload['conversation_id']}")
+    baseline_rr = reciprocal_rank(baseline_payload.get("sources", []), expected) if baseline.is_success else 0.0
+
+    first = client.post(f"{base_url}/rag/chat", json={"message": case["turn1"], "document_id": selected})
+    conversation_id = first.json().get("conversation_id") if first.is_success else None
+    follow = client.post(
+        f"{base_url}/rag/chat",
+        json={"message": case["turn2"], "document_id": selected, "conversation_id": conversation_id},
+    )
+    payload = follow.json() if follow.status_code != 204 else {}
+    if conversation_id:
+        client.delete(f"{base_url}/conversations/{conversation_id}")
+    rr = reciprocal_rank(payload.get("sources", []), expected) if follow.is_success else 0.0
+    return {
+        "id": case["id"],
+        "status": follow.status_code,
+        "recall": rr > 0,
+        "reciprocal_rank": rr,
+        "baseline_recall": baseline_rr > 0,
+        "baseline_reciprocal_rank": baseline_rr,
+        "retrieval_question": payload.get("retrieval_question"),
+        "latency_ms": payload.get("latency_ms"),
+    }
+
+
+def run_conversation_mode(client: httpx.Client, base_url: str, cases: list[dict], document_id: str, output_dir: Path) -> int:
+    results = [run_conversation_case(client, base_url, case, document_id) for case in cases]
+    count = len(results)
+    recall = sum(item["recall"] for item in results) / count if count else 0
+    baseline_recall = sum(item["baseline_recall"] for item in results) / count if count else 0
+    mrr = sum(float(item["reciprocal_rank"]) for item in results) / count if count else 0
+    baseline_mrr = sum(float(item["baseline_reciprocal_rank"]) for item in results) / count if count else 0
+    summary = {
+        "created_at": datetime.now(UTC).isoformat(),
+        "mode": "conversation",
+        "document_id": document_id,
+        "cases": count,
+        "recall_at_k": recall,
+        "baseline_recall_at_k": baseline_recall,
+        "condense_gain": recall - baseline_recall,
+        "mrr": mrr,
+        "baseline_mrr": baseline_mrr,
+        "results": results,
+    }
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / f"rag-conversation-{datetime.now().strftime('%Y%m%d-%H%M%S')}.json"
+    output_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(json.dumps(summary, ensure_ascii=False, indent=2))
+    print(f"Saved report: {output_path}")
+    # Acceptance (P1-2): >=80% follow-up recall, and the condense step must
+    # beat asking the raw follow-up standalone. On a small corpus recall@k
+    # saturates (top-5 covers a third of the chunks), so ranking (MRR) is the
+    # discriminating half of the comparison.
+    return 0 if recall >= 0.8 and (recall > baseline_recall or mrr > baseline_mrr) else 1
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", default=str(PROJECT_ROOT / "data" / "evaluation" / "rag_eval.jsonl"))
+    parser.add_argument("--conversation-dataset", help="Run follow-up pairs (turn1/turn2) instead of single questions.")
     parser.add_argument("--fixture", default=str(PROJECT_ROOT / "data" / "evaluation" / "fixtures" / "local_ai_core_baseline.txt"))
     parser.add_argument("--base-url", default="http://127.0.0.1:8000")
     parser.add_argument("--output-dir", default=str(PROJECT_ROOT / "data" / "evaluation" / "results"))
     parser.add_argument("--document-id", help="Skip bootstrap and use this already-indexed document ID.")
     args = parser.parse_args()
+
+    if args.conversation_dataset:
+        pairs = [json.loads(line) for line in Path(args.conversation_dataset).read_text(encoding="utf-8").splitlines() if line.strip()]
+        api_key = os.environ.get("LOCAL_AI_API_KEY", "").strip()
+        headers = {"X-API-Key": api_key} if api_key else {}
+        with httpx.Client(timeout=600, headers=headers) as client:
+            document_id = args.document_id or bootstrap_document(client, args.base_url, Path(args.fixture))
+            return run_conversation_mode(client, args.base_url, pairs, document_id, Path(args.output_dir))
 
     cases = [json.loads(line) for line in Path(args.dataset).read_text(encoding="utf-8").splitlines() if line.strip()]
     # The harness drives write endpoints, so it needs the key whenever the

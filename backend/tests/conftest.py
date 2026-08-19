@@ -8,6 +8,11 @@ os.environ["LOG_DIR"] = str(Path(__file__).parent / "test_logs")
 # CI. The auth tests set the key explicitly on app.state instead.
 os.environ["LOCAL_AI_API_KEY"] = ""
 os.environ["LOCAL_AI_PROTECT_READS"] = "false"
+# Same isolation for the memory pipeline: an operator running proposal mode
+# (P1-3) must not change which branches the suite exercises. Tests that need
+# the pipeline enable it explicitly on their own service instances.
+os.environ["DISCORD_MEMORY_INGESTION_ENABLED"] = "false"
+os.environ["DISCORD_MEMORY_EXTRACTOR_ENABLED"] = "false"
 if os.getenv("POSTGRES_TEST_URL"):
     # Normal API tests use the isolated PostgreSQL database, never a local
     # SQLite file or the runtime PostgreSQL database.

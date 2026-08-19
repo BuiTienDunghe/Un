@@ -12,6 +12,20 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 ## [Unreleased]
 
 ### Added
+- **Discord RAG — lệnh `/hoi`** (P1-1): hỏi đáp tài liệu ngay trong Discord, chọn tài liệu
+  bằng autocomplete hoặc bỏ trống để tìm tất cả; câu trả lời kèm footer nguồn gọn
+  (`[1,3] file.pdf · trang 5`) giữ nguyên ánh xạ `[Source n]`. Gọi thẳng `/rag/chat` với
+  timeout dài; lượt hỏi persist vào hội thoại session của kênh nên sidebar web không rác.
+- **Condense-question trước retrieval** (P1-2): câu hỏi nối tiếp được model viết lại thành
+  câu độc lập rồi mới retrieval; lượt đầu và mọi lỗi condense đều rơi về nguyên trạng.
+  Bản viết lại phơi ra trường `retrieval_question`; công tắc `rag.condense_enabled`.
+  Kèm bộ eval hội thoại 10 cặp tiếng Việt và chế độ `--conversation-dataset` trong
+  harness, tự đo cả baseline không-condense để chứng minh mức cải thiện.
+- **Memory extractor chế độ đề xuất** (P1-3): bật qua `.env`, launcher tự pull
+  `qwen3.5:2b`, khởi động outbox dispatcher + memory worker trên host
+  (`scripts/memory_worker.py`, SimpleWorker vì Windows không fork). Candidate nằm ở
+  `pending/deferred` chờ duyệt — không tồn tại đường code nào tự áp dụng memory.
+- Nhật ký thi công P1 kèm lý do từng quyết định: `docs/p1_progress.md`.
 - CI GitHub Actions chạy trên mọi pull request và push vào `main`: static check,
   bộ test backend với service container PostgreSQL 16 + Redis 7 + Qdrant, và bộ
   test bot/tools trên Windows (P0-1).
@@ -29,6 +43,8 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   bot Discord, bộ eval và smoke test đều gửi khóa (P0-2).
 
 ### Changed
+- Outbox dispatcher đòi lại event kẹt `processing` quá hạn (T4): dispatcher chết giữa
+  mark và publish không còn làm kẹt job vĩnh viễn; re-publish an toàn nhờ dedupe.
 - Model SQLAlchemy và migration đã khớp nhau: tạo 13 index mà model khai báo nhưng chưa
   migration nào tạo, sửa 17 khai báo model nói sai về database (P0-6, migration `20260818_21`).
 - `outbox_events.idempotency_key` chuyển sang `NOT NULL` — giá trị NULL vô hiệu hóa

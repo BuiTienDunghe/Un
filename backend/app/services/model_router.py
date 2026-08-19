@@ -71,7 +71,10 @@ class ModelRouter:
     # Public API
     # ------------------------------------------------------------------
 
-    def chat(self, mode: str, messages: list[dict[str, str]]) -> tuple[str, str]:
+    def chat(self, mode: str, messages: list[dict[str, str]], options: dict[str, Any] | None = None) -> tuple[str, str]:
+        """`options` overrides per-call generation knobs (e.g. num_predict for a
+        short utility call) on top of the configured defaults. Keyword-optional
+        so every existing caller keeps its exact behaviour."""
         if mode != "general":
             raise ValueError(f"Unsupported model mode: {mode}")
         config = self.models[mode]
@@ -82,14 +85,19 @@ class ModelRouter:
             answer = client.chat(
                 model=model_name,
                 messages=messages,
-                options=self._ollama_options(config),
+                options={**self._ollama_options(config), **(options or {})},
                 keep_alive=str(config.get("keep_alive", "5m")),
                 think=config.get("think") if isinstance(config.get("think"), bool) else None,
             )
-        elif isinstance(client, GeminiClient):
-            answer = client.chat(model=model_name, messages=messages, **self._cloud_kwargs(config))
-        elif isinstance(client, DeepSeekClient):
-            answer = client.chat(model=model_name, messages=messages, **self._cloud_kwargs(config))
+        elif isinstance(client, (GeminiClient, DeepSeekClient)):
+            kwargs = self._cloud_kwargs(config)
+            if options:
+                # Cloud clients speak max_tokens, not Ollama's num_predict.
+                if "num_predict" in options:
+                    kwargs["max_tokens"] = options["num_predict"]
+                if "temperature" in options:
+                    kwargs["temperature"] = options["temperature"]
+            answer = client.chat(model=model_name, messages=messages, **kwargs)
         else:
             raise RuntimeError(f"Unknown client type: {type(client)}")
 

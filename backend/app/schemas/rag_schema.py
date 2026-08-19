@@ -42,4 +42,7 @@ class RagChatResponse(BaseModel):
     model_used: str
     latency_ms: int
     conversation_id: str | None = None
+    # Set when a follow-up was condensed into a standalone question before
+    # retrieval; the persisted user message stays the raw input.
+    retrieval_question: str | None = None
     sources: list[RagSource]

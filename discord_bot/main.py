@@ -14,12 +14,14 @@ from discord import app_commands
 from discord_bot.api_client import (
     BackendClientError,
     BackendConversationNotFoundError,
+    BackendDocument,
+    BackendRagAnswer,
     BackendTimeoutError,
     BackendUnavailableError,
     LocalAgentClient,
     LocalAgentSettings,
 )
-from discord_bot.client import LocalAgentDiscordBot, split_for_discord
+from discord_bot.client import LocalAgentDiscordBot, format_rag_sources, split_for_discord
 from discord_bot.session_location import (
     UnsupportedDiscordLocationError,
     canonical_discord_location,
@@ -249,6 +251,54 @@ class DiscordConversationGateway:
             await asyncio.sleep(0.5)
         raise BackendClientError("Discord turn did not become ready before the polling deadline.")
 
+    async def rag_prepare(
+        self,
+        question: str,
+        guild: discord.Guild | None,
+        channel,
+        user_id: int,
+        document_ids: list[str] | None,
+    ) -> BackendRagAnswer:
+        """Document QA. RAG is single-question by design (history never feeds
+        the RAG prompt), so this deliberately bypasses the FIFO turn pipeline —
+        ordering guarantees buy nothing here. The turn still persists into the
+        channel's session conversation so citations land in durable history and
+        the web sidebar (which hides session conversations) stays clean."""
+        if self.persistent_sessions_enabled and guild is not None:
+            try:
+                location = canonical_discord_location(guild, channel)
+            except UnsupportedDiscordLocationError:
+                return await self.api_client.rag_ask(question, document_ids=document_ids)
+            session = await self.api_client.resolve_discord_session(
+                location.guild_id,
+                location.channel_id,
+                location.thread_id,
+            )
+            try:
+                return await self.api_client.rag_ask(
+                    question,
+                    document_ids=document_ids,
+                    conversation_id=session.backend_conversation_id,
+                )
+            except BackendConversationNotFoundError:
+                # Mirrors the /ask recovery path: a stale session must not
+                # block the answer — degrade to a standalone RAG call.
+                return await self.api_client.rag_ask(question, document_ids=document_ids)
+        # Legacy RAM path: share the same conversation /ask uses in this channel.
+        key = conversation_key(guild.id if guild else None, channel.id, user_id)
+        try:
+            result = await self.api_client.rag_ask(
+                question,
+                document_ids=document_ids,
+                conversation_id=self.conversations.get(key),
+            )
+        except BackendConversationNotFoundError:
+            self.conversations.pop(key, None)
+            result = await self.api_client.rag_ask(question, document_ids=document_ids)
+        if result.conversation_id:
+            self.conversations[key] = result.conversation_id
+        return result
+
     async def delivered(
         self,
         prepared: PreparedDiscordAnswer,
@@ -356,6 +406,86 @@ def create_bot(
             prepared,
             [str(message.id) for message in sent_messages],
         )
+
+    # Autocomplete runs on a 3-second Discord budget, so the document list is
+    # cached briefly instead of hitting the backend on every keystroke.
+    documents_cache: dict[str, object] = {"at": 0.0, "items": []}
+
+    async def fetch_documents_safely() -> list[BackendDocument]:
+        try:
+            return await api_client.list_documents()
+        except BackendClientError:
+            # Autocomplete must never raise; an empty list degrades gracefully.
+            return []
+
+    async def indexed_documents() -> list[BackendDocument]:
+        if monotonic() - float(documents_cache["at"]) > 30.0:
+            documents_cache["items"] = [
+                document for document in await fetch_documents_safely() if document.status == "indexed"
+            ]
+            documents_cache["at"] = monotonic()
+        return list(documents_cache["items"])
+
+    async def tailieu_autocomplete(interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+        needle = current.strip().casefold()
+        documents = await indexed_documents()
+        matches = [d for d in documents if needle in d.filename.casefold()] if needle else documents
+        # Choice name max 100 chars, value must fit document_id (<=64), max 25 rows.
+        return [app_commands.Choice(name=d.filename[:100], value=d.document_id) for d in matches[:25]]
+
+    def resolve_document(selection: str, documents: list[BackendDocument]) -> tuple[list[str] | None, str | None]:
+        """Autocomplete does not enforce its choices, so the submitted text is
+        re-resolved: exact ID, exact filename, then unique substring."""
+        text = selection.strip()
+        if not text:
+            return None, None
+        for document in documents:
+            if document.document_id == text:
+                return [document.document_id], None
+        exact = [d for d in documents if d.filename.casefold() == text.casefold()]
+        if len(exact) == 1:
+            return [exact[0].document_id], None
+        partial = [d for d in documents if text.casefold() in d.filename.casefold()]
+        if len(partial) == 1:
+            return [partial[0].document_id], None
+        if partial:
+            names = ", ".join(d.filename for d in partial[:5])
+            return None, f"Có nhiều tài liệu khớp «{text}»: {names}. Hãy chọn cụ thể hơn."
+        return None, f"Không tìm thấy tài liệu «{text}» trong danh sách đã index."
+
+    @bot.tree.command(name="hoi", description="Hỏi đáp theo tài liệu đã index (RAG), trả lời kèm nguồn.")
+    @app_commands.describe(
+        question="Câu hỏi về nội dung tài liệu",
+        tailieu="Tài liệu muốn hỏi; bỏ trống để tìm trong tất cả",
+    )
+    @app_commands.autocomplete(tailieu=tailieu_autocomplete)
+    async def hoi(interaction, question: str, tailieu: str | None = None):
+        if len(question) > 10_000:
+            await interaction.response.send_message("Câu hỏi quá dài (tối đa 10.000 ký tự).", ephemeral=True)
+            return
+        await interaction.response.defer(thinking=True)
+        document_ids: list[str] | None = None
+        if tailieu:
+            documents = await indexed_documents()
+            document_ids, problem = resolve_document(tailieu, documents)
+            if problem:
+                await interaction.followup.send(problem, ephemeral=True)
+                return
+        try:
+            author_id, _ = discord_author_metadata(interaction.user)
+            result = await gateway.rag_prepare(
+                question,
+                interaction.guild,
+                interaction.channel,
+                int(author_id),
+                document_ids,
+            )
+        except BackendClientError as error:
+            await interaction.followup.send(str(error), ephemeral=True)
+            return
+        footer = format_rag_sources(result.sources)
+        answer = f"{result.answer}\n\n{footer}" if footer else result.answer
+        await send_discord_answer(interaction.followup, answer)
 
     @bot.event
     async def on_message(message: discord.Message) -> None:

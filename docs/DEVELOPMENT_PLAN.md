@@ -36,7 +36,7 @@ So với các sản phẩm cùng phân khúc (Open WebUI, AnythingLLM, LibreChat
 | Độ bền dữ liệu | Versioned ingestion + SHA-256 dedup + transactional outbox + lease/heartbeat worker |
 | Discord pipeline | FIFO durable per-session, idempotent delivery, speaker attribution, đã bật persistent sessions |
 | UI/UX | App chat hiện đại + dashboard quản trị, đã qua 2 vòng review đối kháng (17 lỗi xác nhận đã sửa) |
-| Kiểm thử | ~489 test backend + 50 test bot/tools chạy trong CI mỗi commit (Ubuntu + Windows); eval harness tự động |
+| Kiểm thử | 493 test backend + 59 test bot/tools chạy trong CI mỗi commit (Ubuntu + Windows); eval harness tự động cả single-turn lẫn hội thoại |
 
 ### Khoảng trống chính (xếp theo độ đau)
 
@@ -44,9 +44,9 @@ So với các sản phẩm cùng phân khúc (Open WebUI, AnythingLLM, LibreChat
 | --- | --- | --- |
 | ~~G1~~ ✅ | ~~**Không có xác thực**~~ — đã đóng lớp 1 bằng P0-2 (API key cho endpoint ghi/xóa); phân quyền nhiều người dùng vẫn thuộc P2 | ~~Ai trong LAN cũng xóa được dữ liệu~~ |
 | G2 | **Trí nhớ hai hệ rời** (web `/memory` thủ công · Discord pipeline dry-run) | "Agent có trí nhớ" mới chỉ tồn tại trên giấy |
-| G3 | **Discord chưa dùng được tài liệu** (bot chỉ gọi `/chat`) | Nửa giá trị RAG không đến được kênh chat chính |
+| ~~G3~~ ✅ | ~~**Discord chưa dùng được tài liệu**~~ — đã đóng bằng P1-1 (lệnh `/hoi` kèm nguồn) | ~~Nửa giá trị RAG không đến được kênh chat chính~~ |
 | ~~G4~~ ✅ | ~~**Citation không lưu vào lịch sử**~~ — đã đóng bằng P0-3 (bảng `message_sources`) | ~~Mở lại hội thoại là mất nguồn~~ |
-| G5 | **Câu hỏi nối tiếp không được viết lại** trước retrieval | RAG hụt hơi trong hội thoại thật |
+| ~~G5~~ ✅ | ~~**Câu hỏi nối tiếp không được viết lại**~~ — đã đóng bằng P1-2 (condense, eval 10/10, MRR 0.950 vs 0.787 baseline) | ~~RAG hụt hơi trong hội thoại thật~~ |
 | ~~G6~~ ✅ | ~~**Không CI**~~ — đã đóng bằng P0-1 (`.github/workflows/ci.yml`) | ~~test Postgres ít khi được chạy~~ |
 | G7 | Eval mới 1 tài liệu (đã bão hòa ở 100%) | Không đo được tiến bộ tiếp theo |
 | G8 | BM25 in-process (RAM + rebuild theo process) | Trần khả năng mở rộng corpus |
@@ -100,7 +100,7 @@ Khảo sát 15/08/2026 trên các dự án mã nguồn mở uy tín nhất phân
 | T1 | **Upload lại nội dung của tài liệu đã xóa → 500 vĩnh viễn**: unique `content_hash` vẫn giữ hash của bản ghi `deleted`; kèm rò thư mục trên đĩa | Migration: partial unique index `WHERE status != 'deleted'` (+ xử lý IntegrityError thành conflict decision); hoặc xóa hash khi cleanup chốt xóa | 2 buổi |
 | T2 | **Hủy ingestion ở chế độ RQ khi job còn queued → kẹt vĩnh viễn** (run `queued`, document `processing`, không đường retry) | Cho phép cancel chốt ngay khi job chưa được claim; thêm đường thoát reindex cho document kẹt | 2 buổi |
 | T3 | **`_replace_content` commit hash mới trước khi biết reindex enqueue được** → hash lệch nội dung đã index | Chặn replace bằng 409 khi còn run active (cùng predicate với `create_reindex`); enqueue thất bại thì tạo run `queued` bền | 1–2 buổi |
-| T4 | **Outbox event kẹt `processing` vĩnh viễn** nếu dispatcher chết giữa mark và publish | Thêm mệnh đề reclaim theo tuổi vào `dispatch_pending` (an toàn vì enqueue đã dedupe) | 1 buổi |
+| ~~T4~~ ✅ | **Outbox event kẹt `processing` vĩnh viễn** nếu dispatcher chết giữa mark và publish | Thêm mệnh đề reclaim theo tuổi vào `dispatch_pending` (an toàn vì enqueue đã dedupe) | 1 buổi |
 | T5 | **Discord turn retry sau mất lease giữa chừng → gọi model 2 lần, ghi trùng cặp message** | Chỉ persist message sau khi `save_response` xác nhận ownership | 2 buổi |
 | T6 | **`sentence-transformers` (~650MB–2.5GB) trong install bắt buộc cho reranker đang tắt** | Chuyển sang `[project.optional-dependencies] rerank`; CI bỏ bước torch CPU; Docker image nhẹ đi tương ứng | 1–2 buổi |
 | T7 | **`PostgresDocumentService` chứa 2 bản sao pipeline ingestion đồng bộ tay** (thread vs RQ, đã có micro-drift) | Tách `IngestionPipeline` một bản duy nhất tham số hóa bằng checkpoint hook; tách upload-conflict thành service riêng | 4–5 buổi |
@@ -112,9 +112,9 @@ Khảo sát 15/08/2026 trên các dự án mã nguồn mở uy tín nhất phân
 
 | ID | Hạng mục | Tiêu chí nghiệm thu | Ước lượng |
 | --- | --- | --- | --- |
-| P1-1 | **Discord RAG**: lệnh `/hoi` (câu hỏi + chọn tài liệu hoặc all) gọi `/rag/chat`, trả lời kèm nguồn rút gọn | Hỏi tài liệu trong Discord nhận câu trả lời có `[Source]` + tên file/trang | 2–3 buổi |
-| P1-2 | **Condense-question**: trước retrieval, dùng model general viết lại câu hỏi nối tiếp thành câu độc lập (bỏ qua khi là lượt đầu) | Bộ eval hội thoại mới (10 cặp câu nối tiếp) đạt ≥ 80% recall | 2 buổi |
-| P1-3 | **Bật memory extractor Discord** (`DISCORD_MEMORY_EXTRACTOR_ENABLED=true`) ở chế độ đề xuất | Candidate xuất hiện trong DB với proposal; không memory nào tự áp dụng | 1 buổi |
+| P1-1 ✅ | **Discord RAG**: lệnh `/hoi` (câu hỏi + chọn tài liệu hoặc all) gọi `/rag/chat`, trả lời kèm nguồn rút gọn | Hỏi tài liệu trong Discord nhận câu trả lời có `[Source]` + tên file/trang | 2–3 buổi |
+| P1-2 ✅ | **Condense-question**: trước retrieval, dùng model general viết lại câu hỏi nối tiếp thành câu độc lập (bỏ qua khi là lượt đầu) | Bộ eval hội thoại mới (10 cặp câu nối tiếp) đạt ≥ 80% recall | 2 buổi |
+| P1-3 ✅ | **Bật memory extractor Discord** (`DISCORD_MEMORY_EXTRACTOR_ENABLED=true`) ở chế độ đề xuất | Candidate xuất hiện trong DB với proposal; không memory nào tự áp dụng | 1 buổi |
 | P1-4 | **Duyệt memory trên dashboard**: bảng candidate (nội dung đề xuất, nguồn, độ tin) + nút duyệt/từ chối | Admin duyệt được từ UI; audit trail đầy đủ | 3 buổi |
 | P1-5 | **Hợp nhất kho memory**: memory duyệt từ Discord đổ vào kho `/memory` (Qdrant) mà web chat dùng | Bật "Ghi nhớ" ở web → trợ lý dùng được điều học từ Discord | 2 buổi |
 

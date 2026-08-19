@@ -113,6 +113,30 @@ if errorlevel 1 goto :error
 call :ensure_model "glm-ocr:latest"
 if errorlevel 1 goto :error
 
+REM ── Discord memory proposal mode (P1-3) ─────────────────────────────────
+REM Only when the .env flag is on: the extractor model, the outbox dispatcher
+REM (publishes memory jobs to Redis) and the memory worker (consumes them).
+REM Note: document OCR/index jobs use the in-process thread backend by default;
+REM a future INGESTION_EXECUTION_BACKEND=rq setup would need these two as well.
+findstr /R /C:"^DISCORD_MEMORY_EXTRACTOR_ENABLED=true" .env >nul 2>&1
+if not errorlevel 1 (
+    call :ensure_model "qwen3.5:2b"
+    if errorlevel 1 goto :error
+)
+findstr /R /C:"^DISCORD_MEMORY_INGESTION_ENABLED=true" .env >nul 2>&1
+if not errorlevel 1 (
+    tasklist /v /fi "windowtitle eq LocalAICoreOutbox*" 2>nul | find /i "python.exe" >nul
+    if errorlevel 1 (
+        echo [START] Starting the outbox dispatcher...
+        start "LocalAICoreOutbox" /min /d "%~dp0backend" "%~dp0.venv\Scripts\python.exe" -m scripts.outbox_dispatcher
+    )
+    tasklist /v /fi "windowtitle eq LocalAICoreMemoryWorker*" 2>nul | find /i "python.exe" >nul
+    if errorlevel 1 (
+        echo [START] Starting the memory worker...
+        start "LocalAICoreMemoryWorker" /min /d "%~dp0backend" "%~dp0.venv\Scripts\python.exe" -m scripts.memory_worker
+    )
+)
+
 powershell -NoProfile -Command "if (Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }" >nul 2>&1
 if not errorlevel 1 (
     echo [INFO] Local AI Core is already running. Opening the UI...

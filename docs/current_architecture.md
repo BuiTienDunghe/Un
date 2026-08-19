@@ -1,6 +1,6 @@
 # Current architecture — PostgreSQL-only baseline
 
-Date: 2026-07-19
+Date: 2026-08-19 (original 2026-07-19; refreshed after P0 and P1-1..P1-3)
 
 ## Source-of-truth boundary
 
@@ -23,12 +23,14 @@ database.
 ## Runtime components
 
 ```text
-FastAPI APIs
-  -> PostgreSQL: documents, versions, pages, chunks, jobs, outbox, auxiliary domains
-  -> Redis/RQ: OCR and indexing transport only
-       -> OCR worker / index worker
+FastAPI APIs (layer-1 X-API-Key guard on every mutating route)
+  -> PostgreSQL: documents, versions, pages, chunks, jobs, outbox,
+     conversations + message_sources (persisted citations), Discord sessions/memory
+  -> Redis/RQ: OCR, indexing and Discord-memory transport only
+       -> OCR worker / index worker / memory worker
             -> PostgreSQL canonical state + Qdrant versioned vectors
-  -> PostgreSQL cleanup worker / outbox dispatcher
+  -> host workers started by the launcher: cleanup, backup,
+     outbox dispatcher + memory worker (when memory proposal mode is enabled)
 ```
 
 `backend/app/main.py` composes PostgreSQL repositories and document/retrieval
@@ -36,7 +38,7 @@ services. Redis carries job IDs; PostgreSQL owns lifecycle state, idempotency,
 outbox records, active-version state, citations, and canonical chunk content.
 Ollama provides embeddings and model inference; it is not a persistence source.
 
-The current Alembic head is `20260718_09`.
+The current Alembic head is pinned in README ("Alembic head hiện tại"); do not duplicate it here.
 
 ## Qdrant contract
 
@@ -68,7 +70,9 @@ SQLite archives or use one as a runtime replacement.
 ## Operational evidence
 
 `GET /health` reports PostgreSQL, Redis, Qdrant, Ollama, worker discovery,
-outbox state, and cleanup heartbeat. It has no SQLite component. The runtime
+outbox state, cleanup heartbeat, PostgreSQL backup freshness (`backup`,
+`backup_age_hours`, `backup_worker`) and, when enabled, the memory pipeline
+(`memory_ingestion`, `worker_memory`). It has no SQLite component. The runtime
 guard tests prove FastAPI and worker modules do not import `SQLiteStore` or
 `sqlite3`.
 

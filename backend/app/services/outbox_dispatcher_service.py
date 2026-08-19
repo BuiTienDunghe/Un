@@ -12,24 +12,42 @@ from app.services.job_routing import UnknownJobTypeError
 
 class OutboxDispatcherService:
     """Publishes durable job-enqueue events; Redis is never part of the DB transaction."""
-    def __init__(self, sessions: sessionmaker, queue: object, max_attempts: int = 3) -> None:
+    def __init__(self, sessions: sessionmaker, queue: object, max_attempts: int = 3, reclaim_seconds: int = 300) -> None:
         self.sessions, self.queue, self.max_attempts = sessions, queue, max_attempts
+        # A dispatcher that dies between marking `processing` and publishing
+        # must not strand the event forever: after this window it becomes
+        # claimable again. Re-publishing is safe because JobQueueService.enqueue
+        # dedupes jobs that already live in Redis.
+        self.reclaim_seconds = reclaim_seconds
 
     def dispatch_pending(self, limit: int = 100) -> int:
         now = datetime.now(UTC)
         with self.sessions.begin() as session:
             events = list(session.scalars(select(OutboxEvent).where(
-                OutboxEvent.status.in_(("pending", "retrying")),
-                (OutboxEvent.available_at.is_(None)) | (OutboxEvent.available_at <= now),
+                ((OutboxEvent.status.in_(("pending", "retrying"))) & ((OutboxEvent.available_at.is_(None)) | (OutboxEvent.available_at <= now)))
+                # Reclaim: `processing` always carries an available_at deadline
+                # (set below); one that has expired belongs to a dead dispatcher.
+                | ((OutboxEvent.status == "processing") & (OutboxEvent.available_at <= now)),
             ).order_by(OutboxEvent.created_at).limit(limit).with_for_update(skip_locked=True)))
             ids = [event.id for event in events]
             for event in events:
                 event.status, event.attempts = "processing", event.attempts + 1
+                event.available_at = now + timedelta(seconds=self.reclaim_seconds)
         count = 0
         for event_id in ids:
             with self.sessions() as session:
                 event = session.get(OutboxEvent, event_id); job = session.get(Job, event.job_id) if event else None
-                if not event or not job or job.status not in {"queued", "retrying"}:
+                if not event:
+                    continue
+                if not job or job.status not in {"queued", "retrying"}:
+                    # The event's job moved on (or vanished) before publish:
+                    # there is nothing left to enqueue, and leaving the event in
+                    # `processing` would strand it. Close it out explicitly.
+                    with self.sessions.begin() as closing:
+                        stale = closing.get(OutboxEvent, event_id)
+                        if stale and stale.status == "processing":
+                            stale.status, stale.processed_at = "completed", datetime.now(UTC)
+                            stale.last_error = None if not job else f"job already {job.status}; nothing to publish"
                     continue
                 job_id, job_type = job.id, job.job_type
             try:

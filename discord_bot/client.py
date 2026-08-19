@@ -27,6 +27,37 @@ def split_for_discord(message: str, limit: int = SAFE_MESSAGE_LIMIT) -> list[str
     return cleaned or ["(No response.)"]
 
 
+def escape_discord_markdown(text: str) -> str:
+    """Filenames like sach_*ky-thuat*.pdf must render literally, not as italics."""
+    for character in ("\\", "*", "_", "~", "`", "|"):
+        text = text.replace(character, f"\\{character}")
+    return text
+
+
+def format_rag_sources(sources) -> str:
+    """Compact citation footer mapping the answer's [Source n] markers to files.
+
+    The answer cites positions ([Source 1]..[Source k]), so numbering must be
+    preserved; several chunks of one document collapse into a single line that
+    lists every index pointing at it ("[1,3] file.pdf · trang 5").
+    """
+    grouped: dict[tuple[str, int | None, int | None], list[int]] = {}
+    for index, source in enumerate(sources, start=1):
+        grouped.setdefault((source.filename, source.page_start, source.page_end), []).append(index)
+    lines: list[str] = []
+    for (filename, page_start, page_end), indices in grouped.items():
+        entry = f"[{','.join(map(str, indices))}] {escape_discord_markdown(filename)}"
+        if page_start is not None:
+            if page_end is not None and page_end != page_start:
+                entry += f" · trang {page_start}–{page_end}"
+            else:
+                entry += f" · trang {page_start}"
+        lines.append(entry)
+    if not lines:
+        return ""
+    return "**Nguồn:** " + lines[0] if len(lines) == 1 else "**Nguồn:**\n" + "\n".join(lines)
+
+
 class LocalAgentDiscordBot(discord.Client):
     def __init__(self) -> None:
         # Guilds is non-privileged. Message content and members must also be
