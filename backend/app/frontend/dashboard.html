@@ -64,10 +64,20 @@
     <section class="panel" aria-labelledby="panel-review">
       <h2 id="panel-review"><svg width="15" height="15"><use href="#i-spark"/></svg> Đề xuất ghi nhớ chờ duyệt
         <span class="badge" id="review-count" hidden>0</span></h2>
-      <p class="muted" id="review-note">Mỗi đề xuất do extractor tạo từ hội thoại Discord; chỉ được dùng sau khi bạn duyệt. Từ chối chỉ ghi lại quyết định, không xóa gì.</p>
+      <p class="muted" id="review-note">Đề xuất dưới ngưỡng tin cậy chờ bạn quyết định; đề xuất trên ngưỡng được agent tự áp dụng (xem bảng dưới). Từ chối chỉ ghi lại quyết định, không xóa gì.</p>
       <table class="dash-table" aria-label="Đề xuất ghi nhớ chờ duyệt">
         <thead><tr><th>Nội dung đề xuất</th><th>Nguồn</th><th>Độ tin</th><th></th></tr></thead>
         <tbody id="review-list"><tr><td colspan="4" class="muted">Đang tải…</td></tr></tbody>
+      </table>
+    </section>
+
+    <section class="panel" aria-labelledby="panel-applied">
+      <h2 id="panel-applied"><svg width="15" height="15"><use href="#i-spark"/></svg> Memory đang hiệu lực
+        <span class="badge" id="applied-count" hidden>0</span></h2>
+      <p class="muted">Điều agent đang nhớ và dùng ở cả web lẫn Discord. Cột «Ai duyệt» cho biết agent tự áp dụng hay người duyệt tay; «Thu hồi» gỡ khỏi sử dụng ngay nhưng giữ lại làm sử liệu.</p>
+      <table class="dash-table" aria-label="Memory đang hiệu lực">
+        <thead><tr><th>Nội dung</th><th>Nguồn</th><th>Ai duyệt</th><th></th></tr></thead>
+        <tbody id="applied-list"><tr><td colspan="4" class="muted">Đang tải…</td></tr></tbody>
       </table>
     </section>
 
@@ -85,6 +95,6 @@
   </div>
 </div>
 
-<script src="/ui/dashboard.js?v=14" defer></script>
+<script src="/ui/dashboard.js?v=15" defer></script>
 </body>
 </html>

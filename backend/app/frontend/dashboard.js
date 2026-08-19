@@ -285,16 +285,74 @@ function renderReview(candidates) {
   }));
 }
 
+/* ── Memory đang hiệu lực + thu hồi (P2-1) ───────────────────────── */
+function renderApplied(items) {
+  const tbody = $("applied-list");
+  const badge = $("applied-count");
+  if (items === null) {
+    tableNotice(tbody, "Không tải được danh sách memory.", 4);
+    badge.hidden = true;
+    return;
+  }
+  badge.textContent = String(items.length);
+  badge.hidden = items.length === 0;
+  if (!items.length) {
+    tableNotice(tbody, "Agent chưa nhớ điều gì.", 4);
+    return;
+  }
+  tbody.replaceChildren(...items.map((item) => {
+    const row = document.createElement("tr");
+
+    const factCell = document.createElement("td");
+    const fact = document.createElement("div");
+    fact.textContent = item.canonical_fact || "";
+    const meta = document.createElement("div");
+    meta.className = "muted";
+    const applied = item.applied_at ? new Date(item.applied_at).toLocaleString("vi-VN") : "";
+    meta.textContent = `${item.memory_type || "?"} · v${item.version}${applied ? ` · ${applied}` : ""}`;
+    factCell.append(fact, meta);
+
+    const sourceCell = document.createElement("td");
+    sourceCell.textContent = item.author_display_name || item.author_id || "?";
+
+    const reviewerCell = document.createElement("td");
+    reviewerCell.textContent = item.applied_by === "agent" ? "🤖 agent" : `👤 ${item.applied_by || "?"}`;
+    if (item.confidence != null) reviewerCell.textContent += ` · ${Math.round(item.confidence * 100)}%`;
+
+    const actionCell = document.createElement("td");
+    const revert = document.createElement("button");
+    revert.textContent = "Thu hồi";
+    revert.onclick = async () => {
+      revert.disabled = true;
+      revert.textContent = "Đang thu hồi…";
+      try {
+        await postJson(`/api/memory-review/candidates/${encodeURIComponent(item.candidate_id)}/revert`);
+        refresh();
+      } catch (error) {
+        revert.disabled = false;
+        revert.textContent = "Thu hồi";
+        tableNotice($("applied-list"), error.message, 4);
+      }
+    };
+    actionCell.append(revert);
+
+    row.append(factCell, sourceCell, reviewerCell, actionCell);
+    return row;
+  }));
+}
+
 async function refresh() {
-  const [stats, health, metrics, models, conversations, reviewCandidates] = await Promise.allSettled([
+  const [stats, health, metrics, models, conversations, reviewCandidates, appliedMemories] = await Promise.allSettled([
     fetchJson("/api/dashboard/stats"),
     fetchJson("/health"),
     fetchJson("/metrics"),
     fetchJson("/models"),
     fetchJson("/conversations"),
     fetchJson("/api/memory-review/candidates"),
+    fetchJson("/api/memory-review/applied"),
   ]).then((results) => results.map((result) => (result.status === "fulfilled" ? result.value : null)));
   renderReview(reviewCandidates);
+  renderApplied(appliedMemories);
 
   // Banner hiện khi BẤT KỲ nguồn cốt lõi nào lỗi; render luôn chạy để
   // skeleton được thay bằng trạng thái lỗi thay vì nhấp nháy mãi.

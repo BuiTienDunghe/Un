@@ -1,4 +1,5 @@
-"""Human review of Discord memory candidates (P1-4/P1-5)."""
+"""Review of Discord memory candidates (P1-4/P1-5) and oversight of the
+agent's own applications (P2-1): list what is in service, revert in one click."""
 from __future__ import annotations
 
 from uuid import UUID
@@ -28,6 +29,11 @@ def list_candidates(request: Request) -> list[dict[str, object]]:
     return request.app.state.memory_review_service.list_pending()
 
 
+@router.get("/applied")
+def list_applied(request: Request) -> list[dict[str, object]]:
+    return request.app.state.memory_review_service.list_applied()
+
+
 @router.post("/candidates/{candidate_id}/approve", dependencies=[Depends(require_api_key)])
 def approve_candidate(candidate_id: str, request: Request) -> dict[str, object]:
     try:
@@ -52,3 +58,17 @@ def reject_candidate(candidate_id: str, request: Request) -> dict[str, object]:
         raise HTTPException(status_code=404, detail={"error_code": "CANDIDATE_NOT_FOUND", "message": f"Candidate {error} does not exist"}) from error
     except CandidateNotReviewableError as error:
         raise HTTPException(status_code=422, detail={"error_code": "CANDIDATE_NOT_REVIEWABLE", "message": str(error)}) from error
+
+
+@router.post("/candidates/{candidate_id}/revert", dependencies=[Depends(require_api_key)])
+def revert_candidate(candidate_id: str, request: Request) -> dict[str, object]:
+    try:
+        return request.app.state.memory_review_service.revert(_candidate_uuid(candidate_id))
+    except CandidateNotFoundError as error:
+        raise HTTPException(status_code=404, detail={"error_code": "CANDIDATE_NOT_FOUND", "message": f"Candidate {error} does not exist"}) from error
+    except CandidateNotReviewableError as error:
+        raise HTTPException(status_code=422, detail={"error_code": "CANDIDATE_NOT_REVIEWABLE", "message": str(error)}) from error
+    except MemoryMirrorError as error:
+        # The canonical memory is out of service; only the web-mirror removal
+        # failed. Reverting again retries just the removal.
+        raise HTTPException(status_code=502, detail={"error_code": "MEMORY_MIRROR_FAILED", "message": str(error)}) from error

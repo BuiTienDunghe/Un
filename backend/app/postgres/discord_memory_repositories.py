@@ -986,6 +986,86 @@ class DiscordMemoryRepository:
         self.session.flush()
         return memory, True
 
+    def revive_version(
+        self,
+        *,
+        candidate_id: UUID,
+        identity: DiscordMemoryIdentity,
+        canonical_fact: str,
+        memory_type: str,
+        extractor_model: str,
+        extractor_schema_version: str,
+        validation_status: str = "accepted",
+        source_role: str = "primary",
+        evidence_hash: str,
+        expires_at: datetime | None = None,
+    ) -> tuple[DiscordMemory, bool]:
+        """Next canonical version for an identity whose history ended without
+        an active row (reverted or forgotten). `create_active_version` refuses
+        identities with history and `supersede_active_version` demands a live
+        predecessor, so without this path a reverted fact could never be
+        learned again (P2-1)."""
+        candidate = self._candidate_for_memory(candidate_id, identity)
+        self._lock_identity(identity)
+        existing_origin = self._memory_from_origin(candidate_id)
+        if existing_origin is not None:
+            if not self._same_memory_payload(
+                existing_origin,
+                identity,
+                canonical_fact=canonical_fact,
+                memory_type=memory_type,
+            ):
+                raise DiscordMemoryConflictError(
+                    "candidate already produced a different memory version"
+                )
+            return existing_origin, False
+        if self.get_active_memory(identity, lock=True) is not None:
+            raise DiscordMemoryConflictError(
+                "canonical identity already has an active memory"
+            )
+        history = self.version_history(identity)
+        if not history:
+            raise DiscordMemoryConflictError(
+                "revive_version needs prior canonical history"
+            )
+        now = datetime.now(UTC)
+        memory = DiscordMemory(
+            id=uuid4(),
+            guild_id=identity.guild_id,
+            scope=identity.scope,
+            subject_type=identity.subject_type,
+            subject_id=identity.subject_id,
+            channel_id=identity.channel_id,
+            thread_id=identity.thread_id,
+            memory_type=memory_type,
+            fact_key=identity.fact_key,
+            canonical_fact=canonical_fact,
+            status="active",
+            version=history[-1].version + 1,
+            origin_candidate_id=candidate.id,
+            supersedes_memory_id=history[-1].id,
+            valid_from=now,
+            expires_at=expires_at,
+            extractor_model=extractor_model,
+            extractor_schema_version=extractor_schema_version,
+            validation_status=validation_status,
+            index_status="pending",
+            created_at=now,
+            updated_at=now,
+        )
+        self.session.add(memory)
+        candidate.target_memory_id = history[-1].id
+        candidate.decision = "applied"
+        candidate.updated_at = now
+        self.attach_source(
+            memory=memory,
+            candidate=candidate,
+            source_role=source_role,
+            evidence_hash=evidence_hash,
+        )
+        self.session.flush()
+        return memory, True
+
     def mark_deleted(
         self,
         *,

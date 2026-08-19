@@ -49,6 +49,15 @@ class MemoryService:
             raise
         return self._require(memory_id)
 
+    def remove_with_id(self, memory_id: str) -> bool:
+        """Idempotent delete for mirrored ids: a missing row counts as done, so
+        a revert or supersede retry never fails on work already finished."""
+        existed = self.store.get_memory(memory_id) is not None
+        self.qdrant.delete_memory(memory_id)
+        if existed:
+            self.store.delete_memory(memory_id)
+        return existed
+
     def search(self, query: str, top_k: int) -> list[dict[str, object]]:
         vector, _ = self.router.embed(query)
         return self.qdrant.search_memories(vector, top_k)

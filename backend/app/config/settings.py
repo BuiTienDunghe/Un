@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import model_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     discord_memory_extractor_timeout_seconds: float = 60.0
     discord_memory_extractor_retry_count: int = 1
     discord_memory_queue_name: str = "memory_extract"
+    # P2-1: proposals at or above this extractor confidence are applied by the
+    # agent itself (reviewed_by="agent") and can be reverted in one click from
+    # the dashboard; below it they wait in the review queue. Set to "off" to
+    # review everything by hand. Delete-proposals always wait for a human.
+    discord_memory_auto_apply_threshold: float | None = 0.8
     superseded_version_grace_days: int = 7
     backup_dir: str = "data/backups"
     log_dir: str = "data/logs"
@@ -65,6 +70,15 @@ class Settings(BaseSettings):
     max_upload_size_bytes: int = 52_428_800
     max_message_length: int = 10_000
     conversation_history_limit: int = 12
+
+    @field_validator("discord_memory_auto_apply_threshold", mode="before")
+    @classmethod
+    def _auto_apply_off_words(cls, value: object) -> object:
+        # `.env` files have no null literal; the natural way an operator turns
+        # autonomy off is an empty value or the word "off".
+        if isinstance(value, str) and value.strip().lower() in {"", "off", "none", "disabled"}:
+            return None
+        return value
 
     @model_validator(mode="after")
     def validate_runtime_database(self) -> "Settings":
@@ -94,6 +108,12 @@ class Settings(BaseSettings):
             )
         if not self.discord_memory_queue_name.strip():
             raise ValueError("DISCORD_MEMORY_QUEUE_NAME must not be empty")
+        if self.discord_memory_auto_apply_threshold is not None and not (
+            0.0 < self.discord_memory_auto_apply_threshold <= 1.0
+        ):
+            raise ValueError(
+                "DISCORD_MEMORY_AUTO_APPLY_THRESHOLD must be in (0, 1] or 'off'"
+            )
         return self
 
     @property

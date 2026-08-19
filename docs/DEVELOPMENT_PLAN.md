@@ -119,7 +119,7 @@ Khảo sát 15/08/2026 trên các dự án mã nguồn mở uy tín nhất phân
 | T6 | **`sentence-transformers` (~650MB–2.5GB) trong install bắt buộc cho reranker đang tắt** | Chuyển sang `[project.optional-dependencies] rerank`; CI bỏ bước torch CPU; Docker image nhẹ đi tương ứng | 1–2 buổi |
 | T7 | **`PostgresDocumentService` chứa 2 bản sao pipeline ingestion đồng bộ tay** (thread vs RQ, đã có micro-drift) | Tách `IngestionPipeline` một bản duy nhất tham số hóa bằng checkpoint hook; tách upload-conflict thành service riêng | 4–5 buổi |
 | T8 | **Frontend fork đôi helper** (app.js/dashboard.js) — nguồn gốc lỗi dashboard thiếu API key vừa sửa | Tách `/ui/common.js` ($, el, withApiKey, api, theme/prefs) — script tag thường, không cần build | 1 buổi |
-| T9 | Gom các mục nhỏ đã xác nhận: DashboardService thay SQL trong router; đảo phụ thuộc parsers→services; `ConversationLifecycle` chung cho chat/rag; gom wiring OCR router; race trùng tên file khi upload đồng thời (cần partial unique index, gộp với T1); fencing ownership cho `fail_job`/`mark_cancelled` | Dọn dần khi đụng vào từng vùng, không cần đợt riêng | rải rác |
+| T9 | Gom các mục nhỏ đã xác nhận: DashboardService thay SQL trong router; đảo phụ thuộc parsers→services; `ConversationLifecycle` chung cho chat/rag; gom wiring OCR router; race trùng tên file khi upload đồng thời (cần partial unique index, gộp với T1); fencing ownership cho `fail_job`/`mark_cancelled`; fixture `memory_transport` đếm job memory-ingest toàn cục → nhạy dữ liệu sót, scope theo prefix (thấy 1 lần fail không tái hiện 19/08) | Dọn dần khi đụng vào từng vùng, không cần đợt riêng | rải rác |
 | T11 | **Test và runtime dùng chung Qdrant**: collection `memories` đã cô lập bằng `QDRANT_MEMORIES_COLLECTION` (19/08, sau khi test 3-dim làm hỏng đường ghi memory thật); collection `documents` hiện chỉ an toàn nhờ test dùng fake store — chưa có guard tường minh | Cô lập tên collection `documents` cho test giống memories, hoặc guard chiều vector khi tạo | 1 buổi |
 | T10 | **Script migration SQLite hết nhiệm vụ 07/2027**: `migrate_sqlite_to_postgres.py`, `migrate_sqlite_documents_to_postgres.py`, `migrate_document_storage.py`, `audit_sqlite_readonly.py` + 2 test đi kèm bị ghim bởi cam kết giữ SQLite archive read-only 1 năm | Gỡ sau review xóa archive (sớm nhất 19/07/2027) | 1 buổi (2027) |
 
@@ -133,7 +133,7 @@ Khảo sát 15/08/2026 trên các dự án mã nguồn mở uy tín nhất phân
 | P1-4 ✅ | **Duyệt memory trên dashboard**: bảng candidate (nội dung đề xuất, nguồn, độ tin) + nút duyệt/từ chối | Admin duyệt được từ UI; audit trail đầy đủ | 3 buổi |
 | P1-5 ✅ | **Hợp nhất kho memory**: memory duyệt từ Discord đổ vào kho `/memory` (Qdrant) mà web chat dùng | Bật "Ghi nhớ" ở web → trợ lý dùng được điều học từ Discord | 2 buổi |
 
-### P2 — Agent tự hành *(định hướng 19/08 · agent là sản phẩm, kênh chat là bề mặt)*
+### P2 — Agent tự hành *(định hướng 19/08 · agent là sản phẩm, kênh chat là bề mặt)* — nhật ký: `docs/p2_progress.md`
 
 > Chuyển từ "người duyệt tay" sang "agent tự vận hành, người giám sát". Đổi lại là bất biến
 > mới ở §1: mọi hành động tự hành phải audit được và thu hồi được. Hạ tầng P1 giữ nguyên vai
@@ -141,7 +141,8 @@ Khảo sát 15/08/2026 trên các dự án mã nguồn mở uy tín nhất phân
 
 | ID | Hạng mục | Tiêu chí nghiệm thu | Ước lượng |
 | --- | --- | --- | --- |
-| P2-1 | **Memory tự áp dụng theo ngưỡng tin cậy**: candidate có confidence ≥ τ (mặc định 0.8, chỉnh qua `.env`) được tự approve qua đúng đường `create_active_version` hiện có (`reviewed_by="agent"`, audit giữ nguyên); dưới ngưỡng vẫn vào hàng chờ duyệt | Memory học từ Discord dùng được ở web không cần cú click nào; mọi memory tự áp dụng có provenance và thu hồi được 1 click từ dashboard | 2–3 buổi |
+| P2-1 ✅ | **Memory tự áp dụng theo ngưỡng tin cậy**: candidate có confidence ≥ τ (mặc định 0.8, chỉnh qua `.env`, `off` để tắt) được tự approve qua đúng đường duyệt hiện có (`reviewed_by="agent"`, audit giữ nguyên); dưới ngưỡng vẫn vào hàng chờ duyệt; approve định tuyến create/supersede/revive nên fact đổi ý và học-lại-sau-thu-hồi đều chạy; delete-proposal luôn chờ người | Memory học từ Discord dùng được ở web không cần cú click nào (✅ live 19/08: agent áp dụng sau ~20s, search 0.534); mọi memory tự áp dụng có provenance và thu hồi được 1 click từ dashboard (✅ đã thu hồi một fact 2b bịa sai với confidence 1.0) | 2–3 buổi |
+| P2-1b | **Nâng extractor theo số liệu benchmark 19/08**: `DISCORD_MEMORY_EXTRACTOR_MODEL` → `qwen3.5:9b`; guard xác định thành điều kiện auto-apply (evidence nguyên văn trong tin gốc + fact trùng từ-nội-dung); τ giữ làm công tắc, không còn là tín hiệu chính (confidence đo được là hằng 1.0) | Benchmark tái lập chính sách mới: poison ≤ 21,6% coverage ≥ 96% như số đo; live: memory tự áp dụng phản ánh đúng tin gốc | 1–2 buổi |
 | P2-2 | **Vòng lặp agent + tool use** (function calling qua Ollama): `/ask` và web chat thành cửa vào agent; tools = tìm tài liệu (RAG), đọc memory, trạng thái hệ thống; trace từng bước lưu Postgres | Câu hỏi cần cả tài liệu lẫn memory: agent tự chọn tool, trả lời đúng, trace xem lại được | 5–6 buổi |
 | P2-3 | **Bộ lệnh Discord chuyên nghiệp**: ~~`/hoi`~~ → `/docs` (✅ 19/08, tham số `document`); thêm `/memory` (điều agent đã nhớ về kênh/người hỏi), `/status` (health rút gọn) — tên lệnh tiếng Anh chuẩn, mô tả tiếng Việt | Bộ lệnh nhất quán `/ask` `/docs` `/memory` `/status` `/ping`; `/memory` liệt kê đúng memory liên quan | 2 buổi |
 | P2-4 | **Nhật ký hành động agent**: gom hành động tự hành (memory apply, index, cleanup, backup) về một dòng thời gian trên dashboard | Mọi hành động tự hành tra được một chỗ: việc gì, lúc nào, kết quả, kèm nút thu hồi nếu áp dụng | 2 buổi |
@@ -223,7 +224,7 @@ Discord ─┘    │                            └─ FTS (tsvector, P4-4)
 | Một người bảo trì | Cao | P0 dồn vào automation (CI, backup, eval gate) trước tính năng |
 | Scope creep từ cảm hứng dự án lớn | Trung | Mục "cố tình KHÔNG theo" ở §3; mỗi mục P4 cần use case thật mới làm |
 | Bảo mật khi mở LAN cho nhóm | Cao nếu bỏ qua | P0-2 là điều kiện tiên quyết của P3; không mở nhóm trước khi có auth |
-| Extractor 2B tự áp dụng memory sai → trí nhớ bẩn | Trung | Chỉ auto-apply khi confidence ≥ τ (P2-1), còn lại vào hàng chờ duyệt; thu hồi 1 click + dashboard giám sát; benchmark 150 case đo trước khi chỉnh τ |
+| Extractor tự áp dụng memory sai → trí nhớ bẩn | **Cao — đã đo 19/08**: confidence là hằng 1.0 ở mọi lỗi (τ vô nghĩa); 2b lọt 49% độc, 9b + guard xác định còn 21,6% (benchmark 150 case, `docs/p2_progress.md`) | P2-1b: extractor → 9b + guard evidence/overlap trong auto-apply; giám sát + thu hồi 1 click là lưới chính, không phải tạm bợ; benchmark lại sau mỗi thay đổi extractor |
 
 ## 9. Việc bắt đầu ngay (tuần tới)
 
@@ -232,7 +233,7 @@ Discord ─┘    │                            └─ FTS (tsvector, P4-4)
 3. ~~**P0-2 API key**~~ — ✅ xong (header `X-API-Key`, mặc định tắt để không phá đường một cú click).
 4. ~~**P0-6 đồng bộ migration**~~ — ✅ xong (migration `20260818_21`, `alembic check` đã là cửa chặn trong CI).
 
-**P0 và P1 đã đóng.** Việc tiếp theo là **P2 — Agent tự hành** (định hướng 19/08): bắt đầu bằng P2-1 (memory tự áp dụng theo ngưỡng tin cậy) rồi P2-2 (vòng lặp agent + tool use).
+**P0 và P1 đã đóng; P2-1 xong 19/08** (nhật ký: `docs/p2_progress.md`). Việc tiếp theo là **P2-2 — vòng lặp agent + tool use** (`/ask` thành cửa vào agent), xen kẽ P2-3 phần còn lại (`/memory`, `/status`) nếu cần buổi nhẹ.
 
 ---
 

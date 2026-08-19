@@ -12,6 +12,14 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 ## [Unreleased]
 
 ### Added
+- **Memory tự áp dụng theo ngưỡng tin cậy** (P2-1): đề xuất có confidence ≥
+  `DISCORD_MEMORY_AUTO_APPLY_THRESHOLD` (mặc định 0.8, `off` để tắt) được agent
+  tự approve qua đúng đường duyệt (`reviewed_by="agent"` — audit và mirror y hệt
+  người duyệt); dưới ngưỡng vẫn chờ trên dashboard; đề xuất xóa luôn chờ người.
+  Panel mới «Memory đang hiệu lực» cho biết ai duyệt (🤖/👤) kèm nút **Thu hồi**
+  1 click (giữ nguyên sử liệu). Approve giờ định tuyến create/supersede/revive:
+  fact đổi ý ra version mới + gỡ mirror cũ, và học lại được sau thu hồi — trước
+  đó fact cập nhật lần hai kẹt 409 vĩnh viễn.
 - **Discord RAG — lệnh `/docs`** (P1-1, ra mắt với tên `/hoi`): hỏi đáp tài liệu ngay trong Discord, chọn tài liệu
   bằng autocomplete hoặc bỏ trống để tìm tất cả; câu trả lời kèm footer nguồn gọn
   (`[1,3] file.pdf · trang 5`) giữ nguyên ánh xạ `[Source n]`. Gọi thẳng `/rag/chat` với

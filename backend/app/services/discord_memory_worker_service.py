@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from uuid import UUID
 
 from sqlalchemy.orm import sessionmaker
@@ -9,6 +9,11 @@ from app.postgres.discord_memory_job_repository import (
     DiscordMemoryJobRepository,
 )
 from app.postgres.discord_memory_repositories import DiscordMemoryRepository
+from app.postgres.models import DiscordMemoryCandidate
+from app.services.discord_memory_review_service import (
+    DiscordMemoryReviewService,
+    MemoryMirrorError,
+)
 from app.services.discord_memory_extractor import (
     DiscordMemoryExtractorAdapter,
     DiscordMemoryExtractorEnvelope,
@@ -47,7 +52,9 @@ class _RuleFilterError(RuntimeError):
 
 
 class DiscordMemoryWorkerService:
-    """Filter and dry-run extractor worker; canonical memory is never applied."""
+    """Filter and extractor worker. Canonical memory is applied only through
+    the review service — by a human on the dashboard, or by the agent itself
+    when the proposal's confidence clears `auto_apply_threshold` (P2-1)."""
 
     def __init__(
         self,
@@ -62,6 +69,8 @@ class DiscordMemoryWorkerService:
         extractor_schema_version: str = "v1",
         extractor: DiscordMemoryExtractorAdapter | None = None,
         envelope_builder: DiscordMemoryExtractorEnvelopeBuilder | None = None,
+        review_service: DiscordMemoryReviewService | None = None,
+        auto_apply_threshold: float | None = None,
     ) -> None:
         self.sessions = sessions
         self.worker_id = worker_id
@@ -75,6 +84,8 @@ class DiscordMemoryWorkerService:
         self.envelope_builder = (
             envelope_builder or DiscordMemoryExtractorEnvelopeBuilder()
         )
+        self.review_service = review_service
+        self.auto_apply_threshold = auto_apply_threshold
 
     def heartbeat(self, job_id: str) -> bool:
         with self.sessions.begin() as database:
@@ -367,6 +378,48 @@ class DiscordMemoryWorkerService:
             created=plan.created,
         )
 
+    def auto_apply(
+        self, outcome: DiscordMemoryWorkerOutcome
+    ) -> DiscordMemoryWorkerOutcome:
+        """P2-1: apply a fresh proposal without a human when its extractor
+        confidence clears the operator's threshold.
+
+        Runs after the extraction job committed and outside any transaction.
+        Every failure degrades to the P1-4 review queue — nothing is retried or
+        lost, the candidate simply waits for a human. Delete-proposals never
+        auto-apply: forgetting stays a human decision.
+        """
+        try:
+            if (
+                self.review_service is None
+                or self.auto_apply_threshold is None
+                or outcome.candidate_id is None
+                or outcome.reason != "extractor_proposal_deferred"
+            ):
+                return outcome
+            candidate_id = UUID(outcome.candidate_id)
+            with self.sessions() as database:
+                candidate = database.get(DiscordMemoryCandidate, candidate_id)
+                eligible = (
+                    candidate is not None
+                    and candidate.decision in ("deferred", "pending")
+                    and bool(candidate.canonical_fact)
+                    and bool(candidate.memory_type)
+                    and candidate.operation in ("create", "update")
+                    and candidate.confidence is not None
+                    and float(candidate.confidence) >= self.auto_apply_threshold
+                )
+            if not eligible:
+                return outcome
+            self.review_service.approve(candidate_id, reviewed_by="agent")
+        except MemoryMirrorError:
+            # Applied in PostgreSQL; only the web mirror failed. The dashboard
+            # approve button retries just the mirror.
+            return replace(outcome, reason="auto_apply_mirror_failed")
+        except Exception:
+            return replace(outcome, reason="auto_apply_failed")
+        return replace(outcome, reason="extractor_proposal_auto_applied")
+
     def _retry_failure(
         self,
         job_id: str,
@@ -418,7 +471,9 @@ class DiscordMemoryWorkerService:
                 result = self.extractor.extract(prepared.envelope)
             except DiscordMemoryExtractorOutputError as error:
                 return self._persist_invalid_result(job_id, prepared, error)
-            return self._persist_valid_result(job_id, prepared, result)
+            return self.auto_apply(
+                self._persist_valid_result(job_id, prepared, result)
+            )
         except DiscordMemoryExtractorTransportError as error:
             return self._retry_failure(
                 job_id,
