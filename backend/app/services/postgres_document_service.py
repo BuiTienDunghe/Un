@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 from app.parsers.smart_parser import SmartParser
-from app.postgres.models import Document, DocumentVersion, IngestionRun
+from app.postgres.models import Document, DocumentVersion, IngestionRun, Job
 from app.postgres.repositories import InvalidStateTransition, PostgresDocumentRepository
 from app.services.logging_service import LoggingService
 from app.services.model_router import ModelRouter
@@ -163,16 +163,48 @@ class PostgresDocumentService:
             if target.exists():
                 target.replace(backup)
             staged.replace(target)
+            # T3: the reindex guard, the new hash and the queued run commit in
+            # ONE transaction. Before this, the hash was committed first and
+            # enqueue could still fail (e.g. a run already active), leaving the
+            # database claiming content the index has never seen — with no run
+            # to ever reconcile them.
             with self.sessions.begin() as session:
-                row = session.get(Document, document_id)
+                repo = PostgresDocumentRepository(session)
+                row = session.get(Document, document_id, with_for_update=True)
                 if not row:
                     raise DocumentNotFoundError(document_id)
                 if row.content_hash == digest:
                     return {"document_id": row.id, "filename": row.original_filename, "status": row.status, "duplicate": True, "content_hash": digest}
+                # A run still sitting in "queued" belongs to the content being
+                # replaced and no worker holds it yet — supersede it instead of
+                # refusing (upload → immediate correction is a normal flow).
+                # Anything past "queued" is mid-flight and stays a 409.
+                latest = repo.latest_run(document_id)
+                if latest is not None and latest.current_stage == "queued":
+                    queued_jobs = list(session.scalars(select(Job).where(Job.ingestion_run_id == latest.id).with_for_update()))
+                    if not any(job.status == "running" for job in queued_jobs):
+                        for job in queued_jobs:
+                            if job.status in {"queued", "retrying", "cancel_requested"}:
+                                job.status = "cancelled"
+                        repo.set_stage(latest.id, "cancelled", error_code="CANCELLED", error_message="Superseded by source replacement")
+                        # autoflush=False: create_reindex's pending-run SELECT
+                        # must see the cancellation or it refuses spuriously.
+                        session.flush()
+                try:
+                    _, version, run = repo.create_reindex(document_id)
+                except InvalidStateTransition as error:
+                    raise DocumentAlreadyIndexingError(document_id) from error
                 row.stored_filename, row.mime_type, row.content_hash, row.file_size, row.source_available = f"{document_id}{suffix}", mime_type, digest, len(content), True
+                row.status = "processing"
+                job = repo.create_job("extract_document", document_id, version.id, run.id, self.job_max_attempts) if self.job_queue else None
+                session.flush()
+                payload = self._run_payload(run, version)
             database_committed = True
-            run = self.enqueue_index(document_id)
-            return {"document_id": document_id, "filename": filename, "status": "processing", "duplicate": False, "content_hash": digest, "version_id": run["version_id"], "run_id": run["id"], "index_version": run["index_version"], "stage": run["stage"]}
+            if job:
+                payload["job_id"], payload["queue_pending"] = job.id, True
+            else:
+                threading.Thread(target=self._run_index, args=(payload["id"], document_id, payload["version_id"], None), daemon=True).start()
+            return {"document_id": document_id, "filename": filename, "status": "processing", "duplicate": False, "content_hash": digest, "version_id": payload["version_id"], "run_id": payload["id"], "index_version": payload["index_version"], "stage": payload["stage"]}
         except Exception:
             # Once the row carries the new hash, the new bytes must stay: the
             # database and the disk may never disagree about the source.
@@ -288,6 +320,22 @@ class PostgresDocumentService:
             if not run:
                 raise IngestionNotFoundError(run_id)
             repo.request_cancel(run_id)
+            # T2: in RQ mode a job nobody has claimed yet would never read the
+            # cancel flag — the run sat "queued" and the document "processing"
+            # forever. When no worker holds the job, finalize the cancel right
+            # here; a worker that claims later sees terminal states and no-ops.
+            if self.job_queue is not None and run.current_stage == "queued":
+                jobs = list(session.scalars(select(Job).where(Job.ingestion_run_id == run_id).with_for_update()))
+                if not any(job.status == "running" for job in jobs):
+                    for job in jobs:
+                        if job.status in {"queued", "retrying", "cancel_requested"}:
+                            job.status = "cancelled"
+                    repo.set_stage(run_id, "cancelled", error_code="CANCELLED", error_message="Cancelled before a worker claimed the job")
+                    document = session.get(Document, run.document_id)
+                    if document is not None and document.status == "processing":
+                        # Back to the last truthful state: a previous version
+                        # keeps serving, or the upload simply awaits indexing.
+                        document.status = "indexed" if document.active_version_id else "uploaded"
             version = session.get(DocumentVersion, run.version_id)
             return self._run_payload(run, version)
 

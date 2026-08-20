@@ -109,16 +109,13 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
 
-      # sentence-transformers pulls PyTorch, and the default Linux wheel bundles
-      # ~2.5 GB of CUDA libraries this runner can never use. Installing the CPU
-      # build first satisfies the requirement without that download.
-      - name: Install CPU-only PyTorch
+      # T6: sentence-transformers/PyTorch left the mandatory dependencies (it
+      # only serves the disabled reranker, installable via `.[rerank]`), so no
+      # CPU-torch preinstall trick is needed anymore.
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+          pip install -r requirements.txt
 
       # `--no-deps` keeps the CPU-only torch installed above in place; the point
       # here is that the two-root package mapping still resolves.

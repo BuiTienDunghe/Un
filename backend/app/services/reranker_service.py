@@ -34,6 +34,12 @@ class RerankerService:
 
     @staticmethod
     def _load_cross_encoder(model_name: str) -> Any:
-        from sentence_transformers import CrossEncoder
-
+        try:
+            from sentence_transformers import CrossEncoder
+        except ImportError as error:
+            # T6: the library is an optional extra now — a clear pointer beats
+            # a bare ModuleNotFoundError for whoever flips reranker.enabled.
+            raise RerankerUnavailableError(
+                "Reranker cần gói tùy chọn: pip install -e .[rerank]"
+            ) from error
         return CrossEncoder(model_name)

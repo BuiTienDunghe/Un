@@ -15,7 +15,8 @@ python-docx>=1.1,<2.0
 rank-bm25>=0.2.2,<1.0
 pyvi>=0.1.1,<1.0
 loguru>=0.7,<1.0
-sentence-transformers>=3.0,<4.0
+# sentence-transformers (keo theo PyTorch ~0.65-2.5GB) da chuyen sang optional
+# extra cho tinh nang reranker dang tat (T6): pip install -e .[rerank]
 psutil>=6.0,<8.0
 SQLAlchemy>=2.0,<3.0
 alembic>=1.14,<2.0

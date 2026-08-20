@@ -31,7 +31,10 @@ def test_replace_source_creates_a_new_ingestion_version(client, mock_ollama, mon
 
     assert response.status_code == 202
     assert response.json()["duplicate"] is False
-    assert response.json()["index_version"] == 1
+    # T3: replacing supersedes the never-started queued run and creates a NEW
+    # version for the new bytes (before, version 1 was silently reused for
+    # different content). Version 1 stays behind as cancelled history.
+    assert response.json()["index_version"] == 2
 
 
 def test_upload_invalid_file_type(client):

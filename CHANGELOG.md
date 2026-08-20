@@ -95,6 +95,9 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   bot Discord, bộ eval và smoke test đều gửi khóa (P0-2).
 
 ### Changed
+- `sentence-transformers`/PyTorch (~650MB–2.5GB) rời khỏi phụ thuộc bắt buộc
+  (T6): chỉ tính năng reranker (đang tắt, chờ P4-3) cần nó — cài bằng
+  `pip install -e .[rerank]`; CI bỏ bước cài torch CPU.
 - **Định hướng agent-first** (19/08, plan bản 1.1): thêm phase P2 «Agent tự hành» — memory
   tự áp dụng theo ngưỡng tin cậy (người giám sát + thu hồi thay vì duyệt tay), vòng lặp
   tool-use, nhật ký hành động agent. Lệnh Discord `/hoi` đổi tên **`/docs`** (tham số
@@ -108,6 +111,14 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 - Phiên bản ứng dụng đọc từ `app.__version__` thay cho chuỗi cứng.
 
 ### Fixed
+- **Gói trả nợ pipeline tài liệu 21/08 (T1–T3)**: upload lại nội dung của tài
+  liệu đã xóa không còn 500 vĩnh viễn (unique `content_hash` giờ chỉ tính bản
+  ghi còn sống — migration `20260820_24`); hủy ingestion ở chế độ RQ khi chưa
+  worker nào nhận job được chốt ngay thay vì kẹt `processing` mãi mãi; thay
+  nguồn tài liệu giờ nguyên tử — hash mới và run reindex commit cùng một
+  transaction nên database không bao giờ nói khác với chỉ mục, replace giữa
+  chừng indexing bị chặn 409, còn run mới xếp hàng chưa chạy thì được thay thế
+  êm (mỗi lần thay nguồn ra một version mới).
 - Bộ test không còn làm bẩn Qdrant dùng chung: collection memory của test tách riêng
   (`QDRANT_MEMORIES_COLLECTION=memories_test`); trước đó embed mock 3 chiều đã tạo
   collection `memories` sai chiều, khiến mọi thao tác ghi memory thật (1024 chiều)

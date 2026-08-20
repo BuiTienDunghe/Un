@@ -111,12 +111,12 @@ Khảo sát 15/08/2026 trên các dự án mã nguồn mở uy tín nhất phân
 
 | ID | Hạng mục | Bản chất | Ước lượng |
 | --- | --- | --- | --- |
-| T1 | **Upload lại nội dung của tài liệu đã xóa → 500 vĩnh viễn**: unique `content_hash` vẫn giữ hash của bản ghi `deleted`; kèm rò thư mục trên đĩa | Migration: partial unique index `WHERE status != 'deleted'` (+ xử lý IntegrityError thành conflict decision); hoặc xóa hash khi cleanup chốt xóa | 2 buổi |
-| T2 | **Hủy ingestion ở chế độ RQ khi job còn queued → kẹt vĩnh viễn** (run `queued`, document `processing`, không đường retry) | Cho phép cancel chốt ngay khi job chưa được claim; thêm đường thoát reindex cho document kẹt | 2 buổi |
-| T3 | **`_replace_content` commit hash mới trước khi biết reindex enqueue được** → hash lệch nội dung đã index | Chặn replace bằng 409 khi còn run active (cùng predicate với `create_reindex`); enqueue thất bại thì tạo run `queued` bền | 1–2 buổi |
+| ~~T1~~ ✅ | **Upload lại nội dung của tài liệu đã xóa → 500 vĩnh viễn** — đã sửa 21/08: migration `20260820_24` chuyển sang partial unique index `WHERE status != 'deleted'` (khớp với lookup vốn đã loại deleted); rò thư mục đã được cleanup worker xử lý từ đợt audit | ✅ | 2 buổi |
+| ~~T2~~ ✅ | **Hủy ingestion ở chế độ RQ khi job còn queued → kẹt vĩnh viễn** — đã sửa 21/08: job chưa ai claim thì cancel chốt ngay trong một transaction (job `cancelled`, run `cancelled`, document về `indexed`/`uploaded`); job đang chạy giữ nguyên cờ hợp tác; run cancelled mở lại đường reindex | ✅ | 2 buổi |
+| ~~T3~~ ✅ | **`_replace_content` commit hash mới trước khi biết reindex enqueue được** — đã sửa 21/08: guard + hash + run mới commit trong MỘT transaction (hash không bao giờ tồn tại thiếu run); run còn `queued` chưa ai giữ thì được supersede (upload → sửa ngay vẫn chạy), giữa chừng thì 409; mỗi lần replace ra version mới thay vì tái dùng version của nội dung cũ | ✅ | 1–2 buổi |
 | ~~T4~~ ✅ | **Outbox event kẹt `processing` vĩnh viễn** nếu dispatcher chết giữa mark và publish | Thêm mệnh đề reclaim theo tuổi vào `dispatch_pending` (an toàn vì enqueue đã dedupe) | 1 buổi |
 | T5 | **Discord turn retry sau mất lease giữa chừng → gọi model 2 lần, ghi trùng cặp message** | Chỉ persist message sau khi `save_response` xác nhận ownership | 2 buổi |
-| T6 | **`sentence-transformers` (~650MB–2.5GB) trong install bắt buộc cho reranker đang tắt** | Chuyển sang `[project.optional-dependencies] rerank`; CI bỏ bước torch CPU; Docker image nhẹ đi tương ứng | 1–2 buổi |
+| ~~T6~~ ✅ | **`sentence-transformers` (~650MB–2.5GB) trong install bắt buộc cho reranker đang tắt** — đã sửa 21/08: chuyển sang optional extra `pip install -e .[rerank]`; CI bỏ bước torch CPU; bật reranker thiếu gói sẽ báo lỗi kèm lệnh cài rõ ràng | ✅ | 1–2 buổi |
 | T7 | **`PostgresDocumentService` chứa 2 bản sao pipeline ingestion đồng bộ tay** (thread vs RQ, đã có micro-drift) | Tách `IngestionPipeline` một bản duy nhất tham số hóa bằng checkpoint hook; tách upload-conflict thành service riêng | 4–5 buổi |
 | T8 | **Frontend fork đôi helper** (app.js/dashboard.js) — nguồn gốc lỗi dashboard thiếu API key vừa sửa | Tách `/ui/common.js` ($, el, withApiKey, api, theme/prefs) — script tag thường, không cần build | 1 buổi |
 | T9 | Gom các mục nhỏ đã xác nhận: DashboardService thay SQL trong router; đảo phụ thuộc parsers→services; `ConversationLifecycle` chung cho chat/rag; gom wiring OCR router; race trùng tên file khi upload đồng thời (cần partial unique index, gộp với T1); fencing ownership cho `fail_job`/`mark_cancelled`; fixture `memory_transport` đếm job memory-ingest toàn cục → nhạy dữ liệu sót, scope theo prefix (thấy 1 lần fail không tái hiện 19/08) | Dọn dần khi đụng vào từng vùng, không cần đợt riêng | rải rác |
@@ -158,7 +158,16 @@ Khảo sát 15/08/2026 trên các dự án mã nguồn mở uy tín nhất phân
 | P3-3 ✅ | **Biểu đồ thời gian trên dashboard**: `GET /api/dashboard/timeseries` từ `request_logs`, bucket theo ngày địa phương, SVG tự vẽ không thư viện | ✅ 2 chart 14 ngày (câu hỏi+lỗi; p50/p95) cập nhật cùng auto-refresh — sống 20/08 | 2 buổi |
 | P3-4 ✅ | **OCR console UI** `/ui/ocr.html` trên API có sẵn | ✅ Upload → theo dõi job (poll + progress + events) → xem kết quả trang → promote/tải zip/hủy/lịch sử, không cần curl | 3–4 buổi |
 
-### P4 — RAG nâng cao, có đo lường *(chạy nền liên tục, mỗi mục một thí nghiệm)*
+### P4 — RAG nâng cao, có đo lường *(chạy nền liên tục, mỗi mục một thí nghiệm)* — **GÁC 20/08, đợi máy mạnh hơn**
+
+> Quyết định 20/08: P4 cần vòng lặp thí-nghiệm-nhanh (re-index + eval mỗi lần
+> chỉnh) — trên CPU hiện tại mỗi vòng mất nửa buổi nên gác tới khi chuyển máy.
+> Chỉ số chất lượng không phụ thuộc máy nên không mất gì khi đợi; khi có máy
+> mới: restore backup + pull model + đổi models.yaml (plan §8), cân nhắc nâng
+> model general trước rồi mới đo baseline P4-1 một lần trên cấu hình cuối.
+> Hướng thi công từng mục đã phân tích sẵn trong hội thoại 20/08: thứ tự
+> P4-1 → P4-4 (pyvi tách từ vào tsvector) → P4-2 → P4-3 (+T6) → P4-5; eval
+> trong CI theo phương án retrieval-only với model embedding 0.6b.
 
 | ID | Hạng mục | Giả thuyết cần kiểm chứng bằng eval | Ước lượng |
 | --- | --- | --- | --- |
@@ -171,6 +180,13 @@ Khảo sát 15/08/2026 trên các dự án mã nguồn mở uy tín nhất phân
 ### P5 — Năng lực mở rộng *(tương lai, chọn lọc theo nhu cầu thật)*
 
 > Tool use cơ bản đã chuyển lên P2-2 (trở thành lõi agent). Ở đây còn các mở rộng chọn lọc.
+>
+> **Quyết định 20/08: GÁC OCR và vision** cho tới khi có máy mạnh hơn (CPU/GPU
+> hiện tại chưa tối ưu). Cụ thể: OCR console (P3-4) giữ nguyên như đã ship,
+> không đầu tư thêm; mục vision attachments dưới đây đóng băng; bộ eval P4-1
+> chỉ dùng tài liệu text-native (PDF có text layer, DOCX, TXT, MD) — không cần
+> bản scan. Cấu hình `ocr.enabled` trong models.yaml giữ nguyên (chỉ chạy khi
+> gặp tài liệu thiếu text layer, không tốn gì khi không dùng).
 
 - **Tool bên ngoài cho agent** (thời tiết nội bộ? tra cứu ERP xưởng?) — chỉ khi có use case cụ thể.
 - **Vision attachments**: đính ảnh vào chat (nền `vision_chat` đã có; endpoint `/vision/chat` đang 501).

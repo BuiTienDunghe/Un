@@ -75,3 +75,6 @@ backend/tests/test_logs/
 data/sqlite/*.db
 data/sqlite/*.sqlite
 data/sqlite/*.sqlite3
+
+# Tai lieu that nguoi dung tha vao goc repo de test - khong bao gio commit
+/*.pdf

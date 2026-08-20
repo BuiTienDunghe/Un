@@ -38,10 +38,17 @@ class Base(DeclarativeBase):
 class Document(Base):
     __tablename__ = "documents"
     __table_args__ = (
-        # Named after what PostgreSQL actually created from the inline
-        # `unique=True` in 20260717_01, so the declaration and the database
-        # agree on one canonical form.
-        UniqueConstraint("content_hash", name="documents_content_hash_key"),
+        # T1 (20260820_24): uniqueness only among LIVE rows. The full-table
+        # constraint from 20260717_01 kept the hash of soft-deleted documents
+        # reserved forever, so re-uploading previously deleted content crashed
+        # with a 500. Deduplication lookups already excluded deleted rows —
+        # the database now agrees with them.
+        Index(
+            "uq_documents_content_hash_active",
+            "content_hash",
+            unique=True,
+            postgresql_where=text("status != 'deleted'"),
+        ),
         # Exists in the database since 20260717_01 but was never declared.
         # Kept rather than dropped: migrations here are additive only.
         Index("ix_documents_cleanup_status", "status", "deleted_requested_at"),
