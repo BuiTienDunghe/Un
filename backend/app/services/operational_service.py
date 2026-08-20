@@ -9,7 +9,15 @@ from rq import Queue, Worker
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import sessionmaker
 
-from app.postgres.models import Document, IngestionRun, Job, OutboxEvent
+from app.postgres.models import (
+    AgentTrace,
+    DiscordMemory,
+    DiscordMemoryCandidate,
+    Document,
+    IngestionRun,
+    Job,
+    OutboxEvent,
+)
 from app.services.job_routing import DISCORD_MEMORY_INGEST_JOB_TYPE
 
 
@@ -142,6 +150,76 @@ class OperationalService:
             or components.get("memory_ingestion") == "ok"
         )
         return {"status": "ok" if base_ok and memory_ok else "degraded", "service": "local-ai-core", **components, "checked_at": datetime.now(UTC).isoformat()}
+
+    def agent_activity(self, limit: int = 50) -> list[dict[str, object]]:
+        """Timeline of autonomous actions (P2-4), newest first, one place:
+        memory decisions (with the revert handle when still undoable), agent
+        tool-using answers, and background jobs."""
+        bounded = max(1, min(int(limit), 200))
+        entries: list[dict[str, object]] = []
+        with self.sessions() as session:
+            candidates = session.scalars(
+                select(DiscordMemoryCandidate)
+                .where(DiscordMemoryCandidate.reviewed_at.is_not(None))
+                .order_by(DiscordMemoryCandidate.reviewed_at.desc())
+                .limit(bounded)
+            )
+            for candidate in candidates:
+                memory = session.scalar(
+                    select(DiscordMemory).where(DiscordMemory.origin_candidate_id == candidate.id)
+                )
+                applied = candidate.decision == "applied"
+                # A rejected candidate WITH a canonical memory row means the
+                # memory existed and was taken back: that is a revert.
+                kind = "memory_apply" if applied else ("memory_revert" if memory is not None else "memory_reject")
+                entries.append({
+                    "at": candidate.reviewed_at.isoformat(),
+                    "kind": kind,
+                    "actor": candidate.reviewed_by,
+                    "title": candidate.canonical_fact or "(không có nội dung)",
+                    "status": candidate.decision,
+                    "candidate_id": str(candidate.id),
+                    "revertable": bool(applied and memory is not None and memory.status == "active"),
+                })
+            finals = list(
+                session.scalars(
+                    select(AgentTrace)
+                    .where(AgentTrace.kind == "final")
+                    .order_by(AgentTrace.created_at.desc())
+                    .limit(bounded)
+                )
+            )
+            message_ids = [row.message_id for row in finals if row.message_id is not None]
+            tool_counts: dict[int, int] = {}
+            if message_ids:
+                for message_id, calls in session.execute(
+                    select(AgentTrace.message_id, func.count())
+                    .where(AgentTrace.message_id.in_(message_ids), AgentTrace.kind == "tool_call")
+                    .group_by(AgentTrace.message_id)
+                ):
+                    tool_counts[message_id] = int(calls)
+            for row in finals:
+                entries.append({
+                    "at": row.created_at.isoformat(),
+                    "kind": "agent_answer",
+                    "actor": "agent",
+                    "title": (row.content or "")[:160],
+                    "status": f"{tool_counts.get(row.message_id, 0)} lượt công cụ",
+                    "candidate_id": None,
+                    "revertable": False,
+                })
+            for job in session.scalars(select(Job).order_by(Job.updated_at.desc()).limit(bounded)):
+                entries.append({
+                    "at": job.updated_at.isoformat(),
+                    "kind": "job",
+                    "actor": "worker",
+                    "title": job.job_type,
+                    "status": job.status,
+                    "candidate_id": None,
+                    "revertable": False,
+                })
+        entries.sort(key=lambda item: str(item["at"]), reverse=True)
+        return entries[:bounded]
 
     def metrics(self) -> dict[str, object]:
         result: dict[str, object] = {"generated_at": datetime.now(UTC).isoformat()}

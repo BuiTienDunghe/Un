@@ -341,8 +341,63 @@ function renderApplied(items) {
   }));
 }
 
+/* ── Nhật ký hành động agent (P2-4) ─────────────────────────────── */
+const ACTIVITY_LABELS = {
+  memory_apply: "🧠 Nhớ",
+  memory_revert: "↩️ Thu hồi memory",
+  memory_reject: "🚫 Từ chối đề xuất",
+  agent_answer: "🤖 Trả lời bằng công cụ",
+  job: "⚙️ Việc nền",
+};
+
+function renderActivity(items) {
+  const tbody = $("activity-list");
+  if (items === null) {
+    tableNotice(tbody, "Không tải được nhật ký.", 4);
+    return;
+  }
+  if (!items.length) {
+    tableNotice(tbody, "Chưa có hành động tự hành nào.", 4);
+    return;
+  }
+  tbody.replaceChildren(...items.slice(0, 30).map((item) => {
+    const row = document.createElement("tr");
+    const timeCell = document.createElement("td");
+    timeCell.textContent = new Date(item.at).toLocaleString("vi-VN");
+    const actionCell = document.createElement("td");
+    const label = document.createElement("div");
+    label.textContent = `${ACTIVITY_LABELS[item.kind] || item.kind}${item.actor ? ` · ${item.actor}` : ""}`;
+    const detail = document.createElement("div");
+    detail.className = "muted";
+    detail.textContent = item.title || "";
+    actionCell.append(label, detail);
+    const statusCell = document.createElement("td");
+    statusCell.textContent = item.status || "";
+    const undoCell = document.createElement("td");
+    if (item.revertable && item.candidate_id) {
+      const revert = document.createElement("button");
+      revert.textContent = "Thu hồi";
+      revert.onclick = async () => {
+        revert.disabled = true;
+        revert.textContent = "Đang thu hồi…";
+        try {
+          await postJson(`/api/memory-review/candidates/${encodeURIComponent(item.candidate_id)}/revert`);
+          refresh();
+        } catch (error) {
+          revert.disabled = false;
+          revert.textContent = "Thu hồi";
+          tableNotice($("activity-list"), error.message, 4);
+        }
+      };
+      undoCell.append(revert);
+    }
+    row.append(timeCell, actionCell, statusCell, undoCell);
+    return row;
+  }));
+}
+
 async function refresh() {
-  const [stats, health, metrics, models, conversations, reviewCandidates, appliedMemories] = await Promise.allSettled([
+  const [stats, health, metrics, models, conversations, reviewCandidates, appliedMemories, agentActivity] = await Promise.allSettled([
     fetchJson("/api/dashboard/stats"),
     fetchJson("/health"),
     fetchJson("/metrics"),
@@ -350,9 +405,11 @@ async function refresh() {
     fetchJson("/conversations"),
     fetchJson("/api/memory-review/candidates"),
     fetchJson("/api/memory-review/applied"),
+    fetchJson("/agent/activity"),
   ]).then((results) => results.map((result) => (result.status === "fulfilled" ? result.value : null)));
   renderReview(reviewCandidates);
   renderApplied(appliedMemories);
+  renderActivity(agentActivity);
 
   // Banner hiện khi BẤT KỲ nguồn cốt lõi nào lỗi; render luôn chạy để
   // skeleton được thay bằng trạng thái lỗi thay vì nhấp nháy mãi.

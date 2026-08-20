@@ -164,7 +164,9 @@ def persisted_outcome(candidate_id: str) -> DiscordMemoryWorkerOutcome:
 
 def test_worker_auto_applies_high_confidence_proposal(client, mock_ollama, factory, auto_cleanup):
     guild = auto_cleanup
-    fact = f"User prefers concise answers ({guild})."
+    # A fact a truthful extractor would produce: its words come from the
+    # message itself, so the P2-1b guard passes.
+    fact = f"Người dùng thích trả lời ngắn gọn ({guild})."
     candidate_id = seed_candidate(client, factory, guild, fact=fact, confidence=0.93)
 
     outcome = make_worker(client, factory, 0.8).auto_apply(persisted_outcome(candidate_id))
@@ -186,6 +188,29 @@ def test_worker_auto_applies_high_confidence_proposal(client, mock_ollama, facto
     applied = client.get("/api/memory-review/applied").json()
     row = next(item for item in applied if item["candidate_id"] == candidate_id)
     assert row["applied_by"] == "agent" and row["canonical_fact"] == fact
+    # And the P2-4 timeline lists the autonomous action with its undo handle.
+    activity = client.get("/agent/activity").json()
+    entry = next(item for item in activity if item["candidate_id"] == candidate_id)
+    assert entry["kind"] == "memory_apply" and entry["actor"] == "agent" and entry["revertable"]
+
+
+def test_guard_blocks_hallucinated_facts_even_at_full_confidence(client, mock_ollama, factory, auto_cleanup):
+    """P2-1b regression for the live 19/08 failure: the extractor invented
+    'prefers Vietnamese' from a message about wanting examples — at confidence
+    1.0. Confidence passes; the content guard must not."""
+    guild = auto_cleanup
+    candidate_id = seed_candidate(client, factory, guild, fact=f"User prefers Vietnamese ({guild}).", confidence=1.0)
+
+    outcome = make_worker(client, factory, 0.8).auto_apply(persisted_outcome(candidate_id))
+
+    assert outcome.reason == "auto_apply_guard_rejected"
+    with factory() as session:
+        candidate = session.get(DiscordMemoryCandidate, UUID(candidate_id))
+        assert candidate.decision == "deferred" and candidate.reviewed_by is None
+        assert session.scalar(select(DiscordMemory).where(DiscordMemory.guild_id == guild)) is None
+    # The proposal is not lost — it waits for the human queue instead.
+    listed = client.get("/api/memory-review/candidates").json()
+    assert any(item["candidate_id"] == candidate_id for item in listed)
 
 
 def test_below_threshold_waits_for_the_human_queue(client, mock_ollama, factory, auto_cleanup):
@@ -254,6 +279,10 @@ def test_revert_takes_memory_out_of_service_and_relearning_revives(client, mock_
         assert candidate.decision == "rejected" and candidate.validation_status == "rejected"
         assert session.get(Memory, applied["web_memory_id"]) is None
     assert all(item["candidate_id"] != candidate_id for item in client.get("/api/memory-review/applied").json())
+    # The timeline records the revert and offers no further undo for it.
+    activity = client.get("/agent/activity").json()
+    entry = next(item for item in activity if item["candidate_id"] == candidate_id)
+    assert entry["kind"] == "memory_revert" and entry["revertable"] is False
 
     # A revert must not dead-end the fact: relearning creates the next version.
     relearn = seed_candidate(client, factory, guild, fact=f"User prefers short answers again ({guild}).", confidence=0.9)

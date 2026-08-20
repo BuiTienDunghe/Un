@@ -79,6 +79,14 @@ class BackendDocument:
 
 
 @dataclass(frozen=True)
+class BackendAgentMemory:
+    canonical_fact: str
+    memory_type: str
+    version: int
+    applied_by: str
+
+
+@dataclass(frozen=True)
 class BackendDiscordSession:
     session_id: str
     backend_conversation_id: str
@@ -249,6 +257,63 @@ class LocalAgentClient:
             if isinstance(document_id, str) and isinstance(filename, str):
                 documents.append(BackendDocument(document_id, filename, str(item.get("status", ""))))
         return documents
+
+    async def list_agent_memories(self, guild_id: str, subject_id: str) -> list[BackendAgentMemory]:
+        """What the agent currently remembers about one member in one guild —
+        the data behind `/memory` (P2-3)."""
+
+        async def send() -> httpx.Response:
+            try:
+                return await self._http.get(
+                    "/api/memory-review/applied",
+                    params={"guild_id": guild_id, "subject_id": subject_id},
+                    headers=self._headers(),
+                )
+            except httpx.TimeoutException as error:
+                raise BackendTimeoutError("Backend request timed out. Please try again later.") from error
+            except httpx.HTTPError as error:
+                raise BackendUnavailableError("Backend is unavailable. Please try again later.") from error
+
+        response = await send()
+        if response.status_code == 401:
+            self._jwt = None
+            await self._refresh_jwt()
+            response = await send()
+        if response.status_code >= 400:
+            raise BackendResponseError(self._error_message(response))
+        try:
+            payload = response.json()
+        except ValueError as error:
+            raise BackendResponseError("Backend returned an invalid response for memories.") from error
+        memories: list[BackendAgentMemory] = []
+        for item in payload if isinstance(payload, list) else []:
+            if not isinstance(item, dict) or not isinstance(item.get("canonical_fact"), str):
+                continue
+            memories.append(
+                BackendAgentMemory(
+                    item["canonical_fact"],
+                    str(item.get("memory_type", "?")),
+                    int(item.get("version", 1)),
+                    str(item.get("applied_by") or "?"),
+                )
+            )
+        return memories
+
+    async def backend_health(self) -> dict:
+        """The public /health payload — the data behind `/status` (P2-3)."""
+        try:
+            response = await self._http.get("/health")
+        except httpx.TimeoutException as error:
+            raise BackendTimeoutError("Backend request timed out. Please try again later.") from error
+        except httpx.HTTPError as error:
+            raise BackendUnavailableError("Backend is unavailable. Please try again later.") from error
+        try:
+            payload = response.json()
+        except ValueError as error:
+            raise BackendResponseError("Backend returned an invalid health response.") from error
+        if not isinstance(payload, dict):
+            raise BackendResponseError("Backend returned an invalid health response.")
+        return payload
 
     async def resolve_discord_session(
         self,

@@ -86,10 +86,24 @@ class DiscordMemoryReviewService:
             )
             return [_candidate_payload(row) for row in rows]
 
-    def list_applied(self, limit: int = 20) -> list[dict[str, object]]:
+    def list_applied(
+        self,
+        limit: int = 20,
+        guild_id: str | None = None,
+        subject_id: str | None = None,
+    ) -> list[dict[str, object]]:
         """Memories currently in service, newest decision first — the oversight
         view of P2-1: who applied each one (human or agent) and the handle to
-        revert it."""
+        revert it. The optional filters serve `/memory` on Discord (P2-3):
+        what does the agent remember about this member in this guild."""
+        conditions = [
+            DiscordMemory.status == "active",
+            DiscordMemoryCandidate.decision == "applied",
+        ]
+        if guild_id:
+            conditions.append(DiscordMemory.guild_id == guild_id)
+        if subject_id:
+            conditions.append(DiscordMemory.subject_id == subject_id)
         with self.sessions() as session:
             rows = session.execute(
                 select(DiscordMemory, DiscordMemoryCandidate)
@@ -97,10 +111,7 @@ class DiscordMemoryReviewService:
                     DiscordMemoryCandidate,
                     DiscordMemory.origin_candidate_id == DiscordMemoryCandidate.id,
                 )
-                .where(
-                    DiscordMemory.status == "active",
-                    DiscordMemoryCandidate.decision == "applied",
-                )
+                .where(*conditions)
                 .order_by(DiscordMemory.updated_at.desc())
                 .limit(limit)
             ).all()
@@ -111,6 +122,8 @@ class DiscordMemoryReviewService:
                     "web_memory_id": f"mem_dc_{memory.id.hex}",
                     "canonical_fact": memory.canonical_fact,
                     "memory_type": memory.memory_type,
+                    "guild_id": memory.guild_id,
+                    "scope": memory.scope,
                     "version": memory.version,
                     "confidence": float(candidate.confidence) if candidate.confidence is not None else None,
                     "author_display_name": candidate.source_author_display_name,

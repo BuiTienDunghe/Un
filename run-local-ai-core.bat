@@ -120,7 +120,8 @@ REM Note: document OCR/index jobs use the in-process thread backend by default;
 REM a future INGESTION_EXECUTION_BACKEND=rq setup would need these two as well.
 findstr /R /C:"^DISCORD_MEMORY_EXTRACTOR_ENABLED=true" .env >nul 2>&1
 if not errorlevel 1 (
-    call :ensure_model "qwen3.5:2b"
+    REM P2-1b: extractor moved to 9b (benchmark 19/08) - same model chat uses.
+    call :ensure_model "qwen3.5:9b"
     if errorlevel 1 goto :error
 )
 findstr /R /C:"^DISCORD_MEMORY_INGESTION_ENABLED=true" .env >nul 2>&1

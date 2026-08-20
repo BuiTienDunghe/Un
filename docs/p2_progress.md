@@ -114,6 +114,34 @@ xong; memory độc thì agent tự tin nói sai mãi).
    confidence. Đường ép độc xuống nữa (9b thẩm định chéo đề xuất) để ngỏ, phải
    benchmark riêng trước khi tin.
 
+## P2-1b — Extractor 9b + guard xác định — ✅ 20/08
+
+**Ý tưởng một câu:** thi hành kết luận benchmark — extractor đổi sang `qwen3.5:9b`,
+và điều kiện tự áp dụng không còn tin confidence mà tin **guard xác định**:
+evidence phải nguyên văn trong tin gốc, fact phải trùng từ-nội-dung với tin gốc.
+
+### Quyết định và lý do
+
+| Quyết định | Lý do |
+| --- | --- |
+| Guard là module thuần (`discord_memory_guard.py`), thuật toán **y hệt** bản phân tích benchmark | Số đo 96,7% coverage / 21,6% poison chỉ có giá trị nếu code production và phép đo là một; test `test_production_guard_reproduces_the_measured_benchmark_policy` tái dẫn xuất hai con số từ kết quả 9b đã lưu bằng chính hàm production — chỉnh guard mà lệch trade-off là test đỏ |
+| Guard chỉ chặn đường **tự hành**; người duyệt trên dashboard không qua guard | Con người chính là guard; đề xuất trượt guard rơi về hàng chờ, không mất gì |
+| τ giữ nguyên vai công tắc chính sách (`off` = duyệt tay toàn bộ) | Đã đo: confidence là hằng 1.0 — không phải tín hiệu, chỉ còn là cần gạt |
+| Model đổi ở mọi điểm cấu hình: settings default, `.env`, `.env.example`, launcher pull, docker-compose default | Một chỗ sót là một môi trường chạy nhầm 2b |
+| Outcome mới `auto_apply_guard_rejected` | Nhìn được trong log worker vì sao một đề xuất chờ người thay vì tự áp dụng |
+
+### Bằng chứng
+
+- Test: 12 test guard + auto-apply (kể cả **hồi quy đúng ca bịa fact sống 19/08**:
+  "prefers Vietnamese" confidence 1.0 → `auto_apply_guard_rejected`, nằm lại hàng chờ).
+- **Phát hiện sống 20/08 — điểm mù xuyên ngữ:** lặp lại đúng tin nhắn 2b từng bịa
+  ("muốn ví dụ minh họa"), 9b trích **đúng nội dung** (*"User always wants answers
+  with specific illustrative examples"*) nhưng guard từ chối vì fact tiếng Anh
+  không trùng từ nào với tin gốc tiếng Việt → rơi về hàng chờ. **Hướng rơi an
+  toàn đúng thiết kế** (mất coverage, không nhiễm độc), một click duyệt là xong;
+  hướng sửa thật nằm ở prompt extractor v6 (viết fact bằng ngôn ngữ tin gốc) +
+  re-benchmark — đã ghi T12.
+
 ## P2-2 — Vòng lặp agent + tool use — ✅ 19/08
 
 **Ý tưởng một câu:** chat trở thành agent — model tự quyết định gọi công cụ
@@ -180,15 +208,48 @@ bước để lại vết trong bảng `agent_traces`.
    đồng thời «Ghi nhớ» + «Công cụ» có thể đưa memory vào ngữ cảnh hai lần (vô
    hại, chỉ tốn token).
 
-## P2-3 — Bộ lệnh Discord chuyên nghiệp — 🔶 một phần (19/08)
+## P2-3 — Bộ lệnh Discord chuyên nghiệp — ✅ 20/08
 
-- `/hoi` → `/docs` (tham số `tailieu` → `document`) đã đổi cùng ngày với điều
-  chỉnh định hướng; bộ lệnh hiện tại `/ask · /docs · /ping`. Lý do chọn `/docs`
-  thay vì `/ask`: bot **đã có** `/ask` (chat thường) từ trước — P2-2 sẽ biến
+- 19/08: `/hoi` → `/docs` (tham số `tailieu` → `document`). Lý do chọn `/docs`
+  thay vì `/ask`: bot **đã có** `/ask` (chat thường) từ trước — P2-2 đã biến
   `/ask` thành cửa vào agent tự chọn tool.
-- Còn lại: `/memory`, `/status`.
+- 20/08: thêm **`/memory`** (điều agent đang nhớ về chính người gõ trong server
+  đó — trả lời ephemeral chỉ người đó thấy, phân biệt 🤖 tự áp dụng / 👤 người
+  duyệt, kèm chỉ dẫn thu hồi trên dashboard; backend là filter guild/subject
+  trên `GET /api/memory-review/applied`) và **`/status`** (tóm tắt `/health`
+  từng thành phần, ephemeral). Bộ lệnh chốt: `/ask · /docs · /memory · /status
+  · /ping` — tên tiếng Anh chuẩn, mô tả tiếng Việt.
+- Test: 6 test root (client gửi đúng filter + parse chống dữ liệu hỏng; hai
+  formatter escape markdown, gắn nhãn reviewer, phân loại ok/disabled/lỗi).
+- Bước người thật còn lại (như P1-1): gõ lệnh trong một server Discord thật —
+  cần `DISCORD_TOKEN` và guild.
 
-## P2-4 — Nhật ký hành động agent — ⏳ chưa bắt đầu
+## P2-4 — Nhật ký hành động agent — ✅ 20/08
 
-- Panel "Memory đang hiệu lực" của P2-1 là viên gạch đầu; P2-4 mở rộng thành
-  dòng thời gian mọi hành động tự hành (index, cleanup, backup, memory apply).
+**Ý tưởng một câu:** một dòng thời gian trên dashboard trả lời "agent vừa làm
+gì?" — nhớ/từ chối/thu hồi memory, trả lời bằng công cụ nào, việc nền chạy ra
+sao — kèm nút Thu hồi ngay trên hàng còn gỡ được.
+
+| Quyết định | Lý do |
+| --- | --- |
+| Không thêm bảng mới — timeline **đọc gộp** từ ba nguồn đã có sử liệu: quyết định memory (`discord_memory_candidates.reviewed_*`), câu trả lời agent (`agent_traces` kind `final` + đếm tool_call), việc nền (`jobs`) | Dữ liệu đã tồn tại đầy đủ nhờ các bất biến audit của P2-1/P2-2; thêm bảng ghi trùng là nợ đồng bộ |
+| Phân biệt `memory_reject` với `memory_revert` bằng sự tồn tại của bản ghi memory | Từ chối trước khi áp dụng và thu hồi sau khi áp dụng là hai câu chuyện khác nhau trong sử liệu |
+| Nút Thu hồi ngay trên timeline (chỉ hàng còn active) dùng đúng endpoint revert của P2-1 | Một đường ghi duy nhất; timeline là bề mặt thứ hai, không phải cơ chế thứ hai |
+
+- Endpoint: `GET /agent/activity` (đọc, theo read-guard). Test: kiểm timeline
+  trong test auto-apply (hàng `memory_apply` actor agent, revertable), test
+  revert (`memory_revert`, hết revertable), test agent (hàng `agent_answer`
+  kèm số lượt công cụ).
+
+## Kiểm tra lại toàn bộ P2 — chuỗi sống 20/08, model thật
+
+| Bước | Kết quả |
+| --- | --- |
+| Turn Discord (đúng tin nhắn 2b từng bịa) → agent mode trả lời | Câu trả lời ghi nhận yêu cầu; trace lưu |
+| Extractor **9b thật** | Trích **đúng nội dung** (khác hẳn 2b), confidence 1.0, evidence nguyên văn |
+| Guard xác định | Từ chối tự áp dụng (fact Anh / tin Việt — điểm mù xuyên ngữ) → **rơi đúng hướng an toàn: hàng chờ người** |
+| Người duyệt 1 click | Mirror `mem_dc_*` vào kho chung |
+| `/chat` bật «Công cụ» hỏi lại điều đã dặn | Agent **tự chọn** `search_memory`, tìm thấy (0.44), trả lời đúng: *"bạn luôn muốn câu trả lời đi kèm ví dụ minh họa cụ thể"* |
+| Panel Nhật ký (P2-4) trên dashboard thật | Hiện đủ 4 hàng đúng thứ tự: agent trả lời → việc nền ingest → 🧠 Nhớ (kèm nút) → agent dùng trí nhớ |
+| **Thu hồi từ chính timeline** | applied=0, hàng đổi thành `memory_revert`, search=0 — gỡ khỏi sử dụng, sử liệu còn |
+| Suite chốt | Backend **527 passed / 0 failed** (2:18) · root **65** · JS/compile sạch · dọn sạch dữ liệu test |

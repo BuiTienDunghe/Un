@@ -12,6 +12,19 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 ## [Unreleased]
 
 ### Added
+- **Guard xác định cho memory tự áp dụng** (P2-1b): tự áp dụng đòi evidence
+  trích **nguyên văn** từ tin gốc và fact **trùng từ-nội-dung** với tin gốc —
+  benchmark chứng minh confidence là hằng 1.0 kể cả khi sai nên ngưỡng τ chỉ còn
+  là công tắc. Extractor mặc định chuyển `qwen3.5:2b` → `qwen3.5:9b` (2b để lọt
+  ~49% fact độc, không harness nào cứu được — xem `docs/p2_progress.md`).
+  Đề xuất trượt guard chờ người duyệt, không mất gì.
+- **Lệnh Discord `/memory` và `/status`** (P2-3): xem điều agent đang nhớ về
+  chính mình trong server (ephemeral, phân biệt 🤖/👤) và sức khỏe hệ thống rút
+  gọn. Bộ lệnh chốt: `/ask · /docs · /memory · /status · /ping`.
+- **Nhật ký hành động agent** (P2-4): panel dòng thời gian trên dashboard +
+  `GET /agent/activity` — quyết định memory (nhớ/từ chối/thu hồi), câu trả lời
+  dùng công cụ, việc nền; hàng còn gỡ được có nút Thu hồi ngay tại chỗ.
+  **Phase P2 (Agent tự hành) đóng.**
 - **Chế độ agent — tool use** (P2-2): bật chip «Công cụ» trên web (cờ `use_tools`
   của `/chat`) hoặc `DISCORD_AGENT_TOOLS_ENABLED` cho bot — model tự quyết định
   gọi công cụ (tìm tài liệu kèm nguồn, đọc trí nhớ dài hạn, xem trạng thái hệ

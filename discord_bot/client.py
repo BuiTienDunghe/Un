@@ -58,6 +58,47 @@ def format_rag_sources(sources) -> str:
     return "**Nguồn:** " + lines[0] if len(lines) == 1 else "**Nguồn:**\n" + "\n".join(lines)
 
 
+def format_agent_memories(memories) -> str:
+    """Private `/memory` reply (P2-3): what the agent remembers about the
+    invoking member in this guild, and who let each memory in."""
+    if not memories:
+        return "Agent chưa nhớ điều gì về bạn trong server này."
+    lines = [f"**Agent đang nhớ {len(memories)} điều về bạn:**"]
+    for order, memory in enumerate(memories, start=1):
+        reviewer = "🤖 tự áp dụng" if memory.applied_by == "agent" else "👤 người duyệt"
+        lines.append(
+            f"{order}. {escape_discord_markdown(memory.canonical_fact)}"
+            f" ({memory.memory_type} · v{memory.version} · {reviewer})"
+        )
+    lines.append("_Quản lý hoặc thu hồi trên dashboard của Local AI Core._")
+    return "\n".join(lines)
+
+
+HEALTH_ROWS = (
+    ("postgres", "PostgreSQL"),
+    ("redis", "Redis"),
+    ("qdrant", "Qdrant"),
+    ("ollama", "Ollama"),
+    ("worker_memory", "Worker memory"),
+    ("outbox_dispatcher", "Outbox"),
+    ("backup", "Backup"),
+)
+
+
+def format_health(payload: dict) -> str:
+    """Compact `/status` reply (P2-3) from the public /health payload."""
+    overall = str(payload.get("status", "unknown"))
+    lines = [f"{'✅' if overall == 'ok' else '⚠️'} **Local AI Core: {overall}**"]
+    for key, label in HEALTH_ROWS:
+        value = str(payload.get(key, "?"))
+        mark = "✅" if value == "ok" else ("➖" if value in ("disabled", "not_configured") else "⚠️")
+        entry = f"{mark} {label}: {value}"
+        if key == "backup" and payload.get("backup_age_hours"):
+            entry += f" · {payload['backup_age_hours']}h tuổi"
+        lines.append(entry)
+    return "\n".join(lines)
+
+
 class LocalAgentDiscordBot(discord.Client):
     def __init__(self) -> None:
         # Guilds is non-privileged. Message content and members must also be

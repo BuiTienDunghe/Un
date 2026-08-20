@@ -9,7 +9,8 @@ from app.postgres.discord_memory_job_repository import (
     DiscordMemoryJobRepository,
 )
 from app.postgres.discord_memory_repositories import DiscordMemoryRepository
-from app.postgres.models import DiscordMemoryCandidate
+from app.postgres.models import DiscordMemoryCandidate, DiscordSessionTurn
+from app.services.discord_memory_guard import auto_apply_allowed
 from app.services.discord_memory_review_service import (
     DiscordMemoryReviewService,
     MemoryMirrorError,
@@ -388,6 +389,12 @@ class DiscordMemoryWorkerService:
         Every failure degrades to the P1-4 review queue — nothing is retried or
         lost, the candidate simply waits for a human. Delete-proposals never
         auto-apply: forgetting stays a human decision.
+
+        P2-1b: the confidence threshold is only the policy switch (measured to
+        be a constant 1.0 on wrong facts too); the content filter that actually
+        works is the deterministic guard — evidence quoted verbatim from the
+        source message and fact words present in it. Proposals failing the
+        guard wait for a human instead.
         """
         try:
             if (
@@ -409,8 +416,18 @@ class DiscordMemoryWorkerService:
                     and candidate.confidence is not None
                     and float(candidate.confidence) >= self.auto_apply_threshold
                 )
+                guard_ok = False
+                if eligible:
+                    turn = database.get(DiscordSessionTurn, candidate.source_turn_id)
+                    guard_ok = auto_apply_allowed(
+                        canonical_fact=candidate.canonical_fact,
+                        evidence_text=candidate.evidence_text,
+                        source_text=turn.request_text if turn is not None else "",
+                    )
             if not eligible:
                 return outcome
+            if not guard_ok:
+                return replace(outcome, reason="auto_apply_guard_rejected")
             self.review_service.approve(candidate_id, reviewed_by="agent")
         except MemoryMirrorError:
             # Applied in PostgreSQL; only the web mirror failed. The dashboard

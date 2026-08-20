@@ -76,6 +76,13 @@ def test_agent_calls_a_tool_then_answers_and_the_trace_is_replayable(client, moc
     assert replay.status_code == 200
     assert [step["kind"] for step in replay.json()] == ["tool_call", "tool_result", "final"]
 
+    # The P2-4 timeline lists the tool-using answer with its call count.
+    activity = client.get("/agent/activity").json()
+    assert any(
+        item["kind"] == "agent_answer" and "ngắn gọn" in (item["title"] or "") and item["status"] == "1 lượt công cụ"
+        for item in activity
+    )
+
     client.delete(f"/conversations/{body['conversation_id']}")
 
 

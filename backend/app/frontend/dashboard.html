@@ -81,6 +81,15 @@
       </table>
     </section>
 
+    <section class="panel" aria-labelledby="panel-activity">
+      <h2 id="panel-activity"><svg width="15" height="15"><use href="#i-spark"/></svg> Nhật ký hành động agent</h2>
+      <p class="muted">Mọi hành động tự hành ở một chỗ: agent nhớ/quên gì, trả lời bằng công cụ nào, việc nền chạy ra sao. Hàng có nút «Thu hồi» là gỡ lại được ngay.</p>
+      <table class="dash-table" aria-label="Nhật ký hành động agent">
+        <thead><tr><th>Thời gian</th><th>Hành động</th><th>Kết quả</th><th></th></tr></thead>
+        <tbody id="activity-list"><tr><td colspan="4" class="muted">Đang tải…</td></tr></tbody>
+      </table>
+    </section>
+
     <div class="dash-cols">
       <section class="panel" aria-labelledby="panel-health">
         <h2 id="panel-health">Sức khỏe hệ thống</h2>
@@ -95,6 +104,6 @@
   </div>
 </div>
 
-<script src="/ui/dashboard.js?v=15" defer></script>
+<script src="/ui/dashboard.js?v=16" defer></script>
 </body>
 </html>

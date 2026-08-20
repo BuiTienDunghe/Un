@@ -60,7 +60,9 @@ def test_discord_memory_configuration_defaults_are_safe():
     )
     assert settings.discord_memory_ingestion_enabled is False
     assert settings.discord_memory_extractor_enabled is False
-    assert settings.discord_memory_extractor_model == "qwen3.5:2b"
+    # P2-1b: the shipped default moved to 9b after the 19/08 benchmark showed
+    # 2b poisons ~49% of auto-applies and no harness fixes it.
+    assert settings.discord_memory_extractor_model == "qwen3.5:9b"
     assert settings.discord_memory_extractor_schema_version == "v1"
     assert settings.discord_memory_extractor_num_ctx == 4096
     assert settings.discord_memory_extractor_temperature == 0.0

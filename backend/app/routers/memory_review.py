@@ -30,8 +30,8 @@ def list_candidates(request: Request) -> list[dict[str, object]]:
 
 
 @router.get("/applied")
-def list_applied(request: Request) -> list[dict[str, object]]:
-    return request.app.state.memory_review_service.list_applied()
+def list_applied(request: Request, guild_id: str | None = None, subject_id: str | None = None) -> list[dict[str, object]]:
+    return request.app.state.memory_review_service.list_applied(guild_id=guild_id, subject_id=subject_id)
 
 
 @router.post("/candidates/{candidate_id}/approve", dependencies=[Depends(require_api_key)])

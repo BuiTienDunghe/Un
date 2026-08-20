@@ -21,7 +21,13 @@ from discord_bot.api_client import (
     LocalAgentClient,
     LocalAgentSettings,
 )
-from discord_bot.client import LocalAgentDiscordBot, format_rag_sources, split_for_discord
+from discord_bot.client import (
+    LocalAgentDiscordBot,
+    format_agent_memories,
+    format_health,
+    format_rag_sources,
+    split_for_discord,
+)
 from discord_bot.session_location import (
     UnsupportedDiscordLocationError,
     canonical_discord_location,
@@ -486,6 +492,30 @@ def create_bot(
         footer = format_rag_sources(result.sources)
         answer = f"{result.answer}\n\n{footer}" if footer else result.answer
         await send_discord_answer(interaction.followup, answer)
+
+    @bot.tree.command(name="memory", description="Điều agent đang nhớ về bạn trong server này (chỉ bạn thấy).")
+    async def memory(interaction):
+        if interaction.guild is None:
+            await interaction.response.send_message("Lệnh này chỉ dùng trong server.", ephemeral=True)
+            return
+        await interaction.response.defer(thinking=True, ephemeral=True)
+        try:
+            author_id, _ = discord_author_metadata(interaction.user)
+            memories = await api_client.list_agent_memories(str(interaction.guild.id), str(author_id))
+        except BackendClientError as error:
+            await interaction.followup.send(str(error), ephemeral=True)
+            return
+        await interaction.followup.send(format_agent_memories(memories), ephemeral=True)
+
+    @bot.tree.command(name="status", description="Sức khỏe hệ thống Local AI Core (chỉ bạn thấy).")
+    async def status(interaction):
+        await interaction.response.defer(thinking=True, ephemeral=True)
+        try:
+            payload = await api_client.backend_health()
+        except BackendClientError as error:
+            await interaction.followup.send(str(error), ephemeral=True)
+            return
+        await interaction.followup.send(format_health(payload), ephemeral=True)
 
     @bot.event
     async def on_message(message: discord.Message) -> None:

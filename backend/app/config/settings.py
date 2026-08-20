@@ -31,7 +31,11 @@ class Settings(BaseSettings):
     job_stale_timeout_seconds: int = 900
     discord_memory_ingestion_enabled: bool = False
     discord_memory_extractor_enabled: bool = False
-    discord_memory_extractor_model: str = "qwen3.5:2b"
+    # P2-1b: benchmark 19/08 (150 case) — 2b poisons ~49% of auto-applies and
+    # no harness fixes it; 9b + the deterministic guard measures 21.6% at 96.7%
+    # coverage. Extraction runs in a background queue, so the ~60s cost is idle
+    # time, not user-facing latency.
+    discord_memory_extractor_model: str = "qwen3.5:9b"
     discord_memory_extractor_schema_version: str = "v1"
     discord_memory_extractor_num_ctx: int = 4096
     discord_memory_extractor_temperature: float = 0.0
