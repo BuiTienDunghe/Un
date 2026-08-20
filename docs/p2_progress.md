@@ -155,6 +155,14 @@ bước để lại vết trong bảng `agent_traces`.
 - Sửa kèm: test migration cũ ghim cứng head `20260818_21` (sẽ vỡ ở MỌI migration
   tương lai — đúng lớp lỗi từng gây 77 test đỏ hồi P0) → bỏ assert ghim, giữ
   các kiểm tra schema thật.
+- **CI bắt được lỗi mà local che mất** (push đầu của P2-2 đỏ 3 test): (1) cờ
+  `DISCORD_AGENT_TOOLS_ENABLED` mặc định bật khiến test Discord đi vào đường
+  agent — local *vô tình xanh* vì Ollama đang chạy (suite phình 2:20 → 5:46 vì
+  lén gọi 9b thật!), CI không có Ollama nên lộ → cô lập cờ trong conftest như
+  các cờ memory; (2) hai test migration SQLite dùng id cố định 42/7 — khi tổng
+  số message của các test chạy trước vượt 42, id đó bị chiếm → dời fixture lên
+  vùng 900 triệu, hết đụng autoincrement vĩnh viễn. Suite sau sửa: 520/0 trong
+  2:22 — đồng hồ suite chính là bằng chứng không còn gọi model thật.
 
 ### Giới hạn đã biết của P2-2 (không phải bug — đã ghi T12)
 

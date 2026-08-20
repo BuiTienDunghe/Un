@@ -31,11 +31,11 @@ def _source(path: Path, *, orphan: bool = False, invalid_ocr: bool = False) -> P
     """)
     now = datetime.now(UTC).isoformat(); conversation_id = "legacy-conversation"
     connection.execute("INSERT INTO conversations VALUES (?,?,?)", (conversation_id, now, now))
-    connection.execute("INSERT INTO messages VALUES (?,?,?,?,?,?)", (42, "missing-conversation" if orphan else conversation_id, "user", "sensitive message", None, now))
+    connection.execute("INSERT INTO messages VALUES (?,?,?,?,?,?)", (900000042, "missing-conversation" if orphan else conversation_id, "user", "sensitive message", None, now))
     connection.execute("INSERT INTO ocr_runs VALUES (?,?,?,?,?,?,?)", ("ocr-good", "x.pdf", "completed", "ocr-model", now, now, '{"pages":[{"page":1}]}'))
     if invalid_ocr:
         connection.execute("INSERT INTO ocr_runs VALUES (?,?,?,?,?,?,?)", ("ocr-invalid", "bad.pdf", "failed", "ocr-model", now, now, "{bad"))
-    connection.execute("INSERT INTO request_logs VALUES (?,?,?,?,?,?,?)", (7, "/chat", None, 12, "ok", None, now))
+    connection.execute("INSERT INTO request_logs VALUES (?,?,?,?,?,?,?)", (900000007, "/chat", None, 12, "ok", None, now))
     connection.commit(); connection.close(); return path
 
 
@@ -49,7 +49,7 @@ def _cleanup(factory):
         session.execute(delete(Message).where(Message.conversation_id.in_(("legacy-conversation", "missing-conversation"))))
         session.execute(delete(Conversation).where(Conversation.id == "legacy-conversation"))
         session.execute(delete(OcrRun).where(OcrRun.id.in_(("ocr-good", "ocr-invalid"))))
-        session.execute(delete(RequestLog).where(RequestLog.id == 7))
+        session.execute(delete(RequestLog).where(RequestLog.id == 900000007))
         session.execute(delete(Memory).where(Memory.id.like("mig-test-%")))
         session.execute(delete(OcrCache).where(OcrCache.input_hash == "x" * 64))
 
@@ -70,9 +70,9 @@ def test_conversations_messages_idempotency_and_reseed(factory, tmp_path):
     verification = tool.verify(source, factory, domains=("conversations", "messages"))
     assert verification["conversations"]["valid"] and verification["messages"]["valid"]
     with factory.begin() as session:
-        message = session.get(Message, 42); assert message and message.conversation_id == "legacy-conversation"
+        message = session.get(Message, 900000042); assert message and message.conversation_id == "legacy-conversation"
         session.add(Message(conversation_id="legacy-conversation", role="assistant", content="after import")); session.flush()
-        assert session.scalar(select(Message.id).where(Message.content == "after import")) > 42
+        assert session.scalar(select(Message.id).where(Message.content == "after import")) > 900000042
     _cleanup(factory)
 
 
@@ -82,8 +82,8 @@ def test_request_log_reseed_and_same_primary_key_mismatch_is_not_hidden(factory,
     with factory.begin() as session:
         session.add(RequestLog(endpoint="/runtime", latency_ms=1, status="ok")); session.flush()
         runtime_id = session.scalar(select(RequestLog.id).where(RequestLog.endpoint == "/runtime"))
-        assert runtime_id > 7
-        session.get(Message, 42).content = "different target value"
+        assert runtime_id > 900000007
+        session.get(Message, 900000042).content = "different target value"
     verification = tool.verify(source, factory, domains=("messages", "request_logs"))
     assert not verification["messages"]["valid"]
     assert verification["messages"]["mismatch"] == 1
@@ -98,7 +98,7 @@ def test_verify_only_returns_nonzero_for_conflicting_existing_primary_key(factor
     source = _source(tmp_path / "source.db"); _cleanup(factory)
     tool.migrate(source, factory, domains=("conversations", "messages"))
     with factory.begin() as session:
-        session.get(Message, 42).content = "conflicting target value"
+        session.get(Message, 900000042).content = "conflicting target value"
     monkeypatch.setattr(tool, "validate_cli_source", lambda path: source)
     monkeypatch.setattr(tool, "get_settings", lambda: SimpleNamespace(database_url=str(URL)))
     monkeypatch.setattr("sys.argv", ["migration", "--source", str(source), "--domain", "messages", "--verify-only"])
@@ -110,7 +110,7 @@ def test_orphan_message_is_reported_and_batch_is_rolled_back(factory, tmp_path):
     source = _source(tmp_path / "source.db", orphan=True); _cleanup(factory)
     report = tool.migrate(source, factory, domains=("conversations", "messages"), batch_size=10)
     assert report["messages"].orphan_messages == 1 and report["messages"].failed >= 1
-    with factory() as session: assert session.get(Message, 42) is None
+    with factory() as session: assert session.get(Message, 900000042) is None
     _cleanup(factory)
 
 

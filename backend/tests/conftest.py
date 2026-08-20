@@ -17,6 +17,12 @@ os.environ["DISCORD_MEMORY_EXTRACTOR_ENABLED"] = "false"
 # keeps the runtime `memories` collection from being created at the wrong
 # dimension (which would 500 every real memory write afterwards).
 os.environ["QDRANT_MEMORIES_COLLECTION"] = "memories_test"
+# Discord turns must not route through the agent loop in tests: the loop's
+# tool-calling endpoint is not covered by the mock_ollama fixture, so with the
+# operator default (true) every Discord test would silently call a REAL local
+# model when one is running — and fail in CI where none is. Agent behaviour is
+# tested explicitly in test_agent_service.py.
+os.environ["DISCORD_AGENT_TOOLS_ENABLED"] = "false"
 if os.getenv("POSTGRES_TEST_URL"):
     # Normal API tests use the isolated PostgreSQL database, never a local
     # SQLite file or the runtime PostgreSQL database.
