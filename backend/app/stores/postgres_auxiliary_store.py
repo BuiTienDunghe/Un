@@ -13,7 +13,7 @@ from sqlalchemy import String, cast, exists, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import sessionmaker
 
-from app.postgres.models import Conversation, DiscordConversationSession, Memory, Message, MessageSource, OcrCache, OcrRun, RequestLog
+from app.postgres.models import AgentTrace, Conversation, DiscordConversationSession, Memory, Message, MessageSource, OcrCache, OcrRun, RequestLog
 
 
 def _utc_now() -> datetime:
@@ -87,6 +87,47 @@ class PostgresAuxiliaryStore:
             rows = list(session.scalars(select(Message).where(Message.conversation_id == conversation_id).order_by(Message.id.desc()).limit(limit)))
         rows.reverse()
         return [{"role": row.role, "content": row.content} for row in rows]
+
+    def add_agent_traces(self, conversation_id: str, message_id: int | None, steps: list[dict[str, object]]) -> None:
+        """Persist the agent-loop steps that produced one assistant message."""
+        if not steps:
+            return
+        now = _utc_now()
+        with self._sessions.begin() as session:
+            for index, step in enumerate(steps):
+                session.add(
+                    AgentTrace(
+                        conversation_id=conversation_id,
+                        message_id=message_id,
+                        step_index=index,
+                        kind=str(step.get("kind", "tool_call")),
+                        tool_name=(str(step["tool_name"]) if step.get("tool_name") else None),
+                        arguments=step.get("arguments") if isinstance(step.get("arguments"), dict) else None,
+                        content=(str(step["content"]) if step.get("content") is not None else None),
+                        latency_ms=(int(step["latency_ms"]) if step.get("latency_ms") is not None else None),
+                        created_at=now,
+                    )
+                )
+
+    def get_agent_traces(self, message_id: int) -> list[dict[str, object]]:
+        with self._sessions() as session:
+            rows = list(
+                session.scalars(
+                    select(AgentTrace).where(AgentTrace.message_id == message_id).order_by(AgentTrace.step_index)
+                )
+            )
+            return [
+                {
+                    "step_index": row.step_index,
+                    "kind": row.kind,
+                    "tool_name": row.tool_name,
+                    "arguments": row.arguments,
+                    "content": row.content,
+                    "latency_ms": row.latency_ms,
+                    "created_at": row.created_at.isoformat(),
+                }
+                for row in rows
+            ]
 
     def list_conversations(self) -> list[dict[str, object]]:
         with self._sessions() as session:

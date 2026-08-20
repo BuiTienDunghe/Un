@@ -99,6 +99,17 @@ rag:
     model: cross-encoder/mmarco-mMiniLMv2-L12-H384-v1
     candidate_limit: 15
 
+agent:
+  # Agent mode (P2-2): the general model may call in-house tools (documents,
+  # memory, system status) before answering. `max_steps` bounds tool ROUNDS per
+  # answer — each round costs one extra general-model call, so keep it small
+  # on CPU. Tool outputs are clipped to `tool_result_max_chars` before they
+  # re-enter the prompt.
+  max_steps: 3
+  # 4 excerpt x ~400 ky tu + metadata JSON ~ 2000+ ky tu; tran thap hon se cat
+  # giua chung JSON (model van doc duoc nhung mat doan cuoi).
+  tool_result_max_chars: 2400
+
 storage:
   # Original source files are retained by default. Only documents explicitly marked
   # `temporary` and not pinned are eligible for source-artifact cleanup.

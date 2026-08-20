@@ -114,7 +114,63 @@ xong; memory độc thì agent tự tin nói sai mãi).
    confidence. Đường ép độc xuống nữa (9b thẩm định chéo đề xuất) để ngỏ, phải
    benchmark riêng trước khi tin.
 
-## P2-2 — Vòng lặp agent + tool use — ⏳ chưa bắt đầu
+## P2-2 — Vòng lặp agent + tool use — ✅ 19/08
+
+**Ý tưởng một câu:** chat trở thành agent — model tự quyết định gọi công cụ
+(tìm tài liệu, đọc trí nhớ, xem trạng thái hệ thống) trước khi trả lời, mỗi
+bước để lại vết trong bảng `agent_traces`.
+
+### Quyết định thiết kế và lý do
+
+| Quyết định | Lý do |
+| --- | --- |
+| Probe khả thi TRƯỚC khi thiết kế: gọi thử Ollama `/api/chat` với `tools` | `qwen3.5:9b` trả `tool_calls` chuẩn ngay lần thử đầu → dùng function calling native, không cần framework agent ngoài, không cần tự parse kiểu ReAct |
+| Agent là **một vòng lặp bounded** trong `services/agent_service.py`; tools = 3 service có sẵn (retrieval, memory, health) | Đúng cam kết §5 của plan: "không thêm framework"; mọi tool đều là code đã test kỹ từ P0/P1, agent chỉ là người điều phối |
+| Bật bằng cờ `use_tools` trên `/chat` thay vì endpoint mới | Contract cũ nguyên vẹn (frontend không được phá backend); web thêm một chip «Công cụ», Discord bật qua `DISCORD_AGENT_TOOLS_ENABLED` (mặc định bật — plan định `/ask` là cửa vào agent) |
+| `max_steps: 3` trong models.yaml; hết ngân sách tool → ép trả lời thường bằng những gì đã gom | Mỗi vòng là một lần gọi 9b (~30–60s CPU); vòng lặp không bounded là vòng lặp treo máy |
+| Trace: bảng `agent_traces` (migration `20260819_22`, additive + downgrade đủ), ghi **sau** khi message persist, `message_id` CASCADE | Bất biến agent-first: hành động tự hành phải audit được; không transaction nào ôm qua lời gọi model; trace không bao giờ sống lâu hơn câu trả lời nó giải thích. Xem lại: `GET /agent/traces/{message_id}` + hiện ngay dưới câu trả lời trên web |
+| Tool lỗi → trở thành **dữ liệu** (`{"error": ...}`) đưa lại cho model, không ném exception | Một tool hỏng không được giết cả câu trả lời; model thấy lỗi và tự xoay xở (đã chứng minh sống — xem dưới) |
+| SSE giữ một đường code: `use_tools`+`stream` → `meta` → `steps` → `token` (nguyên câu) → `done` | Agent chạy theo vòng nên không có token-stream thật; UI cũ chỉ thêm một handler `steps`, không cần đường gọi mới |
+| Timeout bot Discord 180s → 360s | Một turn agent tối đa 4 lần gọi model trên CPU |
+
+### Bằng chứng nghiệm thu (tiêu chí plan: *câu hỏi cần cả tài liệu lẫn memory —
+### agent tự chọn tool, trả lời đúng, trace xem lại được*)
+
+- **Test:** 6 test mới (`test_agent_service.py`): chọn tool rồi trả lời + trace
+  replay được, câu chào không gọi tool, hết ngân sách ép trả lời, tool lỗi thành
+  data, SSE đúng thứ tự sự kiện, thiếu agent thì degrade về chat thường. Suite
+  **520 passed / 0 failed**; root 59; JS sạch.
+- **Chuỗi sống 19/08, model 9b thật:** seed memory *"thích mở đầu bằng 'Tóm
+  lại:'"*, hỏi *"backup PostgreSQL giữ bao lâu, tối thiểu mấy bản? Trả lời theo
+  phong cách tôi đã dặn"* → agent tự chạy `search_documents` → `search_memory`
+  (0.516) → `search_documents` (viết lại truy vấn) → trả lời **mở đầu "Tóm
+  lại:"**, dẫn `local_ai_core_baseline.txt`, nêu đúng *02:15 hằng đêm* và *21
+  bản gần nhất* — 7 bước trace, 93s, `GET /agent/traces/210` phát lại đủ. Chip
+  «Công cụ» trên web toggle đúng trạng thái.
+- **Bug bắt được nhờ chạy sống:** tool tài liệu ban đầu đọc key `text` trong
+  khi retrieval trả `content` → excerpt rỗng. Điều giá trị: agent **không sập**
+  mà trả lời trung thực "tài liệu không có thông tin" và đề nghị kiểm tra
+  hệ thống — thiết kế error-as-data hoạt động đúng ngay lần đầu gặp sự cố thật.
+  Đã sửa key và chạy lại: trích đoạn đầy đủ.
+- Sửa kèm: test migration cũ ghim cứng head `20260818_21` (sẽ vỡ ở MỌI migration
+  tương lai — đúng lớp lỗi từng gây 77 test đỏ hồi P0) → bỏ assert ghim, giữ
+  các kiểm tra schema thật.
+
+### Giới hạn đã biết của P2-2 (không phải bug — đã ghi T12)
+
+1. **Mở lại hội thoại cũ trên web không hiện lại khối «Agent đã dùng…»** — trace
+   vẫn đủ trong DB và `GET /agent/traces/{id}`; UI lịch sử chưa fetch nó (cần
+   messages trả kèm id).
+2. **Discord không hiển thị tool đã dùng** — turn agent persist trace đầy đủ
+   nhưng tin nhắn Discord chỉ có câu trả lời.
+3. **Bấm Dừng ở web khi agent đang chạy** chỉ ngắt phía client; server chạy nốt
+   vòng lặp và vẫn persist câu trả lời.
+4. **`use_tools` với provider cloud** (gemini/deepseek làm general) sẽ 500 thay
+   vì thông điệp rõ ràng — máy này luôn ollama nên chưa chạm.
+5. **Latency Discord**: turn agent tốn 1–4 lần gọi 9b; nếu chậm quá thì
+   `DISCORD_AGENT_TOOLS_ENABLED=false` là về lại chat thường ngay. Ngoài ra bật
+   đồng thời «Ghi nhớ» + «Công cụ» có thể đưa memory vào ngữ cảnh hai lần (vô
+   hại, chỉ tốn token).
 
 ## P2-3 — Bộ lệnh Discord chuyên nghiệp — 🔶 một phần (19/08)
 

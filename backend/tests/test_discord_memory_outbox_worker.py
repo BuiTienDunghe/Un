@@ -73,6 +73,7 @@ class ChatStub:
         current_model_message,
         context_system_prompt,
         system_prompt=None,
+        use_tools=False,
     ):
         return f"answer:{message}", "test-model", conversation_id, 1
 

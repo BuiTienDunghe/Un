@@ -108,6 +108,7 @@ const state = {
   conversationId: null,
   mode: "general",           // general | rag
   memoryOn: prefs.memoryDefault,
+  toolsOn: false,            // agent mode (P2-2): opt-in per session
   generating: false,
   abort: null,
   conversations: [],
@@ -329,6 +330,34 @@ function addAssistantMessage() {
       raw += token;
       if (!renderQueued) { renderQueued = true; requestAnimationFrame(paint); }
     },
+    setAgentSteps(steps) {
+      const calls = (steps || []).filter((step) => step.kind === "tool_call");
+      if (!calls.length) return;
+      const details = el("details", "sources");
+      details.innerHTML =
+        `<summary><svg width="14" height="14"><use href="#i-spark"/></svg>` +
+        `Agent đã dùng ${calls.length} lượt công cụ` +
+        `<svg class="chev" width="14" height="14"><use href="#i-chev"/></svg></summary>`;
+      for (const step of steps) {
+        if (step.kind === "final") continue;
+        const item = el("div", "source-item");
+        const head = el("div", "source-head");
+        if (step.kind === "tool_call") {
+          head.append(el("span", "n", "⚙"), el("span", "source-file", step.tool_name || "?"));
+          const query = step.arguments?.query;
+          if (query) head.append(el("span", "source-page", `«${String(query).slice(0, 80)}»`));
+        } else {
+          head.append(el("span", "n", "→"), el("span", "source-file", `kết quả ${step.tool_name || ""}`));
+          if (step.latency_ms != null) head.append(el("span", "source-page", `${step.latency_ms}ms`));
+        }
+        item.append(head);
+        if (step.kind === "tool_result" && step.content) {
+          item.append(el("div", "source-excerpt", String(step.content).slice(0, 300)));
+        }
+        details.append(item);
+      }
+      wrap.querySelector(".msg-body").insertBefore(details, metaRow);
+    },
     setSources(sources) {
       if (!sources?.length) return;
       const details = el("details", "sources");
@@ -418,7 +447,7 @@ function renderHistory(messages) {
 }
 
 /* ── SSE streaming ─────────────────────────────────────────────── */
-async function streamChat(path, payload, { onMeta, onToken }, signal) {
+async function streamChat(path, payload, { onMeta, onToken, onSteps }, signal) {
   const response = await fetch(path, {
     method: "POST",
     headers: withApiKey({ "Content-Type": "application/json" }),
@@ -446,6 +475,7 @@ async function streamChat(path, payload, { onMeta, onToken }, signal) {
       if (!raw) continue;
       const data = JSON.parse(raw);
       if (type === "meta") onMeta?.(data);
+      else if (type === "steps") onSteps?.(data.steps || []);
       else if (type === "token") onToken?.(data.content);
       else if (type === "error") throw new Error(ERROR_HINTS[data.error_code] || data.message || "Lỗi khi sinh phản hồi.");
     }
@@ -489,7 +519,7 @@ async function sendPrompt(prompt) {
 
   const payload =
     state.mode === "general"
-      ? { message: prompt, conversation_id: state.conversationId, use_memory: state.memoryOn }
+      ? { message: prompt, conversation_id: state.conversationId, use_memory: state.memoryOn, use_tools: state.toolsOn }
       : { message: prompt, document_ids: [...state.selectedDocs], conversation_id: state.conversationId };
 
   const retry = () => sendPrompt(prompt);
@@ -503,6 +533,7 @@ async function sendPrompt(prompt) {
         }
         if (state.mode === "rag") handle.setSources(meta.sources || []);
       },
+      onSteps: (steps) => handle.setAgentSteps(steps),
       onToken: (token) => {
         if (!firstToken) { firstToken = true; handle.start(); }
         handle.append(token);
@@ -1088,6 +1119,12 @@ function syncMemoryChip() {
   chip.lastChild.textContent = state.memoryOn ? " Ghi nhớ: bật" : " Ghi nhớ: tắt";
 }
 
+function syncToolsChip() {
+  const chip = $("tools-chip");
+  chip.setAttribute("aria-pressed", String(state.toolsOn));
+  chip.lastChild.textContent = state.toolsOn ? " Công cụ: bật" : " Công cụ: tắt";
+}
+
 const MODE_TEXT = {
   general: { sub: "", placeholder: "Nhập tin nhắn…" },
   rag: { sub: "Hỏi đáp theo tài liệu, có trích dẫn nguồn, lưu vào hội thoại", placeholder: "Hỏi về nội dung tài liệu đã chọn…" },
@@ -1179,6 +1216,7 @@ function bindEvents() {
     radio.addEventListener("change", () => { if (radio.checked) setMode(radio.value); });
   }
   $("memory-chip").onclick = () => { state.memoryOn = !state.memoryOn; syncMemoryChip(); };
+  $("tools-chip").onclick = () => { state.toolsOn = !state.toolsOn; syncToolsChip(); };
   $("docs-chip").onclick = () => openDocs(!docsOpen());
 
   // Sidebar

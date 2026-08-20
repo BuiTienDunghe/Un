@@ -12,6 +12,13 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 ## [Unreleased]
 
 ### Added
+- **Chế độ agent — tool use** (P2-2): bật chip «Công cụ» trên web (cờ `use_tools`
+  của `/chat`) hoặc `DISCORD_AGENT_TOOLS_ENABLED` cho bot — model tự quyết định
+  gọi công cụ (tìm tài liệu kèm nguồn, đọc trí nhớ dài hạn, xem trạng thái hệ
+  thống) trước khi trả lời, tối đa `agent.max_steps` vòng. Mỗi bước lưu bảng
+  `agent_traces` (migration `20260819_22`) gắn với câu trả lời, xem lại qua
+  `GET /agent/traces/{message_id}` và hiện ngay dưới câu trả lời trên web.
+  Tool lỗi trở thành dữ liệu cho model xoay xở, không làm hỏng câu trả lời.
 - **Memory tự áp dụng theo ngưỡng tin cậy** (P2-1): đề xuất có confidence ≥
   `DISCORD_MEMORY_AUTO_APPLY_THRESHOLD` (mặc định 0.8, `off` để tắt) được agent
   tự approve qua đúng đường duyệt (`reviewed_by="agent"` — audit và mirror y hệt

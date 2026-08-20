@@ -751,6 +751,31 @@ class Memory(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
 
+class AgentTrace(Base):
+    """One step of an agent-mode answer (P2-2): which tool ran, with what
+    arguments, what came back, and the final synthesis.
+
+    Rows are written after the assistant message is persisted and cascade with
+    it — a trace never outlives the answer it explains.
+    """
+
+    __tablename__ = "agent_traces"
+    __table_args__ = (
+        Index("ix_agent_traces_conversation_created", "conversation_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    conversation_id: Mapped[str] = mapped_column(ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False)
+    message_id: Mapped[int | None] = mapped_column(ForeignKey("messages.id", ondelete="CASCADE"), index=True)
+    step_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    tool_name: Mapped[str | None] = mapped_column(String(128))
+    arguments: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    content: Mapped[str | None] = mapped_column(Text)
+    latency_ms: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
 class RequestLog(Base):
     __tablename__ = "request_logs"
 

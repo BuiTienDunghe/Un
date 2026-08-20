@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     discord_memory_extractor_timeout_seconds: float = 60.0
     discord_memory_extractor_retry_count: int = 1
     discord_memory_queue_name: str = "memory_extract"
+    # P2-2: Discord turns run through the agent loop (tool use + trace). Off
+    # falls back to plain chat — same answer path as before the agent existed.
+    discord_agent_tools_enabled: bool = True
     # P2-1: proposals at or above this extractor confidence are applied by the
     # agent itself (reviewed_by="agent") and can be reverted in one click from
     # the dashboard; below it they wait in the review queue. Set to "off" to

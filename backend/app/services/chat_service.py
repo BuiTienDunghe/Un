@@ -28,6 +28,10 @@ class ChatService:
         self.logging_service = logging_service
         self.history_limit = history_limit
         self.memory_service = memory_service
+        # Assigned by the composition root after the retrieval stack exists
+        # (the agent needs services that are built later than this one).
+        # None keeps every `use_tools` request on the plain-chat path.
+        self.agent_service = None
         self.system_prompt = (Path(__file__).parents[1] / "prompts" / "general_system.md").read_text(encoding="utf-8")
         self.memory_prompt = (Path(__file__).parents[1] / "prompts" / "memory_system.md").read_text(encoding="utf-8")
 
@@ -37,12 +41,14 @@ class ChatService:
         conversation_id: str | None,
         use_memory: bool = False,
         system_prompt: str | None = None,
-    ) -> tuple[str, str, str, int]:
+        use_tools: bool = False,
+    ) -> tuple[str, str, str, int, list[dict[str, object]] | None]:
         return self._respond(
             message,
             conversation_id,
             use_memory,
             system_prompt,
+            use_tools=use_tools,
         )
 
     def respond_with_context(
@@ -54,13 +60,15 @@ class ChatService:
         current_model_message: dict[str, str],
         context_system_prompt: str,
         system_prompt: str | None = None,
+        use_tools: bool = False,
     ) -> tuple[str, str, str, int]:
         """Run chat with caller-built trusted context while persisting raw text.
 
         The ordinary Web UI path continues through ``respond`` and therefore
-        retains its existing store-backed history behavior.
+        retains its existing store-backed history behavior. Agent steps are
+        persisted but not returned — Discord renders only the answer.
         """
-        return self._respond(
+        answer, model_used, returned_id, latency_ms, _ = self._respond(
             message,
             conversation_id,
             False,
@@ -68,7 +76,9 @@ class ChatService:
             model_history=model_history,
             current_model_message=current_model_message,
             context_system_prompt=context_system_prompt,
+            use_tools=use_tools,
         )
+        return answer, model_used, returned_id, latency_ms
 
     def _respond(
         self,
@@ -80,7 +90,8 @@ class ChatService:
         model_history: list[dict[str, str]] | None = None,
         current_model_message: dict[str, str] | None = None,
         context_system_prompt: str | None = None,
-    ) -> tuple[str, str, str, int]:
+        use_tools: bool = False,
+    ) -> tuple[str, str, str, int, list[dict[str, object]] | None]:
         is_new = conversation_id is None
         if conversation_id is None:
             conversation_id = str(uuid4())
@@ -109,7 +120,11 @@ class ChatService:
                 ]
             )
             started = perf_counter()
-            answer, model_used = self.router.chat("general", messages)
+            agent_steps: list[dict[str, object]] | None = None
+            if use_tools and self.agent_service is not None:
+                answer, model_used, agent_steps = self.agent_service.run(messages)
+            else:
+                answer, model_used = self.router.chat("general", messages)
         except Exception:
             # The turn produced nothing durable; a failed model call must not
             # leave an empty conversation shell in the sidebar. Mirrors the
@@ -119,9 +134,12 @@ class ChatService:
             raise
         latency_ms = int((perf_counter() - started) * 1000)
         self.store.add_message(conversation_id, "user", message)
-        self.store.add_message(conversation_id, "assistant", answer, model_used)
+        assistant_message_id = self.store.add_message(conversation_id, "assistant", answer, model_used)
+        if agent_steps:
+            # Trace rows attach to the persisted answer they explain (P2-2).
+            self.store.add_agent_traces(conversation_id, assistant_message_id, agent_steps)
         self.logging_service.log_request("/chat", model_used, latency_ms, "ok")
-        return answer, model_used, conversation_id, latency_ms
+        return answer, model_used, conversation_id, latency_ms, agent_steps
 
     def stream_response(self, message: str, conversation_id: str | None, use_memory: bool = False, system_prompt: str | None = None) -> tuple[Iterator[str], str, str]:
         is_new = conversation_id is None

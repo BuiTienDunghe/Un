@@ -11,7 +11,7 @@ from app.config.settings import get_settings
 from app.llm_clients.ollama_client import OllamaClient
 from app.llm_clients.gemini_client import GeminiClient
 from app.llm_clients.deepseek_client import DeepSeekClient
-from app.routers import chat, conversations, dashboard, discord_sessions, documents, health, memory, memory_review, models, ocr, rag, vision
+from app.routers import agent, chat, conversations, dashboard, discord_sessions, documents, health, memory, memory_review, models, ocr, rag, vision
 from app.security.api_key import require_api_key_for_read
 from app.services.postgres_bm25_service import PostgresBm25Service
 from app.services.chat_service import ChatService
@@ -21,6 +21,7 @@ from app.services.postgres_document_service import PostgresDocumentService
 from app.services.ocr_job_service import OcrJobService
 from app.services.ocr_service import OCRService
 from app.services.rag_service import RagService
+from app.services.agent_service import AgentService
 from app.services.memory_service import MemoryService
 from app.services.postgres_retrieval_service import PostgresRetrievalService
 from app.services.job_queue_service import JobQueueService
@@ -99,6 +100,7 @@ async def lifespan(app: FastAPI):
             ),
             max_attempts=settings.job_max_attempts,
         ),
+        agent_tools_enabled=settings.discord_agent_tools_enabled,
     )
     ocr_service = OCRService(router, auxiliary_store)
     queue = (
@@ -142,6 +144,18 @@ async def lifespan(app: FastAPI):
         history_limit=settings.conversation_history_limit,
         condense_enabled=bool(rag_config.get("condense_enabled", True)),
     )
+    agent_config = config.get("agent", {})
+    app.state.agent_service = AgentService(
+        router,
+        retrieval_service,
+        app.state.memory_service,
+        app.state.operational_service,
+        max_steps=int(agent_config.get("max_steps", 3)),
+        tool_result_max_chars=int(agent_config.get("tool_result_max_chars", 1200)),
+    )
+    # ChatService is built before the retrieval stack the agent needs, so the
+    # agent is handed over here instead of through the constructor.
+    app.state.chat_service.agent_service = app.state.agent_service
     try:
         yield
     finally:
@@ -156,6 +170,7 @@ app.include_router(models.router)
 # Write routes carry their own `require_api_key`. This adds the opt-in read
 # guard on top, so `LOCAL_AI_PROTECT_READS=true` closes the whole surface.
 read_guard = [Depends(require_api_key_for_read)]
+app.include_router(agent.router, dependencies=read_guard)
 app.include_router(chat.router, dependencies=read_guard)
 app.include_router(documents.router, dependencies=read_guard)
 app.include_router(ocr.router, dependencies=read_guard)

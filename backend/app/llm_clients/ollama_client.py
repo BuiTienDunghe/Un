@@ -69,6 +69,72 @@ class OllamaClient:
             time.sleep(1 + attempt * 2)
         raise OllamaUnavailableError("Cannot connect to Ollama")
 
+    def chat_tools(
+        self,
+        model: str,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]],
+        options: dict[str, Any],
+        keep_alive: str,
+        think: bool | None = None,
+    ) -> dict[str, Any]:
+        """One non-streaming chat turn with function-calling enabled.
+
+        Returns ``{"content", "tool_calls", "raw_tool_calls"}``: `tool_calls`
+        is normalised to `{name, arguments}`, `raw_tool_calls` is the exact
+        payload Ollama produced — the follow-up request must echo it back in
+        the assistant message so the model can see its own calls.
+        """
+        payload = {
+            "model": model,
+            "messages": messages,
+            "stream": False,
+            "options": options,
+            "keep_alive": keep_alive,
+            "tools": tools,
+        }
+        if think is not None:
+            payload["think"] = think
+        for attempt in range(self.retry_count + 1):
+            try:
+                response = httpx.post(
+                    f"{self.base_url}/api/chat", json=payload, timeout=self.chat_timeout
+                )
+                if response.status_code == 404:
+                    raise OllamaModelNotLoadedError(
+                        f"Model {model} is unavailable. Run: ollama pull {model}"
+                    )
+                response.raise_for_status()
+                message = response.json().get("message", {})
+                content = message.get("content")
+                if not isinstance(content, str):
+                    raise OllamaUnavailableError("Ollama returned an invalid chat response")
+                raw_tool_calls = message.get("tool_calls")
+                raw_tool_calls = raw_tool_calls if isinstance(raw_tool_calls, list) else []
+                tool_calls = []
+                for call in raw_tool_calls:
+                    function = call.get("function") if isinstance(call, dict) else None
+                    if not isinstance(function, dict):
+                        continue
+                    name = function.get("name")
+                    arguments = function.get("arguments")
+                    if isinstance(name, str) and name:
+                        tool_calls.append({
+                            "name": name,
+                            "arguments": arguments if isinstance(arguments, dict) else {},
+                        })
+                return {"content": content, "tool_calls": tool_calls, "raw_tool_calls": raw_tool_calls}
+            except OllamaModelNotLoadedError:
+                raise
+            except httpx.TimeoutException as error:
+                if attempt == self.retry_count:
+                    raise OllamaTimeoutError("Ollama did not answer before the timeout") from error
+            except httpx.HTTPError as error:
+                if attempt == self.retry_count:
+                    raise OllamaUnavailableError("Cannot connect to Ollama") from error
+            time.sleep(1 + attempt * 2)
+        raise OllamaUnavailableError("Cannot connect to Ollama")
+
     def embed(self, model: str, text: str) -> list[float]:
         for attempt in range(self.retry_count + 1):
             try:

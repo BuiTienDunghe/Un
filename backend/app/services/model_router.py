@@ -103,6 +103,31 @@ class ModelRouter:
 
         return answer, model_name
 
+    def chat_tools(
+        self,
+        mode: str,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]],
+    ) -> tuple[dict[str, Any], str]:
+        """One function-calling turn. Only the ollama provider supports the
+        tools API; cloud providers raise so the caller can fall back."""
+        if mode != "general":
+            raise ValueError(f"Unsupported model mode: {mode}")
+        config = self.models[mode]
+        model_name = str(config["name"])
+        client = self._get_client(config)
+        if not isinstance(client, OllamaClient):
+            raise RuntimeError("Tool calling requires the 'ollama' provider for the general model")
+        result = client.chat_tools(
+            model=model_name,
+            messages=messages,
+            tools=tools,
+            options=self._ollama_options(config),
+            keep_alive=str(config.get("keep_alive", "5m")),
+            think=config.get("think") if isinstance(config.get("think"), bool) else None,
+        )
+        return result, model_name
+
     def embed(self, text: str) -> tuple[list[float], str]:
         """Embedding always uses Ollama (cloud embedding not yet supported)."""
         config = self.models["embedding"]

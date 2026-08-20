@@ -59,6 +59,7 @@ class DiscordTurnService:
         lease_seconds: int = 120,
         max_attempts: int = 3,
         memory_completion_service: DiscordMemoryCompletionService | None = None,
+        agent_tools_enabled: bool = False,
     ) -> None:
         self.sessions = sessions
         self.session_service = session_service
@@ -66,6 +67,8 @@ class DiscordTurnService:
         self.lease_seconds = max(3, lease_seconds)
         self.max_attempts = max(1, max_attempts)
         self.memory_completion_service = memory_completion_service
+        # P2-2: Discord turns become agent turns (tool use + trace) when on.
+        self.agent_tools_enabled = agent_tools_enabled
         self.history_turn_limit = max(
             1,
             int(getattr(chat_service, "history_limit", 12)) // 2,
@@ -484,6 +487,7 @@ class DiscordTurnService:
                 current_model_message=speaker_context.current_message,
                 context_system_prompt=speaker_context.system_instruction,
                 system_prompt=system_prompt,
+                use_tools=self.agent_tools_enabled,
             )
         except ConversationNotFoundError:
             return self._orphan_and_requeue(turn, execution_token)

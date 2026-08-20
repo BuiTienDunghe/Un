@@ -8,6 +8,9 @@ class ChatRequest(BaseModel):
     # persona without changing the UI/general-chat prompt on disk.
     system_prompt: str | None = Field(default=None, min_length=1, max_length=20_000)
     use_memory: bool = False
+    # Agent mode (P2-2): the model may call in-house tools (documents, memory,
+    # system status) before answering; every step is traced.
+    use_tools: bool = False
     stream: bool = False
 
 
@@ -16,3 +19,6 @@ class ChatResponse(BaseModel):
     model_used: str
     conversation_id: str
     latency_ms: int
+    # Present only for agent-mode answers: the tool calls/results and final
+    # synthesis, in order. The same steps persist in `agent_traces`.
+    agent_steps: list[dict[str, object]] | None = None

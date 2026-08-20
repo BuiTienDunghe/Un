@@ -40,6 +40,7 @@ class CapturingChatService:
         current_model_message,
         context_system_prompt,
         system_prompt=None,
+        use_tools=False,
     ):
         self.calls.append(
             {

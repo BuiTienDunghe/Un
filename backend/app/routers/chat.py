@@ -17,7 +17,7 @@ router = APIRouter(tags=["chat"])
 def chat(payload: ChatRequest, request: Request) -> ChatResponse | StreamingResponse:
     started = perf_counter()
     try:
-        if payload.stream:
+        if payload.stream and not payload.use_tools:
             tokens, model_used, conversation_id = request.app.state.chat_service.stream_response(payload.message, payload.conversation_id, payload.use_memory, payload.system_prompt)
 
             def events():
@@ -30,10 +30,21 @@ def chat(payload: ChatRequest, request: Request) -> ChatResponse | StreamingResp
                     yield sse_event("error", {"error_code": "STREAM_FAILED", "message": str(error)})
 
             return StreamingResponse(events(), media_type="text/event-stream")
-        answer, model_used, conversation_id, latency_ms = request.app.state.chat_service.respond(
-            payload.message, payload.conversation_id, payload.use_memory, payload.system_prompt
+        answer, model_used, conversation_id, latency_ms, agent_steps = request.app.state.chat_service.respond(
+            payload.message, payload.conversation_id, payload.use_memory, payload.system_prompt, payload.use_tools
         )
-        return ChatResponse(answer=answer, model_used=model_used, conversation_id=conversation_id, latency_ms=latency_ms)
+        if payload.stream:
+            # Agent mode has no token stream (the loop runs whole rounds), but
+            # SSE clients keep one code path: meta → steps → answer → done.
+            def agent_events():
+                yield sse_event("meta", {"conversation_id": conversation_id, "model_used": model_used})
+                if agent_steps:
+                    yield sse_event("steps", {"steps": agent_steps})
+                yield sse_event("token", {"content": answer})
+                yield sse_event("done", {})
+
+            return StreamingResponse(agent_events(), media_type="text/event-stream")
+        return ChatResponse(answer=answer, model_used=model_used, conversation_id=conversation_id, latency_ms=latency_ms, agent_steps=agent_steps)
     except ConversationNotFoundError as error:
         raise HTTPException(status_code=404, detail={"error_code": "CONVERSATION_NOT_FOUND", "message": f"Conversation {error} does not exist"}) from error
     except OllamaModelNotLoadedError as error:

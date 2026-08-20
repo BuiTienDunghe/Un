@@ -75,7 +75,10 @@ def test_revision_21_creates_indexes_and_tightens_the_outbox_key_reversibly():
     for table, names in CREATED_INDEXES.items():
         assert names <= _index_names(engine, table)
     assert not _idempotency_key_is_nullable(engine)
-    assert head_revision() == "20260818_21"
+    # No head-equality assert here: pinning the repo head to this revision
+    # would break the suite on every later migration (the same brittleness the
+    # pinned-restore bug had). The index/nullable checks above already prove
+    # the round trip restored this revision's schema.
 
 
 def test_the_two_undeclared_indexes_are_kept_rather_than_dropped():

@@ -43,7 +43,8 @@ class LocalAgentSettings:
     username: str = ""
     password: str = ""
     timeout_seconds: float = 45.0
-    turn_execute_timeout_seconds: float = 180.0
+    # Agent mode (P2-2) may spend several local-model rounds on one turn.
+    turn_execute_timeout_seconds: float = 360.0
     # Layer-1 shared key. Empty when the backend has no key configured, which
     # is the default single-user setup.
     api_key: str = ""
