@@ -6,6 +6,7 @@ from app.services.memory_service import MemoryNotFoundError
 from app.stores.qdrant_store import QdrantUnavailableError
 
 from app.security.api_key import require_api_key
+from app.security.auth import require_admin
 
 router = APIRouter(prefix="/memory", tags=["memory"])
 
@@ -26,7 +27,7 @@ def search_memory(payload: MemorySearchRequest, request: Request) -> list[Memory
         raise _service_error(error) from error
 
 
-@router.put("/{memory_id}", response_model=MemoryResponse, dependencies=[Depends(require_api_key)])
+@router.put("/{memory_id}", response_model=MemoryResponse, dependencies=[Depends(require_api_key), Depends(require_admin)])
 def update_memory(memory_id: str, payload: MemoryUpdateRequest, request: Request) -> MemoryResponse:
     try:
         return MemoryResponse(**request.app.state.memory_service.update(memory_id, payload.content, payload.memory_type, payload.importance))
@@ -36,7 +37,7 @@ def update_memory(memory_id: str, payload: MemoryUpdateRequest, request: Request
         raise _service_error(error) from error
 
 
-@router.delete("/{memory_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_api_key)])
+@router.delete("/{memory_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_api_key), Depends(require_admin)])
 def delete_memory(memory_id: str, request: Request) -> None:
     try:
         request.app.state.memory_service.delete(memory_id)

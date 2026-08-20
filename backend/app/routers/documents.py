@@ -5,6 +5,7 @@ from app.services.postgres_document_service import DocumentAlreadyIndexingError,
 from app.stores.qdrant_store import QdrantDimensionMismatchError
 
 from app.security.api_key import require_api_key
+from app.security.auth import require_admin
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -25,7 +26,7 @@ async def upload_document(request: Request, file: UploadFile = File(...), decisi
         raise HTTPException(status_code=413, detail={"error_code": "DOCUMENT_TOO_LARGE", "message": "The uploaded file exceeds the configured size limit"}) from error
 
 
-@router.post("/{document_id}/replace", response_model=ReplaceSourceResponse, status_code=202, dependencies=[Depends(require_api_key)])
+@router.post("/{document_id}/replace", response_model=ReplaceSourceResponse, status_code=202, dependencies=[Depends(require_api_key), Depends(require_admin)])
 async def replace_document_source(document_id: str, request: Request, file: UploadFile = File(...)) -> ReplaceSourceResponse:
     try:
         result = await request.app.state.document_service.replace_source(document_id, file, request.app.state.settings.max_upload_size_bytes)
@@ -43,7 +44,7 @@ async def replace_document_source(document_id: str, request: Request, file: Uplo
         raise HTTPException(status_code=413, detail={"error_code": "DOCUMENT_TOO_LARGE", "message": "The uploaded file exceeds the configured size limit"}) from error
 
 
-@router.post("/index", response_model=IndexResponse, status_code=202, dependencies=[Depends(require_api_key)])
+@router.post("/index", response_model=IndexResponse, status_code=202, dependencies=[Depends(require_api_key), Depends(require_admin)])
 def index_document(payload: IndexRequest, request: Request) -> IndexResponse:
     try:
         run = request.app.state.document_service.enqueue_index(payload.document_id)
@@ -68,7 +69,7 @@ def ingestion_status(run_id: str, request: Request) -> IngestionStatusResponse:
         raise HTTPException(status_code=404, detail={"error_code": "INGESTION_NOT_FOUND", "message": f"Ingestion {error} does not exist"}) from error
 
 
-@router.post("/ingestions/{run_id}/cancel", response_model=IngestionStatusResponse, dependencies=[Depends(require_api_key)])
+@router.post("/ingestions/{run_id}/cancel", response_model=IngestionStatusResponse, dependencies=[Depends(require_api_key), Depends(require_admin)])
 def cancel_ingestion(run_id: str, request: Request) -> IngestionStatusResponse:
     try:
         return IngestionStatusResponse(**request.app.state.document_service.cancel_ingestion(run_id))
@@ -76,7 +77,7 @@ def cancel_ingestion(run_id: str, request: Request) -> IngestionStatusResponse:
         raise HTTPException(status_code=404, detail={"error_code": "INGESTION_NOT_FOUND", "message": f"Ingestion {error} does not exist"}) from error
 
 
-@router.post("/ingestions/{run_id}/retry", response_model=IndexResponse, status_code=202, dependencies=[Depends(require_api_key)])
+@router.post("/ingestions/{run_id}/retry", response_model=IndexResponse, status_code=202, dependencies=[Depends(require_api_key), Depends(require_admin)])
 def retry_ingestion(run_id: str, request: Request) -> IndexResponse:
     try:
         run = request.app.state.document_service.retry_ingestion(run_id)
@@ -87,7 +88,7 @@ def retry_ingestion(run_id: str, request: Request) -> IndexResponse:
         raise HTTPException(status_code=409, detail={"error_code": "INGESTION_NOT_RETRYABLE", "message": str(error)}) from error
 
 
-@router.delete("/{document_id}", status_code=204, dependencies=[Depends(require_api_key)])
+@router.delete("/{document_id}", status_code=204, dependencies=[Depends(require_api_key), Depends(require_admin)])
 def delete_document(document_id: str, request: Request) -> None:
     try:
         request.app.state.document_service.delete_document(document_id)
@@ -95,7 +96,7 @@ def delete_document(document_id: str, request: Request) -> None:
         raise HTTPException(status_code=404, detail={"error_code": "DOCUMENT_NOT_FOUND", "message": f"Document {error} does not exist"}) from error
 
 
-@router.delete("/{document_id}/source", status_code=204, dependencies=[Depends(require_api_key)])
+@router.delete("/{document_id}/source", status_code=204, dependencies=[Depends(require_api_key), Depends(require_admin)])
 def remove_document_source(document_id: str, request: Request) -> None:
     """Remove only the original artifact; indexed knowledge remains available."""
     try:

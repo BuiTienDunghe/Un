@@ -4,6 +4,8 @@ Web-agent numbers come from the auxiliary store (which already excludes
 Discord-origin conversations); Discord-agent numbers are aggregated straight
 from the session/turn/delivery tables. Everything here is read-only.
 """
+from datetime import datetime, time, timedelta
+
 from fastapi import APIRouter, Request
 from sqlalchemy import func, select
 
@@ -11,6 +13,7 @@ from app.postgres.models import (
     DiscordConversationSession,
     DiscordSessionTurn,
     DiscordTurnDelivery,
+    RequestLog,
 )
 from app.schemas.dashboard_schema import (
     DashboardStats,
@@ -20,6 +23,56 @@ from app.schemas.dashboard_schema import (
 )
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
+
+
+QUESTION_ENDPOINTS = ("/chat", "/rag/chat")
+
+
+@router.get("/timeseries")
+def dashboard_timeseries(request: Request, days: int = 14) -> dict[str, object]:
+    """Daily question volume, latency percentiles and error counts (P3-3),
+    aggregated from `request_logs` and bucketed in the machine's local
+    timezone so "một ngày" matches the operator's day, not UTC's."""
+    bounded = max(1, min(int(days), 60))
+    local_now = datetime.now().astimezone()
+    offset = local_now.utcoffset() or timedelta(0)
+    start_date = (local_now - timedelta(days=bounded - 1)).date()
+    since = datetime.combine(start_date, time.min, tzinfo=local_now.tzinfo)
+    # The database runs in UTC; shifting by the local offset before date()
+    # buckets rows by local calendar day.
+    local_day = func.date(RequestLog.created_at + offset)
+
+    with request.app.state.postgres_sessions() as database:
+        question_rows = database.execute(
+            select(
+                local_day.label("day"),
+                func.count(),
+                func.percentile_cont(0.5).within_group(RequestLog.latency_ms),
+                func.percentile_cont(0.95).within_group(RequestLog.latency_ms),
+            )
+            .where(RequestLog.endpoint.in_(QUESTION_ENDPOINTS), RequestLog.created_at >= since)
+            .group_by(local_day)
+        ).all()
+        error_rows = database.execute(
+            select(local_day.label("day"), func.count())
+            .where(RequestLog.status != "ok", RequestLog.created_at >= since)
+            .group_by(local_day)
+        ).all()
+
+    questions = {row[0]: (int(row[1]), row[2], row[3]) for row in question_rows}
+    errors = {row[0]: int(row[1]) for row in error_rows}
+    series = []
+    for index in range(bounded):
+        day = start_date + timedelta(days=index)
+        count, p50, p95 = questions.get(day, (0, None, None))
+        series.append({
+            "date": day.isoformat(),
+            "questions": count,
+            "errors": errors.get(day, 0),
+            "p50_ms": int(p50) if p50 is not None else None,
+            "p95_ms": int(p95) if p95 is not None else None,
+        })
+    return {"days": series}
 
 
 @router.get("/stats", response_model=DashboardStats)

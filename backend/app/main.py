@@ -7,12 +7,14 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app import __version__
-from app.config.settings import get_settings
+from app.config.settings import PROJECT_ROOT, get_settings
 from app.llm_clients.ollama_client import OllamaClient
 from app.llm_clients.gemini_client import GeminiClient
 from app.llm_clients.deepseek_client import DeepSeekClient
-from app.routers import agent, chat, conversations, dashboard, discord_sessions, documents, health, memory, memory_review, models, ocr, rag, vision
+from app.routers import agent, auth, bot, chat, conversations, dashboard, discord_sessions, documents, health, memory, memory_review, models, ocr, rag, vision
 from app.security.api_key import require_api_key_for_read
+from app.security.auth import require_admin
+from app.services.auth_service import AuthService
 from app.services.postgres_bm25_service import PostgresBm25Service
 from app.services.chat_service import ChatService
 from app.services.logging_service import LoggingService
@@ -27,6 +29,7 @@ from app.services.postgres_retrieval_service import PostgresRetrievalService
 from app.services.job_queue_service import JobQueueService
 from app.services.operational_service import OperationalService
 from app.services.reranker_service import RerankerService
+from app.services.bot_control_service import BotControlService
 from app.services.discord_session_service import DiscordSessionService
 from app.services.discord_memory_review_service import DiscordMemoryReviewService
 from app.services.discord_memory_completion_service import (
@@ -156,6 +159,16 @@ async def lifespan(app: FastAPI):
     # ChatService is built before the retrieval stack the agent needs, so the
     # agent is handed over here instead of through the constructor.
     app.state.chat_service.agent_service = app.state.agent_service
+    # P3-2: dashboard start/stop for the compose-managed Discord bot.
+    app.state.bot_control_service = BotControlService(PROJECT_ROOT)
+    # P3-1: accounts. Constructed even with auth off — /auth/config answers
+    # {"enabled": false} and everything else in it 409s.
+    app.state.auth_service = AuthService(
+        postgres_sessions,
+        jwt_secret=settings.local_ai_jwt_secret,
+        access_minutes=settings.local_ai_access_token_minutes,
+        refresh_days=settings.local_ai_refresh_token_days,
+    )
     try:
         yield
     finally:
@@ -167,19 +180,27 @@ app = FastAPI(title="Local AI Core", version=__version__, lifespan=lifespan)
 # and the Settings dialog all read them before anyone can supply a key.
 app.include_router(health.router)
 app.include_router(models.router)
+# Auth endpoints are public by necessity (login/refresh/config); their admin
+# subroutes carry require_admin themselves.
+app.include_router(auth.router)
+app.include_router(auth.alias_router)
 # Write routes carry their own `require_api_key`. This adds the opt-in read
 # guard on top, so `LOCAL_AI_PROTECT_READS=true` closes the whole surface.
 read_guard = [Depends(require_api_key_for_read)]
-app.include_router(agent.router, dependencies=read_guard)
+# Admin surfaces (P3-1): oversight and operations. `require_admin` is a no-op
+# while auth is disabled, so single-user installs keep today's behavior.
+admin_guard = [*read_guard, Depends(require_admin)]
+app.include_router(agent.router, dependencies=admin_guard)
+app.include_router(bot.router, dependencies=admin_guard)
 app.include_router(chat.router, dependencies=read_guard)
 app.include_router(documents.router, dependencies=read_guard)
 app.include_router(ocr.router, dependencies=read_guard)
 app.include_router(rag.router, dependencies=read_guard)
 app.include_router(memory.router, dependencies=read_guard)
-app.include_router(memory_review.router, dependencies=read_guard)
+app.include_router(memory_review.router, dependencies=admin_guard)
 app.include_router(conversations.router, dependencies=read_guard)
-app.include_router(dashboard.router, dependencies=read_guard)
-app.include_router(discord_sessions.router, dependencies=read_guard)
+app.include_router(dashboard.router, dependencies=admin_guard)
+app.include_router(discord_sessions.router, dependencies=admin_guard)
 app.include_router(vision.router, dependencies=read_guard)
 app.mount("/ui", StaticFiles(directory=str(Path(__file__).parent / "frontend"), html=True), name="ui")
 

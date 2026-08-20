@@ -231,6 +231,44 @@ class OutboxEvent(Base):
 # Auxiliary-domain schema added in SQLite-to-PostgreSQL Phase 2.  These models
 # are deliberately not wired into runtime services until data migration and
 # domain-by-domain cutover have been verified.
+class User(Base):
+    """Web account (P3-1). Roles are deliberately just admin/member; the
+    Discord bot and CLI tools authenticate with the API key instead."""
+
+    __tablename__ = "users"
+    __table_args__ = (
+        CheckConstraint("role IN ('admin','member')", name="ck_users_role"),
+        CheckConstraint("username = lower(username)", name="ck_users_username_lower"),
+        UniqueConstraint("username", name="uq_users_username"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    username: Mapped[str] = mapped_column(String(64), nullable=False)
+    password_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    role: Mapped[str] = mapped_column(String(16), nullable=False)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+class RefreshToken(Base):
+    """One long-lived refresh credential per login, stored hashed and
+    revocable. Deliberately NOT rotated on use: rotation with reuse-detection
+    turns every multi-tab refresh race into a mass logout on a LAN tool."""
+
+    __tablename__ = "refresh_tokens"
+    __table_args__ = (
+        UniqueConstraint("token_hash", name="uq_refresh_tokens_token_hash"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
 class Conversation(Base):
     __tablename__ = "conversations"
 
@@ -238,6 +276,9 @@ class Conversation(Base):
     # a valid UUID.
     id: Mapped[str] = mapped_column(String(128), primary_key=True)
     title: Mapped[str | None] = mapped_column(String(200))
+    # NULL = created before accounts existed (or with auth off); such rows are
+    # admin-only once auth is on.
+    user_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
 

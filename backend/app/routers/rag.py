@@ -10,6 +10,7 @@ from app.stores.qdrant_store import QdrantUnavailableError
 from app.utils.sse import sse_event
 
 from app.security.api_key import require_api_key
+from app.security.auth import ensure_conversation_access, resolve_identity
 
 router = APIRouter(prefix="/rag", tags=["rag"])
 
@@ -45,9 +46,14 @@ def _response_sources(sources: list[dict[str, object]]) -> list[RagSource]:
 @router.post("/chat", response_model=RagChatResponse, dependencies=[Depends(require_api_key)])
 def rag_chat(payload: RagChatRequest, request: Request) -> RagChatResponse | StreamingResponse:
     try:
+        identity = resolve_identity(request)
+        owner = identity.user_id if identity.is_user else None
+        if payload.conversation_id:
+            # P3-1: appending to someone else's conversation must 404.
+            ensure_conversation_access(request, payload.conversation_id)
         document_scope = payload.document_ids or ([payload.document_id] if payload.document_id else None)
         if payload.stream:
-            tokens, model_used, sources, conversation_id, retrieval_question = request.app.state.rag_service.stream_response(payload.message, payload.top_k, document_scope, payload.conversation_id)
+            tokens, model_used, sources, conversation_id, retrieval_question = request.app.state.rag_service.stream_response(payload.message, payload.top_k, document_scope, payload.conversation_id, user_id=owner)
             response_sources = [source.model_dump() for source in _response_sources(sources)]
 
             def events():
@@ -60,7 +66,7 @@ def rag_chat(payload: RagChatRequest, request: Request) -> RagChatResponse | Str
                     yield sse_event("error", {"error_code": "STREAM_FAILED", "message": str(error)})
 
             return StreamingResponse(events(), media_type="text/event-stream")
-        answer, model_used, latency_ms, sources, conversation_id, retrieval_question = request.app.state.rag_service.respond(payload.message, payload.top_k, document_scope, payload.conversation_id)
+        answer, model_used, latency_ms, sources, conversation_id, retrieval_question = request.app.state.rag_service.respond(payload.message, payload.top_k, document_scope, payload.conversation_id, user_id=owner)
         return RagChatResponse(answer=answer, model_used=model_used, latency_ms=latency_ms, conversation_id=conversation_id, retrieval_question=retrieval_question, sources=_response_sources(sources))
     except ConversationNotFoundError as error:
         raise HTTPException(status_code=404, detail={"error_code": "CONVERSATION_NOT_FOUND", "message": f"Conversation {error} does not exist"}) from error

@@ -23,6 +23,11 @@ os.environ["QDRANT_MEMORIES_COLLECTION"] = "memories_test"
 # model when one is running — and fail in CI where none is. Agent behaviour is
 # tested explicitly in test_agent_service.py.
 os.environ["DISCORD_AGENT_TOOLS_ENABLED"] = "false"
+# P3-1 accounts stay off in tests: an operator's .env with auth enabled must
+# not flip every open-access assertion. Auth tests enable it explicitly on
+# their own app settings instance.
+os.environ["LOCAL_AI_AUTH_ENABLED"] = "false"
+os.environ["LOCAL_AI_JWT_SECRET"] = ""
 if os.getenv("POSTGRES_TEST_URL"):
     # Normal API tests use the isolated PostgreSQL database, never a local
     # SQLite file or the runtime PostgreSQL database.

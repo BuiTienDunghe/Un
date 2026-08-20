@@ -12,6 +12,23 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 ## [Unreleased]
 
 ### Added
+- **Chế độ tài khoản admin/member** (P3-1): bật `LOCAL_AI_AUTH_ENABLED` (kèm
+  `LOCAL_AI_JWT_SECRET` ≥32 ký tự và `LOCAL_AI_API_KEY` — validator ép đủ, mặt
+  HTTP fail-closed) là web thành nhiều người dùng: người đầu tiên đăng ký làm
+  quản trị viên rồi tạo tài khoản cho người khác; đăng nhập JWT (access 15
+  phút + refresh thu hồi được); hội thoại thuộc về từng người (người khác nhìn
+  vào là 404), member không xóa/sửa được tài nguyên chung (tài liệu, memory,
+  các trang quản trị — 403). Bot Discord, eval và smoke test giữ nguyên lane
+  X-API-Key. Tắt cờ là trở về đúng chế độ một-người-dùng zero-setup như cũ.
+  Migration `20260820_23` (users, refresh_tokens, conversations.user_id).
+- **Điều khiển bot Discord từ dashboard** (P3-2): nút Bật/Tắt + trạng thái đọc
+  thẳng từ `docker compose ps` — cùng cơ chế run-discord-bot.bat nên không thể
+  lệch thực tế.
+- **Biểu đồ 14 ngày trên dashboard** (P3-3): câu hỏi/lỗi mỗi ngày và độ trễ
+  p50/p95 từ `request_logs`, SVG tự vẽ không cần thư viện.
+- **OCR Console** (P3-4): trang `/ui/ocr.html` — upload, theo dõi tiến độ theo
+  trang, xem kết quả, đưa thành tài liệu, tải zip, quản lý lịch sử; không cần
+  curl. **Phase P3 (Đa người dùng & quản trị) đóng.**
 - **Guard xác định cho memory tự áp dụng** (P2-1b): tự áp dụng đòi evidence
   trích **nguyên văn** từ tin gốc và fact **trùng từ-nội-dung** với tin gốc —
   benchmark chứng minh confidence là hằng 1.0 kể cả khi sai nên ngưỡng τ chỉ còn

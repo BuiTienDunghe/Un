@@ -22,3 +22,6 @@ alembic>=1.14,<2.0
 psycopg[binary]>=3.2,<4.0
 redis>=5.0,<6.0
 rq>=2.0,<3.0
+# P3-1 accounts: JWT access tokens + bcrypt password hashing.
+PyJWT>=2.9,<3.0
+bcrypt>=4.2,<5.0

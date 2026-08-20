@@ -33,14 +33,129 @@ const setApiKey = (value) => {
   else localStorage.removeItem("lac.apikey");
 };
 
+/* ── Tài khoản (P3-1) ─────────────────────────────────────────────
+   Khi LOCAL_AI_AUTH_ENABLED bật, mọi request kèm Bearer token; token hết hạn
+   thì tự refresh một lần rồi thử lại; hết đường thì hiện màn đăng nhập. */
+const authState = { enabled: false, user: null };
+let refreshInFlight = null;
+
+function isMemberRole() {
+  return authState.enabled && authState.user?.role === "member";
+}
+
+async function tryRefreshToken() {
+  const refresh = localStorage.getItem("lac.refresh");
+  if (!authState.enabled || !refresh) return false;
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      try {
+        const response = await fetch("/auth/refresh", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: refresh }),
+        });
+        if (!response.ok) return false;
+        const data = await response.json();
+        localStorage.setItem("lac.access", data.access_token);
+        if (data.user) authState.user = data.user;
+        return true;
+      } catch {
+        return false;
+      }
+    })().finally(() => { refreshInFlight = null; });
+  }
+  return refreshInFlight;
+}
+
+function showAuthOverlay(isBootstrap) {
+  const overlay = $("auth-overlay");
+  if (!overlay) return;
+  overlay.hidden = false;
+  overlay.dataset.mode = isBootstrap ? "register" : "login";
+  $("auth-title").textContent = isBootstrap ? "Tạo tài khoản quản trị" : "Đăng nhập";
+  $("auth-subtitle").textContent = isBootstrap
+    ? "Hệ thống chưa có tài khoản nào — tài khoản đầu tiên sẽ là quản trị viên."
+    : "Dùng tài khoản do quản trị viên cấp.";
+  $("auth-submit").textContent = isBootstrap ? "Tạo tài khoản" : "Đăng nhập";
+  $("auth-username").focus();
+}
+
+async function submitAuthForm(event) {
+  event.preventDefault();
+  const path = $("auth-overlay").dataset.mode === "register" ? "/auth/register" : "/auth/login";
+  $("auth-error").textContent = "";
+  $("auth-submit").disabled = true;
+  try {
+    const response = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: $("auth-username").value.trim(), password: $("auth-password").value }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || "Đăng nhập thất bại.");
+    localStorage.setItem("lac.access", data.access_token);
+    localStorage.setItem("lac.refresh", data.refresh_token);
+    location.reload();
+  } catch (error) {
+    $("auth-error").textContent = error.message;
+    $("auth-submit").disabled = false;
+  }
+}
+
+async function logoutAccount() {
+  const refresh = localStorage.getItem("lac.refresh");
+  try {
+    if (refresh) await fetch("/auth/logout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ refresh_token: refresh }) });
+  } catch { /* đăng xuất cục bộ vẫn tiếp tục */ }
+  localStorage.removeItem("lac.access");
+  localStorage.removeItem("lac.refresh");
+  location.reload();
+}
+
+function syncRoleUi() {
+  const member = isMemberRole();
+  const dashboardLink = $("nav-dashboard");
+  if (dashboardLink) dashboardLink.hidden = member;
+  const section = $("auth-account-section");
+  if (section) {
+    section.hidden = !(authState.enabled && authState.user);
+    if (authState.user) {
+      $("auth-account-name").textContent = authState.user.username;
+      $("auth-account-role").textContent = authState.user.role === "admin" ? "Quản trị viên" : "Thành viên";
+    }
+  }
+}
+
+async function initAuth() {
+  let config;
+  try {
+    config = await rawApi("/auth/config");
+  } catch {
+    return true; // backend chưa chạy: để luồng lỗi thường phía sau báo
+  }
+  authState.enabled = !!config.enabled;
+  if (!authState.enabled) return true;
+  if (localStorage.getItem("lac.access")) {
+    try { authState.user = await rawApi("/auth/me"); syncRoleUi(); return true; } catch { /* thử refresh */ }
+  }
+  if (await tryRefreshToken()) {
+    try { authState.user = await rawApi("/auth/me"); syncRoleUi(); return true; } catch { /* hết đường */ }
+  }
+  showAuthOverlay(!config.has_users);
+  return false;
+}
+
 /* Gắn khóa vào mọi request; header rỗng thì bỏ hẳn để không đổi hành vi khi
    máy chủ không bật xác thực. */
 function withApiKey(headers = {}) {
   const key = getApiKey();
-  return key ? { ...headers, "X-API-Key": key } : headers;
+  const result = key ? { ...headers, "X-API-Key": key } : { ...headers };
+  const access = localStorage.getItem("lac.access");
+  if (authState.enabled && access) result.Authorization = `Bearer ${access}`;
+  return result;
 }
 
-async function api(path, options = {}) {
+async function rawApi(path, options = {}) {
   let response;
   try {
     response = await fetch(path, { ...options, headers: withApiKey(options.headers) });
@@ -55,6 +170,18 @@ async function api(path, options = {}) {
     throw error;
   }
   return data;
+}
+
+async function api(path, options = {}) {
+  try {
+    return await rawApi(path, options);
+  } catch (error) {
+    if (error.status === 401 && authState.enabled && (await tryRefreshToken())) {
+      return rawApi(path, options);
+    }
+    if (error.status === 401 && authState.enabled) showAuthOverlay(false);
+    throw error;
+  }
 }
 
 function esc(text) {
@@ -448,12 +575,16 @@ function renderHistory(messages) {
 
 /* ── SSE streaming ─────────────────────────────────────────────── */
 async function streamChat(path, payload, { onMeta, onToken, onSteps }, signal) {
-  const response = await fetch(path, {
+  const send = () => fetch(path, {
     method: "POST",
     headers: withApiKey({ "Content-Type": "application/json" }),
     body: JSON.stringify({ ...payload, stream: true }),
     signal,
   });
+  let response = await send();
+  if (response.status === 401 && authState.enabled && (await tryRefreshToken())) {
+    response = await send();
+  }
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
     const error = new Error(ERROR_HINTS[data.error_code] || data.message || "Mô hình không phản hồi.");
@@ -806,6 +937,7 @@ function renderDocuments() {
     main.append(el("div", `doc-meta${metaClass}`, metaText));
     main.onclick = () => { if (!checkbox.disabled) { checkbox.checked = !checkbox.checked; checkbox.onchange(); } };
     const deleteBtn = iconBtn("trash", `Xóa tài liệu ${doc.filename}`);
+    deleteBtn.hidden = isMemberRole(); // P3-1: member không xóa được tài liệu chung
     deleteBtn.onclick = async () => {
       const yes = await confirmAction({
         title: "Xóa tài liệu?",
@@ -1065,6 +1197,7 @@ async function searchMemories(query) {
       const body = el("div", "mem-content", memory.content);
       body.append(el("div", "mem-meta", `${memory.memory_type || "ghi nhớ"} · độ quan trọng ${memory.importance ?? "?"}`));
       const deleteBtn = iconBtn("trash", "Xóa ghi nhớ này");
+      deleteBtn.hidden = isMemberRole(); // P3-1: quản trị viên mới xóa được ghi nhớ chung
       deleteBtn.onclick = async () => {
         const yes = await confirmAction({ title: "Xóa ghi nhớ?", body: "Trợ lý sẽ không dùng ghi nhớ này nữa." });
         if (!yes) return;
@@ -1325,4 +1458,7 @@ function init() {
   setInterval(pollHealth, 60000);
 }
 
-init();
+$("auth-form")?.addEventListener("submit", submitAuthForm);
+$("auth-logout")?.addEventListener("click", logoutAccount);
+// P3-1: chỉ nạp dữ liệu khi danh tính đã sẵn sàng — tránh loạt 401 lúc mở app.
+initAuth().then((ready) => { if (ready) init(); });

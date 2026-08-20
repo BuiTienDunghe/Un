@@ -6,6 +6,7 @@ from app.services.ocr_job_service import OcrPromotionError
 from app.services.monitoring_service import system_metrics
 
 from app.security.api_key import require_api_key
+from app.security.auth import require_admin
 
 router = APIRouter(prefix="/api/ocr", tags=["ocr-console"])
 
@@ -63,5 +64,5 @@ def metrics(): return system_metrics()
 @router.get("/history")
 def history(request: Request): return {"runs": request.app.state.ocr_job_service.list_history()}
 
-@router.delete("/history/{job_id}", status_code=204, dependencies=[Depends(require_api_key)])
+@router.delete("/history/{job_id}", status_code=204, dependencies=[Depends(require_api_key), Depends(require_admin)])
 def delete_history(job_id: str, request: Request): request.app.state.ocr_job_service.delete(job_id)

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>OCR Console — Local AI Core</title>
+<link rel="stylesheet" href="/ui/styles.css?v=14">
+<style>
+  .ocr-wrap { max-width: 1080px; margin: 0 auto; padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+  .ocr-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .ocr-head h1 { margin: 0; font-size: 1.25rem; }
+  .progress-track { height: 8px; border-radius: 6px; background: rgba(128,128,128,.25); overflow: hidden; }
+  .progress-fill { height: 100%; width: 0; background: #4f8cff; transition: width .4s; }
+  .ocr-events { font-size: .82rem; margin: 8px 0 0; padding-left: 18px; }
+  .ocr-result { white-space: pre-wrap; font-size: .85rem; max-height: 320px; overflow: auto; border: 1px solid rgba(128,128,128,.3); border-radius: 8px; padding: 10px; margin-top: 10px; }
+  .ocr-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  #ocr-notice { min-height: 1.2em; }
+</style>
+</head>
+<body>
+<div class="ocr-wrap">
+  <div class="ocr-head">
+    <a class="btn ghost" href="/ui/dashboard.html">← Bảng điều khiển</a>
+    <h1>OCR Console</h1>
+    <span class="muted">Nhận dạng chữ trong PDF/ảnh, xem kết quả và đưa thành tài liệu — không cần curl (P3-4).</span>
+  </div>
+
+  <section class="panel">
+    <h2>Chạy OCR mới</h2>
+    <div class="ocr-actions">
+      <input type="file" id="ocr-file" accept=".pdf,.png,.jpg,.jpeg,.webp,.tiff,.bmp">
+      <label>DPI
+        <select id="ocr-dpi">
+          <option value="150">150</option>
+          <option value="200" selected>200</option>
+          <option value="300">300</option>
+        </select>
+      </label>
+      <button id="ocr-upload">Bắt đầu OCR</button>
+    </div>
+    <p class="muted" id="ocr-notice"></p>
+  </section>
+
+  <section class="panel" id="ocr-job-panel" hidden>
+    <h2>Job: <span id="ocr-job-name"></span></h2>
+    <p class="muted"><span id="ocr-job-stage"></span> · <span id="ocr-job-status"></span> · trang <span id="ocr-job-pages"></span></p>
+    <div class="progress-track"><div class="progress-fill" id="ocr-progress"></div></div>
+    <ul class="ocr-events muted" id="ocr-events"></ul>
+    <div class="ocr-actions">
+      <button id="ocr-cancel" hidden>Hủy job</button>
+      <button id="ocr-promote" hidden>Đưa thành tài liệu</button>
+      <button id="ocr-export" hidden>Tải kết quả (zip)</button>
+    </div>
+    <div class="ocr-result" id="ocr-result" hidden></div>
+  </section>
+
+  <section class="panel">
+    <h2>Lịch sử OCR</h2>
+    <table class="dash-table">
+      <thead><tr><th>Tệp</th><th>Trạng thái</th><th>Model</th><th></th></tr></thead>
+      <tbody id="ocr-history"><tr><td colspan="4" class="muted">Đang tải…</td></tr></tbody>
+    </table>
+  </section>
+</div>
+<script src="/ui/ocr.js?v=2" defer></script>
+</body>
+</html>

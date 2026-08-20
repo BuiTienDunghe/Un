@@ -9,6 +9,7 @@ from app.services.chat_service import ConversationNotFoundError
 from app.utils.sse import sse_event
 
 from app.security.api_key import require_api_key
+from app.security.auth import ensure_conversation_access, resolve_identity
 
 router = APIRouter(tags=["chat"])
 
@@ -17,8 +18,13 @@ router = APIRouter(tags=["chat"])
 def chat(payload: ChatRequest, request: Request) -> ChatResponse | StreamingResponse:
     started = perf_counter()
     try:
+        identity = resolve_identity(request)
+        owner = identity.user_id if identity.is_user else None
+        if payload.conversation_id:
+            # P3-1: appending to someone else's conversation must 404.
+            ensure_conversation_access(request, payload.conversation_id)
         if payload.stream and not payload.use_tools:
-            tokens, model_used, conversation_id = request.app.state.chat_service.stream_response(payload.message, payload.conversation_id, payload.use_memory, payload.system_prompt)
+            tokens, model_used, conversation_id = request.app.state.chat_service.stream_response(payload.message, payload.conversation_id, payload.use_memory, payload.system_prompt, user_id=owner)
 
             def events():
                 yield sse_event("meta", {"conversation_id": conversation_id, "model_used": model_used})
@@ -31,7 +37,7 @@ def chat(payload: ChatRequest, request: Request) -> ChatResponse | StreamingResp
 
             return StreamingResponse(events(), media_type="text/event-stream")
         answer, model_used, conversation_id, latency_ms, agent_steps = request.app.state.chat_service.respond(
-            payload.message, payload.conversation_id, payload.use_memory, payload.system_prompt, payload.use_tools
+            payload.message, payload.conversation_id, payload.use_memory, payload.system_prompt, payload.use_tools, user_id=owner
         )
         if payload.stream:
             # Agent mode has no token stream (the loop runs whole rounds), but

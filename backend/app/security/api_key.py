@@ -15,6 +15,8 @@ from hmac import compare_digest
 
 from fastapi import Header, HTTPException, Request, status
 
+from app.security.auth import auth_enabled, require_identity
+
 
 def _configured_key(request: Request) -> str:
     settings = getattr(request.app.state, "settings", None)
@@ -42,12 +44,25 @@ def _check(request: Request, provided: str | None) -> None:
 
 
 def require_api_key(request: Request, x_api_key: str | None = Header(default=None)) -> None:
-    """Guard every endpoint that changes state."""
+    """Guard every endpoint that changes state.
+
+    With accounts enabled (P3-1) this fails CLOSED: a valid API key (service
+    lane) or a valid Bearer login is required — the legacy no-key fail-open
+    path must never apply while the operator believes the box is protected.
+    """
+    if auth_enabled(request):
+        require_identity(request)
+        return
     _check(request, x_api_key)
 
 
 def require_api_key_for_read(request: Request, x_api_key: str | None = Header(default=None)) -> None:
-    """Guard read endpoints, but only when the installation asks for it."""
+    """Guard read endpoints. With accounts enabled every read needs an
+    identity; otherwise only when the installation opts in via
+    LOCAL_AI_PROTECT_READS."""
+    if auth_enabled(request):
+        require_identity(request)
+        return
     settings = getattr(request.app.state, "settings", None)
     if not getattr(settings, "local_ai_protect_reads", False):
         return

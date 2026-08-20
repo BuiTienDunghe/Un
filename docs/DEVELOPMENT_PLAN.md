@@ -56,7 +56,7 @@ duyệt tay từng mục. Hệ quả trong plan:
 
 | # | Khoảng trống | Hệ quả |
 | --- | --- | --- |
-| ~~G1~~ ✅ | ~~**Không có xác thực**~~ — đã đóng lớp 1 bằng P0-2 (API key cho endpoint ghi/xóa); phân quyền nhiều người dùng vẫn thuộc P3 | ~~Ai trong LAN cũng xóa được dữ liệu~~ |
+| ~~G1~~ ✅ | ~~**Không có xác thực**~~ — đã đóng lớp 1 bằng P0-2 (API key cho endpoint ghi/xóa) và lớp 2 bằng P3-1 (tài khoản admin/member, JWT — 20/08) | ~~Ai trong LAN cũng xóa được dữ liệu~~ |
 | ~~G2~~ ✅ | ~~**Trí nhớ hai hệ rời**~~ — đã đóng bằng P1-3..P1-5: extractor đề xuất → người duyệt trên dashboard → memory đổ vào kho chung mà web chat dùng | ~~"Agent có trí nhớ" mới chỉ tồn tại trên giấy~~ |
 | ~~G3~~ ✅ | ~~**Discord chưa dùng được tài liệu**~~ — đã đóng bằng P1-1 (lệnh `/hoi`, nay là `/docs`, kèm nguồn) | ~~Nửa giá trị RAG không đến được kênh chat chính~~ |
 | ~~G4~~ ✅ | ~~**Citation không lưu vào lịch sử**~~ — đã đóng bằng P0-3 (bảng `message_sources`) | ~~Mở lại hội thoại là mất nguồn~~ |
@@ -122,6 +122,7 @@ Khảo sát 15/08/2026 trên các dự án mã nguồn mở uy tín nhất phân
 | T9 | Gom các mục nhỏ đã xác nhận: DashboardService thay SQL trong router; đảo phụ thuộc parsers→services; `ConversationLifecycle` chung cho chat/rag; gom wiring OCR router; race trùng tên file khi upload đồng thời (cần partial unique index, gộp với T1); fencing ownership cho `fail_job`/`mark_cancelled`; fixture `memory_transport` đếm job memory-ingest toàn cục → nhạy dữ liệu sót, scope theo prefix (thấy 1 lần fail không tái hiện 19/08) | Dọn dần khi đụng vào từng vùng, không cần đợt riêng | rải rác |
 | T11 | **Test và runtime dùng chung Qdrant**: collection `memories` đã cô lập bằng `QDRANT_MEMORIES_COLLECTION` (19/08, sau khi test 3-dim làm hỏng đường ghi memory thật); collection `documents` hiện chỉ an toàn nhờ test dùng fake store — chưa có guard tường minh | Cô lập tên collection `documents` cho test giống memories, hoặc guard chiều vector khi tạo | 1 buổi |
 | T12 | **Đánh bóng agent P2** (gom, không chặn dùng): UI hiện lại trace khi mở hội thoại cũ (messages cần trả kèm id); footer tool cho tin Discord; hủy vòng lặp khi client ngắt; map lỗi tools-với-provider-cloud thành 502 rõ nghĩa; tránh nạp memory hai lần khi bật cả «Ghi nhớ» lẫn «Công cụ»; **guard xuyên ngữ** — fact tiếng Anh vs tin Việt bị từ chối oan (an toàn nhưng mất coverage; hướng: prompt extractor v6 viết fact bằng ngôn ngữ tin gốc + re-benchmark) | Dọn khi đụng vào từng vùng | 2–3 buổi |
+| T13 | **Đánh bóng auth P3-1** (gom, không chặn dùng): đổi mật khẩu + admin reset qua UI; trang quản lý user trên dashboard (hiện chỉ API); token localStorage → cân nhắc cookie httpOnly nếu mở ra ngoài LAN; member-role staleness 15' ở surface thường; ẩn/hiện điều khiển theo role còn thiếu chỗ nào thì server vẫn chặn | Dọn khi đụng vào từng vùng | 2–3 buổi |
 | T10 | **Script migration SQLite hết nhiệm vụ 07/2027**: `migrate_sqlite_to_postgres.py`, `migrate_sqlite_documents_to_postgres.py`, `migrate_document_storage.py`, `audit_sqlite_readonly.py` + 2 test đi kèm bị ghim bởi cam kết giữ SQLite archive read-only 1 năm | Gỡ sau review xóa archive (sớm nhất 19/07/2027) | 1 buổi (2027) |
 
 ### P1 — Một agent, hai kênh *(2–3 tuần · giá trị người dùng lớn nhất)* — **ĐÃ ĐÓNG 19/08** (nhật ký: `docs/p1_progress.md`)
@@ -148,14 +149,14 @@ Khảo sát 15/08/2026 trên các dự án mã nguồn mở uy tín nhất phân
 | P2-3 ✅ | **Bộ lệnh Discord chuyên nghiệp**: ~~`/hoi`~~ → `/docs` (19/08, tham số `document`); `/memory` (điều agent nhớ về người gõ trong guild, ephemeral, filter guild/subject trên `/api/memory-review/applied`) + `/status` (tóm tắt `/health`) — 20/08 | Bộ lệnh nhất quán `/ask` `/docs` `/memory` `/status` `/ping` ✅; còn bước người thật gõ trong server thật (cần DISCORD_TOKEN, như P1-1) | 2 buổi |
 | P2-4 ✅ | **Nhật ký hành động agent**: `GET /agent/activity` đọc gộp ba nguồn sử liệu có sẵn (quyết định memory, câu trả lời dùng công cụ, việc nền) thành dòng thời gian trên dashboard, kèm nút Thu hồi trên hàng còn gỡ được | ✅ Live 20/08: timeline kể đủ chuỗi agent-trả-lời → ingest → nhớ → dùng trí nhớ; thu hồi từ chính timeline hoạt động | 2 buổi |
 
-### P3 — Đa người dùng & quản trị *(3–4 tuần · khi mở cho nhóm)*
+### P3 — Đa người dùng & quản trị — **ĐÃ ĐÓNG 20/08** (nhật ký: `docs/p3_progress.md`)
 
 | ID | Hạng mục | Tiêu chí nghiệm thu | Ước lượng |
 | --- | --- | --- | --- |
-| P3-1 | **Tài khoản + RBAC tối giản** (admin/member — học mô hình Open WebUI, không sao chép độ phức tạp): JWT + refresh theo chuẩn FastAPI production | Hội thoại thuộc user; member không xóa được tài liệu chung | 5–6 buổi |
-| P3-2 | **Điều khiển bot từ dashboard**: start/stop/status (thay control panel Tkinter) | Nút hoạt động; trạng thái đúng với thực tế process | 3 buổi |
-| P3-3 | **Biểu đồ thời gian trên dashboard**: câu hỏi/ngày, latency p50/p95, lỗi — từ `request_logs` có sẵn | 2 chart 14 ngày, cập nhật cùng auto-refresh | 2 buổi |
-| P3-4 | **OCR console UI** (backend API đã đủ từ lâu) | Upload → theo dõi job → xem kết quả → promote thành tài liệu, không cần curl | 3–4 buổi |
+| P3-1 ✅ | **Tài khoản + RBAC tối giản** (admin/member): JWT access 15' + refresh thu-hồi-được (cố ý không xoay vòng — xem nhật ký); bật bằng `LOCAL_AI_AUTH_ENABLED` (validator ép đủ secret + API key, guard fail-closed); bootstrap admin đầu tiên có khóa chống race, sau đó admin tạo user; thiết kế qua hội đồng phản biện đối kháng 34 phát hiện trước khi code | ✅ Hội thoại thuộc user (người khác nhìn vào 404); member không xóa được tài liệu chung (403, đã kiểm sống); lane API-key của bot/tool nguyên vẹn; auth tắt = zero-setup như cũ | 5–6 buổi |
+| P3-2 ✅ | **Điều khiển bot từ dashboard**: status/start/stop qua đúng cơ chế `docker compose --profile discord` mà run-discord-bot.bat dùng | ✅ Trạng thái = compose ps thật nên không thể lệch; nút hiện đúng (sống 20/08); bấm Bật thật cần DISCORD_TOKEN (bước người thật) | 3 buổi |
+| P3-3 ✅ | **Biểu đồ thời gian trên dashboard**: `GET /api/dashboard/timeseries` từ `request_logs`, bucket theo ngày địa phương, SVG tự vẽ không thư viện | ✅ 2 chart 14 ngày (câu hỏi+lỗi; p50/p95) cập nhật cùng auto-refresh — sống 20/08 | 2 buổi |
+| P3-4 ✅ | **OCR console UI** `/ui/ocr.html` trên API có sẵn | ✅ Upload → theo dõi job (poll + progress + events) → xem kết quả trang → promote/tải zip/hủy/lịch sử, không cần curl | 3–4 buổi |
 
 ### P4 — RAG nâng cao, có đo lường *(chạy nền liên tục, mỗi mục một thí nghiệm)*
 
@@ -234,7 +235,7 @@ Discord ─┘    │                            └─ FTS (tsvector, P4-4)
 3. ~~**P0-2 API key**~~ — ✅ xong (header `X-API-Key`, mặc định tắt để không phá đường một cú click).
 4. ~~**P0-6 đồng bộ migration**~~ — ✅ xong (migration `20260818_21`, `alembic check` đã là cửa chặn trong CI).
 
-**P0, P1 và P2 đã đóng** (P2: 20/08 — nhật ký `docs/p2_progress.md`). Việc tiếp theo theo lộ trình là **P3 — Đa người dùng & quản trị** (điều kiện để "đưa link cho nhiều người dùng" thật sự), hoặc xen kẽ nợ P0.5 (T1–T3, T5–T9, T11–T12) và **P4** (RAG nâng cao) tùy ưu tiên.
+**P0 → P3 đã đóng** (P3: 20/08 — nhật ký `docs/p3_progress.md`; muốn mở link cho nhóm: bật `LOCAL_AI_AUTH_ENABLED` + secret + API key trong `.env`). Việc tiếp theo: **P4 — RAG nâng cao có đo lường** (bắt đầu bằng P4-1 mở rộng bộ eval — G7 đang chặn mọi đo đạc tiến bộ), xen kẽ nợ P0.5 (T1–T3, T5–T9, T11–T13).
 
 ---
 

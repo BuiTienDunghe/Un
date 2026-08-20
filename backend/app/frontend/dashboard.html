@@ -22,6 +22,7 @@
       <a class="btn ghost" href="/ui/" aria-label="Quay lại trò chuyện">
         <svg width="16" height="16"><use href="#i-back"/></svg> Trò chuyện
       </a>
+      <a class="btn ghost" href="/ui/ocr.html" aria-label="OCR Console">OCR</a>
       <h1>Bảng điều khiển</h1>
       <span class="dash-updated" id="dash-updated">Đang tải…</span>
       <button class="btn icon ghost" id="dash-refresh" aria-label="Tải lại số liệu" title="Tải lại">
@@ -81,6 +82,14 @@
       </table>
     </section>
 
+    <section class="panel" aria-labelledby="panel-charts">
+      <h2 id="panel-charts">Hoạt động 14 ngày</h2>
+      <div class="dash-cols">
+        <div><p class="muted" style="margin:0 0 6px">Câu hỏi (xanh) và lỗi (đỏ) mỗi ngày</p><div id="chart-questions"></div></div>
+        <div><p class="muted" style="margin:0 0 6px">Độ trễ trả lời: p50 (xanh) / p95 (cam), giây</p><div id="chart-latency"></div></div>
+      </div>
+    </section>
+
     <section class="panel" aria-labelledby="panel-activity">
       <h2 id="panel-activity"><svg width="15" height="15"><use href="#i-spark"/></svg> Nhật ký hành động agent</h2>
       <p class="muted">Mọi hành động tự hành ở một chỗ: agent nhớ/quên gì, trả lời bằng công cụ nào, việc nền chạy ra sao. Hàng có nút «Thu hồi» là gỡ lại được ngay.</p>
@@ -99,11 +108,16 @@
       <section class="panel" aria-labelledby="panel-ops">
         <h2 id="panel-ops">Mô hình &amp; tác vụ nền</h2>
         <div class="kv-list" id="ops-kv"><div class="skeleton" style="height:60px"></div></div>
+        <div id="bot-control" style="margin-top:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+          <strong>Bot Discord:</strong> <span id="bot-state">…</span>
+          <button id="bot-start-btn" disabled>Bật bot</button>
+          <button id="bot-stop-btn" disabled>Tắt bot</button>
+        </div>
       </section>
     </div>
   </div>
 </div>
 
-<script src="/ui/dashboard.js?v=16" defer></script>
+<script src="/ui/dashboard.js?v=17" defer></script>
 </body>
 </html>

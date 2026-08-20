@@ -23,6 +23,17 @@ class Settings(BaseSettings):
     local_ai_api_key: str = ""
     # Only meaningful once a key is set; closes read endpoints too.
     local_ai_protect_reads: bool = False
+    # ── P3-1 accounts (admin/member) ──
+    # Off by default: single-user machines keep today's zero-setup behavior and
+    # the one-click launcher never asks for anything. Turning this on REQUIRES
+    # both a JWT secret (>=32 chars) and LOCAL_AI_API_KEY — the key becomes the
+    # service lane (Discord bot, eval, smoke test) while every other request
+    # fails closed without a login. Registration only bootstraps the FIRST
+    # admin; afterwards the admin creates accounts from the API.
+    local_ai_auth_enabled: bool = False
+    local_ai_jwt_secret: str = ""
+    local_ai_access_token_minutes: int = 15
+    local_ai_refresh_token_days: int = 14
     request_log_retention_days: int = 7
     ingestion_execution_backend: str = "thread"
     redis_url: str = "redis://127.0.0.1:6379/0"
@@ -121,6 +132,18 @@ class Settings(BaseSettings):
             raise ValueError(
                 "DISCORD_MEMORY_AUTO_APPLY_THRESHOLD must be in (0, 1] or 'off'"
             )
+        if self.local_ai_auth_enabled:
+            # A half-configured auth mode must never boot: without the secret
+            # there are no logins, and without the API key the service lane
+            # (Discord bot, eval, smoke test) would silently die — or worse,
+            # the legacy fail-open path would leave the surface wide open
+            # while the UI shows a reassuring login screen.
+            if len(self.local_ai_jwt_secret.strip()) < 32:
+                raise ValueError("LOCAL_AI_JWT_SECRET must be at least 32 characters when LOCAL_AI_AUTH_ENABLED=true")
+            if not self.local_ai_api_key.strip():
+                raise ValueError("LOCAL_AI_API_KEY is required when LOCAL_AI_AUTH_ENABLED=true (service lane for the bot and tools)")
+            if self.local_ai_access_token_minutes < 1 or self.local_ai_refresh_token_days < 1:
+                raise ValueError("Auth token lifetimes must be positive")
         return self
 
     @property

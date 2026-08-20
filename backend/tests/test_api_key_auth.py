@@ -26,6 +26,8 @@ WRITE_REQUESTS = [
     ("post", "/api/memory-review/candidates/00000000-0000-0000-0000-000000000000/approve"),
     ("post", "/api/memory-review/candidates/00000000-0000-0000-0000-000000000000/reject"),
     ("post", "/api/memory-review/candidates/00000000-0000-0000-0000-000000000000/revert"),
+    ("post", "/api/bot/start"),
+    ("post", "/api/bot/stop"),
 ]
 
 READ_REQUESTS = [

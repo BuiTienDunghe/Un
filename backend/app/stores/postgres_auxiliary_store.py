@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from uuid import UUID
 
 from sqlalchemy import String, cast, exists, func, select
 from sqlalchemy.dialects.postgresql import insert
@@ -18,6 +19,10 @@ from app.postgres.models import AgentTrace, Conversation, DiscordConversationSes
 
 def _utc_now() -> datetime:
     return datetime.now(UTC)
+
+
+def _uuid(value: str) -> UUID:
+    return UUID(value)
 
 
 class PostgresAuxiliaryStore:
@@ -37,10 +42,24 @@ class PostgresAuxiliaryStore:
         with self._sessions() as session:
             return session.get(Conversation, conversation_id) is not None
 
-    def create_conversation(self, conversation_id: str, title: str | None = None) -> None:
+    def create_conversation(self, conversation_id: str, title: str | None = None, user_id: str | None = None) -> None:
         now = _utc_now()
         with self._sessions.begin() as session:
-            session.add(Conversation(id=conversation_id, title=title, created_at=now, updated_at=now))
+            session.add(
+                Conversation(
+                    id=conversation_id,
+                    title=title,
+                    user_id=_uuid(user_id) if user_id else None,
+                    created_at=now,
+                    updated_at=now,
+                )
+            )
+
+    def conversation_owner(self, conversation_id: str) -> str | None:
+        """Owning user id, or None for unowned/legacy rows (P3-1 ownership)."""
+        with self._sessions() as session:
+            conversation = session.get(Conversation, conversation_id)
+            return str(conversation.user_id) if conversation is not None and conversation.user_id else None
 
     def set_conversation_title(self, conversation_id: str, title: str) -> bool:
         with self._sessions.begin() as session:
@@ -129,19 +148,23 @@ class PostgresAuxiliaryStore:
                 for row in rows
             ]
 
-    def list_conversations(self) -> list[dict[str, object]]:
+    def list_conversations(self, owner_user_id: str | None = None) -> list[dict[str, object]]:
+        conditions = [
+            ~exists(
+                select(DiscordConversationSession.id).where(
+                    cast(DiscordConversationSession.backend_conversation_id, String) == Conversation.id,
+                    DiscordConversationSession.origin == "discord",
+                )
+            )
+        ]
+        if owner_user_id is not None:
+            # P3-1: a member's sidebar shows only their own conversations.
+            conditions.append(Conversation.user_id == _uuid(owner_user_id))
         with self._sessions() as session:
             rows = session.execute(
                 select(Conversation.id, Conversation.title, Conversation.created_at, Conversation.updated_at, func.count(Message.id).label("message_count"))
                 .outerjoin(Message, Message.conversation_id == Conversation.id)
-                .where(
-                    ~exists(
-                        select(DiscordConversationSession.id).where(
-                            cast(DiscordConversationSession.backend_conversation_id, String) == Conversation.id,
-                            DiscordConversationSession.origin == "discord",
-                        )
-                    )
-                )
+                .where(*conditions)
                 .group_by(Conversation.id, Conversation.title, Conversation.created_at, Conversation.updated_at)
                 .order_by(Conversation.updated_at.desc())
             ).all()

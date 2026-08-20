@@ -42,6 +42,7 @@ class ChatService:
         use_memory: bool = False,
         system_prompt: str | None = None,
         use_tools: bool = False,
+        user_id: str | None = None,
     ) -> tuple[str, str, str, int, list[dict[str, object]] | None]:
         return self._respond(
             message,
@@ -49,6 +50,7 @@ class ChatService:
             use_memory,
             system_prompt,
             use_tools=use_tools,
+            user_id=user_id,
         )
 
     def respond_with_context(
@@ -91,11 +93,12 @@ class ChatService:
         current_model_message: dict[str, str] | None = None,
         context_system_prompt: str | None = None,
         use_tools: bool = False,
+        user_id: str | None = None,
     ) -> tuple[str, str, str, int, list[dict[str, object]] | None]:
         is_new = conversation_id is None
         if conversation_id is None:
             conversation_id = str(uuid4())
-            self.store.create_conversation(conversation_id, derive_conversation_title(message))
+            self.store.create_conversation(conversation_id, derive_conversation_title(message), user_id)
         elif not self.store.conversation_exists(conversation_id):
             raise ConversationNotFoundError(conversation_id)
 
@@ -141,11 +144,11 @@ class ChatService:
         self.logging_service.log_request("/chat", model_used, latency_ms, "ok")
         return answer, model_used, conversation_id, latency_ms, agent_steps
 
-    def stream_response(self, message: str, conversation_id: str | None, use_memory: bool = False, system_prompt: str | None = None) -> tuple[Iterator[str], str, str]:
+    def stream_response(self, message: str, conversation_id: str | None, use_memory: bool = False, system_prompt: str | None = None, user_id: str | None = None) -> tuple[Iterator[str], str, str]:
         is_new = conversation_id is None
         if conversation_id is None:
             conversation_id = str(uuid4())
-            self.store.create_conversation(conversation_id, derive_conversation_title(message))
+            self.store.create_conversation(conversation_id, derive_conversation_title(message), user_id)
         elif not self.store.conversation_exists(conversation_id):
             raise ConversationNotFoundError(conversation_id)
         history = self.store.get_messages(conversation_id, self.history_limit)

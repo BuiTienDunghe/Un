@@ -55,11 +55,25 @@ function statCard(value, label) {
   return card;
 }
 
-async function fetchJson(path) {
-  // Cùng khóa với trang chat (lac.apikey): khi LOCAL_AI_PROTECT_READS bật,
-  // dashboard cũng phải trình khóa, nếu không mọi panel sẽ 401.
+/* Cùng khóa với trang chat (lac.apikey), cộng Bearer token khi chế độ tài
+   khoản bật (P3-1) — dashboard là mặt admin nên 401 đẩy về trang đăng nhập. */
+function dashHeaders(extra = {}) {
+  const headers = { ...extra };
   const key = localStorage.getItem("lac.apikey") || "";
-  const response = await fetch(path, key ? { headers: { "X-API-Key": key } } : undefined);
+  if (key) headers["X-API-Key"] = key;
+  const access = localStorage.getItem("lac.access") || "";
+  if (access) headers.Authorization = `Bearer ${access}`;
+  return headers;
+}
+
+async function fetchJson(path) {
+  const headers = dashHeaders();
+  const response = await fetch(path, Object.keys(headers).length ? { headers } : undefined);
+  if (response.status === 401) {
+    window.location.href = "/ui/";
+    throw new Error("401");
+  }
+  if (response.status === 403) throw new Error("Trang này dành cho quản trị viên.");
   if (!response.ok) throw new Error(String(response.status));
   return response.json();
 }
@@ -210,11 +224,14 @@ function render(stats, health, metrics, models, conversations) {
 
 /* ── Duyệt đề xuất ghi nhớ (P1-4) ────────────────────────────────── */
 async function postJson(path) {
-  const key = localStorage.getItem("lac.apikey") || "";
   const response = await fetch(path, {
     method: "POST",
-    headers: key ? { "X-API-Key": key } : {},
+    headers: dashHeaders(),
   });
+  if (response.status === 401) {
+    window.location.href = "/ui/";
+    throw new Error("401");
+  }
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     const hint = data.error_code === "API_KEY_REQUIRED" || data.error_code === "API_KEY_INVALID"
@@ -341,6 +358,129 @@ function renderApplied(items) {
   }));
 }
 
+/* ── Biểu đồ 14 ngày (P3-3) — SVG tự vẽ, không thư viện ─────────── */
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+function svgRoot(width, height) {
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  svg.style.width = "100%";
+  svg.style.height = "auto";
+  return svg;
+}
+
+function svgRect(svg, x, y, width, height, fill) {
+  const rect = document.createElementNS(SVG_NS, "rect");
+  rect.setAttribute("x", x.toFixed(1));
+  rect.setAttribute("y", y.toFixed(1));
+  rect.setAttribute("width", Math.max(1, width).toFixed(1));
+  rect.setAttribute("height", Math.max(0, height).toFixed(1));
+  rect.setAttribute("fill", fill);
+  rect.setAttribute("rx", "1.5");
+  svg.append(rect);
+}
+
+function svgText(svg, x, y, content, size = 9, anchor = "middle") {
+  const text = document.createElementNS(SVG_NS, "text");
+  text.setAttribute("x", x.toFixed(1));
+  text.setAttribute("y", y.toFixed(1));
+  text.setAttribute("font-size", String(size));
+  text.setAttribute("text-anchor", anchor);
+  text.setAttribute("fill", "currentColor");
+  text.setAttribute("opacity", "0.65");
+  text.textContent = content;
+  svg.append(text);
+}
+
+function svgLine(svg, points, stroke) {
+  const line = document.createElementNS(SVG_NS, "polyline");
+  line.setAttribute("points", points.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" "));
+  line.setAttribute("fill", "none");
+  line.setAttribute("stroke", stroke);
+  line.setAttribute("stroke-width", "2");
+  line.setAttribute("stroke-linejoin", "round");
+  svg.append(line);
+}
+
+function renderTimeseries(payload) {
+  const questionsBox = $("chart-questions");
+  const latencyBox = $("chart-latency");
+  if (!questionsBox || !latencyBox) return;
+  const days = payload?.days;
+  if (!days || !days.length) {
+    questionsBox.textContent = latencyBox.textContent = "Không tải được dữ liệu.";
+    return;
+  }
+  const W = 560, H = 180, PAD = 26;
+  const band = (W - PAD * 2) / days.length;
+
+  const maxCount = Math.max(1, ...days.map((d) => Math.max(d.questions, d.errors)));
+  const bars = svgRoot(W, H);
+  days.forEach((day, index) => {
+    const x = PAD + index * band;
+    const questionHeight = (day.questions / maxCount) * (H - PAD * 2);
+    const errorHeight = (day.errors / maxCount) * (H - PAD * 2);
+    svgRect(bars, x + band * 0.14, H - PAD - questionHeight, band * 0.44, questionHeight, "#4f8cff");
+    if (day.errors) svgRect(bars, x + band * 0.62, H - PAD - errorHeight, band * 0.26, errorHeight, "#e0575b");
+    if (day.questions) svgText(bars, x + band * 0.36, H - PAD - questionHeight - 4, String(day.questions));
+    if (index % 2 === 0) svgText(bars, x + band / 2, H - 8, day.date.slice(5));
+  });
+  svgLine(bars, [[PAD, H - PAD], [W - PAD, H - PAD]], "currentColor");
+  questionsBox.replaceChildren(bars);
+
+  const latencies = days.flatMap((d) => [d.p50_ms, d.p95_ms]).filter((v) => v != null);
+  const maxLatency = Math.max(1000, ...latencies);
+  const lines = svgRoot(W, H);
+  const pointX = (index) => PAD + (index + 0.5) * band;
+  const pointY = (value) => H - PAD - (value / maxLatency) * (H - PAD * 2);
+  for (const [selector, color] of [[(d) => d.p95_ms, "#e0a34f"], [(d) => d.p50_ms, "#4f8cff"]]) {
+    const points = days.map((d, i) => (selector(d) != null ? [pointX(i), pointY(selector(d))] : null)).filter(Boolean);
+    if (points.length > 1) svgLine(lines, points, color);
+  }
+  svgText(lines, PAD + 2, 14, `tối đa ${(maxLatency / 1000).toFixed(1)}s`, 9, "start");
+  days.forEach((day, index) => { if (index % 2 === 0) svgText(lines, pointX(index), H - 8, day.date.slice(5)); });
+  svgLine(lines, [[PAD, H - PAD], [W - PAD, H - PAD]], "currentColor");
+  latencyBox.replaceChildren(lines);
+}
+
+/* ── Điều khiển bot Discord (P3-2) ──────────────────────────────── */
+async function refreshBotStatus() {
+  const stateEl = $("bot-state");
+  if (!stateEl) return;
+  try {
+    const status = await fetchJson("/api/bot/status");
+    stateEl.textContent =
+      status.state === "running" ? "🟢 đang chạy"
+      : status.state === "stopped" ? "⚪ đang tắt"
+      : `⚠️ ${status.detail || "không rõ"}`;
+    $("bot-start-btn").disabled = status.state === "running";
+    $("bot-stop-btn").disabled = status.state !== "running";
+  } catch (error) {
+    stateEl.textContent = `⚠️ ${error.message}`;
+  }
+}
+
+function wireBotControls() {
+  const wire = (id, path, busyLabel, idleLabel) => {
+    const button = $(id);
+    if (!button) return;
+    button.onclick = async () => {
+      button.disabled = true;
+      button.textContent = busyLabel;
+      try {
+        await postJson(path);
+      } catch (error) {
+        $("bot-state").textContent = `⚠️ ${error.message}`;
+      }
+      button.textContent = idleLabel;
+      refreshBotStatus();
+    };
+  };
+  wire("bot-start-btn", "/api/bot/start", "Đang bật…", "Bật bot");
+  wire("bot-stop-btn", "/api/bot/stop", "Đang tắt…", "Tắt bot");
+}
+wireBotControls();
+
 /* ── Nhật ký hành động agent (P2-4) ─────────────────────────────── */
 const ACTIVITY_LABELS = {
   memory_apply: "🧠 Nhớ",
@@ -397,7 +537,7 @@ function renderActivity(items) {
 }
 
 async function refresh() {
-  const [stats, health, metrics, models, conversations, reviewCandidates, appliedMemories, agentActivity] = await Promise.allSettled([
+  const [stats, health, metrics, models, conversations, reviewCandidates, appliedMemories, agentActivity, timeseries] = await Promise.allSettled([
     fetchJson("/api/dashboard/stats"),
     fetchJson("/health"),
     fetchJson("/metrics"),
@@ -406,10 +546,13 @@ async function refresh() {
     fetchJson("/api/memory-review/candidates"),
     fetchJson("/api/memory-review/applied"),
     fetchJson("/agent/activity"),
+    fetchJson("/api/dashboard/timeseries"),
   ]).then((results) => results.map((result) => (result.status === "fulfilled" ? result.value : null)));
   renderReview(reviewCandidates);
   renderApplied(appliedMemories);
   renderActivity(agentActivity);
+  renderTimeseries(timeseries);
+  refreshBotStatus();
 
   // Banner hiện khi BẤT KỲ nguồn cốt lõi nào lỗi; render luôn chạy để
   // skeleton được thay bằng trạng thái lỗi thay vì nhấp nháy mãi.

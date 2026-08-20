@@ -33,7 +33,7 @@ class RagService:
         self.system_prompt = (Path(__file__).parents[1] / "prompts" / "rag_system.md").read_text(encoding="utf-8")
         self.condense_prompt = (Path(__file__).parents[1] / "prompts" / "rag_condense.md").read_text(encoding="utf-8")
 
-    def _resolve_conversation(self, question: str, conversation_id: str | None) -> tuple[str | None, bool]:
+    def _resolve_conversation(self, question: str, conversation_id: str | None, user_id: str | None = None) -> tuple[str | None, bool]:
         """Create or validate the conversation this RAG turn belongs to.
 
         RAG answers are persisted as ordinary conversation turns so users can
@@ -44,7 +44,7 @@ class RagService:
             return None, False
         if conversation_id is None:
             conversation_id = str(uuid4())
-            self.store.create_conversation(conversation_id, derive_conversation_title(question))
+            self.store.create_conversation(conversation_id, derive_conversation_title(question), user_id)
             return conversation_id, True
         if not self.store.conversation_exists(conversation_id):
             raise ConversationNotFoundError(conversation_id)
@@ -136,9 +136,9 @@ class RagService:
             origin += f", page {page}" if source.get("page_end") in {None, page} else f", pages {page}-{source['page_end']}"
         return f"[Source {index + 1}] ({origin})\n{source['content']}"
 
-    def respond(self, question: str, top_k: int | None, document_id: str | list[str] | None, conversation_id: str | None = None) -> tuple[str, str, int, list[dict[str, object]], str | None, str | None]:
+    def respond(self, question: str, top_k: int | None, document_id: str | list[str] | None, conversation_id: str | None = None, user_id: str | None = None) -> tuple[str, str, int, list[dict[str, object]], str | None, str | None]:
         started = perf_counter()
-        conversation_id, created = self._resolve_conversation(question, conversation_id)
+        conversation_id, created = self._resolve_conversation(question, conversation_id, user_id)
         # On follow-up turns the standalone rewrite feeds BOTH retrieval and the
         # Question: line — the answer model sees no history, so an unresolved
         # pronoun there would spoil the answer even with perfect retrieval.
@@ -157,8 +157,8 @@ class RagService:
         self.logging_service.log_request("/rag/chat", model_used, latency_ms, "ok")
         return answer, model_used, latency_ms, sources, conversation_id, retrieval_question
 
-    def stream_response(self, question: str, top_k: int | None, document_id: str | list[str] | None, conversation_id: str | None = None) -> tuple[Iterator[str], str, list[dict[str, object]], str | None, str | None]:
-        conversation_id, created = self._resolve_conversation(question, conversation_id)
+    def stream_response(self, question: str, top_k: int | None, document_id: str | list[str] | None, conversation_id: str | None = None, user_id: str | None = None) -> tuple[Iterator[str], str, list[dict[str, object]], str | None, str | None]:
+        conversation_id, created = self._resolve_conversation(question, conversation_id, user_id)
         retrieval_question = self._condense_question(question, conversation_id, created)
         effective_question = retrieval_question or question
         try:
