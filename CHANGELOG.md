@@ -12,6 +12,13 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 ## [Unreleased]
 
 ### Added
+- **D3a self-check bám nguồn (không model)**: `answer_grounding.py` chấm từng câu của
+  câu trả lời RAG theo văn bản trần của chunk đã trích (fold dấu, content-word overlap,
+  chuỗi nguyên văn — tư duy guard memory P2-1b); nhãn grounded/weak/ungrounded, câu
+  khác ngôn ngữ nguồn trần ở weak + `language_mismatch`. Báo cáo qua field `grounding`
+  của `/rag/chat` (response thường và SSE `done`) và chip "bám nguồn" trên web — chỉ
+  báo, không chặn. `evaluate_rag` chế độ full thêm `grounding_rate`; 0 lời gọi model
+  thêm. Đo trên bộ 82 câu là việc máy mạnh (`docs/d3a_answer_grounding.md`).
 - **Override contextual retrieval theo máy**: biến `.env` `RAG_CONTEXTUAL_RETRIEVAL_ENABLED`
   (không đặt = theo `models.yaml`; `true`/`false` = máy này tự quyết) qua
   `ChunkContextService.from_config` dùng chung cho API lẫn RQ worker — máy nhẹ tắt

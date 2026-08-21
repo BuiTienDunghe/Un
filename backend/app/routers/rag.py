@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from app.llm_clients.ollama_client import OllamaModelNotLoadedError, OllamaTimeoutError, OllamaUnavailableError
-from app.schemas.rag_schema import RagChatRequest, RagChatResponse, RagSearchRequest, RagSearchResponse, RagSource
+from app.schemas.rag_schema import GroundingReport, RagChatRequest, RagChatResponse, RagSearchRequest, RagSearchResponse, RagSource
+from app.services.answer_grounding import grade_rag_answer
 from app.services.chat_service import ConversationNotFoundError
 from app.services.rag_service import InsufficientContextError
 from app.services.reranker_service import RerankerUnavailableError
@@ -77,16 +78,20 @@ def rag_chat(payload: RagChatRequest, request: Request) -> RagChatResponse | Str
 
             def events():
                 yield sse_event("meta", {"model_used": model_used, "conversation_id": conversation_id, "retrieval_question": retrieval_question, "sources": response_sources})
+                answer_parts: list[str] = []
                 try:
                     for token in tokens:
+                        answer_parts.append(token)
                         yield sse_event("token", {"content": token})
-                    yield sse_event("done", {})
+                    # D3a: the self-check needs the whole answer, so it rides on
+                    # `done` — zero model calls, milliseconds, report only.
+                    yield sse_event("done", {"grounding": grade_rag_answer("".join(answer_parts), sources)})
                 except (OllamaModelNotLoadedError, OllamaTimeoutError, OllamaUnavailableError) as error:
                     yield sse_event("error", {"error_code": "STREAM_FAILED", "message": str(error)})
 
             return StreamingResponse(events(), media_type="text/event-stream")
         answer, model_used, latency_ms, sources, conversation_id, retrieval_question = request.app.state.rag_service.respond(payload.message, payload.top_k, document_scope, payload.conversation_id, user_id=owner)
-        return RagChatResponse(answer=answer, model_used=model_used, latency_ms=latency_ms, conversation_id=conversation_id, retrieval_question=retrieval_question, sources=_response_sources(sources))
+        return RagChatResponse(answer=answer, model_used=model_used, latency_ms=latency_ms, conversation_id=conversation_id, retrieval_question=retrieval_question, sources=_response_sources(sources), grounding=GroundingReport(**grade_rag_answer(answer, sources)))
     except ConversationNotFoundError as error:
         raise HTTPException(status_code=404, detail={"error_code": "CONVERSATION_NOT_FOUND", "message": f"Conversation {error} does not exist"}) from error
     except InsufficientContextError as error:

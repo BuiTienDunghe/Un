@@ -510,7 +510,7 @@ function addAssistantMessage() {
       });
       wrap.querySelector(".msg-body").insertBefore(details, metaRow);
     },
-    finish({ model, seconds, stopped = false, retry = null } = {}) {
+    finish({ model, seconds, stopped = false, retry = null, grounding = null } = {}) {
       wrap.classList.remove("streaming");
       if (!raw) content.innerHTML = "";
       paint();
@@ -520,6 +520,17 @@ function addAssistantMessage() {
       if (seconds != null) parts.push(`${seconds}s`);
       if (stopped) parts.push("đã dừng");
       if (parts.length) metaRow.append(el("span", "", parts.join(" · ")));
+      // D3a: self-check bám nguồn (không gọi model) — chỉ báo, không chặn.
+      if (grounding && grounding.label && grounding.label !== "unjudged") {
+        const pct = Math.round((grounding.grounded_ratio || 0) * 100);
+        const text = grounding.label === "grounded" ? `bám nguồn ${pct}%`
+          : grounding.label === "weak" ? (grounding.language_mismatch ? "bám nguồn: khác ngôn ngữ nguồn" : `bám nguồn một phần (${pct}%)`)
+          : `⚠ ${grounding.ungrounded} câu không có nguồn`;
+        const chip = el("span", `grounding-chip grounding-${grounding.label}`, text);
+        const gaps = (grounding.sentences || []).map((item) => `• ${item.text}`).join("\n");
+        chip.title = gaps ? `Câu chưa đủ nguồn:\n${gaps}` : "Mọi câu đều có từ ngữ bám theo nguồn đã trích.";
+        metaRow.append(chip);
+      }
       if (raw) announce(`Trợ lý: ${content.textContent}`);
       const actions = el("div", "msg-actions");
       const copyBtn = iconBtn("copy", "Sao chép câu trả lời");
@@ -574,7 +585,7 @@ function renderHistory(messages) {
 }
 
 /* ── SSE streaming ─────────────────────────────────────────────── */
-async function streamChat(path, payload, { onMeta, onToken, onSteps }, signal) {
+async function streamChat(path, payload, { onMeta, onToken, onSteps, onDone }, signal) {
   const send = () => fetch(path, {
     method: "POST",
     headers: withApiKey({ "Content-Type": "application/json" }),
@@ -608,6 +619,7 @@ async function streamChat(path, payload, { onMeta, onToken, onSteps }, signal) {
       if (type === "meta") onMeta?.(data);
       else if (type === "steps") onSteps?.(data.steps || []);
       else if (type === "token") onToken?.(data.content);
+      else if (type === "done") onDone?.(data || {});
       else if (type === "error") throw new Error(ERROR_HINTS[data.error_code] || data.message || "Lỗi khi sinh phản hồi.");
     }
   }
@@ -654,6 +666,7 @@ async function sendPrompt(prompt) {
       : { message: prompt, document_ids: [...state.selectedDocs], conversation_id: state.conversationId };
 
   const retry = () => sendPrompt(prompt);
+  let grounding = null;
   try {
     await streamChat(state.mode === "general" ? "/chat" : "/rag/chat", payload, {
       onMeta: (meta) => {
@@ -669,11 +682,13 @@ async function sendPrompt(prompt) {
         if (!firstToken) { firstToken = true; handle.start(); }
         handle.append(token);
       },
+      onDone: (data) => { grounding = data.grounding || null; },
     }, controller.signal);
     handle.finish({
       model,
       seconds: ((performance.now() - started) / 1000).toFixed(1),
       retry,
+      grounding,
     });
     if (isNewConversation && streamConversationId) {
       // Backend tự đặt title từ tin nhắn đầu; giữ bản localStorage làm

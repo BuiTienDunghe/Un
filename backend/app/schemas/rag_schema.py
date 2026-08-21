@@ -52,6 +52,31 @@ class RagSearchResponse(BaseModel):
     sources: list[RagSource]
 
 
+class GroundingSentence(BaseModel):
+    text: str
+    label: str  # weak | ungrounded (grounded sentences are not listed)
+    overlap: float
+    verbatim: bool
+
+
+class GroundingReport(BaseModel):
+    """D3a self-check: lexical support of the answer by its cited sources.
+
+    Report only — the answer is never blocked or rewritten on this signal.
+    ``unjudged`` means nothing judgeable (empty answer, only pleasantries).
+    """
+    label: str  # grounded | weak | ungrounded | unjudged
+    grounded_ratio: float
+    judged: int
+    grounded: int
+    weak: int
+    ungrounded: int
+    # A sentence in another language than the sources was capped at "weak":
+    # lexical checks cannot see across languages (known blind spot, T12).
+    language_mismatch: bool = False
+    sentences: list[GroundingSentence] = Field(default_factory=list)
+
+
 class RagChatResponse(BaseModel):
     answer: str
     model_used: str
@@ -61,3 +86,6 @@ class RagChatResponse(BaseModel):
     # retrieval; the persisted user message stays the raw input.
     retrieval_question: str | None = None
     sources: list[RagSource]
+    # D3a: optional self-check report; absent for older clients/consumers that
+    # do not read it, never required to render the answer.
+    grounding: GroundingReport | None = None

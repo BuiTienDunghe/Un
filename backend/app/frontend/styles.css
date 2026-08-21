@@ -466,6 +466,10 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round
 
 /* Meta + actions dưới message */
 .msg-meta { display: flex; align-items: center; gap: 10px; margin-top: 7px; font-size: 12px; color: var(--text-3); }
+.grounding-chip { padding: 1px 8px; border-radius: 999px; font-size: 11px; border: 1px solid currentColor; cursor: help; white-space: nowrap; }
+.grounding-grounded { color: var(--ok, #1a7f37); }
+.grounding-weak { color: var(--warn, #9a6700); }
+.grounding-ungrounded { color: var(--danger, #cf222e); }
 .msg-actions { display: inline-flex; gap: 2px; opacity: 0; transition: opacity .15s; }
 .msg:hover .msg-actions, .msg:focus-within .msg-actions { opacity: 1; }
 @media (hover: none) { .msg-actions { opacity: 1; } }

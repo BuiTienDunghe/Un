@@ -140,7 +140,10 @@ def run_multidoc_mode(client: httpx.Client, base_url: str, cases: list[dict], ma
                 client.delete(f"{base_url}/conversations/{payload['conversation_id']}")
             answer_pass = response.is_success and contains_all(str(payload.get("answer", "")), case.get("expected_answer_terms", []))
         rr, doc_hit = score_multidoc_sources(payload.get("sources", []), expected_ids, terms) if response.is_success else (0.0, False)
-        results.append({"id": case["id"], "group": case.get("group", "single"), "status": response.status_code, "source_recall": rr > 0, "reciprocal_rank": rr, "doc_hit": doc_hit, "answer_pass": answer_pass, "latency_ms": payload.get("latency_ms")})
+        # D3a: the server's no-model self-check rides on the full-mode answer;
+        # retrieval-only runs have no answer to grade, so nothing is recorded.
+        grounding = (payload.get("grounding") or {}) if not retrieval_only else {}
+        results.append({"id": case["id"], "group": case.get("group", "single"), "status": response.status_code, "source_recall": rr > 0, "reciprocal_rank": rr, "doc_hit": doc_hit, "answer_pass": answer_pass, "grounding_label": grounding.get("label"), "grounded_ratio": grounding.get("grounded_ratio"), "language_mismatch": grounding.get("language_mismatch"), "ungrounded_sentences": [item.get("text") for item in grounding.get("sentences", []) if item.get("label") == "ungrounded"], "latency_ms": payload.get("latency_ms")})
 
     count = len(results)
 
@@ -152,6 +155,20 @@ def run_multidoc_mode(client: httpx.Client, base_url: str, cases: list[dict], ma
 
     groups = sorted({str(item["group"]) for item in results})
     answered = [item for item in results if item["answer_pass"] is not None]
+    # Grounding (D3a, full mode only): share of answers whose self-check came
+    # back "grounded", plus the label distribution so a drift toward "weak"
+    # is visible even while the headline rate holds.
+    graded = [item for item in results if item.get("grounding_label")]
+    grounding_summary = None
+    if graded:
+        labels = sorted({str(item["grounding_label"]) for item in graded})
+        grounding_summary = {
+            "graded": len(graded),
+            "grounding_rate": sum(1 for item in graded if item["grounding_label"] == "grounded") / len(graded),
+            "ungrounded_rate": sum(1 for item in graded if item["grounding_label"] == "ungrounded") / len(graded),
+            "language_mismatch": sum(1 for item in graded if item.get("language_mismatch")),
+            "labels": {label: sum(1 for item in graded if item["grounding_label"] == label) for label in labels},
+        }
     summary = {
         "created_at": datetime.now(UTC).isoformat(),
         "mode": "multidoc-retrieval" if retrieval_only else "multidoc-full",
@@ -162,6 +179,7 @@ def run_multidoc_mode(client: httpx.Client, base_url: str, cases: list[dict], ma
         "mrr": mean_rr(results),
         "doc_hit_rate": rate(results, "doc_hit"),
         "answer_pass_rate": rate(answered, "answer_pass") if answered else None,
+        "grounding": grounding_summary,
         "by_group": {group: {"cases": len(items), "recall_at_k": rate(items, "source_recall"), "mrr": mean_rr(items), "doc_hit_rate": rate(items, "doc_hit")} for group in groups for items in [[item for item in results if item["group"] == group]]},
         "results": results,
     }
@@ -172,6 +190,9 @@ def run_multidoc_mode(client: httpx.Client, base_url: str, cases: list[dict], ma
     misses = [item["id"] for item in results if not item["source_recall"]]
     if misses:
         print(f"Missed cases: {', '.join(misses)}")
+    ungrounded = [item["id"] for item in results if item.get("grounding_label") == "ungrounded"]
+    if ungrounded:
+        print(f"Ungrounded answers (D3a): {', '.join(ungrounded)}")
     print(f"Saved report: {output_path}")
 
     if write_baseline:
