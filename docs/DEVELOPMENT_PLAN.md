@@ -300,10 +300,16 @@ Discord ─┘    │                            └─ FTS (tsvector, P4-4)
 5. **Xác minh bàn giao**: suite backend + bot xanh; mở dashboard thấy đủ lịch sử/timeline; hỏi 1 câu RAG trên tài liệu cũ có nguồn (Qdrant đi theo `data/` nên không cần re-index; nếu lệch thì reindex từng tài liệu từ UI); nếu dùng bot: bật từ dashboard như P3-2.
 6. **Chốt cấu hình model TRƯỚC khi đo đạc**: máy mạnh hơn → cân nhắc nâng model general trong `models.yaml` (ghi chú P4 §4). Mọi baseline D1/P4-1 chỉ đo **một lần trên cấu hình cuối** — đổi model sau khi đo là phải đo lại.
 
-### 9b. Thứ tự thi công trên máy mới
+### 9b. Thứ tự thi công (hai máy — xem `docs/machine_split.md`)
 
-1. **D1 — bộ eval đa tài liệu** (mở màn, gỡ G7): trên máy mới làm được bản đầy đủ ngay — retrieval + faithfulness/citation, không phải giới hạn retrieval-only nữa; gate trong CI vẫn ở dạng retrieval-only embedding 0.6b (CI không có GPU). D1 xong thì mọi mục sau mới có thước đo.
-2. **D5 red-team + D3a self-check** — hai mục rẻ, ăn ngay vào chất lượng và an toàn.
+> Từ 21/08 dự án chạy trên **hai máy**: máy nhẹ (daily, GPU yếu) và máy mạnh (dùng ít).
+> Phân lane bằng câu hỏi thử duy nhất — "bước này có cần model SINH hoặc re-index nặng
+> không?": không → làm ngay trên máy nhẹ; có → để dành máy mạnh. Mỗi máy có file
+> `.machine-role` (`light`/`heavy`, đã gitignore) để phiên Claude tự route. Nhiều mục
+> chẻ đôi: phần *xây* (nhẹ) làm trước ở máy nhẹ, phần *đo* (nặng) handoff sang máy mạnh.
+
+1. **D1 — bộ eval đa tài liệu** ✅ **ĐÓNG 21/08**: hạ tầng + dataset 82 câu + baseline retrieval-only (recall@5 0.866 / MRR 0.734 / doc_hit 0.768, model `qwen3-embedding:0.6b`, đo trong chính CI) + gate chặn thoái lui đang hiệu lực. Nhật ký: `docs/d1_retrieval_eval.md`.
+2. **D5 red-team + D3a self-check** — hai mục rẻ, ăn ngay vào chất lượng và an toàn. Phần *xây* (guard bám-nguồn, corpus bẫy, harness, unit test) là lane NHẸ → làm trên máy nhẹ ngay; phần *đo* (faithfulness qua model sinh, chạy tấn công thật) là lane NẶNG → máy mạnh.
 3. **Mở lại P4** theo đúng thứ tự đã phân tích: P4-2 contextual retrieval → P4-3 reranker (`pip install -e .[rerank]`, T6) → P4-4 Postgres FTS + pyvi → P4-5 chunk visualization — mỗi mục một thí nghiệm chấm bằng D1.
 4. **D2 distillation** (cloud free hoặc máy mới nếu GPU đủ) → chỉ sau khi D2 đạt mới xét mở **D3c** multi-step planning (vẫn dạng có-điều-kiện + cap theo bất biến ngân sách inference).
 5. **D3b digest nền + D4 LLMOps** xen kẽ sau D1; nợ còn lại (T5, T7–T9, T11–T13) dọn khi đụng vùng, T10 hẹn 2027.

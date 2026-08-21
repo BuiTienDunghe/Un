@@ -22,6 +22,9 @@ htmlcov/
 .coverage
 coverage.xml
 
+# ── Machine role marker (per-machine, set once — see docs/machine_split.md) ──
+.machine-role
+
 # ── IDE / Editor ──
 .vscode/
 .idea/
