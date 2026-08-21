@@ -37,7 +37,7 @@ không bao giờ dùng `retrieval_context` sinh bởi P4-2. Tư duy lấy từ g
 | `grounded` | ≥ 60% content-word của câu có trong nguồn, **hoặc** có chuỗi ≥ 4 content-word liên tiếp nguyên văn trong nguồn | 0.6 = câu chủ yếu dùng từ vựng của nguồn; chuỗi nguyên văn là "evidence verbatim" của guard memory |
 | `weak` | 34% ≤ overlap < 60% | 0.34 là sàn đo được của guard memory (benchmark P2-1b) |
 | `ungrounded` | overlap < 34% | dưới sàn: câu gần như không lấy gì từ nguồn |
-| Xuyên ngữ | câu khác ngôn ngữ với nguồn (phát hiện bằng chữ cái có dấu tiếng Việt) bị **trần ở `weak`** + cờ `language_mismatch` | kiểm tra từ vựng không nhìn xuyên ngôn ngữ được (điểm mù T12): kết luận đúng là "không chấm được", không phải "bịa" |
+| Xuyên ngữ | câu khác ngôn ngữ với **nguồn khớp nhất của chính câu đó** (không phải cả pool; hòa điểm mà có nguồn khác ngôn ngữ thì tính là khác) bị **trần ở `weak`** + cờ `language_mismatch`; câu không trùng từ nào với nguồn nào chỉ được cap khi **mọi** nguồn đều khác ngôn ngữ | kiểm tra từ vựng không nhìn xuyên ngôn ngữ được (điểm mù T12): kết luận đúng là "không chấm được", không phải "bịa". Sửa 21/08 sau đối chiếu tay: pool trộn Việt+Anh từng làm cap không bao giờ bật |
 | Nhãn tổng | có câu `ungrounded` → `ungrounded`; ≥ 80% câu `grounded` → `grounded`; còn lại `weak`; không có câu nào chấm được → `unjudged` | một câu bịa là đủ để cả câu trả lời không đáng tin |
 | Không có nguồn | mọi câu `ungrounded` | không nguồn thì không gì bám được, bất kể ngôn ngữ |
 
@@ -170,3 +170,23 @@ chính các câu dịch đúng. Thứ tự việc còn lại: (1) sửa cap theo
 nhẹ, có test tái hiện #6/#10), (2) đo lại 82 câu trên máy nặng — kỳ vọng nhãn thấp
 còn lại đều là báo đúng, (3) khi đó mới quyết định hành vi cho `ungrounded` và đóng
 D3a hẳn.
+
+## Sửa 21/08 (máy nhẹ) — cap xuyên ngữ theo nguồn khớp nhất
+
+Thi hành đúng đề xuất ở trên, ngưỡng 0.60/0.34 **giữ nguyên**:
+
+| Thay đổi | Lý do |
+| --- | --- |
+| `_source_index` giữ thêm **từng nguồn** (từ vựng + ngôn ngữ) bên cạnh pool chung | Pool quyết định nhãn (chunk nào cũng có thể đỡ câu); chỉ câu hỏi "câu này dựa vào chunk nào" mới cần nhìn từng nguồn |
+| Với câu không `grounded`: nguồn bằng chứng = nguồn có **số từ trùng cao nhất** với câu đó; khác ngôn ngữ với câu → cap `weak` + `language_mismatch` | Tái hiện đúng #6 (legacy Qdrant points, `current_architecture.md`) và #10 (RQ worker, `versioned_ingestion.md`) bằng văn bản fixture thật trong test |
+| **Hòa điểm** giữa nguồn cùng ngôn ngữ và nguồn khác ngôn ngữ → tính là khác | Hòa là không quy được bằng chứng (ví dụ thật: `.bat` fold trùng "bật"); "không chấm được" phải thắng "bịa" — cap chỉ hạ về weak, không bao giờ nâng lên grounded |
+| Câu **không trùng từ nào** với nguồn nào → chỉ cap khi mọi nguồn đều khác ngôn ngữ | Không có bằng chứng để quy thì là câu không được đỡ, trừ khi cả pool là tiếng khác; test: câu bịa tiếng Việt trong pool trộn vẫn `ungrounded` |
+| Câu bịa mà vài từ trùng rơi vào chunk tiếng Việt → vẫn `ungrounded` | Cap không được thành lý do bao che chung cho pool trộn (test riêng) |
+
+Còn theo dõi (chưa sửa, chưa có bằng chứng đủ): caveat #4 — chuỗi nguyên văn 4 từ
+chứng nhận cả câu nửa-trích nửa-suy-diễn. Chờ lần đo lại cho số liệu.
+
+**Việc còn lại để đóng D3a (máy nặng):** đo lại 82 câu với bản sửa; kỳ vọng
+`language_mismatch > 0` và nhãn thấp còn lại đều là báo đúng; rồi quyết định hành vi cho
+`ungrounded`.
+

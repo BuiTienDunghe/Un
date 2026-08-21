@@ -89,8 +89,8 @@ def test_verbatim_run_grounds_a_sentence_even_with_extra_words():
     # Four consecutive content words copied from the source outweigh padding
     # the source never said — the memory guard's "evidence verbatim" rule.
     answer = "Nói hơi dài dòng một chút nhưng theo cách tôi hiểu thì mất nó là mất hội thoại, tài liệu, version, job và citation đấy nhé."
-    vocabulary, runs = ag._source_index([SOURCE])
-    verdict, _ = ag.judge_sentence(answer, vocabulary, runs, sources_vietnamese=True)
+    vocabulary, runs, indexed = ag._source_index([SOURCE])
+    verdict, _ = ag.judge_sentence(answer, vocabulary, runs, indexed)
     assert verdict.overlap < ag.GROUNDED_MINIMUM  # padding alone would leave it below the bar
     assert verdict.verbatim is True and verdict.label == "grounded"
 
@@ -145,3 +145,61 @@ def test_rag_chat_reports_grounding_in_both_response_shapes(client, mock_ollama,
     payload = json.loads(done[0].split("data: ", 1)[1])
     # The whole streamed answer was graded once, after the last token.
     assert payload["grounding"]["label"] == "grounded" and payload["grounding"]["judged"] == 1
+
+
+# ── Mixed-language source pool (21/08 heavy-machine hand-check, cases #6/#10) ──
+
+# Real fixture text: two English chunks that sat in a pool with Vietnamese ones.
+EN_LEGACY_POINTS = (
+    "Points that only contain legacy `index_version` are deliberately ignored by retrieval. "
+    "Cleanup planning and execution also exclude legacy Qdrant points; there is no "
+    "`legacy-qdrant` cleanup domain. Legacy-point audit is a separate, read-only Phase 9A "
+    "command and no automatic cleanup policy exists."
+)
+EN_RQ_WORKERS = (
+    "When `INGESTION_EXECUTION_BACKEND=rq`, this document's extraction and indexing steps "
+    "run in separate RQ worker processes rather than the FastAPI thread. Their state "
+    "transitions, version activation, and retrieval semantics are unchanged."
+)
+VI_FILLER = [
+    "Chu kỳ backup mặc định 24 giờ, giữ lại 14 ngày, tối thiểu luôn giữ 3 bản mới nhất.",
+    "Xưởng in Ánh Dương nhận in offset và in kỹ thuật số, báo giá trong ngày làm việc.",
+    SOURCE,
+]
+
+
+def test_faithful_vietnamese_rendering_of_an_english_chunk_in_a_mixed_pool_is_weak_not_ungrounded():
+    # Case #6: the pool as a whole "looks Vietnamese", but the evidence chunk
+    # for this sentence is English → the old pool-level cap never fired and
+    # the faithful translation was called ungrounded.
+    answer = (
+        "Các point chỉ mang index_version cũ bị retrieval cố ý bỏ qua, và việc lập kế hoạch "
+        "lẫn thực thi dọn dẹp cũng loại trừ các point Qdrant kiểu cũ; không có miền dọn dẹp riêng cho legacy-qdrant."
+    )
+    report = ag.grade_answer(answer, VI_FILLER + [EN_LEGACY_POINTS])
+    assert report.ungrounded == 0
+    assert report.language_mismatch is True
+    assert report.label in {"weak", "grounded"}
+
+
+def test_case_10_rq_workers_translation_is_flagged_as_cross_language():
+    answer = "Khi bật chế độ rq, các bước trích xuất và index chạy trong các tiến trình worker RQ riêng thay vì luồng FastAPI; ngữ nghĩa truy hồi không đổi."
+    report = ag.grade_answer(answer, VI_FILLER + [EN_RQ_WORKERS])
+    assert report.ungrounded == 0 and report.language_mismatch is True
+
+
+def test_invented_vietnamese_sentence_in_a_mixed_pool_stays_ungrounded():
+    # The cap must not become a blanket excuse: an invented sentence that
+    # shares nothing with the English chunk and nothing with the Vietnamese
+    # ones is still unsupported.
+    answer = "Hệ thống tự động gửi email cảnh báo cho quản trị viên qua SendGrid mỗi khi dung lượng ổ đĩa vượt 90 phần trăm."
+    report = ag.grade_answer(answer, VI_FILLER + [EN_LEGACY_POINTS])
+    assert report.label == "ungrounded" and report.language_mismatch is False
+
+
+def test_invented_sentence_whose_few_shared_words_point_at_a_vietnamese_chunk_is_not_excused():
+    # Shares "backup"/"ngày" with a Vietnamese chunk → evidence is Vietnamese →
+    # same language → no mercy, even though an English chunk sits in the pool.
+    answer = "Backup được tải lên Google Drive và Dropbox mỗi ngày kèm mã hóa AES-256 và thông báo qua Telegram."
+    report = ag.grade_answer(answer, VI_FILLER + [EN_LEGACY_POINTS])
+    assert report.label == "ungrounded" and report.language_mismatch is False

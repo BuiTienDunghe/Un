@@ -12,6 +12,14 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 ## [Unreleased]
 
 ### Fixed
+- **D3a cap xuyên ngữ theo nguồn khớp nhất** (thay cho theo cả pool): đối chiếu tay trên máy nặng
+  cho thấy pool nguồn trộn Việt+Anh làm cap không bao giờ bật → câu dịch trung thành từ chunk
+  tiếng Anh bị gắn `ungrounded` oan (2/3 nhãn thấp). Giờ bằng chứng của từng câu là nguồn trùng
+  nhiều từ nhất (hòa → tính là khác ngôn ngữ), ngưỡng 0.60/0.34 giữ nguyên; 4 test tái hiện bằng
+  fixture thật. Cần đo lại 82 câu trên máy nặng trước khi đóng D3a.
+- `requirements.txt` về ASCII thuần và launcher đặt `PYTHONUTF8=1`: pip trên Windows đọc file
+  bằng cp1252 và chết ở comment tiếng Việt có dấu trước khi launcher kịp chạy (bẫy do máy
+  nặng phát hiện khi kiểm tra chéo).
 - **Launcher không còn vỡ trên máy cài mới sau P4-3**: `run-local-ai-core.bat` tự ghim
   `RAG_RERANKER_ENABLED=false` vào `.env` khi máy thiếu extra `[rerank]` (một lần, idempotent,
   ghi rõ lý do), và báo lỗi + dừng màn hình khi uvicorn thoát lỗi thay vì đóng cửa sổ sau

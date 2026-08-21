@@ -135,20 +135,61 @@ def _verbatim_run(words: list[str], source_words: set[tuple[str, ...]]) -> bool:
     return any(tuple(words[i : i + VERBATIM_RUN]) in source_words for i in range(len(words) - VERBATIM_RUN + 1))
 
 
-def _source_index(sources: list[str]) -> tuple[set[str], set[tuple[str, ...]]]:
-    """Vocabulary and VERBATIM_RUN-grams of all sources, built once per answer."""
+@dataclass
+class _IndexedSource:
+    vocabulary: set[str]
+    vietnamese: bool
+
+
+def _source_index(sources: list[str]) -> tuple[set[str], set[tuple[str, ...]], list[_IndexedSource]]:
+    """Pooled vocabulary + VERBATIM_RUN-grams, plus a per-source view.
+
+    The pooled sets decide the label (any cited chunk may support a sentence).
+    The per-source view exists for one question the pool cannot answer: WHICH
+    chunk a sentence leans on — needed to tell "translated from an English
+    chunk" apart from "invented" when the pool mixes languages (21/08 hand-check
+    on the heavy machine: a mixed VI+EN pool read as Vietnamese, so faithful
+    Vietnamese renderings of English evidence were called ungrounded).
+    """
     vocabulary: set[str] = set()
     runs: set[tuple[str, ...]] = set()
+    indexed: list[_IndexedSource] = []
     for source in sources:
         # Same normalisation as the answer side (content_words), so a run of
         # answer words can only match a run of source words token for token.
         content = content_words(source)
-        vocabulary.update(content)
+        words = set(content)
+        vocabulary.update(words)
         runs.update(tuple(content[i : i + VERBATIM_RUN]) for i in range(max(0, len(content) - VERBATIM_RUN + 1)))
-    return vocabulary, runs
+        indexed.append(_IndexedSource(vocabulary=words, vietnamese=looks_vietnamese(source, minimum=3)))
+    return vocabulary, runs, indexed
 
 
-def judge_sentence(sentence: str, vocabulary: set[str], runs: set[tuple[str, ...]], sources_vietnamese: bool | None = None) -> tuple[SentenceGrounding, bool] | None:
+def _evidence_is_foreign(words: list[str], sentence_vietnamese: bool, indexed: list[_IndexedSource]) -> bool:
+    """Is the chunk this sentence leans on written in another language?
+
+    The evidence chunk is the source with the highest overlap for THIS sentence
+    (not the pool: a pool of five chunks can mix Vietnamese and English, and a
+    Vietnamese sentence translated from the one English chunk must be judged
+    against that chunk). When no source shares a single word, there is no
+    evidence to attribute; only a pool that is foreign throughout can then
+    excuse the sentence — otherwise it is simply unsupported.
+    """
+    if not indexed:
+        return False
+    hits = [sum(1 for word in words if word in source.vocabulary) for source in indexed]
+    best = max(hits)
+    if best > 0:
+        # Ties are genuinely unattributable (a folded ".bat" matches "bật" as
+        # readily as "worker" matches "worker"); when a foreign-language chunk
+        # is among the best matches we cannot rule it out as the evidence, and
+        # "cannot judge" must win over "invented" — the cap only ever lowers a
+        # verdict to weak, never raises one to grounded.
+        return any(source.vietnamese != sentence_vietnamese for source, count in zip(indexed, hits) if count == best)
+    return all(source.vietnamese != sentence_vietnamese for source in indexed)
+
+
+def judge_sentence(sentence: str, vocabulary: set[str], runs: set[tuple[str, ...]], indexed: list[_IndexedSource] | None = None) -> tuple[SentenceGrounding, bool] | None:
     """(verdict, language_mismatch) for one sentence, or None when not a claim."""
     words = content_words(sentence)
     if len(words) < MIN_CONTENT_WORDS or is_pleasantry(sentence):
@@ -161,10 +202,12 @@ def judge_sentence(sentence: str, vocabulary: set[str], runs: set[tuple[str, ...
         label = "weak"
     else:
         label = "ungrounded"
-    mismatch = sources_vietnamese is not None and looks_vietnamese(sentence) != sources_vietnamese
+    mismatch = False
+    if label != "grounded" and indexed:
+        mismatch = _evidence_is_foreign(words, looks_vietnamese(sentence), indexed)
     if mismatch and label == "ungrounded":
         label = "weak"  # cannot judge across languages; cap on the safe side
-    return SentenceGrounding(text=sentence, label=label, overlap=round(overlap, 3), verbatim=verbatim), (mismatch and label != "grounded")
+    return SentenceGrounding(text=sentence, label=label, overlap=round(overlap, 3), verbatim=verbatim), mismatch
 
 
 def grade_answer(answer: str, sources: list[str]) -> GroundingReport:
@@ -174,15 +217,13 @@ def grade_answer(answer: str, sources: list[str]) -> GroundingReport:
     user can open) — callers must not pass ``retrieval_context``.
     """
     texts = [source for source in sources if source]
-    vocabulary, runs = _source_index(texts)
-    # Language of the sources as a whole (a few letters, not one stray accent);
-    # None when there are no sources, which disables the cap — an answer with
+    # No sources → empty per-source view → the cap never fires: an answer with
     # no sources is unsupported in any language.
-    sources_vietnamese = looks_vietnamese(" ".join(texts), minimum=3) if texts else None
+    vocabulary, runs, indexed = _source_index(texts)
     judged: list[SentenceGrounding] = []
     mismatch = False
     for sentence in split_sentences(answer):
-        result = judge_sentence(sentence, vocabulary, runs, sources_vietnamese)
+        result = judge_sentence(sentence, vocabulary, runs, indexed)
         if result is not None:
             verdict, sentence_mismatch = result
             judged.append(verdict)

@@ -5,6 +5,11 @@ title Local AI Core
 REM Always run relative to this script, even when launched by double-click.
 cd /d "%~dp0"
 
+REM Python tools (pip, uvicorn logs) read and print UTF-8 regardless of the Windows
+REM locale codec: requirements/docs carry Vietnamese text and pip would otherwise
+REM die decoding them as cp1252 on a fresh machine.
+set PYTHONUTF8=1
+
 echo.
 echo ==========================================
 echo            Local AI Core launcher
