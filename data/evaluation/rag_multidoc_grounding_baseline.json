@@ -1,0 +1,512 @@
+{
+  "created_at": "2026-08-21T11:57:31.230297+00:00",
+  "general_model": "qwen3.5:9b",
+  "embedding_model": "qwen3-embedding:0.6b",
+  "cases": 82,
+  "grounding": {
+    "graded": 82,
+    "grounding_rate": 0.9390243902439024,
+    "ungrounded_rate": 0.012195121951219513,
+    "language_mismatch": 0,
+    "labels": {
+      "grounded": 77,
+      "ungrounded": 1,
+      "weak": 4
+    }
+  },
+  "answer_pass_rate": 0.9390243902439024,
+  "results": [
+    {
+      "id": "br_backup_thu_cong",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "br_chu_ky_backup",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "br_db_dien_tap",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "br_doi_ten_db_hong",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "br_ghi_ket_qua_dien_tap",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "br_health_truong_backup",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "br_loi_git_bash",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "br_ly_do_keep_minimum",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "br_nghiem_thu_dien_tap",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "br_rebuild_qdrant",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "br_tan_suat_dien_tap",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "br_tep_goc",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "br_thoi_gian_giu_lai",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "br_worker_tren_host",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "ca_ai_duoc_dung_sqlite3",
+      "group": "single",
+      "grounding_label": "weak",
+      "grounded_ratio": 0.667
+    },
+    {
+      "id": "ca_alembic_head_o_dau",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "ca_audit_legacy_point",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "ca_cleanup_phien_ban_cu",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "ca_dialect_database_url",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "ca_dieu_kien_candidate",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "ca_duong_dan_archive_sqlite",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "ca_guard_route_mutating",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "ca_health_do_tuoi_backup",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "ca_khoi_phuc_qdrant_snapshot",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "ca_lam_moi_sau_phase",
+      "group": "single",
+      "grounding_label": "weak",
+      "grounded_ratio": 0.667
+    },
+    {
+      "id": "ca_test_guard_import",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "ca_vai_tro_ollama",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "ca_worker_launcher",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "p3_bootstrap_advisory",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "p3_bot_status_compose",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "p3_chay_song_tai_khoan",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "p3_co_bat_auth",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "p3_hoi_dong_phan_bien",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "p3_khoa_brute_force",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "p3_migration_chot_phase",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "p3_ocr_bug_mount",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "p3_ownership_404",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "p3_refresh_khong_xoay",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "p3_require_admin_db",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "p3_reset_mat_khau",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "p3_test_moi_auth",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "p3_timeseries_utc",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "vi_activation_superseded",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "vi_alembic_revision",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "vi_bat_backend_postgres",
+      "group": "single",
+      "grounding_label": "weak",
+      "grounded_ratio": 0.333
+    },
+    {
+      "id": "vi_chuyen_sang_rq",
+      "group": "single",
+      "grounding_label": "weak",
+      "grounded_ratio": 0.5
+    },
+    {
+      "id": "vi_hash_trung_lap",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "vi_khoa_hang_hai_version",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "vi_nguon_active_version",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "vi_qdrant_point_id",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "vi_reindex_that_bai_trang_thai",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "vi_retry_idempotent",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "vi_thu_muc_nguon_khi_loi",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "vi_transaction_khi_goi_ngoai",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "vi_vector_superseded_giu_lai",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "vi_version_failed_retry",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xa_chunk_rag",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xa_cong_ollama",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xa_dinh_dang_tep",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xa_doi_mo_hinh_embedding",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xa_dpi_ban_quet",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xa_gpu_may_chu",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xa_icc_profile",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xa_intent_bot_un",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xa_kho_danh_thiep",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xa_khoi_dong_docker",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xa_ma_bao_gia",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xa_noi_day_sao_luu",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xa_quan_tri_chinh",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xa_so_nhan_vien",
+      "group": "single",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xd_an_han_xoa_vector_version_cu",
+      "group": "cross",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xd_bot_doc_tin_nhan_intent",
+      "group": "cross",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xd_chinh_chu_ky_backup_models_yaml",
+      "group": "cross",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xd_dump_postgres_nas_synology",
+      "group": "cross",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xd_dung_lai_chi_muc_vector_sau_restore",
+      "group": "cross",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xd_kiem_tra_quyen_admin_doc_db",
+      "group": "cross",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xd_point_id_qdrant_uuid5",
+      "group": "cross",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xd_point_index_version_cu_bi_bo_qua",
+      "group": "cross",
+      "grounding_label": "ungrounded",
+      "grounded_ratio": 0.25
+    },
+    {
+      "id": "xd_reindex_that_bai_version_cu",
+      "group": "cross",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xd_ten_database_dien_tap_restore",
+      "group": "cross",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xd_trang_thai_bot_tren_dashboard",
+      "group": "cross",
+      "grounding_label": "grounded",
+      "grounded_ratio": 1.0
+    },
+    {
+      "id": "xd_vai_tro_sqlite_cu",
+      "group": "cross",
+      "grounding_label": "grounded",
+      "grounded_ratio": 0.8
+    }
+  ]
+}

@@ -37,6 +37,17 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   lẽ đo sai cấu hình. Tolerance vẫn 0.02, dataset không đổi.
 
 ### Added
+- **Baseline faithfulness đầu tiên (D3a, đo trên máy nặng)**:
+  `data/evaluation/rag_multidoc_grounding_baseline.json` — 82 câu full-mode với cấu
+  hình ship (contextual + reranker ON): grounding_rate **0.9390** (77 grounded / 4
+  weak / 1 ungrounded), answer_pass_rate 0.9390 (trùng số là trùng hợp — lệch 5-5 hai
+  chiều). Đối chiếu tay 10 câu: **0 câu `grounded` chứa mệnh đề bịa sự kiện**; nhưng
+  2/3 nhãn thấp là báo oan xuyên ngữ (câu Việt dịch trung thành từ chunk bằng chứng
+  tiếng Anh — cap ngôn ngữ đo theo cả pool nên không bật khi pool trộn Việt+Anh).
+  Kết luận: giữ mức "chỉ báo"; việc còn lại trước khi đóng D3a là cap theo-nguồn-khớp-nhất
+  (giữ nguyên ngưỡng 0.60/0.34) rồi đo lại. Hai câu retrieval miss được chấm
+  `grounded` + `answer_pass=False` — chữ ký "trung thành với chunk sai": guard đo
+  faithfulness, không đo correctness. Bảng đầy đủ: `docs/d3a_answer_grounding.md`.
 - **D3a self-check bám nguồn (không model)**: `answer_grounding.py` chấm từng câu của
   câu trả lời RAG theo văn bản trần của chunk đã trích (fold dấu, content-word overlap,
   chuỗi nguyên văn — tư duy guard memory P2-1b); nhãn grounded/weak/ungrounded, câu
