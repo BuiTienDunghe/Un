@@ -1,6 +1,6 @@
 # Kế hoạch phát triển tổng thể — Local AI Core
 
-**Phiên bản:** 1.1 · **Ngày:** 15/08/2026 · **Cập nhật:** 19/08/2026 (định hướng agent-first) · **Trạng thái:** Đang hiệu lực
+**Phiên bản:** 1.2 · **Ngày:** 15/08/2026 · **Cập nhật:** 19/08 (agent-first) · 21/08/2026 (track D — kỹ năng AI + ngân sách inference) · **Trạng thái:** Đang hiệu lực
 **Thay thế:** các định hướng rải rác trong README và `docs/discord_memory_workflow_plan_v5_final.md` (phần roadmap; phần thiết kế memory của tài liệu đó vẫn là spec cho P1-3..P1-5)
 
 ---
@@ -24,6 +24,7 @@ So với các sản phẩm cùng phân khúc (Open WebUI, AnythingLLM, LibreChat
 - Mọi thay đổi chất lượng RAG phải qua bộ eval trước khi thành mặc định.
 - Tính năng mới không phá đường "một cú click" (`run-local-ai-core.bat`).
 - Hành động tự hành của agent (ghi nhớ, index, dọn dẹp) phải để lại audit trail và thu hồi được (bổ sung 19/08).
+- **Ngân sách inference cố định**: tính năng agent mới không được tăng số lượt gọi model mặc định của một câu hỏi thường; kiểm tra/xác minh ưu tiên cơ chế không-LLM hoặc model nhỏ chuyên hóa; việc nền phải nhường request tương tác — Ollama một máy chỉ phục vụ một request một lúc (bổ sung 21/08).
 
 ### Điều chỉnh định hướng 19/08/2026 — agent-first
 
@@ -37,6 +38,16 @@ duyệt tay từng mục. Hệ quả trong plan:
   `/ask` sẽ thành cửa vào agent tự chọn tool ở P2-2.
 - Nền human-review xây ở P1-4 **không bỏ đi** — nó trở thành lưới giám sát: hàng chờ cho
   candidate dưới ngưỡng tin cậy và nút thu hồi cho memory đã tự áp dụng.
+
+### Điều chỉnh định hướng 21/08/2026 — track D (kỹ năng AI engineer)
+
+Bổ sung một track phát triển **song song với các phase sản phẩm**, chọn theo tiêu chí kép:
+mỗi mục vừa nâng chất hệ thống vừa xây một kỹ năng AI-engineer đo được (eval, fine-tune,
+agent design, LLMOps, AI security). Đi kèm là phân tích phần cứng 21/08: agent gọi model
+**tuần tự nhiều lần** nên độ trễ cộng dồn (turn 3 bước hiện đã cần timeout 360s trên máy
+phụ), và Ollama một máy chỉ phục vụ một request một lúc — việc nền chạy sai lúc sẽ chặn
+người dùng thật. Hệ quả: bất biến "ngân sách inference" ở §1 và số phận tách ba của mục
+agent nâng cao (D3a/D3b giữ, D3c gác). Chi tiết: §4, mục "Track D".
 
 ---
 
@@ -194,6 +205,32 @@ Khảo sát 15/08/2026 trên các dự án mã nguồn mở uy tín nhất phân
 - **MCP client** nếu hệ sinh thái nội bộ cần nối tool ngoài (LibreChat là tham chiếu tốt).
 - Fork/branch hội thoại; resumable streams đa tab (LibreChat).
 
+### Track D — Kỹ năng AI engineer *(bổ sung 21/08 · song song các phase · tiêu chí kép: nâng chất hệ thống + xây kỹ năng AI đo được)*
+
+> Nguồn: phân tích hướng phát triển 21/08 (hội thoại). Nguyên tắc xuyên suốt: mọi mục
+> đều phải tạo ra **số liệu do chính mình thiết kế phép đo** — đó là thứ phân biệt
+> AI engineer với người gọi API. Ràng buộc phần cứng chi phối thiết kế (xem bất biến
+> "ngân sách inference" §1): không mục nào được chồng thêm lượt gọi model mặc định.
+
+| ID | Hạng mục | Nội dung & tiêu chí nghiệm thu | Điều kiện máy | Ước lượng |
+| --- | --- | --- | --- | --- |
+| D1 | **Eval engineering** — nền của mọi mục sau | Bộ eval RAG tiếng Việt 50–100 câu trên 3–5 tài liệu thật (có nhóm câu cross-doc chủ đích); đo retrieval hit-rate, faithfulness (bám nguồn), citation accuracy; gate trong CI chặn thoái lui. Chính là **P4-1 bản retrieval-only làm-được-ngay** (embedding 0.6b, không cần re-index loop nặng) — gỡ G7; thí nghiệm P4-2/P4-3 vẫn đợi máy | Máy hiện tại OK | 3–4 buổi |
+| D2 | **Distillation extractor 9b → 2b** (QLoRA) | 9b làm teacher sinh vài nghìn cặp (tin nhắn → fact), lọc bằng guard sẵn có; fine-tune 2b trên GPU free (Colab/Kaggle — đủ cho 2b, không đụng máy nhà); nghiệm thu bằng chính benchmark 19/08: 2b-tuned phải đạt poison/coverage tương đương 9b+guard mới thay. Thất bại cũng chốt được bằng số liệu. Vai trò chiến lược: **lối thoát phần cứng** — bước phụ của agent giao được cho model nhỏ; là điều kiện mở lại D3c | GPU cloud free | 4–6 buổi |
+| D3a | **Self-check không-LLM cho câu trả lời RAG** | Mở rộng tư duy guard memory (evidence verbatim + content-word overlap) sang câu trả lời: kiểm tra bám-nguồn ngay trước khi gửi, **0 lượt gọi model thêm** (mili-giây); hiệu quả chứng minh bằng D1 (điểm faithfulness trước/sau) | Máy hiện tại OK | 2 buổi |
+| D3b | **Digest nền có luật nhường** | Agent tự tổng hợp định kỳ (tài liệu mới, memory đáng chú ý, việc nền lỗi) gửi Discord; **luật nhường**: chỉ chạy khi hệ rảnh ≥ N phút, tự dừng ngay khi có request tương tác, kích hoạt tay được (`/digest`), máy tắt thì bỏ lượt không dồn; audit + thu hồi theo bất biến P2 | Máy hiện tại OK nếu giữ luật nhường | 3 buổi |
+| D3c | **Multi-step planning** — **GÁC 21/08** | Phân rã câu hỏi đa tài liệu thành nhiều lượt retrieval (đúng điểm yếu cross-doc đã thấy khi test 2 paper 20/08). Gác vì độ trễ cộng dồn 5–8 lượt gọi/câu không cứu được bằng phần cứng sẽ có. Điều kiện mở lại: **D2 xong và có máy mới**; khi mở cũng chỉ dạng có-điều-kiện (heuristic rẻ phát hiện câu cần phân rã, ~90% câu single-hop đi đường cũ) + **cap cứng** tổng lượt gọi mỗi câu | Gác | (sau) |
+| D4 | **LLMOps / observability** | Hợp nhất sử liệu rời (agent_traces, request_logs, dashboard) thành trace một-câu-hỏi-một-cây: retrieval → tool call → generation, kèm token vào/ra, thời gian, prompt version; prompt quản lý như code — mỗi version có số hiệu gắn điểm eval (extractor đã qua 5 đời prompt không sử liệu) | Máy hiện tại OK (chỉ ghi metadata) | 3–4 buổi |
+| D5 | **AI security — red-team prompt injection** | Nội dung tài liệu/tin Discord là untrusted input đi thẳng vào prompt của agent có tool. Xây bộ tài liệu bẫy (chỉ thị độc nhúng văn bản/bảng, Việt + Anh) đo tỉ lệ agent bị lừa **trước/sau** phòng thủ; phòng tuyến: tách "lệnh hệ thống" khỏi "dữ liệu chỉ đọc" trong prompt + mở rộng guard evidence sang RAG. Cấp thiết tăng dần vì P3 đã mở multi-user upload | Máy hiện tại OK | 3–4 buổi |
+
+**Trình tự khuyến nghị** (khớp giới hạn máy phụ hiện tại):
+
+| Giai đoạn | Mục | Vì sao |
+| --- | --- | --- |
+| Ngay, trên máy hiện tại | **D1 → D5**, xen D3a | Chạy chủ yếu trên logic + retrieval, gần như không thêm tải model; D1 là thước đo cho mọi mục sau |
+| Song song, GPU cloud free | D2 | Không đụng máy nhà; tái dùng benchmark 19/08 làm nghiệm thu |
+| Sau khi có D1 | D3b, D4 | Digest và trace cần thước đo + sử liệu để chứng minh giá trị thay vì chỉ thêm tính năng |
+| Khi có máy mới | P4 (re-index loop P4-2/P4-3) + D3c | Đúng ghi chú gác 20/08; D3c cần cả D2 lẫn máy |
+
 ---
 
 ## 5. Kiến trúc đích (không đổi xương sống, chỉ bồi)
@@ -243,15 +280,33 @@ Discord ─┘    │                            └─ FTS (tsvector, P4-4)
 | Scope creep từ cảm hứng dự án lớn | Trung | Mục "cố tình KHÔNG theo" ở §3; mỗi mục P4 cần use case thật mới làm |
 | Bảo mật khi mở LAN cho nhóm | Cao nếu bỏ qua | P0-2 là điều kiện tiên quyết của P3; không mở nhóm trước khi có auth |
 | Extractor tự áp dụng memory sai → trí nhớ bẩn | **Cao — đã đo 19/08**: confidence là hằng 1.0 ở mọi lỗi (τ vô nghĩa); 2b lọt 49% độc, 9b + guard xác định còn 21,6% (benchmark 150 case, `docs/p2_progress.md`) | P2-1b: extractor → 9b + guard evidence/overlap trong auto-apply; giám sát + thu hồi 1 click là lưới chính, không phải tạm bợ; benchmark lại sau mỗi thay đổi extractor |
+| Việc nền của agent chặn request tương tác (Ollama 1 slot/máy) | Trung — tăng nếu thêm D3b | Bất biến ngân sách inference (§1); luật nhường của D3b: chỉ chạy khi rảnh, tự dừng khi có người hỏi |
+| Prompt injection qua tài liệu/tin nhắn (untrusted input vào agent có tool) | Trung — tăng theo multi-user (P3) và mức tự hành | D5: red-team đo được + tách lệnh/dữ liệu trong prompt; chưa mở upload cho người lạ ngoài nhóm tin cậy trước khi có D5 |
 
-## 9. Việc bắt đầu ngay (tuần tới)
+## 9. Việc tiếp theo — handoff sang máy mới (chốt 21/08/2026)
 
-1. ~~**P0-1 CI**~~ — ✅ xong (`.github/workflows/ci.yml`, 3 job: static / backend+PostgreSQL+Redis / bot trên Windows).
-2. ~~**P0-3 lưu citation**~~ — ✅ xong (migration `20260818_20`, nguồn hiện lại khi mở hội thoại cũ).
-3. ~~**P0-2 API key**~~ — ✅ xong (header `X-API-Key`, mặc định tắt để không phá đường một cú click).
-4. ~~**P0-6 đồng bộ migration**~~ — ✅ xong (migration `20260818_21`, `alembic check` đã là cửa chặn trong CI).
+> Hiện trạng bàn giao: **P0 → P3 đã đóng** (nhật ký `docs/p1..p3_progress.md`), nợ P0.5
+> đợt T1–T3+T6 đã trả 21/08, plan v1.2 đã chứa Track D. Quyết định 21/08: chuyển sang
+> máy mạnh hơn rồi thi công tiếp — checklist dưới đây là toàn bộ đường chuyển.
 
-**P0 → P3 đã đóng** (P3: 20/08 — nhật ký `docs/p3_progress.md`; muốn mở link cho nhóm: bật `LOCAL_AI_AUTH_ENABLED` + secret + API key trong `.env`). Việc tiếp theo: **P4 — RAG nâng cao có đo lường** (bắt đầu bằng P4-1 mở rộng bộ eval — G7 đang chặn mọi đo đạc tiến bộ), xen kẽ nợ P0.5 (T1–T3, T5–T9, T11–T13).
+### 9a. Checklist chuyển máy (những gì git KHÔNG mang theo)
+
+1. **Trên máy cũ, trước khi rời**: chạy backup Postgres mới (`python -m scripts.backup_postgres` từ `backend/`, hoặc xác nhận dump mới nhất < 24h trong `data/backups/postgres/local-ai-*.dump`).
+2. **Chép tay sang máy mới** (tuyệt đối không commit — đúng quy tắc bảo mật sẵn có):
+   - `.env` (DISCORD_TOKEN, LOCAL_AI_API_KEY, JWT secret, mật khẩu DB, các cờ memory/agent);
+   - toàn bộ thư mục `data/` — trong đó `data/qdrant/` (vector index, bind-mount nên đi theo thư mục), `data/documents/` (file gốc đã upload), `data/backups/postgres/` (dump).
+3. **Máy mới**: cài Docker Desktop + Ollama → clone repo → đặt `.env` và `data/` vào chỗ cũ → chạy `run-local-ai-core.bat` (launcher tự pull model theo `models.yaml`, dựng container).
+4. **Restore Postgres** theo `docs/backup_restore.md` (pg_restore dump mới nhất vào container — dữ liệu Postgres nằm trong named volume nên KHÔNG tự đi theo thư mục), rồi `alembic upgrade head` từ repo root (head hiện tại: `20260820_24`).
+5. **Xác minh bàn giao**: suite backend + bot xanh; mở dashboard thấy đủ lịch sử/timeline; hỏi 1 câu RAG trên tài liệu cũ có nguồn (Qdrant đi theo `data/` nên không cần re-index; nếu lệch thì reindex từng tài liệu từ UI); nếu dùng bot: bật từ dashboard như P3-2.
+6. **Chốt cấu hình model TRƯỚC khi đo đạc**: máy mạnh hơn → cân nhắc nâng model general trong `models.yaml` (ghi chú P4 §4). Mọi baseline D1/P4-1 chỉ đo **một lần trên cấu hình cuối** — đổi model sau khi đo là phải đo lại.
+
+### 9b. Thứ tự thi công trên máy mới
+
+1. **D1 — bộ eval đa tài liệu** (mở màn, gỡ G7): trên máy mới làm được bản đầy đủ ngay — retrieval + faithfulness/citation, không phải giới hạn retrieval-only nữa; gate trong CI vẫn ở dạng retrieval-only embedding 0.6b (CI không có GPU). D1 xong thì mọi mục sau mới có thước đo.
+2. **D5 red-team + D3a self-check** — hai mục rẻ, ăn ngay vào chất lượng và an toàn.
+3. **Mở lại P4** theo đúng thứ tự đã phân tích: P4-2 contextual retrieval → P4-3 reranker (`pip install -e .[rerank]`, T6) → P4-4 Postgres FTS + pyvi → P4-5 chunk visualization — mỗi mục một thí nghiệm chấm bằng D1.
+4. **D2 distillation** (cloud free hoặc máy mới nếu GPU đủ) → chỉ sau khi D2 đạt mới xét mở **D3c** multi-step planning (vẫn dạng có-điều-kiện + cap theo bất biến ngân sách inference).
+5. **D3b digest nền + D4 LLMOps** xen kẽ sau D1; nợ còn lại (T5, T7–T9, T11–T13) dọn khi đụng vùng, T10 hẹn 2027.
 
 ---
 
