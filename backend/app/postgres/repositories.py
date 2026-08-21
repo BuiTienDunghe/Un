@@ -100,7 +100,7 @@ class PostgresDocumentRepository:
         for index, chunk in enumerate(chunks):
             content = str(getattr(chunk, "content"))
             uid = str(uuid5(NAMESPACE_URL, f"local-ai-core:{document_id}:{version_id}:{index}"))
-            records.append(DocumentChunk(id=new_id("chunk"), chunk_uid=uid, document_id=document_id, version_id=version_id, chunk_index=index, content=content, content_hash=sha256(content.encode()).hexdigest(), page_start=getattr(chunk, "page_start"), page_end=getattr(chunk, "page_end"), section_title=getattr(chunk, "section_title"), block_type=str(getattr(chunk, "block_type")), extraction_method=str(getattr(chunk, "extraction_method")), status="staging"))
+            records.append(DocumentChunk(id=new_id("chunk"), chunk_uid=uid, document_id=document_id, version_id=version_id, chunk_index=index, content=content, retrieval_context=getattr(chunk, "retrieval_context", None), content_hash=sha256(content.encode()).hexdigest(), page_start=getattr(chunk, "page_start"), page_end=getattr(chunk, "page_end"), section_title=getattr(chunk, "section_title"), block_type=str(getattr(chunk, "block_type")), extraction_method=str(getattr(chunk, "extraction_method")), status="staging"))
         self.session.add_all(records)
 
     def pages_for_version(self, version_id: str) -> list[DocumentPage]:

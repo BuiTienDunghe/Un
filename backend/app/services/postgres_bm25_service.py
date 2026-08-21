@@ -8,6 +8,7 @@ from rank_bm25 import BM25Okapi
 from sqlalchemy.orm import sessionmaker
 
 from app.postgres.repositories import PostgresDocumentRepository
+from app.utils.chunking import combined_retrieval_text
 from app.utils.vi_tokenizer import tokenize_vietnamese
 
 
@@ -21,6 +22,8 @@ class _IndexedChunk:
     filename: str
     source_available: bool
     content: str
+    # P4-2: indexed in front of content; never returned as citation text.
+    retrieval_context: str | None
     page_start: int | None
     page_end: int | None
     locations: list[dict[str, object]]
@@ -55,6 +58,7 @@ class PostgresBm25Service:
                     document_id=document.id, version_id=version.id, version_number=version.version_number,
                     chunk_id=chunk.id, chunk_index=chunk.chunk_index, filename=document.original_filename,
                     source_available=document.source_available, content=chunk.content,
+                    retrieval_context=chunk.retrieval_context,
                     page_start=chunk.page_start, page_end=chunk.page_end,
                     locations=list(chunk.locations or []), heading_path=list(chunk.heading_path or []),
                     section_title=chunk.section_title, block_type=chunk.block_type,
@@ -83,7 +87,7 @@ class PostgresBm25Service:
                 return
             chunks = self._snapshot()
             self._chunks = chunks
-            self._index = BM25Okapi([tokenize_vietnamese(chunk.content) for chunk in chunks]) if chunks else None
+            self._index = BM25Okapi([tokenize_vietnamese(combined_retrieval_text(chunk.retrieval_context, chunk.content)) for chunk in chunks]) if chunks else None
             self._fingerprint = fingerprint
             self.rebuild_count += 1
 
@@ -130,7 +134,7 @@ class PostgresBm25Service:
                 for chunk in self._chunks:
                     if requested is not None and chunk.document_id not in requested:
                         continue
-                    overlap = sum(1 for token in tokenize_vietnamese(chunk.content) if token in wanted)
+                    overlap = sum(1 for token in tokenize_vietnamese(combined_retrieval_text(chunk.retrieval_context, chunk.content)) if token in wanted)
                     if overlap:
                         fallback.append((chunk, float(overlap)))
                 fallback.sort(key=lambda item: (-item[1], item[0].document_id, item[0].chunk_index))

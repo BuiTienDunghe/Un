@@ -21,7 +21,7 @@ from app.services.model_router import ModelRouter
 from app.services.ocr_service import OCRService
 from app.stores.embedding_cache_store import EmbeddingCacheIdentity, EmbeddingCacheStore, fingerprint
 from app.stores.qdrant_store import QdrantStore
-from app.utils.chunking import chunk_pages
+from app.utils.chunking import chunk_pages, combined_retrieval_text
 from app.utils.file_utils import safe_upload_suffix
 
 
@@ -46,12 +46,15 @@ class PostgresDocumentService:
 
     allowed_file_types = {".pdf": {"application/pdf"}, ".docx": {"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}, ".txt": {"text/plain"}, ".md": {"text/markdown", "text/plain"}}
 
-    def __init__(self, session_factory: sessionmaker, embedding_cache: EmbeddingCacheStore, qdrant: QdrantStore, router: ModelRouter, logging_service: LoggingService, documents_path: Path, chunk_tokens: int, chunk_overlap_tokens: int, ocr_service: OCRService, job_queue: object | None = None, job_max_attempts: int = 3) -> None:
+    def __init__(self, session_factory: sessionmaker, embedding_cache: EmbeddingCacheStore, qdrant: QdrantStore, router: ModelRouter, logging_service: LoggingService, documents_path: Path, chunk_tokens: int, chunk_overlap_tokens: int, ocr_service: OCRService, job_queue: object | None = None, job_max_attempts: int = 3, chunk_context: object | None = None) -> None:
         self.sessions, self.embedding_cache, self.qdrant, self.router = session_factory, embedding_cache, qdrant, router
         self.logging_service, self.documents_path = logging_service, documents_path
         self.chunk_tokens, self.chunk_overlap_tokens, self.parser = chunk_tokens, chunk_overlap_tokens, SmartParser(ocr_service)
         self._lock = threading.Lock()
         self.job_queue, self.job_max_attempts = job_queue, job_max_attempts
+        # P4-2: optional contextual-retrieval annotator; None or disabled means
+        # both index paths behave exactly as before.
+        self.chunk_context = chunk_context
 
     @staticmethod
     def _document_payload(document: Document, run: IngestionRun | None = None, version: DocumentVersion | None = None) -> dict[str, object]:
@@ -424,6 +427,7 @@ class PostgresDocumentService:
                 chunks = chunk_pages(pages, self.chunk_tokens, self.chunk_overlap_tokens)
                 if not chunks:
                     raise ValueError("Document contains no readable text")
+                chunks = self._contextualize(chunks, pages, document_id, run_id)
                 with self.sessions.begin() as session:
                     repo = PostgresDocumentRepository(session)
                     repo.replace_chunks(document_id, version_id, chunks)
@@ -431,7 +435,7 @@ class PostgresDocumentService:
                 vectors = []
                 model = str(self.router.models["embedding"]["name"])
                 for index, chunk in enumerate(chunks, 1):
-                    vector = self._embed_with_cache(chunk.content, model)
+                    vector = self._embed_with_cache(combined_retrieval_text(chunk.retrieval_context, chunk.content), model)
                     vectors.append(vector)
                     self._set_stage(run_id, "embedding", embedded_chunks=index, progress_percent=45 + int(35 * index / len(chunks)))
                 with self.sessions() as session:
@@ -488,6 +492,8 @@ class PostgresDocumentService:
         chunks = chunk_pages(pages, self.chunk_tokens, self.chunk_overlap_tokens)
         if not chunks:
             raise ValueError("Document contains no readable text")
+        chunks = self._contextualize(chunks, pages, document_id, run_id, long_call)
+        if checkpoint and not checkpoint(): raise PermissionError("worker lost job ownership after contextualizing")
         with self.sessions.begin() as session:
             repo = PostgresDocumentRepository(session)
             repo.replace_chunks(document_id, version_id, chunks)
@@ -496,7 +502,7 @@ class PostgresDocumentService:
         vectors, model = [], str(self.router.models["embedding"]["name"])
         for index, chunk in enumerate(chunks, 1):
             if checkpoint and not checkpoint(): raise PermissionError("worker lost job ownership before embedding")
-            vector = self._embed_with_cache(chunk.content, model, long_call)
+            vector = self._embed_with_cache(combined_retrieval_text(chunk.retrieval_context, chunk.content), model, long_call)
             vectors.append(vector)
             self._set_stage(run_id, "embedding", embedded_chunks=index, progress_percent=45 + int(35 * index / len(chunks)))
             if checkpoint and not checkpoint(): raise PermissionError("worker lost job ownership after embedding")
@@ -514,6 +520,22 @@ class PostgresDocumentService:
     def _set_stage(self, run_id: str, stage: str, **values: object) -> None:
         with self.sessions.begin() as session:
             PostgresDocumentRepository(session).set_stage(run_id, stage, **values)
+
+    def _contextualize(self, chunks: list, pages: list[tuple[int | None, str, str]], document_id: str, run_id: str, long_call: Callable[[], object] | None = None) -> list:
+        """P4-2: annotate chunks between chunking and persistence.
+
+        Deliberately runs with no session open — the N general-model calls must
+        never sit inside a transaction (plan §1). Progress reuses the chunking
+        band (35→44%) so no new stage value reaches the UI.
+        """
+        service = self.chunk_context
+        if service is None or not getattr(service, "enabled", False):
+            return chunks
+        return service.annotate(
+            chunks, pages, document_id=document_id,
+            on_progress=lambda done, total: self._set_stage(run_id, "chunking", progress_percent=35 + int(9 * done / total)),
+            long_call=long_call,
+        )
 
     def _cache_identity(self, content: str, dimensions: int | None) -> EmbeddingCacheIdentity | None:
         """Build identity only from explicitly configured model semantics.

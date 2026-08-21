@@ -63,6 +63,7 @@ echo heavy > .machine-role
 | --- | --- | --- | --- |
 | Nhẹ (daily) | `hehehhe` | GTX 1650 Ti, Ryzen 5 4600H, 15GB | `light` |
 | Mạnh | *(điền khi đặt)* | *(GPU mạnh hơn)* | `heavy` |
+| Cloud (Claude Code web) | `vm` (container phù du) | 4 vCPU, 15GB, **không GPU**, proxy chặn tải model (registry.ollama.ai/huggingface.co 403) → không chạy được model sinh lẫn embedding thật | `light` — chỉ lane nhẹ; số đo model thật lấy qua job CI `retrieval-eval` |
 
 ## Một phiên Claude Code tự route thế nào
 

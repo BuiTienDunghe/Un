@@ -183,7 +183,7 @@ Khảo sát 15/08/2026 trên các dự án mã nguồn mở uy tín nhất phân
 | ID | Hạng mục | Giả thuyết cần kiểm chứng bằng eval | Ước lượng |
 | --- | --- | --- | --- |
 | P4-1 | **Mở rộng bộ eval**: 3–5 tài liệu thật + 30 câu đa tài liệu + eval trong CI (gate: không tụt quá 2 điểm) | Baseline mới thay bộ 1-tài-liệu đã bão hòa | 2 buổi |
-| P4-2 | **Contextual retrieval** (Anthropic): sinh 50–100 token ngữ cảnh/chunk lúc index bằng model local | MRR đa tài liệu tăng ≥ 5 điểm (kỳ vọng theo paper: −49% failure) | 3 buổi |
+| P4-2 | **Contextual retrieval** (Anthropic): sinh 50–100 token ngữ cảnh/chunk lúc index bằng model local. **Lane nhẹ ✅ 21/08**: cột `retrieval_context` (migration `20260821_25`), sinh context ngoài transaction chung cho cả hai đường index, embedding + BM25 cùng index context+content qua một helper, citation giữ nguyên văn, cờ `rag.contextual_retrieval.enabled` mặc định TẮT, 8 test; thiết kế + runbook đo: `docs/p4_progress.md`. **Còn lane nặng**: bật cờ → re-index corpus → đo D1 → quyết theo ngưỡng (MRR +≥0.03 hoặc cross +≥0.05, single không tụt >0.02) | MRR đa tài liệu tăng ≥ 5 điểm (kỳ vọng theo paper: −49% failure) | 3 buổi |
 | P4-3 | **Bật reranker** (đã có sẵn `RerankerService`, warmup lúc startup) | Kết hợp P4-2 hướng tới mức −67% failure của paper | 1–2 buổi |
 | P4-4 | **Postgres FTS thay BM25 in-process** (tsvector + GIN + unaccent) | Không tụt chất lượng; RAM không tăng theo corpus; nhất quán đa process | 3–4 buổi |
 | P4-5 | **Chunk visualization** (học RAGFlow): xem chunk của tài liệu trong UI, đánh dấu chunk kém | Người dùng tự chẩn đoán được "tại sao trả lời sai" | 3 buổi |
@@ -296,7 +296,7 @@ Discord ─┘    │                            └─ FTS (tsvector, P4-4)
    - `.env` (DISCORD_TOKEN, LOCAL_AI_API_KEY, JWT secret, mật khẩu DB, các cờ memory/agent);
    - toàn bộ thư mục `data/` — trong đó `data/qdrant/` (vector index, bind-mount nên đi theo thư mục), `data/documents/` (file gốc đã upload), `data/backups/postgres/` (dump).
 3. **Máy mới**: cài Docker Desktop + Ollama → clone repo → đặt `.env` và `data/` vào chỗ cũ → chạy `run-local-ai-core.bat` (launcher tự pull model theo `models.yaml`, dựng container).
-4. **Restore Postgres** theo `docs/backup_restore.md` (pg_restore dump mới nhất vào container — dữ liệu Postgres nằm trong named volume nên KHÔNG tự đi theo thư mục), rồi `alembic upgrade head` từ repo root (head hiện tại: `20260820_24`).
+4. **Restore Postgres** theo `docs/backup_restore.md` (pg_restore dump mới nhất vào container — dữ liệu Postgres nằm trong named volume nên KHÔNG tự đi theo thư mục), rồi `alembic upgrade head` từ repo root (head hiện tại: `20260821_25`).
 5. **Xác minh bàn giao**: suite backend + bot xanh; mở dashboard thấy đủ lịch sử/timeline; hỏi 1 câu RAG trên tài liệu cũ có nguồn (Qdrant đi theo `data/` nên không cần re-index; nếu lệch thì reindex từng tài liệu từ UI); nếu dùng bot: bật từ dashboard như P3-2.
 6. **Chốt cấu hình model TRƯỚC khi đo đạc**: máy mạnh hơn → cân nhắc nâng model general trong `models.yaml` (ghi chú P4 §4). Mọi baseline D1/P4-1 chỉ đo **một lần trên cấu hình cuối** — đổi model sau khi đo là phải đo lại.
 

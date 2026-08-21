@@ -158,6 +158,10 @@ class DocumentChunk(Base):
     version_id: Mapped[str] = mapped_column(ForeignKey("document_versions.id", ondelete="CASCADE"), index=True)
     chunk_index: Mapped[int] = mapped_column(Integer)
     content: Mapped[str] = mapped_column(Text)
+    # P4-2 (20260821_25): generated situating context that embedding and BM25
+    # index in front of the content. NULL = index the bare content; citations
+    # always show `content`, never this text.
+    retrieval_context: Mapped[str | None] = mapped_column(Text)
     # Written on insert, never used as a query predicate anywhere in backend/.
     content_hash: Mapped[str] = mapped_column(String(64))
     page_start: Mapped[int | None] = mapped_column(Integer)

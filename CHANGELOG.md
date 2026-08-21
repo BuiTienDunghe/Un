@@ -12,6 +12,15 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 ## [Unreleased]
 
 ### Added
+- **P4-2 contextual retrieval — phần code, cờ TẮT mặc định** (lane nhẹ): cột
+  `document_chunks.retrieval_context` (migration `20260821_25`), service sinh
+  50–100 token ngữ cảnh/chunk bằng model general **ngoài mọi transaction**,
+  dùng chung cho cả hai đường index; embedding và BM25 cùng index
+  context+content qua một helper duy nhất, citation vẫn là nguyên văn `content`;
+  lỗi model ở chunk nào thì chunk đó index bản trần, ingestion không fail; chi
+  phí ghi log (giây, số lời gọi). Bật qua `rag.contextual_retrieval.enabled` —
+  chỉ thành mặc định sau khi thí nghiệm D1 trên máy nặng đạt ngưỡng
+  (`docs/p4_progress.md`).
 - **Bộ eval retrieval đa tài liệu** (D1, gỡ G7): corpus 5 tài liệu thật snapshot
   trong `data/evaluation/fixtures/multidoc/`, bộ câu hỏi tiếng Việt
   `rag_multidoc_eval.jsonl` (nhóm single + cross-doc) chấm trên **toàn corpus

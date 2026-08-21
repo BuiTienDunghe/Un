@@ -17,6 +17,7 @@ from app.security.auth import require_admin
 from app.services.auth_service import AuthService
 from app.services.postgres_bm25_service import PostgresBm25Service
 from app.services.chat_service import ChatService
+from app.services.chunk_context_service import ChunkContextService
 from app.services.logging_service import LoggingService
 from app.services.model_router import ModelRouter
 from app.services.postgres_document_service import PostgresDocumentService
@@ -115,10 +116,18 @@ async def lifespan(app: FastAPI):
         if settings.ingestion_execution_backend == "rq"
         else None
     )
+    contextual_config = rag_config.get("contextual_retrieval", {})
+    chunk_context_service = ChunkContextService(
+        router,
+        enabled=bool(contextual_config.get("enabled", False)),
+        context_tokens=int(contextual_config.get("context_tokens", 80)),
+        document_char_cap=int(contextual_config.get("document_char_cap", 12_000)),
+    )
     app.state.document_service = PostgresDocumentService(
         postgres_sessions, PostgresEmbeddingCacheStore(postgres_sessions), qdrant_store, router, logging_service, settings.documents_path,
         int(rag_config.get("chunk_tokens", rag_config.get("chunk_size", 480))),
         int(rag_config.get("chunk_overlap_tokens", rag_config.get("chunk_overlap", 80))), ocr_service, queue, settings.job_max_attempts,
+        chunk_context=chunk_context_service,
     )
     app.state.operational_service = OperationalService(
         postgres_sessions,

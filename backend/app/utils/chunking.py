@@ -27,6 +27,18 @@ class DocumentChunk:
     section_title: str | None
     block_type: str
     extraction_method: str
+    # P4-2: generated situating context. Only the retrieval indexes (embedding
+    # input and BM25 tokens) see it; `content` stays the citation text.
+    retrieval_context: str | None = None
+
+
+def combined_retrieval_text(retrieval_context: str | None, content: str) -> str:
+    """The text a retrieval index represents a chunk by (context + content).
+
+    Contextual retrieval only works when BOTH the embedding and BM25 see the
+    same prefixed text, so every index-side call sites this one helper.
+    """
+    return f"{retrieval_context}\n\n{content}" if retrieval_context else content
 
 
 @dataclass(frozen=True)
