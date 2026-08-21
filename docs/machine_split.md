@@ -10,6 +10,30 @@ máy nhẹ không gánh nổi model sinh chạy nhiều lượt, nên việc nà
 dồn sang máy mạnh — còn lại làm ở đâu cũng được, ưu tiên máy nhẹ vì đó là nơi ngồi
 nhiều nhất.
 
+## Vận hành ở đâu — quyết định 21/08/2026
+
+**Máy nặng `PC-dungbt` = máy VẬN HÀNH (production)**: giữ dữ liệu thật (Postgres +
+`data/documents` + Qdrant), chạy launcher (API + worker + **backup worker**), chạy bot
+Discord, cấu hình ship đầy đủ (contextual + reranker). **Máy nhẹ `hehehhe` = máy VIẾT
+PLAN / CODE / TEST**: lane nhẹ, suite, tài liệu; dùng hệ thống như *client* qua LAN
+(trình duyệt / Discord trỏ vào máy nặng). Lý do: production phải hưởng P4-2/P4-3 (máy
+nhẹ không chạy nổi reranker: +990ms CPU) và backup phải sống cùng launcher trên một máy.
+
+Hệ quả bắt buộc:
+
+| Quy tắc | Vì sao |
+| --- | --- |
+| **Dữ liệu thật chỉ tồn tại ở máy nặng.** DB/Qdrant trên máy nhẹ là dữ liệu dev, bỏ được | Hai bản "thật" là hai nhánh rẽ — đã xảy ra 21/08 (máy nặng restore nhầm dump 18/08) |
+| Snapshot chỉ đi **một chiều: nặng → nhẹ** (dump → restore làm dữ liệu dev khi cần) | Không bao giờ copy ngược; thứ máy nhẹ tạo ra là code + tài liệu, đi qua git |
+| **Chỉ một máy chạy bot Discord** (máy nặng). Máy nhẹ không đặt `DISCORD_TOKEN` hoặc không bật profile `discord` | Hai instance cùng token = trả lời đúp |
+| Máy nặng khởi động **bằng launcher** (không chạy uvicorn tay) + Scheduled Task `backup_worker --once` hằng ngày làm lưới thứ hai | Backup worker chỉ sống trong phiên launcher — đó là cách dump 18/08 thành điểm phục hồi duy nhất |
+| Thí nghiệm trên máy nặng **không được xóa/sửa tài liệu thật**; corpus eval (5 fixture) được phép nằm chung DB (đã vậy từ D1); thí nghiệm phá hoại (đổi schema, xóa index) chạy trên DB drill copy từ dump | Production và phòng thí nghiệm chung một máy thì ranh giới phải nằm ở quy tắc |
+| Máy nhẹ giữ `.env` với `RAG_*_ENABLED=false` và DB test riêng (`local_ai_core_test`) cho suite | Đúng lane nhẹ |
+
+Bàn giao 21/08: dump cuối của dữ liệu thật từ máy nhẹ `local-ai-20260821-131518.dump`
+(3 tài liệu, 1 hội thoại, 91 chunk, head `20260821_25`; đã drill restore thành công) +
+`data/documents/` → máy nặng restore theo mục "Khôi phục thật" trong `docs/backup_restore.md`.
+
 ## Câu hỏi thử duy nhất
 
 > **Bước này có phải gọi model SINH (generation) hoặc chạy một vòng re-index / thí

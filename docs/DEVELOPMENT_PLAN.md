@@ -134,6 +134,7 @@ Khảo sát 15/08/2026 trên các dự án mã nguồn mở uy tín nhất phân
 | T11 | **Test và runtime dùng chung Qdrant**: collection `memories` đã cô lập bằng `QDRANT_MEMORIES_COLLECTION` (19/08, sau khi test 3-dim làm hỏng đường ghi memory thật); collection `documents` hiện chỉ an toàn nhờ test dùng fake store — chưa có guard tường minh | Cô lập tên collection `documents` cho test giống memories, hoặc guard chiều vector khi tạo | 1 buổi |
 | T12 | **Đánh bóng agent P2** (gom, không chặn dùng): UI hiện lại trace khi mở hội thoại cũ (messages cần trả kèm id); footer tool cho tin Discord; hủy vòng lặp khi client ngắt; map lỗi tools-với-provider-cloud thành 502 rõ nghĩa; tránh nạp memory hai lần khi bật cả «Ghi nhớ» lẫn «Công cụ»; **guard xuyên ngữ** — fact tiếng Anh vs tin Việt bị từ chối oan (an toàn nhưng mất coverage; hướng: prompt extractor v6 viết fact bằng ngôn ngữ tin gốc + re-benchmark) | Dọn khi đụng vào từng vùng | 2–3 buổi |
 | T13 | **Đánh bóng auth P3-1** (gom, không chặn dùng): đổi mật khẩu + admin reset qua UI; trang quản lý user trên dashboard (hiện chỉ API); token localStorage → cân nhắc cookie httpOnly nếu mở ra ngoài LAN; member-role staleness 15' ở surface thường; ẩn/hiện điều khiển theo role còn thiếu chỗ nào thì server vẫn chặn | Dọn khi đụng vào từng vùng | 2–3 buổi |
+| T14 | **Backup chỉ sống trong phiên launcher**: `backup_worker --loop` do `run-local-ai-core.bat` khởi động; chạy API kiểu khác hoặc đóng cửa sổ là mất backup (phát hiện 21/08: heartbeat chết từ 18/08 trên máy nhẹ, máy nặng không có điểm phục hồi thật) | Lưới thứ hai độc lập launcher: Scheduled Task `backup_worker --once` hằng ngày trên máy vận hành (người dùng tự đặt — thay đổi hệ thống); cân nhắc cảnh báo đỏ trên dashboard khi `/health.backup != ok` | 1 buổi |
 | T10 | **Script migration SQLite hết nhiệm vụ 07/2027**: `migrate_sqlite_to_postgres.py`, `migrate_sqlite_documents_to_postgres.py`, `migrate_document_storage.py`, `audit_sqlite_readonly.py` + 2 test đi kèm bị ghim bởi cam kết giữ SQLite archive read-only 1 năm | Gỡ sau review xóa archive (sớm nhất 19/07/2027) | 1 buổi (2027) |
 
 ### P1 — Một agent, hai kênh *(2–3 tuần · giá trị người dùng lớn nhất)* — **ĐÃ ĐÓNG 19/08** (nhật ký: `docs/p1_progress.md`)
@@ -301,6 +302,8 @@ Discord ─┘    │                            └─ FTS (tsvector, P4-4)
 6. **Chốt cấu hình model TRƯỚC khi đo đạc**: máy mạnh hơn → cân nhắc nâng model general trong `models.yaml` (ghi chú P4 §4). Mọi baseline D1/P4-1 chỉ đo **một lần trên cấu hình cuối** — đổi model sau khi đo là phải đo lại.
 
 ### 9b. Thứ tự thi công (hai máy — xem `docs/machine_split.md`)
+
+> **Quyết định 21/08 (tối)**: máy nặng `PC-dungbt` = **vận hành** (dữ liệu thật, launcher, bot, backup, cấu hình ship); máy nhẹ = **viết plan/code/test** + client qua LAN. Dữ liệu thật chỉ ở máy nặng; snapshot một chiều nặng → nhẹ. Chi tiết và quy tắc: `docs/machine_split.md` mục "Vận hành ở đâu".
 
 > Từ 21/08 dự án chạy trên **hai máy**: máy nhẹ (daily, GPU yếu) và máy mạnh (dùng ít).
 > Phân lane bằng câu hỏi thử duy nhất — "bước này có cần model SINH hoặc re-index nặng
