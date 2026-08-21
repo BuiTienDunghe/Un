@@ -257,7 +257,7 @@ Ròng: **7 câu được, 2 câu mất** — và ngay cả 2 câu mất vẫn gi
 | latency p50 `/rag/search` | **622ms (+35)** | 660ms (+73) |
 | latency riêng rerank p50 | **65ms** | 103ms |
 
-Chọn 15 vì nó **thắng ở mọi chỉ số chất lượng và rẻ hơn** — không có đánh đổi
+Chọn 15 vì nó **thắng ở mọi chỉ số xếp hạng (MRR/doc_hit; recall@5 hòa) và rẻ hơn** — không có đánh đổi
 nào để cân nhắc. Đáng chú ý là *vì sao* 30 lại tệ hơn: recall giữ nguyên
 (0.9756) nhưng thứ hạng xấu đi, tức 15 ứng viên thêm vào không mang theo đáp án
 nào mới, chỉ mang thêm mồi nhiễu đủ giống để cross-encoder xếp lên trên đáp án
@@ -287,3 +287,20 @@ CUDA — máy muốn bật reranker phải cài torch từ index cu128 trở lê
 sẽ trả giá ~1 giây mỗi câu hỏi; (2) 990ms so 35ms là 28×, nên đây không phải
 thứ tinh chỉnh được bằng cách giảm `candidate_limit` — máy không có GPU nên
 ghim `RAG_RERANKER_ENABLED=false`.
+
+### Hậu kiểm 21/08 (máy nhẹ, hội đồng kiểm chứng đối kháng 12 agent)
+
+Mọi tuyên bố kỹ thuật của báo cáo đứng vững khi đối chiếu code (đường rerank
+chung có test khóa, resolver hai chiều, fail-fast thiếu extra — tái hiện trên máy
+nhẹ, CI ghim cả hai cờ và exit 1 khi thiếu khóa, số liệu khớp từng con số). Ba
+điều phải sửa, đã sửa cùng ngày:
+
+| Phát hiện | Mức | Sửa |
+| --- | --- | --- |
+| **Đường "một cú click" vỡ với máy cài mới**: launcher chỉ cài `requirements.txt` (không có extra), copy `.env.example` (dòng pin bị comment) → yaml bật reranker → warmup từ chối → uvicorn exit 3, nhưng launcher đã mở trình duyệt trước và không kiểm tra errorlevel nên cửa sổ đóng im lặng. Vi phạm bất biến §1 | Cao | `run-local-ai-core.bat`: nếu `.env` chưa có `RAG_RERANKER_ENABLED=` và `import sentence_transformers` thất bại → tự ghi `RAG_RERANKER_ENABLED=false` vào `.env` (quyết định theo máy, nhìn thấy được, idempotent); uvicorn thoát lỗi → báo rõ + `pause` thay vì đóng cửa sổ |
+| `RerankerService(False, "", 1)` mặc định (từ 07/2026) cắt kết quả còn 1 dòng vì slice `candidate_limit` chạy TRƯỚC kiểm tra `enabled` — chưa caller production nào dính, nhưng là bẫy chờ sẵn | Thấp | Kiểm tra `enabled` trước khi slice; test hồi quy |
+| Câu chữ: "30 kém 15 ở *mọi* chỉ số chất lượng" (recall@5 hòa 0.9756); plan §4 hàng P4-2/P4-3 và header P4 vẫn ghi "gác"; comment ci.yml trùng/cũ; `requirements.txt` ghi reranker "đang tắt"; mô tả bảng override chỉ nói "model sinh lúc index" | Thấp | Sửa đồng loạt; số liệu gốc không đổi |
+
+Bài học ghi lại: **đo xong trên máy mạnh chưa phải là xong** — thay đổi mặc định
+(`models.yaml`) phải được thử qua con đường người dùng mới đi (launcher + `.env.example`),
+và hội đồng kiểm chứng độc lập bắt được đúng lớp lỗi mà người làm tính năng không nhìn thấy.

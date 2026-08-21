@@ -11,6 +11,14 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+### Fixed
+- **Launcher không còn vỡ trên máy cài mới sau P4-3**: `run-local-ai-core.bat` tự ghim
+  `RAG_RERANKER_ENABLED=false` vào `.env` khi máy thiếu extra `[rerank]` (một lần, idempotent,
+  ghi rõ lý do), và báo lỗi + dừng màn hình khi uvicorn thoát lỗi thay vì đóng cửa sổ sau
+  khi đã mở trình duyệt. Phát hiện bởi hội đồng kiểm chứng đối kháng (`docs/p4_progress.md`).
+- `RerankerService` tắt không còn cắt kết quả theo `candidate_limit` (slice chạy trước kiểm tra
+  `enabled` từ 07/2026; mặc định `RerankerService(False, "", 1)` cắt còn 1 dòng). Test hồi quy.
+
 ### Changed
 - **P4-3 reranker BẬT mặc định** (`cross-encoder/mmarco-mMiniLMv2-L12-H384-v1`,
   `candidate_limit` 15) sau khi thí nghiệm D1 trên máy nặng đạt cả ba điều kiện
@@ -20,8 +28,8 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   văn — headroom P4-4). Chi phí là **độ trễ chứ không phải lời gọi model sinh**:
   `/rag/search` p50 587 → 622ms (**+35ms**, trần 300ms), riêng bước rerank p50
   65ms; số lượt gọi model sinh của một câu hỏi **không đổi**, bất biến ngân sách
-  inference còn nguyên. Đo `candidate_limit` 30 thì kém hơn 15 ở **mọi** chỉ số
-  chất lượng lẫn tốc độ, nên giữ 15. Chi tiết: `docs/p4_progress.md`.
+  inference còn nguyên. Đo `candidate_limit` 30 thì kém hơn 15 ở mọi chỉ số
+  xếp hạng (MRR/doc_hit; recall@5 hòa) lẫn tốc độ, nên giữ 15. Chi tiết: `docs/p4_progress.md`.
 - **Baseline D1 ghi lại vì P4-3** (`rag_multidoc_baseline.json`, cấu hình
   contextual ON + reranker ON). Gate CI vẫn dùng `rag_multidoc_baseline_bare.json`;
   bước ghim cờ trong job `retrieval-eval` nay tắt **cả hai** cờ và **fail nếu

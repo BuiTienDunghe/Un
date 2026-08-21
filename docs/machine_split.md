@@ -67,9 +67,11 @@ echo heavy > .machine-role
 
 ## Cấu hình khác nhau theo máy — override qua `.env`
 
-`models.yaml` là file dùng chung (versioned), nên tính năng nào **tốn model sinh lúc
-index** mà máy nhẹ không kham nổi thì đè theo máy bằng `.env` (không commit), không
-sửa `models.yaml`:
+`models.yaml` là file dùng chung (versioned), nên tính năng nào **tốn tài nguyên theo
+máy** (model sinh lúc index, cross-encoder lúc hỏi, gói GPU tùy chọn) mà máy nhẹ không
+kham nổi thì đè theo máy bằng `.env` (không commit), không sửa `models.yaml`. Launcher
+`run-local-ai-core.bat` tự ghim `RAG_RERANKER_ENABLED=false` khi máy thiếu extra
+`[rerank]` — quyết định theo máy được ghi rõ trong `.env` thay vì API từ chối khởi động:
 
 | Biến `.env` | Máy nhẹ | Máy mạnh | Ý nghĩa |
 | --- | --- | --- | --- |

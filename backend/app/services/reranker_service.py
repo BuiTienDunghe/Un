@@ -86,8 +86,12 @@ class RerankerService:
         )
 
     def rerank(self, question: str, candidates: list[dict[str, object]], top_k: int) -> list[dict[str, object]]:
+        if not self.enabled:
+            # Disabled means pass-through: candidate_limit is a rerank
+            # budget and must not truncate a plain retrieval result.
+            return candidates[:top_k]
         candidates = candidates[:self.candidate_limit]
-        if not self.enabled or len(candidates) <= 1:
+        if len(candidates) <= 1:
             return candidates[:top_k]
         started = perf_counter()
         try:

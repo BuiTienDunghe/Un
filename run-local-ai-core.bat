@@ -49,6 +49,23 @@ if not exist ".env" (
     copy /y ".env.example" ".env" >nul
 )
 
+REM P4-3: models.yaml ships the cross-encoder reranker ON, but the [rerank]
+REM extra (sentence-transformers + torch) is deliberately not in
+REM requirements.txt. A machine without it must decide per machine
+REM (docs/machine_split.md); decide it here, once, visibly in .env, instead
+REM of letting the API refuse to start behind an already-opened browser tab.
+findstr /B /C:"RAG_RERANKER_ENABLED=" ".env" >nul 2>&1
+if errorlevel 1 (
+    .venv\Scripts\python.exe -c "import sentence_transformers" >nul 2>&1
+    if errorlevel 1 (
+        echo [SETUP] Reranker extra not installed on this machine: pinning RAG_RERANKER_ENABLED=false in .env
+        echo [SETUP] To enable it later: pip install -e .[rerank]  ^(GPU torch recommended^), then remove that line.
+        >>".env" echo.
+        >>".env" echo # Added by run-local-ai-core.bat - [rerank] extra not installed on this machine, see docs/machine_split.md
+        >>".env" echo RAG_RERANKER_ENABLED=false
+    )
+)
+
 echo [START] Starting PostgreSQL, Qdrant and Redis...
 docker compose --profile postgres up -d
 if errorlevel 1 (
@@ -151,6 +168,12 @@ start "" "http://127.0.0.1:8000/ui/"
 echo.
 cd backend
 ..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+if errorlevel 1 (
+    cd ..
+    echo.
+    echo [ERROR] The API stopped with an error ^(see the traceback above^). The browser tab cannot connect until this is fixed.
+    goto :error
+)
 goto :done
 
 :ensure_model

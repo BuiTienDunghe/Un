@@ -109,9 +109,10 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
 
-      # T6: sentence-transformers/PyTorch left the mandatory dependencies (it
-      # only serves the disabled reranker, installable via `.[rerank]`), so no
-      # CPU-torch preinstall trick is needed anymore.
+      # T6: sentence-transformers/PyTorch left the mandatory dependencies (they
+      # only serve the reranker, installable via `.[rerank]`; since P4-3 it is ON
+      # by default but every test/CI path pins it off), so no CPU-torch
+      # preinstall trick is needed anymore.
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -162,10 +163,11 @@ jobs:
     # needs the 0.6b embedding model and no generation model. It fails on a
     # drop of more than the harness tolerance below its baseline.
     #
-    # Since P4-2 the shipped default is contextual retrieval ON, which needs
-    # the general model at INDEX time — 6.6GB that this job cannot afford, and
-    # 27 CPU generations that would blow the 30-minute timeout. So the job
-    # deliberately turns the flag OFF and gates the BARE retrieval path against
+    # The shipped defaults are contextual retrieval ON (P4-2: general model at
+    # INDEX time — 6.6GB this job cannot afford, 27 CPU generations past the
+    # 30-minute timeout) and the cross-encoder reranker ON (P4-3: needs the
+    # [rerank] extra this job does not install). So the job deliberately turns
+    # BOTH flags OFF and gates the BARE retrieval path against
     # rag_multidoc_baseline_bare.json. That still protects what CI can protect:
     # embedding + BM25 + RRF. The shipped configuration's own baseline lives in
     # rag_multidoc_baseline.json and is measured on the heavy machine
@@ -259,10 +261,6 @@ jobs:
           done
           ollama pull qwen3-embedding:0.6b
 
-      # Measured on purpose, not by accident: without this the flag would still
-      # be on and every chunk's context call would fail against an Ollama that
-      # has no general model, degrading to the same bare index but through 27
-      # error paths. Turning it off states the intent in the diff.
       # Measured on purpose, not by accident. Without this the shipped defaults
       # would apply: contextual retrieval would call a generation model this
       # runner does not have (27 failed calls degrading to the same bare index),

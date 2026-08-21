@@ -117,3 +117,12 @@ def test_from_config_tolerates_missing_block():
     assert service.enabled is False
     assert service.candidate_limit == 15
     assert service.model_name == "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
+
+
+def test_disabled_reranker_never_truncates_to_its_candidate_limit():
+    # Regression (pre-existing since 07/2026, found in the P4-3 review): the
+    # candidate_limit slice ran BEFORE the enabled check, so the disabled
+    # default RerankerService(False, "", 1) capped any caller at one result.
+    service = RerankerService(False, "", 1)
+    candidates = [{"content": f"chunk {i}", "chunk_id": str(i)} for i in range(5)]
+    assert service.rerank("q", candidates, top_k=3) == candidates[:3]
