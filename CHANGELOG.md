@@ -11,6 +11,22 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+### Changed
+- **P4-2 contextual retrieval BẬT mặc định** sau khi thí nghiệm D1 trên máy nặng
+  đạt ngưỡng đã chốt trước khi đo: recall@5 0.8659 → **0.9146**, MRR 0.7341 →
+  **0.7967**, doc_hit 0.7683 → **0.8415**; riêng nhóm cross-doc recall 0.7500 →
+  **1.0000** và MRR 0.5903 → **0.7986**. 4 câu miss→hit, **0 câu hit→miss**.
+  Chi phí nằm trọn ở lúc index — 1 lời gọi model general/chunk (corpus 5 tài
+  liệu: 27 chunk, 144.0s, 0 lỗi), đường hỏi-đáp **không thêm lời gọi model nào**
+  nên bất biến ngân sách inference còn nguyên. Số liệu đầy đủ, bảng chi phí và
+  danh sách câu đổi hạng: `docs/p4_progress.md`.
+- **Baseline D1 ghi lại vì P4-2** và tách làm hai mốc: `rag_multidoc_baseline.json`
+  là cấu hình đang ship (contextual BẬT, đo trên máy nặng), còn
+  `rag_multidoc_baseline_bare.json` là bản trần cho gate CI. Job `retrieval-eval`
+  nay tắt cờ tường minh rồi gate bản trần — runner không tải nổi model sinh 6.6GB
+  để dựng chỉ mục contextual, nên so cùng-điều-kiện là cách duy nhất giữ gate có
+  nghĩa. Tolerance vẫn 0.02, dataset không đổi. Chi tiết: `docs/d1_retrieval_eval.md`.
+
 ### Added
 - **P4-2 contextual retrieval — phần code, cờ TẮT mặc định** (lane nhẹ): cột
   `document_chunks.retrieval_context` (migration `20260821_25`), service sinh

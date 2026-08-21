@@ -310,7 +310,9 @@ Discord ─┘    │                            └─ FTS (tsvector, P4-4)
 
 1. **D1 — bộ eval đa tài liệu** ✅ **ĐÓNG 21/08**: hạ tầng + dataset 82 câu + baseline retrieval-only (recall@5 0.866 / MRR 0.734 / doc_hit 0.768, model `qwen3-embedding:0.6b`, đo trong chính CI) + gate chặn thoái lui đang hiệu lực. Nhật ký: `docs/d1_retrieval_eval.md`.
 2. **D5 red-team + D3a self-check** — hai mục rẻ, ăn ngay vào chất lượng và an toàn. Phần *xây* (guard bám-nguồn, corpus bẫy, harness, unit test) là lane NHẸ → làm trên máy nhẹ ngay; phần *đo* (faithfulness qua model sinh, chạy tấn công thật) là lane NẶNG → máy mạnh.
-3. **Mở lại P4** theo đúng thứ tự đã phân tích: P4-2 contextual retrieval → P4-3 reranker (`pip install -e .[rerank]`, T6) → P4-4 Postgres FTS + pyvi → P4-5 chunk visualization — mỗi mục một thí nghiệm chấm bằng D1.
+3. **Mở lại P4** theo đúng thứ tự đã phân tích — mỗi mục một thí nghiệm chấm bằng D1:
+   - **P4-2 contextual retrieval** ✅ **ĐÓNG 21/08** (đo trên máy nặng `PC-dungbt`): ĐẠT ngưỡng, cờ `rag.contextual_retrieval.enabled` BẬT mặc định. recall@5 0.866 → **0.915**, MRR 0.734 → **0.797**, doc_hit 0.768 → **0.842**; nhóm cross recall 0.750 → **1.000**, MRR 0.590 → **0.799**; 4 câu miss→hit, 0 câu hit→miss. Chi phí: 1 lời gọi model/chunk lúc index (27 chunk / 144s cho corpus 5 tài liệu), đường hỏi-đáp **không thêm lời gọi nào** — bất biến ngân sách inference còn nguyên. Baseline D1 đã ghi lại; CI gate chuyển sang đo bản trần theo `rag_multidoc_baseline_bare.json` vì runner không có model sinh. Nhật ký: `docs/p4_progress.md`.
+   - **P4-3 reranker** (`pip install -e .[rerank]`, T6) → **P4-4** Postgres FTS + pyvi → **P4-5** chunk visualization. Headroom P4-3 nhắm: 7 câu còn miss + 5 câu bị context đẩy từ hạng 1 xuống hạng 2 (liệt kê trong `docs/p4_progress.md`).
 4. **D2 distillation** (cloud free hoặc máy mới nếu GPU đủ) → chỉ sau khi D2 đạt mới xét mở **D3c** multi-step planning (vẫn dạng có-điều-kiện + cap theo bất biến ngân sách inference).
 5. **D3b digest nền + D4 LLMOps** xen kẽ sau D1; nợ còn lại (T5, T7–T9, T11–T13) dọn khi đụng vùng, T10 hẹn 2027.
 

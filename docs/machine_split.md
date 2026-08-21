@@ -62,7 +62,7 @@ echo heavy > .machine-role
 | Máy | hostname | Dấu hiệu | `.machine-role` |
 | --- | --- | --- | --- |
 | Nhẹ (daily) | `hehehhe` | GTX 1650 Ti, Ryzen 5 4600H, 15GB | `light` |
-| Mạnh | *(điền khi đặt)* | *(GPU mạnh hơn)* | `heavy` |
+| Mạnh | `PC-dungbt` | RTX 5060 Ti 16GB VRAM, Ryzen 7 7700 (16 luồng), 31GB RAM, Win 11 Pro | `heavy` (đặt 21/08/2026) |
 | Cloud (Claude Code web) | `vm` (container phù du) | 4 vCPU, 15GB, **không GPU**, proxy chặn tải model (registry.ollama.ai/huggingface.co 403) → không chạy được model sinh lẫn embedding thật | `light` — chỉ lane nhẹ; số đo model thật lấy qua job CI `retrieval-eval` |
 
 ## Một phiên Claude Code tự route thế nào

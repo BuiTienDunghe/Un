@@ -159,10 +159,18 @@ jobs:
 
   retrieval-eval:
     # D1 gate: the multi-document retrieval eval, retrieval-only so the job
-    # needs the 0.6b embedding model and no generation model. Report-only
-    # until data/evaluation/rag_multidoc_baseline.json is recorded; after
-    # that it fails on a drop of more than the harness tolerance.
-    name: Retrieval eval gate (D1)
+    # needs the 0.6b embedding model and no generation model. It fails on a
+    # drop of more than the harness tolerance below its baseline.
+    #
+    # Since P4-2 the shipped default is contextual retrieval ON, which needs
+    # the general model at INDEX time — 6.6GB that this job cannot afford, and
+    # 27 CPU generations that would blow the 30-minute timeout. So the job
+    # deliberately turns the flag OFF and gates the BARE retrieval path against
+    # rag_multidoc_baseline_bare.json. That still protects what CI can protect:
+    # embedding + BM25 + RRF. The shipped configuration's own baseline lives in
+    # rag_multidoc_baseline.json and is measured on the heavy machine
+    # (docs/d1_retrieval_eval.md, docs/p4_progress.md).
+    name: Retrieval eval gate (D1, bare index)
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -251,6 +259,23 @@ jobs:
           done
           ollama pull qwen3-embedding:0.6b
 
+      # Measured on purpose, not by accident: without this the flag would still
+      # be on and every chunk's context call would fail against an Ollama that
+      # has no general model, degrading to the same bare index but through 27
+      # error paths. Turning it off states the intent in the diff.
+      - name: Pin contextual retrieval off for the bare-index gate
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("backend/app/config/models.yaml")
+          text = path.read_text(encoding="utf-8")
+          needle = "  contextual_retrieval:\n    enabled: true\n"
+          if needle not in text:
+              raise SystemExit(f"contextual_retrieval.enabled: true not found in {path}")
+          path.write_text(text.replace(needle, "  contextual_retrieval:\n    enabled: false\n"), encoding="utf-8")
+          print("contextual retrieval pinned off for this job")
+          PY
+
       - name: Start the API
         working-directory: backend
         run: |
@@ -269,7 +294,7 @@ jobs:
           python -m scripts.evaluate_rag
           --multidoc-dataset ../data/evaluation/rag_multidoc_eval.jsonl
           --retrieval-only
-          --baseline ../data/evaluation/rag_multidoc_baseline.json
+          --baseline ../data/evaluation/rag_multidoc_baseline_bare.json
 
   bot-tests:
     name: Bot and tools tests (Windows)

@@ -11,7 +11,8 @@ sau này (plan §4, §9b).
 | --- | --- |
 | Corpus 5 tài liệu thật (snapshot bất biến) | `data/evaluation/fixtures/multidoc/` |
 | Bộ câu hỏi (JSONL, tiếng Việt, nhóm `single` + `cross`) | `data/evaluation/rag_multidoc_eval.jsonl` |
-| Baseline được ghi nhận | `data/evaluation/rag_multidoc_baseline.json` |
+| Baseline cấu hình đang ship (contextual BẬT) | `data/evaluation/rag_multidoc_baseline.json` |
+| Baseline bản trần cho gate CI (contextual TẮT) | `data/evaluation/rag_multidoc_baseline_bare.json` |
 | Endpoint retrieval-only | `POST /rag/search` (đúng nguồn mà `/rag/chat` sẽ trích, không gọi model sinh) |
 | Harness | `backend/scripts/evaluate_rag.py --multidoc-dataset …` |
 | Gate CI | job `retrieval-eval` trong `.github/workflows/ci.yml` |
@@ -40,23 +41,43 @@ không cần model sinh — đúng bất biến ngân sách inference và chạy
 không GPU. Bỏ cờ này để đo thêm `answer_pass_rate` bằng model sinh thật
 (chỉ nên đo trên máy đích, cấu hình model cuối cùng).
 
-## Baseline đã ghi (21/08/2026)
+## Baseline hiện hành (21/08/2026) — **đổi vì P4-2**
 
-Đo bởi chính job CI `retrieval-eval` (run #15 trên main, commit `2f0ddfa`) với
-model `qwen3-embedding:0.6b` **thật** — cùng môi trường mà gate chạy, nên
-baseline và các lần đo sau so sánh cùng-điều-kiện tuyệt đối:
+> **Baseline đã được ghi lại sau khi P4-2 contextual retrieval bật mặc định.**
+> Đây là một thay đổi có chủ đích, không phải trôi số: cờ
+> `rag.contextual_retrieval.enabled` chuyển sang `true` sau khi thí nghiệm đạt
+> ngưỡng đã chốt, nên corpus được index lại kèm ngữ cảnh và mọi phép so sánh về
+> sau phải lấy mốc mới. Số liệu, ngưỡng và chi phí index: `docs/p4_progress.md`.
+> Baseline này đo trên máy nặng `PC-dungbt`, không phải trong CI — xem lưu ý ở
+> cuối mục.
 
 | Metric | Toàn bộ (82) | single (70) | cross (12) |
 | --- | --- | --- | --- |
-| recall@5 | **0.8659** | 0.8857 | 0.7500 |
-| MRR | **0.7341** | 0.7588 | 0.5903 |
-| doc_hit_rate | **0.7683** | 0.8000 | 0.5833 |
+| recall@5 | **0.9146** | 0.9000 | 1.0000 |
+| MRR | **0.7967** | 0.7964 | 0.7986 |
+| doc_hit_rate | **0.8415** | 0.8571 | 0.7500 |
 
-11 câu miss tập trung vào vùng chủ đề trùng lấn giữa các tài liệu kỹ thuật
-(Qdrant point/version giữa `versioned_ingestion` ↔ `current_architecture`,
-legacy SQLite, vai trò worker/Ollama) — đúng headroom mà P4-2 contextual
-retrieval và P4-3 reranker nhắm cải thiện. Không chỉnh dataset để làm đẹp số:
-baseline là hiện trạng thật.
+Còn 7 câu miss (trước P4-2 là 11): `ca_ai_duoc_dung_sqlite3`,
+`ca_lam_moi_sau_phase`, `ca_test_guard_import`, `ca_vai_tro_ollama`,
+`ca_worker_launcher`, `vi_qdrant_point_id`, `vi_vector_superseded_giu_lai` —
+headroom còn lại cho P4-3 reranker. Không chỉnh dataset để làm đẹp số: baseline
+là hiện trạng thật.
+
+**Baseline trước đó (nền bản trần, để đối chiếu lịch sử)** — đo bởi chính job CI
+`retrieval-eval` (run #15 trên main, commit `2f0ddfa`), cùng model
+`qwen3-embedding:0.6b`:
+
+| Metric | Toàn bộ (82) | single (70) | cross (12) |
+| --- | --- | --- | --- |
+| recall@5 | 0.8659 | 0.8857 | 0.7500 |
+| MRR | 0.7341 | 0.7588 | 0.5903 |
+| doc_hit_rate | 0.7683 | 0.8000 | 0.5833 |
+
+**Lưu ý về môi trường đo:** baseline cũ ghi trong CI, baseline mới ghi trên máy
+nặng — vì P4-2 cần model sinh để index, thứ CI không có. Cả hai dùng cùng model
+embedding nên gate vẫn so được, nhưng nếu job `retrieval-eval` báo lệch có hệ
+thống (không phải một câu lẻ) thì nghi ngờ khác biệt môi trường trước khi nghi
+ngờ thoái lui, và đo lại một lượt trên máy nặng để phân định.
 
 ## Ghi lại baseline (chỉ khi đổi model embedding hoặc corpus — plan §9a.6)
 
@@ -71,7 +92,7 @@ python -m scripts.evaluate_rag --multidoc-dataset ..\data\evaluation\rag_multido
 Baseline ghi kèm tên model embedding; gate từ chối so sánh nếu model hiện tại
 khác model lúc ghi (đổi model là phải đo lại — đúng plan §9a.6).
 
-## Gate trong CI
+## Gate trong CI — đo **bản trần**, gate theo baseline trần
 
 Job `retrieval-eval` dựng Postgres + Redis + Qdrant + Ollama (chỉ pull model
 embedding 0.6b, có cache), chạy API thật, bootstrap corpus rồi chấm bộ câu hỏi:
@@ -80,6 +101,21 @@ embedding 0.6b, có cache), chạy API thật, bootstrap corpus rồi chấm b�
   eval vào được main trước khi máy đích ghi baseline).
 - **Có baseline** → tụt quá `--tolerance` (mặc định 0.02, "không tụt quá 2
   điểm" — plan P4-1) ở `recall_at_k` hoặc `mrr` là job đỏ.
+
+**Từ P4-2, CI đo một cấu hình khác với cấu hình đang ship.** Mặc định của hệ
+thống là contextual retrieval BẬT, nhưng nó cần model sinh lúc *index* — 6.6GB
+và 27 lượt sinh trên CPU, quá sức một job 30 phút. Nên job có một bước tắt cờ
+tường minh rồi gate bản trần theo `rag_multidoc_baseline_bare.json`:
+
+| Tệp baseline | Cấu hình | Đo ở đâu | Ai dùng |
+| --- | --- | --- | --- |
+| `rag_multidoc_baseline.json` | contextual BẬT (mặc định đang ship) | máy nặng | mốc chất lượng của sản phẩm; thí nghiệm P4 sau này |
+| `rag_multidoc_baseline_bare.json` | contextual TẮT | CI | gate chặn thoái lui embedding + BM25 + RRF |
+
+Tách đôi vì một con số chỉ có nghĩa khi so cùng-điều-kiện. CI vẫn bảo vệ được
+đúng phần nó chạy được; phần contextual do máy nặng đo và ghi. Khi đổi model
+embedding hoặc corpus thì **cả hai** phải đo lại — bản trần bằng cách tắt cờ
+trong `models.yaml` rồi re-index, bản contextual theo runbook P4-2.
 
 ## Quan hệ với bộ eval cũ
 

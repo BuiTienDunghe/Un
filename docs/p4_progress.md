@@ -7,9 +7,11 @@ unit test) là lane nhẹ, phần *đo* (sinh context, re-index) là lane nặng
 
 ## P4-2 — Contextual retrieval (Anthropic)
 
-**Trạng thái 21/08/2026: CODE XONG (lane nhẹ) — cờ TẮT mặc định — thí nghiệm đo
-lường chờ máy nặng** (phiên code chạy trên container cloud không GPU, không kéo
-được model sinh; xem "Runbook thí nghiệm" dưới).
+**Trạng thái 21/08/2026: ĐÓNG — ĐẠT ngưỡng, cờ BẬT mặc định.** Thí nghiệm chạy
+trên máy nặng `PC-dungbt` (RTX 5060 Ti 16GB, Ryzen 7 7700, 31GB RAM) với
+`qwen3.5:9b` sinh context và `qwen3-embedding:0.6b` đo retrieval. Kết quả: MRR
+tổng **+0.068**, MRR cross **+0.208**, recall cross đạt **1.0000**, 4 câu
+miss→hit và **0 câu hit→miss**. Baseline D1 đã ghi lại theo cấu hình mới.
 
 ### Thiết kế (và lý do từng quyết định)
 
@@ -37,7 +39,13 @@ embedding lẫn BM25: −49% retrieval failure (−67% kèm reranking).
 - Cờ tắt → passthrough, **0** lời gọi model (có test khẳng định gọi model khi cờ tắt là AssertionError).
 - Xuyên suốt upload→index: context vào đúng cột DB + đúng embedding input + BM25 tìm được chunk bằng từ CHỈ có trong context — còn `content` trong kết quả **không** chứa context.
 
-### Runbook thí nghiệm (máy NẶNG — theo BƯỚC 4 đã giao)
+### Runbook thí nghiệm (máy NẶNG) — ✅ đã chạy 21/08/2026, kết quả ở bảng dưới
+
+Giữ nguyên để mục P4-3/P4-4 lặp lại được đúng quy trình. Một điều runbook chưa
+lường trước và đã xử lý khi thi hành: bật cờ mặc định làm **gate CI đỏ**, vì
+runner không có model sinh nên nó dựng chỉ mục trần rồi so với baseline
+contextual. Cách chữa (đã áp dụng, không hạ tolerance, không sửa dataset): job CI
+tắt cờ tường minh và gate theo baseline trần riêng — xem `docs/d1_retrieval_eval.md`.
 
 ```powershell
 # 0. Chuẩn bị: API + Ollama đang chạy, suite xanh, D1 sanity khớp baseline ±0.02
@@ -59,19 +67,64 @@ python -m scripts.evaluate_rag --multidoc-dataset ..\data\evaluation\rag_multido
 # KHÔNG chỉnh dataset, KHÔNG hạ tolerance để qua gate.
 ```
 
-**Bảng trước/sau (điền khi đo trên máy nặng):**
+**Bảng trước/sau (đo 21/08/2026 trên `PC-dungbt`, retrieval-only, 82 câu):**
 
 | Metric | Trước (baseline 21/08) | Sau P4-2 | Δ |
 | --- | --- | --- | --- |
-| recall@5 tổng | 0.8659 | — | — |
-| MRR tổng | 0.7341 | — | — |
-| doc_hit tổng | 0.7683 | — | — |
-| recall@5 cross | 0.7500 | — | — |
-| MRR cross | 0.5903 | — | — |
-| Câu miss→hit / hit→miss | (11 miss nền: xem d1_retrieval_eval.md) | — | — |
-| Giây index/tài liệu · lời gọi | — (cờ tắt) | — | — |
+| recall@5 tổng | 0.8659 | **0.9146** | **+0.0488** |
+| MRR tổng | 0.7341 | **0.7967** | **+0.0626** |
+| doc_hit tổng | 0.7683 | **0.8415** | **+0.0732** |
+| recall@5 cross | 0.7500 | **1.0000** | **+0.2500** |
+| MRR cross | 0.5903 | **0.7986** | **+0.2083** |
+| doc_hit cross | 0.5833 | 0.7500 | +0.1667 |
+| recall@5 single | 0.8857 | 0.9000 | +0.0143 |
+| MRR single | 0.7588 | 0.7964 | +0.0376 |
+| doc_hit single | 0.8000 | 0.8571 | +0.0571 |
+| Câu miss→hit / hit→miss | (11 miss nền) | **4 miss→hit · 0 hit→miss** (còn 7 miss) | — |
+| Giây index/tài liệu · lời gọi | — (cờ tắt) | **32.7s/tài liệu · 1 lời gọi/chunk** (27 chunk, 144.0s sinh context, 0 lỗi) | — |
 
-Kỳ vọng cụ thể trên bộ miss hiện tại: cụm nhiễu chéo Qdrant point/version
-(`vi_qdrant_point_id`, `xd_point_id_qdrant_uuid5`…) và cụm `ca_*` chủ đề trùng
-lấn là đúng dạng lỗi mà context "tài liệu này là gì, đoạn này nằm ở đâu" nhắm
-sửa — theo dõi riêng các câu này trong cột miss→hit.
+> Cột "Trước" là baseline CI đã ghi 21/08. Lần chạy sanity ngay trước thí nghiệm
+> trên chính máy này cho 0.8659 / 0.7287 / 0.7683 — khớp baseline trong ±0.02
+> (chỉ MRR lệch −0.0055), nên hai cột so được cùng-điều-kiện. Diff theo từng câu
+> ở dưới lấy từ lần sanity đó vì nó có kết quả per-case.
+
+**Ngưỡng chốt trước khi đo — đối chiếu:** MRR tổng +0.0626 (cần ≥0.03) ✅ ·
+MRR cross +0.2083 (cần ≥0.05) ✅ · nhóm single **không tụt điểm nào**, cả ba chỉ
+số đều tăng ✅ → **ĐẠT**, giữ `enabled: true`.
+
+**4 câu miss→hit:** `ca_health_do_tuoi_backup`, `xd_point_id_qdrant_uuid5`,
+`xd_reindex_that_bai_version_cu`, `xd_vai_tro_sqlite_cu`. Ba trong bốn câu là
+nhóm `cross` thuộc đúng cụm nhiễu Qdrant point/version và SQLite legacy đã dự
+đoán — context "tài liệu này là gì, đoạn này nằm ở đâu" gỡ đúng chỗ nó nhắm.
+**Không có câu nào hit→miss.**
+
+**7 câu còn miss:** `ca_ai_duoc_dung_sqlite3`, `ca_lam_moi_sau_phase`,
+`ca_test_guard_import`, `ca_vai_tro_ollama`, `ca_worker_launcher`,
+`vi_qdrant_point_id`, `vi_vector_superseded_giu_lai` — headroom còn lại để P4-3
+reranker nhắm vào.
+
+**Đánh đổi thấy được trong dữ liệu:** 16 câu lên hạng, 5 câu tụt từ hạng 1 xuống
+hạng 2 (`ca_alembic_head_o_dau`, `p3_refresh_khong_xoay`, `p3_require_admin_db`,
+`vi_activation_superseded`, `xa_khoi_dong_docker`) — vẫn trúng trong top-5 nên
+recall không đổi, chỉ MRR chịu một phần. Ròng vẫn dương rất rõ; ghi lại để P4-3
+biết cụm nào đang bị context làm nhiễu nhẹ.
+
+**Chi phí index (log `chunk_context_done`, không có lỗi nào):**
+
+| Tài liệu | chunk | giây sinh context | lời gọi | tổng giây re-index |
+| --- | --- | --- | --- | --- |
+| backup_restore.md | 5 | 66.5 | 5 | 70.6 |
+| current_architecture.md | 2 | 6.9 | 2 | 9.1 |
+| p3_progress.md | 8 | 27.1 | 8 | 32.3 |
+| versioned_ingestion.md | 2 | 12.1 | 2 | 14.1 |
+| xuong_in_anh_duong.txt | 10 | 31.4 | 10 | 37.3 |
+| **Tổng** | **27** | **144.0** | **27** | **163.4** |
+
+`backup_restore.md` đắt bất thường (13.3s/chunk so với ~3–6s ở các tài liệu sau)
+vì nó là tài liệu đầu tiên, gánh luôn phần nạp `qwen3.5:9b` (6.6GB) vào VRAM. Bỏ
+nó ra thì còn ~3.5s/chunk. Đường hỏi-đáp **không thêm lời gọi model nào** — đúng
+bất biến ngân sách inference: toàn bộ chi phí nằm ở lúc index.
+
+**Bất biến version còn nguyên:** sau re-index mỗi tài liệu có version 2 `active`
+với 27/27 chunk có context, version 1 `superseded` giữ bản trần — không có
+khoảnh khắc nào tài liệu mất index.

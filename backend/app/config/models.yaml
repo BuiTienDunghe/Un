@@ -91,12 +91,15 @@ rag:
   rrf_k: 60
   # P4-2 contextual retrieval (Anthropic): at INDEX time the general model
   # writes a short situating context per chunk; embedding and BM25 index
-  # context+content while citations keep showing the bare content. OFF until
-  # the D1 eval proves it on this corpus (plan §1: RAG-quality changes only
-  # become default after eval). Costs N general-model calls per indexing run —
-  # enable on the heavy machine, re-index, then measure (docs/p4_progress.md).
+  # context+content while citations keep showing the bare content. ON since
+  # 21/08/2026 — the D1 eval earned it on this corpus (MRR 0.734 -> 0.797,
+  # cross-doc recall 0.750 -> 1.000, no case regressed; docs/p4_progress.md).
+  # Costs one general-model call per chunk at INDEX time and nothing at answer
+  # time. Turning it off is safe but only takes effect on the next re-index:
+  # chunks already carrying a context keep it until their version is replaced.
+  # CI pins this off — its runner has no generation model (.github/workflows/ci.yml).
   contextual_retrieval:
-    enabled: false
+    enabled: true
     context_tokens: 80
     document_char_cap: 12000
   # Rewrite follow-up questions into standalone form before retrieval.
