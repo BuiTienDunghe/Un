@@ -19,8 +19,15 @@ classifiers = [
 dynamic = ["version", "dependencies"]
 
 [project.optional-dependencies]
-# The reranker (P4-3, currently disabled in models.yaml) is the single feature
-# that runs a model in-process; only its users pay for PyTorch (T6).
+# The reranker (P4-3, ON by default in models.yaml since 21/08/2026) is the
+# single feature that runs a model in-process; only its users pay for PyTorch
+# (T6). A machine that does not install this pins RAG_RERANKER_ENABLED=false.
+#
+# This pulls torch from PyPI, which on Windows is the CPU-only build: measured
+# at ~990ms added per question versus ~35ms on a GPU. If the machine has an
+# NVIDIA GPU, follow up with the CUDA wheel, e.g.
+#   pip install --index-url https://download.pytorch.org/whl/cu128 "torch==2.9.1+cu128"
+# Details and the measurement: docs/machine_split.md, docs/p4_progress.md.
 rerank = ["sentence-transformers>=3.0,<4.0"]
 
 [project.urls]
