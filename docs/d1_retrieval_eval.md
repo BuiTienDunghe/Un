@@ -41,27 +41,43 @@ không cần model sinh — đúng bất biến ngân sách inference và chạy
 không GPU. Bỏ cờ này để đo thêm `answer_pass_rate` bằng model sinh thật
 (chỉ nên đo trên máy đích, cấu hình model cuối cùng).
 
-## Baseline hiện hành (21/08/2026) — **đổi vì P4-2**
+## Baseline hiện hành (21/08/2026) — **đổi vì P4-3**
 
-> **Baseline đã được ghi lại sau khi P4-2 contextual retrieval bật mặc định.**
-> Đây là một thay đổi có chủ đích, không phải trôi số: cờ
-> `rag.contextual_retrieval.enabled` chuyển sang `true` sau khi thí nghiệm đạt
-> ngưỡng đã chốt, nên corpus được index lại kèm ngữ cảnh và mọi phép so sánh về
-> sau phải lấy mốc mới. Số liệu, ngưỡng và chi phí index: `docs/p4_progress.md`.
-> Baseline này đo trên máy nặng `PC-dungbt`, không phải trong CI — xem lưu ý ở
-> cuối mục.
+> **Baseline được ghi lại lần thứ hai trong ngày, sau khi P4-3 reranker bật mặc
+> định** (lần trước là vì P4-2 contextual retrieval — bảng ngay dưới). Đây là
+> thay đổi có chủ đích, không phải trôi số: cờ `rag.reranker.enabled` chuyển
+> sang `true` sau khi thí nghiệm đạt cả ba điều kiện đã chốt trước khi đo, nên
+> mọi phép so sánh về sau phải lấy mốc mới. Số liệu, ngưỡng, chi phí độ trễ và
+> so sánh `candidate_limit`: `docs/p4_progress.md`.
+>
+> Cấu hình đo: contextual retrieval ON + reranker ON (`candidate_limit` 15,
+> `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1`), embedding `qwen3-embedding:0.6b`,
+> trên máy nặng `PC-dungbt` với `torch 2.9.1+cu128` — **không** phải trong CI;
+> xem lưu ý ở cuối mục. Máy đo lại baseline này phải có GPU và bản CUDA của
+> torch: trên CPU chất lượng giống hệt nhưng độ trễ khác 28×, và baseline chỉ
+> ghi chất lượng nên số sẽ trùng — đừng lấy đó làm bằng chứng cấu hình đúng.
 
 | Metric | Toàn bộ (82) | single (70) | cross (12) |
 | --- | --- | --- | --- |
-| recall@5 | **0.9146** | 0.9000 | 1.0000 |
-| MRR | **0.7967** | 0.7964 | 0.7986 |
-| doc_hit_rate | **0.8415** | 0.8571 | 0.7500 |
+| recall@5 | **0.9756** | 0.9714 | 1.0000 |
+| MRR | **0.8581** | 0.8576 | 0.8611 |
+| doc_hit_rate | **0.8537** | 0.8571 | 0.8333 |
 
-Còn 7 câu miss (trước P4-2 là 11): `ca_ai_duoc_dung_sqlite3`,
-`ca_lam_moi_sau_phase`, `ca_test_guard_import`, `ca_vai_tro_ollama`,
-`ca_worker_launcher`, `vi_qdrant_point_id`, `vi_vector_superseded_giu_lai` —
-headroom còn lại cho P4-3 reranker. Không chỉnh dataset để làm đẹp số: baseline
-là hiện trạng thật.
+Còn 2 câu miss (trước P4-3 là 7): `p3_khoa_brute_force`, `p3_refresh_khong_xoay`
+— cả hai vẫn trúng đúng tài liệu, chỉ trượt chunk mang nguyên văn; headroom cho
+P4-4 (Postgres FTS + pyvi).
+
+**Baseline trước đó (P4-2, contextual ON + reranker OFF)** — mốc mà P4-3 được đo
+so với:
+
+| Metric | Toàn bộ (82) | single (70) | cross (12) |
+| --- | --- | --- | --- |
+| recall@5 | 0.9146 | 0.9000 | 1.0000 |
+| MRR | 0.7967 | 0.7964 | 0.7986 |
+| doc_hit_rate | 0.8415 | 0.8571 | 0.7500 |
+
+Ở mốc này còn 7 câu miss (trước P4-2 là 11); P4-3 gỡ trọn cả 7. Không chỉnh
+dataset để làm đẹp số ở bất kỳ mốc nào: baseline là hiện trạng thật.
 
 **Baseline trước đó (nền bản trần, để đối chiếu lịch sử)** — đo bởi chính job CI
 `retrieval-eval` (run #15 trên main, commit `2f0ddfa`), cùng model
@@ -102,20 +118,25 @@ embedding 0.6b, có cache), chạy API thật, bootstrap corpus rồi chấm b�
 - **Có baseline** → tụt quá `--tolerance` (mặc định 0.02, "không tụt quá 2
   điểm" — plan P4-1) ở `recall_at_k` hoặc `mrr` là job đỏ.
 
-**Từ P4-2, CI đo một cấu hình khác với cấu hình đang ship.** Mặc định của hệ
-thống là contextual retrieval BẬT, nhưng nó cần model sinh lúc *index* — 6.6GB
-và 27 lượt sinh trên CPU, quá sức một job 30 phút. Nên job có một bước tắt cờ
-tường minh rồi gate bản trần theo `rag_multidoc_baseline_bare.json`:
+**Từ P4-2, CI đo một cấu hình khác với cấu hình đang ship**, và P4-3 làm khoảng
+cách đó rộng thêm. Mặc định của hệ thống là contextual retrieval BẬT (cần model
+sinh lúc *index* — 6.6GB và 27 lượt sinh trên CPU, quá sức một job 30 phút)
+**và** reranker BẬT (cần extra `[rerank]`, tức PyTorch, mà job này không cài —
+và trên CPU runner sẽ đắt thêm ~1 giây mỗi câu trong 82 câu). Nên job có một
+bước tắt **cả hai** cờ tường minh rồi gate bản trần theo
+`rag_multidoc_baseline_bare.json`. Bước đó fail nếu không tìm thấy khoá, nên đổi
+tên hay di chuyển cờ sẽ làm job đỏ chứ không lặng lẽ đo sai cấu hình:
 
 | Tệp baseline | Cấu hình | Đo ở đâu | Ai dùng |
 | --- | --- | --- | --- |
-| `rag_multidoc_baseline.json` | contextual BẬT (mặc định đang ship) | máy nặng | mốc chất lượng của sản phẩm; thí nghiệm P4 sau này |
-| `rag_multidoc_baseline_bare.json` | contextual TẮT | CI | gate chặn thoái lui embedding + BM25 + RRF |
+| `rag_multidoc_baseline.json` | contextual BẬT + reranker BẬT (mặc định đang ship) | máy nặng, có GPU | mốc chất lượng của sản phẩm; thí nghiệm P4 sau này |
+| `rag_multidoc_baseline_bare.json` | cả hai TẮT | CI | gate chặn thoái lui embedding + BM25 + RRF |
 
 Tách đôi vì một con số chỉ có nghĩa khi so cùng-điều-kiện. CI vẫn bảo vệ được
-đúng phần nó chạy được; phần contextual do máy nặng đo và ghi. Khi đổi model
-embedding hoặc corpus thì **cả hai** phải đo lại — bản trần bằng cách tắt cờ
-trong `models.yaml` rồi re-index, bản contextual theo runbook P4-2.
+đúng phần nó chạy được — tầng lấy ứng viên; phần contextual và rerank do máy
+nặng đo và ghi. Khi đổi model embedding hoặc corpus thì **cả hai** phải đo lại —
+bản trần bằng cách tắt cả hai cờ trong `models.yaml` rồi re-index, bản đầy đủ
+theo runbook P4-2 (re-index) rồi P4-3 (không cần re-index).
 
 ## Quan hệ với bộ eval cũ
 

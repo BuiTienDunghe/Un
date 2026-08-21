@@ -263,17 +263,33 @@ jobs:
       # be on and every chunk's context call would fail against an Ollama that
       # has no general model, degrading to the same bare index but through 27
       # error paths. Turning it off states the intent in the diff.
-      - name: Pin contextual retrieval off for the bare-index gate
+      # Measured on purpose, not by accident. Without this the shipped defaults
+      # would apply: contextual retrieval would call a generation model this
+      # runner does not have (27 failed calls degrading to the same bare index),
+      # and the reranker would need the [rerank] extra this job does not
+      # install. Pinning both states the intent in the diff.
+      #
+      # It fails loudly when a key cannot be found, so renaming or moving a flag
+      # cannot silently turn this into a no-op that measures the wrong config.
+      - name: Pin index-time and query-time RAG flags off for the bare gate
         run: |
           python - <<'PY'
+          import re
           from pathlib import Path
+
           path = Path("backend/app/config/models.yaml")
           text = path.read_text(encoding="utf-8")
-          needle = "  contextual_retrieval:\n    enabled: true\n"
-          if needle not in text:
-              raise SystemExit(f"contextual_retrieval.enabled: true not found in {path}")
-          path.write_text(text.replace(needle, "  contextual_retrieval:\n    enabled: false\n"), encoding="utf-8")
-          print("contextual retrieval pinned off for this job")
+          for key in ("contextual_retrieval", "reranker"):
+              # Match this key's own `enabled:` line whatever its current value —
+              # the point is to force false, not to assert today's default.
+              pattern = re.compile(rf"(?m)^(  {key}:\n(?:    \w[^\n]*\n)*?    enabled: )(true|false)$")
+              found = pattern.findall(text)
+              if len(found) != 1:
+                  raise SystemExit(f"expected exactly one rag.{key}.enabled in {path}, found {len(found)}")
+              was = found[0][1]
+              text = pattern.sub(lambda match: match.group(1) + "false", text, count=1)
+              print(f"rag.{key}.enabled pinned false (was {was})")
+          path.write_text(text, encoding="utf-8")
           PY
 
       - name: Start the API

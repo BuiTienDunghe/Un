@@ -26,6 +26,10 @@ os.environ["DISCORD_AGENT_TOOLS_ENABLED"] = "false"
 # P4-2: models.yaml ships contextual retrieval ON; tests run the bare index path
 # unless a test enables the service explicitly (test_chunk_context.py does).
 os.environ["RAG_CONTEXTUAL_RETRIEVAL_ENABLED"] = "false"
+# P4-3: same reasoning for the reranker, plus one of its own — the real
+# cross-encoder would download ~500MB of weights on first use. Reranker tests
+# inject a fake model_loader instead (test_reranker_service.py).
+os.environ["RAG_RERANKER_ENABLED"] = "false"
 # P3-1 accounts stay off in tests: an operator's .env with auth enabled must
 # not flip every open-access assertion. Auth tests enable it explicitly on
 # their own app settings instance.

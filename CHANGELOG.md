@@ -11,6 +11,23 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+### Changed
+- **P4-3 reranker BẬT mặc định** (`cross-encoder/mmarco-mMiniLMv2-L12-H384-v1`,
+  `candidate_limit` 15) sau khi thí nghiệm D1 trên máy nặng đạt cả ba điều kiện
+  chốt trước khi đo: recall@5 0.9146 → **0.9756**, MRR 0.7967 → **0.8581**, MRR
+  cross 0.7986 → **0.8611**; **cả 7 câu miss còn lại của P4-2 thành hit**, đổi
+  lại 2 câu tụt khỏi top-5 (vẫn trúng đúng tài liệu, chỉ trượt chunk mang nguyên
+  văn — headroom P4-4). Chi phí là **độ trễ chứ không phải lời gọi model sinh**:
+  `/rag/search` p50 587 → 622ms (**+35ms**, trần 300ms), riêng bước rerank p50
+  65ms; số lượt gọi model sinh của một câu hỏi **không đổi**, bất biến ngân sách
+  inference còn nguyên. Đo `candidate_limit` 30 thì kém hơn 15 ở **mọi** chỉ số
+  chất lượng lẫn tốc độ, nên giữ 15. Chi tiết: `docs/p4_progress.md`.
+- **Baseline D1 ghi lại vì P4-3** (`rag_multidoc_baseline.json`, cấu hình
+  contextual ON + reranker ON). Gate CI vẫn dùng `rag_multidoc_baseline_bare.json`;
+  bước ghim cờ trong job `retrieval-eval` nay tắt **cả hai** cờ và **fail nếu
+  không tìm thấy khoá**, nên đổi tên hoặc di chuyển cờ làm job đỏ chứ không lặng
+  lẽ đo sai cấu hình. Tolerance vẫn 0.02, dataset không đổi.
+
 ### Added
 - **D3a self-check bám nguồn (không model)**: `answer_grounding.py` chấm từng câu của
   câu trả lời RAG theo văn bản trần của chunk đã trích (fold dấu, content-word overlap,
@@ -19,6 +36,17 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   của `/rag/chat` (response thường và SSE `done`) và chip "bám nguồn" trên web — chỉ
   báo, không chặn. `evaluate_rag` chế độ full thêm `grounding_rate`; 0 lời gọi model
   thêm. Đo trên bộ 82 câu là việc máy mạnh (`docs/d3a_answer_grounding.md`).
+- **Override reranker theo máy**: biến `.env` `RAG_RERANKER_ENABLED` (không đặt =
+  theo `models.yaml`) qua `RerankerService.from_config` — cùng khuôn resolver với
+  P4-2. Kèm **warmup lúc khởi động**: máy bật cờ mà thiếu `pip install -e .[rerank]`
+  bị từ chối dựng server với `RerankerUnavailableError` chỉ rõ lệnh cần chạy,
+  thay vì hỏng lúc người dùng hỏi; warmup cũng gánh phần nạp model để nó không
+  rơi vào một câu hỏi xui và bóp méo p95. Log `reranker_config` (nguồn quyết
+  định) và `rerank_done` (số ứng viên, ms) mỗi câu.
+  **Lưu ý cài đặt:** extra `[rerank]` kéo về bản **torch CPU-only** trên PyPI —
+  đo trên đó thì mỗi câu hỏi đắt thêm ~990ms (28× so với GPU). Máy có GPU NVIDIA
+  cài thêm torch từ index `cu128`; máy không có thì ghim `RAG_RERANKER_ENABLED=false`
+  (`docs/machine_split.md`).
 - **Override contextual retrieval theo máy**: biến `.env` `RAG_CONTEXTUAL_RETRIEVAL_ENABLED`
   (không đặt = theo `models.yaml`; `true`/`false` = máy này tự quyết) qua
   `ChunkContextService.from_config` dùng chung cho API lẫn RQ worker — máy nhẹ tắt

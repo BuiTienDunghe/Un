@@ -108,8 +108,20 @@ rag:
   # Costs one extra (short, capped) general-model call per follow-up turn;
   # first turns and single-question calls never condense.
   condense_enabled: true
+  # P4-3 reranker: a cross-encoder rescores the RRF candidates at QUERY time.
+  # ON since 21/08/2026 — the D1 eval earned it (recall 0.915 -> 0.976, MRR
+  # 0.797 -> 0.858, all 7 remaining P4-2 misses fixed; docs/p4_progress.md).
+  # Costs no extra GENERATION call, so the inference budget is untouched; it
+  # costs latency: +35ms p50 on /rag/search with a GPU, +990ms without one.
+  # Needs the optional extra AND a CUDA build of torch:
+  #   pip install -e ".[rerank]"
+  #   pip install --index-url https://download.pytorch.org/whl/cu128 "torch==2.9.1+cu128"
+  # A machine that cannot do that pins RAG_RERANKER_ENABLED=false in .env; one
+  # that turns this on without the extra is refused at startup, not at question
+  # time. CI pins this off (.github/workflows/ci.yml). candidate_limit 30 was
+  # measured and lost to 15 on every quality metric as well as on latency.
   reranker:
-    enabled: false
+    enabled: true
     provider: sentence-transformers
     model: cross-encoder/mmarco-mMiniLMv2-L12-H384-v1
     candidate_limit: 15

@@ -137,8 +137,10 @@ async def lifespan(app: FastAPI):
         backup_max_age_hours=float(storage_config.get("backup_interval_hours", 24)),
     )
     app.state.ocr_job_service = OcrJobService(router, settings.ocr_runs_path, auxiliary_store, ocr_service)
-    reranker_config = rag_config.get("reranker", {})
-    reranker_service = RerankerService(bool(reranker_config.get("enabled", False)), str(reranker_config.get("model", "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1")), int(reranker_config.get("candidate_limit", 15)))
+    reranker_service = RerankerService.from_config(rag_config, enabled_override=settings.rag_reranker_enabled)
+    # Fail here, on a machine that turned the reranker on without the [rerank]
+    # extra, rather than on that machine's first question (P4-3).
+    reranker_service.warmup()
     retrieval_service = PostgresRetrievalService(qdrant_store, router, postgres_sessions, PostgresBm25Service(postgres_sessions), reranker_service, str(rag_config.get("retrieval_mode", "hybrid")), int(rag_config.get("rrf_k", 60)))
     app.state.rag_service = RagService(
         router,

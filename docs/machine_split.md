@@ -74,8 +74,32 @@ sửa `models.yaml`:
 | Biến `.env` | Máy nhẹ | Máy mạnh | Ý nghĩa |
 | --- | --- | --- | --- |
 | `RAG_CONTEXTUAL_RETRIEVAL_ENABLED` | `false` | *(không đặt → theo models.yaml = true)* | P4-2: sinh 1 lời gọi model/chunk lúc index. Máy nhẹ tắt để upload vẫn nhanh; đánh đổi: tài liệu index ở máy nhẹ không có context (vẫn tìm được kiểu trần, re-index ở máy mạnh là có) |
+| `RAG_RERANKER_ENABLED` | `false` **hoặc** cài extra (xem dưới) | *(không đặt → theo models.yaml = true)* | P4-3: cross-encoder chấm lại 15 ứng viên **mỗi câu hỏi**. Không thêm lời gọi model sinh nào, nhưng thêm ~35ms/câu trên GPU và **~990ms/câu trên CPU** |
 
-Log khởi động ghi rõ nguồn quyết định (`event=chunk_context_config`, `source=env|models.yaml`).
+Log khởi động ghi rõ nguồn quyết định (`event=chunk_context_config` và
+`event=reranker_config`, `source=env|models.yaml`).
+
+### Máy nhẹ cần làm gì với P4-3
+
+Reranker cần gói tùy chọn, và **bản mặc định trên PyPI là CPU-only** — bật cờ mà
+dùng bản đó thì mỗi câu hỏi đắt thêm gần một giây. Hai lựa chọn:
+
+```bash
+# (a) Không cài gì — ghim tắt trong .env. Chất lượng về mức P4-2, tốc độ giữ nguyên.
+echo RAG_RERANKER_ENABLED=false >> .env
+```
+
+```bash
+# (b) Cài kèm bản CUDA (chỉ đáng làm nếu máy có GPU NVIDIA)
+pip install -e ".[rerank]"
+pip install --index-url https://download.pytorch.org/whl/cu128 "torch==2.9.1+cu128"
+```
+
+Bật cờ mà **không** cài extra thì API **từ chối khởi động** với
+`RerankerUnavailableError` kèm đúng lệnh cần chạy — cố ý fail lúc dựng server
+chứ không phải lúc người dùng hỏi. GTX 1650 Ti của máy nhẹ chạy được cross-encoder
+này (4GB VRAM là dư), nhưng chưa ai đo trên đó; số trong `p4_progress.md` là của
+RTX 5060 Ti.
 
 ## Một phiên Claude Code tự route thế nào
 
