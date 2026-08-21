@@ -11,6 +11,13 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+### Added
+- **Override contextual retrieval theo máy**: biến `.env` `RAG_CONTEXTUAL_RETRIEVAL_ENABLED`
+  (không đặt = theo `models.yaml`; `true`/`false` = máy này tự quyết) qua
+  `ChunkContextService.from_config` dùng chung cho API lẫn RQ worker — máy nhẹ tắt
+  sinh context lúc index, máy mạnh giữ bật (`docs/machine_split.md`). Test cô lập
+  cờ này (`false`) để suite chạy đường index trần trừ khi test bật tường minh.
+
 ### Changed
 - **P4-2 contextual retrieval BẬT mặc định** sau khi thí nghiệm D1 trên máy nặng
   đạt ngưỡng đã chốt trước khi đo: recall@5 0.8659 → **0.9146**, MRR 0.7341 →

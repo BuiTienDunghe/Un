@@ -166,3 +166,24 @@ def test_index_without_the_flag_stays_bytewise_identical(client, mock_ollama, mo
     assert rows and all(row.retrieval_context is None for row in rows)
 
     client.delete(f"/documents/{document_id}")
+
+
+# ── Per-machine override (docs/machine_split.md) ─────────────────────
+
+
+def test_from_config_follows_models_yaml_when_no_override():
+    service = ChunkContextService.from_config(object(), {"contextual_retrieval": {"enabled": True, "context_tokens": 64, "document_char_cap": 5000}})
+    assert service.enabled is True
+    assert service.context_tokens == 64 and service.document_char_cap == 5000
+
+
+def test_from_config_env_override_wins_in_both_directions():
+    # Light machine: yaml says ON (shipped default), .env pins OFF.
+    assert ChunkContextService.from_config(object(), {"contextual_retrieval": {"enabled": True}}, enabled_override=False).enabled is False
+    # Heavy machine experimenting ahead of the shared default: yaml OFF, .env ON.
+    assert ChunkContextService.from_config(object(), {"contextual_retrieval": {"enabled": False}}, enabled_override=True).enabled is True
+
+
+def test_from_config_tolerates_missing_block():
+    service = ChunkContextService.from_config(object(), {})
+    assert service.enabled is False and service.context_tokens == 80 and service.document_char_cap == 12_000

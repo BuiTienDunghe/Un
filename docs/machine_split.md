@@ -65,6 +65,18 @@ echo heavy > .machine-role
 | Mạnh | `PC-dungbt` | RTX 5060 Ti 16GB VRAM, Ryzen 7 7700 (16 luồng), 31GB RAM, Win 11 Pro | `heavy` (đặt 21/08/2026) |
 | Cloud (Claude Code web) | `vm` (container phù du) | 4 vCPU, 15GB, **không GPU**, proxy chặn tải model (registry.ollama.ai/huggingface.co 403) → không chạy được model sinh lẫn embedding thật | `light` — chỉ lane nhẹ; số đo model thật lấy qua job CI `retrieval-eval` |
 
+## Cấu hình khác nhau theo máy — override qua `.env`
+
+`models.yaml` là file dùng chung (versioned), nên tính năng nào **tốn model sinh lúc
+index** mà máy nhẹ không kham nổi thì đè theo máy bằng `.env` (không commit), không
+sửa `models.yaml`:
+
+| Biến `.env` | Máy nhẹ | Máy mạnh | Ý nghĩa |
+| --- | --- | --- | --- |
+| `RAG_CONTEXTUAL_RETRIEVAL_ENABLED` | `false` | *(không đặt → theo models.yaml = true)* | P4-2: sinh 1 lời gọi model/chunk lúc index. Máy nhẹ tắt để upload vẫn nhanh; đánh đổi: tài liệu index ở máy nhẹ không có context (vẫn tìm được kiểu trần, re-index ở máy mạnh là có) |
+
+Log khởi động ghi rõ nguồn quyết định (`event=chunk_context_config`, `source=env|models.yaml`).
+
 ## Một phiên Claude Code tự route thế nào
 
 Đầu mỗi phiên làm việc, đọc `.machine-role`:

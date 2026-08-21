@@ -13,6 +13,12 @@ trên máy nặng `PC-dungbt` (RTX 5060 Ti 16GB, Ryzen 7 7700, 31GB RAM) với
 tổng **+0.068**, MRR cross **+0.208**, recall cross đạt **1.0000**, 4 câu
 miss→hit và **0 câu hit→miss**. Baseline D1 đã ghi lại theo cấu hình mới.
 
+> **Bổ sung 21/08 (máy nhẹ):** cờ bật mặc định kéo theo máy nhẹ cũng sinh context lúc
+> index (32.7s/tài liệu trên RTX 5060 Ti → nhiều phút/tài liệu trên GTX 1650 Ti). Thêm
+> override theo máy `RAG_CONTEXTUAL_RETRIEVAL_ENABLED` (`.env`, không commit) qua một
+> `ChunkContextService.from_config` dùng chung cho API lẫn RQ worker — máy nhẹ đặt
+> `false`, máy mạnh để theo `models.yaml`. Quyết định: `docs/machine_split.md`.
+
 ### Thiết kế (và lý do từng quyết định)
 
 Bài gốc: [Contextual Retrieval](https://www.anthropic.com/engineering/contextual-retrieval)

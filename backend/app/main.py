@@ -116,13 +116,7 @@ async def lifespan(app: FastAPI):
         if settings.ingestion_execution_backend == "rq"
         else None
     )
-    contextual_config = rag_config.get("contextual_retrieval", {})
-    chunk_context_service = ChunkContextService(
-        router,
-        enabled=bool(contextual_config.get("enabled", False)),
-        context_tokens=int(contextual_config.get("context_tokens", 80)),
-        document_char_cap=int(contextual_config.get("document_char_cap", 12_000)),
-    )
+    chunk_context_service = ChunkContextService.from_config(router, rag_config, enabled_override=settings.rag_contextual_retrieval_enabled)
     app.state.document_service = PostgresDocumentService(
         postgres_sessions, PostgresEmbeddingCacheStore(postgres_sessions), qdrant_store, router, logging_service, settings.documents_path,
         int(rag_config.get("chunk_tokens", rag_config.get("chunk_size", 480))),

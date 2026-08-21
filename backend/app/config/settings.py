@@ -63,6 +63,12 @@ class Settings(BaseSettings):
     # the dashboard; below it they wait in the review queue. Set to "off" to
     # review everything by hand. Delete-proposals always wait for a human.
     discord_memory_auto_apply_threshold: float | None = 0.8
+    # P4-2: per-machine override of models.yaml rag.contextual_retrieval.enabled.
+    # Unset = follow models.yaml (shared, versioned); true/false = this machine
+    # decides. Context generation is one general-model call per chunk at INDEX
+    # time, so the light machine pins it off and the heavy machine leaves it on
+    # (docs/machine_split.md). Answer-time cost is unaffected either way.
+    rag_contextual_retrieval_enabled: bool | None = None
     superseded_version_grace_days: int = 7
     backup_dir: str = "data/backups"
     log_dir: str = "data/logs"

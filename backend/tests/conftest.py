@@ -23,6 +23,9 @@ os.environ["QDRANT_MEMORIES_COLLECTION"] = "memories_test"
 # model when one is running — and fail in CI where none is. Agent behaviour is
 # tested explicitly in test_agent_service.py.
 os.environ["DISCORD_AGENT_TOOLS_ENABLED"] = "false"
+# P4-2: models.yaml ships contextual retrieval ON; tests run the bare index path
+# unless a test enables the service explicitly (test_chunk_context.py does).
+os.environ["RAG_CONTEXTUAL_RETRIEVAL_ENABLED"] = "false"
 # P3-1 accounts stay off in tests: an operator's .env with auth enabled must
 # not flip every open-access assertion. Auth tests enable it explicitly on
 # their own app settings instance.

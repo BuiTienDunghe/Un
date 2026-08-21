@@ -48,6 +48,30 @@ class ChunkContextService:
         self.context_tokens = int(context_tokens)
         self.document_char_cap = int(document_char_cap)
 
+    @classmethod
+    def from_config(cls, router, rag_config: dict, *, enabled_override: bool | None = None) -> "ChunkContextService":
+        """Build the service from the models.yaml ``rag`` block, honouring a
+        per-machine override.
+
+        ``enabled_override`` is ``Settings.rag_contextual_retrieval_enabled``
+        (env ``RAG_CONTEXTUAL_RETRIEVAL_ENABLED``): ``None`` follows the shared
+        models.yaml default; ``True``/``False`` lets one machine diverge without
+        editing a versioned file. The API process and the RQ worker both build
+        through here so the two index paths can never disagree on the flag.
+        """
+        config = rag_config.get("contextual_retrieval", {}) or {}
+        yaml_enabled = bool(config.get("enabled", False))
+        enabled = yaml_enabled if enabled_override is None else bool(enabled_override)
+        logger.bind(event="chunk_context_config", enabled=enabled, source="env" if enabled_override is not None else "models.yaml", yaml_enabled=yaml_enabled).info(
+            "Contextual retrieval {} ({})", "ON" if enabled else "OFF", "per-machine env override" if enabled_override is not None else "models.yaml default"
+        )
+        return cls(
+            router,
+            enabled=enabled,
+            context_tokens=int(config.get("context_tokens", 80)),
+            document_char_cap=int(config.get("document_char_cap", 12_000)),
+        )
+
     def annotate(
         self,
         chunks: list[DocumentChunk],

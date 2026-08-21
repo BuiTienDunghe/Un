@@ -74,8 +74,7 @@ def _service() -> tuple[PostgresDocumentService, object, JobQueueService]:
     # embedding cache.  SQLite remains isolated to the cleanup process.
     auxiliary_store = PostgresAuxiliaryStore(sessions)
     rag_config = settings.load_config().get("rag", {})
-    contextual_config = rag_config.get("contextual_retrieval", {})
-    chunk_context = ChunkContextService(router, enabled=bool(contextual_config.get("enabled", False)), context_tokens=int(contextual_config.get("context_tokens", 80)), document_char_cap=int(contextual_config.get("document_char_cap", 12_000)))
+    chunk_context = ChunkContextService.from_config(router, rag_config, enabled_override=settings.rag_contextual_retrieval_enabled)
     service = PostgresDocumentService(sessions, PostgresEmbeddingCacheStore(sessions), QdrantStore(settings.qdrant_url, settings.qdrant_timeout_seconds), router, LoggingService(auxiliary_store, settings.logs_path), settings.documents_path, int(rag_config.get("chunk_tokens", 480)), int(rag_config.get("chunk_overlap_tokens", 80)), OCRService(router, auxiliary_store), chunk_context=chunk_context)
     return (
         service,
