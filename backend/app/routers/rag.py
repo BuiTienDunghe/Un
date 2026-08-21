@@ -2,14 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from app.llm_clients.ollama_client import OllamaModelNotLoadedError, OllamaTimeoutError, OllamaUnavailableError
-from app.schemas.rag_schema import RagChatRequest, RagChatResponse, RagSource
+from app.schemas.rag_schema import RagChatRequest, RagChatResponse, RagSearchRequest, RagSearchResponse, RagSource
 from app.services.chat_service import ConversationNotFoundError
 from app.services.rag_service import InsufficientContextError
 from app.services.reranker_service import RerankerUnavailableError
 from app.stores.qdrant_store import QdrantUnavailableError
 from app.utils.sse import sse_event
 
-from app.security.api_key import require_api_key
+from app.security.api_key import require_api_key, require_api_key_for_read
 from app.security.auth import ensure_conversation_access, resolve_identity
 
 router = APIRouter(prefix="/rag", tags=["rag"])
@@ -41,6 +41,25 @@ def _response_sources(sources: list[dict[str, object]]) -> list[RagSource]:
         )
         for source in sources
     ]
+
+
+@router.post("/search", response_model=RagSearchResponse, dependencies=[Depends(require_api_key_for_read)])
+def rag_search(payload: RagSearchRequest, request: Request) -> RagSearchResponse:
+    try:
+        document_scope = payload.document_ids or ([payload.document_id] if payload.document_id else None)
+        sources, latency_ms = request.app.state.rag_service.search(payload.message, payload.top_k, document_scope)
+        return RagSearchResponse(latency_ms=latency_ms, sources=_response_sources(sources))
+    except QdrantUnavailableError as error:
+        request.app.state.logging_service.log_request("/rag/search", None, 0, "error", "QDRANT_UNAVAILABLE")
+        raise HTTPException(status_code=503, detail={"error_code": "QDRANT_UNAVAILABLE", "message": str(error)}) from error
+    except OllamaModelNotLoadedError as error:
+        raise HTTPException(status_code=502, detail={"error_code": "MODEL_NOT_LOADED", "message": str(error)}) from error
+    except OllamaTimeoutError as error:
+        raise HTTPException(status_code=504, detail={"error_code": "MODEL_TIMEOUT", "message": str(error)}) from error
+    except OllamaUnavailableError as error:
+        raise HTTPException(status_code=502, detail={"error_code": "OLLAMA_UNAVAILABLE", "message": str(error)}) from error
+    except RerankerUnavailableError as error:
+        raise HTTPException(status_code=503, detail={"error_code": "RERANKER_UNAVAILABLE", "message": str(error)}) from error
 
 
 @router.post("/chat", response_model=RagChatResponse, dependencies=[Depends(require_api_key)])

@@ -12,6 +12,14 @@ class RagChatRequest(BaseModel):
     stream: bool = False
 
 
+class RagSearchRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=10_000)
+    document_id: str | None = Field(default=None, max_length=64)
+    document_ids: list[str] | None = Field(default=None, max_length=100)
+    # None defers to the server-side default from models.yaml (rag.top_k).
+    top_k: int | None = Field(default=None, ge=1, le=20)
+
+
 class RagSource(BaseModel):
     document_id: str
     filename: str
@@ -35,6 +43,13 @@ class RagSource(BaseModel):
     # display preview. Consumers verifying citations should use this field.
     content: str
     extraction_method: str
+
+
+class RagSearchResponse(BaseModel):
+    latency_ms: int
+    # Empty means nothing indexed matched: for search that is a result, not an
+    # error — unlike /rag/chat, which refuses to answer without context.
+    sources: list[RagSource]
 
 
 class RagChatResponse(BaseModel):

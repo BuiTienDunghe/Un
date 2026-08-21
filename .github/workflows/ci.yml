@@ -157,6 +157,120 @@ jobs:
       - name: Assert the test database is back at head
         run: python -m alembic current | grep -q "(head)"
 
+  retrieval-eval:
+    # D1 gate: the multi-document retrieval eval, retrieval-only so the job
+    # needs the 0.6b embedding model and no generation model. Report-only
+    # until data/evaluation/rag_multidoc_baseline.json is recorded; after
+    # that it fails on a drop of more than the harness tolerance.
+    name: Retrieval eval gate (D1)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: local_ai_core_eval
+          POSTGRES_USER: local_ai
+          POSTGRES_PASSWORD: local_ai
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U local_ai -d local_ai_core_eval"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      qdrant:
+        image: qdrant/qdrant:latest
+        ports:
+          - 6333:6333
+
+    env:
+      DATABASE_URL: postgresql+psycopg://local_ai:local_ai@127.0.0.1:5432/local_ai_core_eval
+      REDIS_URL: redis://127.0.0.1:6379/14
+      RQ_QUEUE_PREFIX: local-ai:ci-eval
+      QDRANT_URL: http://127.0.0.1:6333
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify the editable install
+        run: pip install -e . --no-deps
+
+      - name: Apply migrations to the eval database
+        run: python -m alembic upgrade head
+
+      - name: Wait for Qdrant to accept requests
+        run: |
+          for _ in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:6333/readyz > /dev/null \
+              || curl -sf http://127.0.0.1:6333/ > /dev/null; then
+              echo "Qdrant is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Qdrant did not become ready in 120s" >&2
+          exit 1
+
+      # The pulled model blobs are ~640MB; cache them keyed on the embedding
+      # cache identity from models.yaml so a revision bump refetches.
+      - name: Cache the Ollama embedding model
+        uses: actions/cache@v4
+        with:
+          path: ~/.ollama
+          key: ollama-qwen3-embedding-0.6b-r1
+
+      - name: Install and start Ollama with the embedding model
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          (ollama serve > /tmp/ollama.log 2>&1 &) || true
+          for _ in $(seq 1 30); do
+            curl -sf http://127.0.0.1:11434/api/version > /dev/null && break
+            sleep 2
+          done
+          ollama pull qwen3-embedding:0.6b
+
+      - name: Start the API
+        working-directory: backend
+        run: |
+          nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 > /tmp/api.log 2>&1 &
+          for _ in $(seq 1 60); do
+            curl -sf http://127.0.0.1:8000/models > /dev/null && exit 0
+            sleep 2
+          done
+          echo "API did not become ready in 120s" >&2
+          tail -50 /tmp/api.log >&2
+          exit 1
+
+      - name: Run the retrieval eval gate
+        working-directory: backend
+        run: >-
+          python -m scripts.evaluate_rag
+          --multidoc-dataset ../data/evaluation/rag_multidoc_eval.jsonl
+          --retrieval-only
+          --baseline ../data/evaluation/rag_multidoc_baseline.json
+
   bot-tests:
     name: Bot and tools tests (Windows)
     # Windows is the deployment target for the launcher and the control panel,

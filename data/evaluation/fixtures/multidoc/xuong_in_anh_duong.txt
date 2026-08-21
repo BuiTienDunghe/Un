@@ -1,0 +1,143 @@
+# Sổ tay vận hành Local AI Core — Xưởng In Ánh Dương
+
+Tài liệu nội bộ, phiên bản 2.3, cập nhật tháng 7 năm 2026. Người biên soạn: tổ Công nghệ Xưởng In Ánh Dương. Mã dự án nội bộ là LAC-AD. Tài liệu này là nguồn tham chiếu duy nhất cho việc vận hành hệ thống trợ lý AI nội bộ.
+
+## 1. Giới thiệu và phạm vi
+
+Hệ thống Local AI Core được Xưởng In Ánh Dương đưa vào sử dụng chính thức từ tháng 3 năm 2026, phục vụ 18 nhân viên thuộc ba bộ phận: thiết kế, chế bản và kinh doanh. Toàn bộ dữ liệu và mô hình AI chạy cục bộ trên một máy chủ đặt tại phòng kỹ thuật, không gửi nội dung tài liệu ra dịch vụ bên ngoài. Hệ thống phục vụ ba nhu cầu chính: hỏi đáp quy trình nội bộ, tra cứu tài liệu kỹ thuật in ấn có trích dẫn nguồn, và hỗ trợ soạn thảo báo giá.
+
+Phạm vi tài liệu này gồm kiến trúc triển khai, yêu cầu phần cứng, quy trình sao lưu, chính sách lưu trữ, danh mục mô hình AI, quy trình tải tài liệu, cấu hình hỏi đáp RAG, bot Discord và phân công trực sự cố. Tài liệu không bao gồm hướng dẫn phát triển phần mềm.
+
+## 2. Kiến trúc triển khai
+
+Máy chủ vận hành năm dịch vụ chính, mỗi dịch vụ gắn một cổng cố định: FastAPI phục vụ API và giao diện web tại cổng 8000, Qdrant lưu chỉ mục vector tại cổng 6333, PostgreSQL lưu dữ liệu chuẩn tại cổng 5432, Redis điều phối hàng đợi tại cổng 6379, và Ollama chạy mô hình AI tại cổng 11434. Toàn bộ dữ liệu vận hành được lưu trong thư mục D:\lac-data trên máy chủ.
+
+PostgreSQL là nguồn dữ liệu chuẩn duy nhất của hệ thống. Qdrant chỉ giữ vai trò chỉ mục vector phục vụ tìm kiếm; khi hai bên lệch nhau, dữ liệu trong PostgreSQL luôn được coi là đúng. Giao diện web truy cập qua địa chỉ nội bộ http://127.0.0.1:8000/ui/ và chỉ mở trong mạng LAN của xưởng.
+
+## 3. Yêu cầu phần cứng
+
+Cấu hình máy chủ hiện tại của xưởng được liệt kê trong bảng dưới đây. Linh kiện quan trọng nhất là card đồ họa vì mọi mô hình AI đều chạy trên GPU.
+
+| Thành phần | Cấu hình | Ghi chú |
+| --- | --- | --- |
+| CPU | AMD Ryzen 9 7900, 12 nhân | đủ cho OCR song song |
+| RAM | 64 GB DDR5 | tối thiểu 32 GB |
+| GPU | NVIDIA RTX 4090, 24 GB VRAM | bắt buộc cho mô hình 9B |
+| Ổ cứng | SSD NVMe 2 TB | chứa mô hình và dữ liệu |
+| Nguồn dự phòng | UPS 1500 VA | giữ máy 15 phút khi mất điện |
+
+Khi nâng cấp phần cứng phải giữ nguyên khe cắm GPU và kiểm tra lại nhiệt độ phòng kỹ thuật; nhiệt độ khuyến nghị của phòng máy là dưới 28 độ C.
+
+## 4. Khởi động và kiểm tra hệ thống
+
+Quy trình khởi động chuẩn dùng tệp run-local-ai-core.bat đặt tại thư mục gốc của dự án và mất khoảng 90 giây cho tới khi giao diện web sẵn sàng. Thứ tự khởi động bắt buộc là: bật Docker Desktop trước, chờ biểu tượng chuyển xanh; sau đó chạy tệp bat để hệ thống tự kéo Qdrant, Ollama và FastAPI. Không được khởi động FastAPI khi Docker chưa chạy xong.
+
+Sau khi khởi động, nhân viên trực kiểm tra địa chỉ /health trên cổng 8000. Kết quả trả về phải có trạng thái ok cho các thành phần postgres, qdrant và ollama. Nếu một thành phần báo unavailable, xử lý theo bảng sự cố ở mục 11 trước khi cho người dùng vào hệ thống.
+
+## 5. Quy trình sao lưu
+
+Sao lưu PostgreSQL chạy tự động lúc 02:15 mỗi đêm bằng script backup_postgres.py và hệ thống giữ lại đúng 21 bản sao lưu gần nhất. Bản sao lưu được đẩy sang ổ NAS Synology đặt tại phòng kế toán, tách biệt vật lý với máy chủ chính. Bản cũ hơn 21 bản bị xóa tự động sau khi bản mới ghi thành công.
+
+Diễn tập phục hồi là bắt buộc: mỗi quý một lần, nhân viên trực phục hồi bản sao lưu mới nhất vào môi trường cô lập và chạy bộ kiểm tra nhanh trước khi xác nhận bản sao lưu dùng được. Không bao giờ phục hồi trực tiếp lên máy chủ đang vận hành. Ảnh chụp Qdrant chỉ tạo thủ công trước khi nâng cấp phiên bản lớn.
+
+## 6. Chính sách lưu trữ dữ liệu
+
+Thời hạn lưu từng loại dữ liệu vận hành được quy định trong bảng sau. Quá thời hạn, tiến trình dọn dẹp tự động xóa dữ liệu tương ứng.
+
+| Loại dữ liệu | Thời hạn giữ | Ghi chú |
+| --- | --- | --- |
+| Kết quả OCR tạm | 14 ngày | thư mục ocr_runs |
+| Nhật ký hệ thống | 7 ngày | request logs |
+| Bản nháp ingest | 7 ngày | run chưa hoàn tất |
+| Version bị thay thế | 7 ngày ân hạn | sau đó mới xóa vector |
+
+Tài liệu gốc do người dùng tải lên không có thời hạn xóa tự động; chỉ người quản trị mới được xóa tài liệu gốc, và thao tác xóa yêu cầu xác nhận hai bước trên giao diện.
+
+## 7. Danh mục mô hình AI
+
+Bốn mô hình đang phục vụ hệ thống được phân vai như bảng dưới. Tất cả chạy qua Ollama trên GPU của máy chủ.
+
+| Vai trò | Mô hình | Ghi chú |
+| --- | --- | --- |
+| Trò chuyện và RAG | qwen3.5:9b | chiếm khoảng 7 GB VRAM |
+| Hỗ trợ lập trình | qwen2.5-coder:7b | dùng cho tổ công nghệ |
+| Embedding | qwen3-embedding:0.6b | vector 1024 chiều |
+| OCR | glm-ocr:latest | đọc bản scan |
+
+Muốn đổi một vai trò sang mô hình khác phải sửa tệp cấu hình models.yaml rồi khởi động lại dịch vụ; không đổi mô hình embedding khi chưa có kế hoạch đánh chỉ mục lại toàn bộ tài liệu, vì vector cũ và mới không tương thích.
+
+## 8. Tải tài liệu và quản lý phiên bản
+
+Hệ thống nhận bốn định dạng tệp: PDF, DOCX, TXT và Markdown, với dung lượng tối đa 50 MB mỗi tệp. Nội dung tệp được nhận diện bằng mã băm SHA-256 để phát hiện trùng lặp ngay lúc tải lên.
+
+Khi tải tệp trùng, hệ thống phân biệt bốn tình huống: tên trùng và nội dung trùng thì dùng lại tài liệu sẵn có; tên khác nhưng nội dung trùng thì đề nghị đổi tên tài liệu cũ; tên trùng nhưng nội dung khác thì tạo phiên bản mới hoặc giữ cả hai với tên phân biệt; tên và nội dung đều mới thì tạo tài liệu mới. Khi thay nội dung, phiên bản cũ vẫn hoạt động cho tới khi phiên bản mới OCR và đánh chỉ mục thành công, nhờ đó tải lỗi không làm mất khả năng tra cứu tài liệu đang dùng.
+
+## 9. Cấu hình hỏi đáp RAG
+
+Bộ hỏi đáp RAG cắt tài liệu thành các đoạn khoảng 480 token với phần chồng lấn 80 token, và mỗi câu trả lời dùng tối đa 5 đoạn ngữ cảnh. Chế độ tìm kiếm mặc định là hybrid: kết hợp tìm kiếm vector với BM25 theo từ khóa tiếng Việt, trộn kết quả bằng thuật toán RRF.
+
+Mỗi câu trả lời RAG kèm danh sách nguồn: tên tệp, số trang và đoạn trích dẫn để người dùng đối chiếu. Câu trả lời không có nguồn đi kèm thì không được dùng làm căn cứ cho báo giá hay hợp đồng. Nếu hệ thống trả lời rằng không đủ thông tin, người dùng cần tải bổ sung tài liệu liên quan rồi hỏi lại.
+
+## 10. Bot Discord Ún
+
+Bot Discord tên Ún là kênh phụ để hỏi hệ thống ngay trong máy chủ Discord của xưởng. Bot có hai lệnh gạch chéo: /ping kiểm tra bot còn phản hồi và /ask gửi câu hỏi tới hệ thống; ngoài ra nhắc tên @Ún trong kênh chat rồi đặt câu hỏi thì bot cũng trả lời. Ún gửi kèm ngữ cảnh máy chủ Discord với tối đa 100 tên hiển thị của thành viên không phải bot.
+
+Để Ún đọc được tin nhắn nhắc tên, quản trị viên Discord phải bật Message Content Intent và Server Members Intent trong trang cài đặt bot của Discord Developer Portal. Ún là dịch vụ tùy chọn: khi bot tắt, các chức năng web và API của hệ thống không bị ảnh hưởng.
+
+## 11. Xử lý sự cố thường gặp
+
+Bảng dưới liệt kê mã lỗi thường gặp trên giao diện và cách xử lý đầu tiên nên thử.
+
+| Mã lỗi | Ý nghĩa | Cách xử lý đầu tiên |
+| --- | --- | --- |
+| OLLAMA_UNAVAILABLE | dịch vụ mô hình không chạy | khởi động lại Ollama rồi thử lại |
+| QDRANT_UNAVAILABLE | chỉ mục vector không phản hồi | chạy docker compose up -d |
+| MODEL_TIMEOUT | mô hình trả lời quá chậm | rút ngắn câu hỏi, giảm số đoạn ngữ cảnh |
+| DOCUMENT_TOO_LARGE | tệp vượt 50 MB | nén hoặc tách nhỏ tệp |
+| INSUFFICIENT_CONTEXT | chưa có tài liệu phù hợp | tải tài liệu liên quan rồi hỏi lại |
+
+Sự cố ngoài bảng trên phải ghi vào sổ trực kèm ảnh chụp màn hình và báo cho người phụ trách theo mục 12. Tuyệt đối không tự xóa dữ liệu trong PostgreSQL hay Qdrant khi xử lý sự cố.
+
+## 12. Phân công trực và liên hệ
+
+Người quản trị chính của hệ thống là anh Đức Khoa thuộc tổ Công nghệ, liên hệ qua số máy lẻ nội bộ 1088; người dự phòng là chị Mai Trâm thuộc bộ phận chế bản. Cam kết phản hồi sự cố trong vòng 4 giờ làm việc kể từ khi nhận báo.
+
+Bảo trì định kỳ diễn ra vào thứ Bảy đầu tiên của mỗi tháng, từ 8 giờ đến 10 giờ sáng; trong khung giờ này hệ thống có thể gián đoạn và lịch bảo trì được thông báo trước trên kênh Discord chung của xưởng. Mọi thay đổi cấu hình ngoài lịch bảo trì phải được anh Đức Khoa phê duyệt trước khi thực hiện.
+
+## 13. Quy ước tài liệu chế bản đưa vào hệ thống
+
+Bộ phận chế bản chịu trách nhiệm đưa tài liệu kỹ thuật vào hệ thống theo quy ước thống nhất để kết quả tra cứu không lẫn giữa các khách hàng. Tên tệp thiết kế phải theo mẫu gồm mã khách hàng, tên ấn phẩm và ngày bàn giao, ví dụ KH102_catalogue-xuan_2026-01-20.pdf; tệp sai quy ước đặt tên sẽ bị từ chối ở khâu duyệt nội bộ trước khi tải lên, không phải do hệ thống chặn.
+
+Bản in thử đã ký duyệt của khách được quét lại thành PDF trước khi đưa vào hệ thống; bản quét phải đạt độ phân giải quét tối thiểu 300 dpi để OCR đọc ổn định chữ nhỏ trên thông số kỹ thuật. Tài liệu hợp đồng và phụ lục giá chỉ được tải vào hệ thống sau khi đã che thông tin tài khoản ngân hàng của khách.
+
+## 14. Khổ giấy và định lượng thường dùng
+
+Danh mục vật tư giấy của xưởng xoay quanh các khổ và định lượng phổ biến sau; tổ kinh doanh dùng danh mục này khi tra cứu để soạn báo giá.
+
+| Loại ấn phẩm | Khổ thành phẩm | Định lượng giấy |
+| --- | --- | --- |
+| Danh thiếp | 90 x 54 mm | couche 300 gsm |
+| Tờ rơi A5 | 148 x 210 mm | couche 150 gsm |
+| Catalogue | 210 x 297 mm | ruột 150 gsm, bìa 250 gsm |
+| Túi giấy | 260 x 350 x 100 mm | ivory 250 gsm |
+| Lịch để bàn | 210 x 200 mm | couche 250 gsm |
+
+Giấy couche và ivory nhập theo ram ở khổ lớn 65 x 86 cm rồi cắt theo lệnh sản xuất. Khách yêu cầu giấy mỹ thuật ngoài danh mục thì tổ kinh doanh phải hỏi lại nhà cung cấp về thời gian đặt hàng trước khi chốt hợp đồng, thường mất thêm từ 5 đến 7 ngày làm việc.
+
+## 15. Quản lý màu khi in
+
+Xưởng in theo hệ màu CMYK; tệp thiết kế gửi in phải được chuyển từ RGB sang CMYK trước khi ra bản kẽm, nếu không màu thành phẩm sẽ lệch so với màn hình. Hồ sơ màu chuẩn của xưởng là ICC profile tên AnhDuong-Coated-v4, áp cho giấy couche có cán màng; tệp hồ sơ này lưu cùng máy chủ và được nhắc đến trong tài liệu đào tạo thiết kế.
+
+Sai lệch màu chấp nhận được giữa bản in thử và bản in sản lượng là delta E nhỏ hơn hoặc bằng 3 đo bằng máy đo màu cầm tay của tổ chế bản. Khiếu nại màu sắc của khách chỉ được tiếp nhận khi có bản in thử đã ký duyệt kèm theo; đây là lý do mọi bản in thử ký duyệt đều phải quét và đưa vào hệ thống theo mục 13.
+
+## 16. Quy trình soạn báo giá bằng trợ lý AI
+
+Nhân viên kinh doanh soạn báo giá bằng cách hỏi hệ thống theo cú pháp gợi ý: nêu loại ấn phẩm, số lượng, khổ và loại giấy, sau đó đối chiếu câu trả lời với bảng khổ giấy ở mục 14. Trợ lý AI chỉ hỗ trợ tra cứu thông số và soạn lời văn; đơn giá cuối cùng luôn do trưởng bộ phận kinh doanh duyệt, hệ thống không được phép tự chốt giá với khách.
+
+Báo giá gửi khách phải xuất từ mẫu chuẩn của xưởng, có mã báo giá theo dạng BG-năm-số thứ tự, ví dụ BG-2026-0147. Câu trả lời của trợ lý AI không có trích dẫn nguồn thì không được sao chép vào báo giá; quy tắc này nhắc lại đúng nguyên tắc đã nêu ở mục 9.
+
+## 17. An toàn dữ liệu và quyền truy cập
+
+Giao diện web của hệ thống chỉ truy cập được trong mạng LAN của xưởng và không mở ra Internet; nhân viên làm việc từ xa phải vào bằng VPN nội bộ do tổ Công nghệ cấp tài khoản. Tài khoản VPN cấp theo từng người, không dùng chung, và bị thu hồi ngay khi nhân viên nghỉ việc.
+
+Dữ liệu khách hàng trong hệ thống thuộc danh mục bảo mật nội bộ: không sao chép nội dung tài liệu khách ra thiết bị cá nhân, không dán nội dung hợp đồng vào các dịch vụ AI công cộng bên ngoài. Vi phạm quy định bảo mật xử lý theo nội quy lao động của xưởng và phải báo cáo cho anh Đức Khoa trong vòng 24 giờ kể từ khi phát hiện.

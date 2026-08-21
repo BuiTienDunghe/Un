@@ -136,6 +136,22 @@ class RagService:
             origin += f", page {page}" if source.get("page_end") in {None, page} else f", pages {page}-{source['page_end']}"
         return f"[Source {index + 1}] ({origin})\n{source['content']}"
 
+    def search(self, question: str, top_k: int | None = None, document_id: str | list[str] | None = None) -> tuple[list[dict[str, object]], int]:
+        """Retrieval without generation: exactly the sources /rag/chat would cite.
+
+        No generation call, no conversation, no persisted turn — the only model
+        involved is the embedding model inside the retrieval backend. This is
+        what the retrieval-only eval gate (D1) measures, so it must stay
+        behaviourally identical to the retrieval half of respond(): same
+        default top_k, same max_context_chunks clipping.
+        """
+        started = perf_counter()
+        sources = self.retrieval_service.retrieve(question, top_k or self.default_top_k, document_id)
+        sources = sources[: self.max_context_chunks]
+        latency_ms = int((perf_counter() - started) * 1000)
+        self.logging_service.log_request("/rag/search", None, latency_ms, "ok")
+        return sources, latency_ms
+
     def respond(self, question: str, top_k: int | None, document_id: str | list[str] | None, conversation_id: str | None = None, user_id: str | None = None) -> tuple[str, str, int, list[dict[str, object]], str | None, str | None]:
         started = perf_counter()
         conversation_id, created = self._resolve_conversation(question, conversation_id, user_id)

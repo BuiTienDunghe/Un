@@ -88,3 +88,53 @@ def test_rag_chat_persists_turn_into_conversation(client, mock_ollama, monkeypat
     assert missing.status_code == 404
     assert missing.json()["error_code"] == "CONVERSATION_NOT_FOUND"
     client.delete(f"/conversations/{conversation_id}")
+
+
+def test_rag_search_returns_sources_without_the_answer_model(client, monkeypatch):
+    monkeypatch.setattr(
+        "app.services.postgres_retrieval_service.PostgresRetrievalService.retrieve",
+        lambda self, query, top_k, document_id=None: [{"document_id": "doc_demo", "filename": "demo.txt", "chunk_id": "chunk_1", "chunk_index": 0, "page": None, "score": 0.99, "content": "RAG retrieves context before answering."}],
+    )
+
+    def forbidden_chat(*args, **kwargs):
+        raise AssertionError("/rag/search must not call the answer model")
+
+    monkeypatch.setattr("app.services.model_router.ModelRouter.chat", forbidden_chat)
+
+    response = client.post("/rag/search", json={"message": "RAG làm gì?"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "answer" not in body
+    assert body["sources"][0]["document_id"] == "doc_demo"
+    assert body["sources"][0]["content"] == "RAG retrieves context before answering."
+
+
+def test_rag_search_with_no_matching_context_returns_an_empty_list(client, monkeypatch):
+    monkeypatch.setattr(
+        "app.services.postgres_retrieval_service.PostgresRetrievalService.retrieve",
+        lambda self, query, top_k, document_id=None: [],
+    )
+
+    response = client.post("/rag/search", json={"message": "Câu hỏi ngoài tài liệu", "document_id": "doc_missing"})
+
+    # Search reports absence as an empty result; only /rag/chat treats missing
+    # context as an error, because it would otherwise answer ungrounded.
+    assert response.status_code == 200
+    assert response.json()["sources"] == []
+
+
+def test_rag_search_clips_to_the_cited_context_budget(client, monkeypatch):
+    monkeypatch.setattr(
+        "app.services.postgres_retrieval_service.PostgresRetrievalService.retrieve",
+        lambda self, query, top_k, document_id=None: [
+            {"document_id": "doc_demo", "filename": "demo.txt", "chunk_id": f"chunk_{index}", "chunk_index": index, "page": None, "score": 1.0 - index * 0.1, "content": f"chunk {index}"}
+            for index in range(8)
+        ],
+    )
+
+    response = client.post("/rag/search", json={"message": "RAG làm gì?"})
+
+    # Same max_context_chunks clipping as /rag/chat, so eval-measured sources
+    # are exactly the citations the chat path would produce.
+    assert [source["chunk_id"] for source in response.json()["sources"]] == ["chunk_0", "chunk_1", "chunk_2", "chunk_3", "chunk_4"]

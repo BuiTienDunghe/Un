@@ -12,6 +12,16 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 ## [Unreleased]
 
 ### Added
+- **Bộ eval retrieval đa tài liệu** (D1, gỡ G7): corpus 5 tài liệu thật snapshot
+  trong `data/evaluation/fixtures/multidoc/`, bộ câu hỏi tiếng Việt
+  `rag_multidoc_eval.jsonl` (nhóm single + cross-doc) chấm trên **toàn corpus
+  không lọc tài liệu** — trúng khi chunk thuộc đúng tài liệu và chứa nguyên văn
+  `expected_source_terms`. Endpoint mới `POST /rag/search` trả đúng nguồn mà
+  `/rag/chat` sẽ trích nhưng **không gọi model sinh** (retrieval-only, đúng
+  ngân sách inference); job CI `retrieval-eval` dựng Ollama chỉ với embedding
+  0.6b và gate theo baseline đã ghi (chưa có baseline thì chỉ báo cáo; tụt quá
+  2 điểm recall/MRR là đỏ; đổi model embedding buộc đo lại). Cách dùng:
+  `docs/d1_retrieval_eval.md`.
 - **Chế độ tài khoản admin/member** (P3-1): bật `LOCAL_AI_AUTH_ENABLED` (kèm
   `LOCAL_AI_JWT_SECRET` ≥32 ký tự và `LOCAL_AI_API_KEY` — validator ép đủ, mặt
   HTTP fail-closed) là web thành nhiều người dùng: người đầu tiên đăng ký làm

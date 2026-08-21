@@ -36,6 +36,8 @@ READ_REQUESTS = [
     ("get", "/conversations"),
     ("get", "/documents"),
     ("get", "/api/dashboard/stats"),
+    # POST, but a pure read: retrieval without generation or persistence.
+    ("post", "/rag/search"),
 ]
 
 
