@@ -44,6 +44,20 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   không tìm thấy khoá**, nên đổi tên hoặc di chuyển cờ làm job đỏ chứ không lặng
   lẽ đo sai cấu hình. Tolerance vẫn 0.02, dataset không đổi.
 
+### Changed
+- **D3a ✅ ĐÓNG — đo lại sau sửa cap xuyên ngữ, baseline faithfulness cập nhật**:
+  82 câu full-mode lần 2 trên máy nặng, cùng điều kiện (retrieval khớp baseline P4-3
+  từng số). grounding_rate giữ **0.9390** nhưng chất nhãn thấp đổi hẳn: **0 ungrounded**
+  (trước 1 — và lần bắn duy nhất đó là báo oan), `language_mismatch` 0→**3** (cờ giờ
+  đánh dấu đúng câu dịch từ chunk tiếng Anh). Đối chiếu tay vòng 2 (toàn bộ 5 nhãn
+  thấp + 3 grounded ngẫu nhiên): tiếp tục **0 dương tính giả về độ tin cậy** — cộng
+  dồn hai vòng 15 câu grounded không mệnh đề bịa nào; caveat verbatim-run không tái
+  xuất; còn 1 báo oan nhẹ mức weak (attribution trượt khi câu dịch trùng từ chức năng
+  với chunk Việt không liên quan — ghi hồ sơ, 1/82, phía an toàn). Quyết định hành vi:
+  **giữ "chỉ báo"** vì `ungrounded` chưa từng có dương tính thật để đáng gắn hành vi
+  tự động; mở lại khi baseline này bị vượt hoặc D5 tạo được câu bịa chủ đích.
+  Bảng đầy đủ: `docs/d3a_answer_grounding.md`.
+
 ### Added
 - **Baseline faithfulness đầu tiên (D3a, đo trên máy nặng)**:
   `data/evaluation/rag_multidoc_grounding_baseline.json` — 82 câu full-mode với cấu

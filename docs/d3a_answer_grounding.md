@@ -1,12 +1,12 @@
 # D3a — Self-check bám nguồn cho câu trả lời RAG (không dùng model)
 
-**Trạng thái 21/08/2026: ĐÃ ĐO trên máy nặng `PC-dungbt` — baseline faithfulness đầu
-tiên ghi ở `data/evaluation/rag_multidoc_grounding_baseline.json`.** Kết quả nghiệm
-thu: tiêu chí quan trọng nhất **đạt** (0 câu `grounded` chứa mệnh đề bịa sự kiện —
-không dương tính giả về độ tin cậy), nhưng đối chiếu tay lộ một **điểm mù xuyên ngữ
-khi pool nguồn trộn Việt+Anh** làm nhãn thấp báo oan các câu dịch trung thành → giữ
-mức "chỉ báo", còn **một sửa nhắm đích** (cap ngôn ngữ theo từng nguồn) trước khi
-đóng hẳn — chi tiết ở "Kết quả đo" dưới.
+**Trạng thái 21/08/2026: ✅ ĐÓNG.** Đo hai lần trên máy nặng `PC-dungbt` (trước và
+sau khi sửa cap xuyên ngữ), đối chiếu tay hai vòng (10 + 8 câu): **cả hai vòng đều
+0 dương tính giả về độ tin cậy**, và sau sửa các nhãn thấp đa số nói đúng bản chất
+("không chấm được vì khác ngôn ngữ" thay vì "bịa"). Baseline faithfulness hiện hành:
+`data/evaluation/rag_multidoc_grounding_baseline.json` (grounding_rate **0.9390**,
+0 ungrounded, `language_mismatch` 3). Quyết định hành vi: **giữ "chỉ báo"** — lý do
+bằng số ở mục "Đo lại" cuối tài liệu.
 Mục Track D3a trong `docs/DEVELOPMENT_PLAN.md`; phân lane theo `docs/machine_split.md`.
 
 ## Nó là gì
@@ -190,3 +190,79 @@ chứng nhận cả câu nửa-trích nửa-suy-diễn. Chờ lần đo lại ch
 `language_mismatch > 0` và nhãn thấp còn lại đều là báo đúng; rồi quyết định hành vi cho
 `ungrounded`.
 
+
+## Đo lại sau sửa cap (21/08/2026 lần 2, máy nặng `PC-dungbt`) — nghiệm thu ✅, D3a ĐÓNG
+
+Cùng lệnh, cùng cấu hình ship; retrieval lại khớp baseline P4-3 từng con số
+(0.9756 / 0.8581 / 0.8537) — hai lần đo cùng-điều-kiện.
+
+| Metric | Trước sửa (11:57) | Sau sửa (19:36) | Ghi chú |
+| --- | --- | --- | --- |
+| grounding_rate | 0.9390 (77/82) | **0.9390** (77/82) | không đổi — sửa nhắm vào *chất* của nhãn thấp, không phải con số đầu bảng |
+| labels | 77 g / 4 w / **1 u** | 77 g / 5 w / **0 u** | mức báo động `ungrounded` về 0; câu ungrounded-oan cũ (`xd_point_index_version_cu_bi_bo_qua`) giờ `weak + language_mismatch` |
+| language_mismatch | 0 (thiếu nhạy) | **3** | đúng kỳ vọng >0: cờ giờ đánh dấu được câu dịch từ chunk tiếng Anh |
+| answer_pass_rate | 0.9390 | 0.9390 | |
+| Số câu nhãn thấp | 5 | 5 | **không giảm về lượng** — sinh nondeterministic đảo câu nào rơi weak giữa hai lần; cái giảm là *mức độ sai*: hết ungrounded, 3/5 mang cờ "không chấm được" |
+
+Danh sách weak lần 2: `ca_audit_legacy_point`, `ca_duong_dan_archive_sqlite`,
+`ca_khoi_phuc_qdrant_snapshot`, `ca_lam_moi_sau_phase`,
+`xd_point_index_version_cu_bi_bo_qua`. Hai câu retrieval miss vẫn là
+`p3_khoa_brute_force` / `p3_refresh_khong_xoay` — không liên quan grounding.
+
+### Đối chiếu tay vòng 2 (toàn bộ nhãn thấp + 3 grounded ngẫu nhiên, seed 20260821)
+
+Cùng quy cách vòng 1: mỗi câu gọi lại `/rag/chat` một lần, người chấm cặp
+câu-trả-lời/nhãn của chính lần gọi đó.
+
+| # | id | nhãn run | nhãn máy (lần gọi chấm) | kết luận người | khớp? | ghi chú |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | ca_audit_legacy_point | weak | weak (không cờ) | **có nguồn** — dịch từ "no automatic cleanup policy exists… separately approved policy" | ❌ báo oan nhẹ | cap trượt: từ trùng nhiều nhất của câu rơi vào chunk tiếng Việt khác ("chính sách", "phê duyệt" có trong fixture xưởng in) nên bằng chứng bị quy nhầm nguồn |
+| 2 | ca_duong_dan_archive_sqlite | weak | grounded (1.0) | có nguồn — đường dẫn archive nguyên văn | ✅ | |
+| 3 | ca_khoi_phuc_qdrant_snapshot | weak | grounded (1.0) | có nguồn — "retained Qdrant snapshot" | ✅ | |
+| 4 | ca_lam_moi_sau_phase | weak | **weak + mismatch** | có nguồn — lần này model trả lời đúng "P0 và P1-1..P1-3", dịch từ chunk tiếng Anh | ✅ đúng thiết kế | máy nói đúng bản chất: "không chấm được vì khác ngôn ngữ", không phải "bịa" (vòng 1 câu này còn trả lời sai "Phase 1") |
+| 5 | xd_point_index_version_cu_bi_bo_qua | weak | **weak + mismatch** | có nguồn — 4 câu đều dịch trung thành Source 1 tiếng Anh | ✅ đúng thiết kế | chính là câu #6 vòng 1 từng bị `ungrounded` không cờ |
+| 6 | br_rebuild_qdrant | grounded | grounded | có nguồn (`rebuild_qdrant` nguyên văn) | ✅ | |
+| 7 | xa_gpu_may_chu | grounded | grounded | có nguồn (RTX 4090 / 24 GB VRAM nguyên văn bảng) | ✅ | |
+| 8 | p3_reset_mat_khau | grounded | grounded | có nguồn ("reset qua psql" nguyên văn) | ✅ | |
+
+**Chấm theo tiêu chí:**
+
+1. **Dương tính giả về độ tin cậy = 0 ✅** (vòng 2 tiếp tục sạch; cộng dồn hai vòng:
+   15 câu grounded được người đọc kỹ, 0 mệnh đề bịa sự kiện). **Caveat #4 không tái
+   xuất** — không câu nào nửa-trích nửa-suy-diễn được verbatim-run chứng nhận trong
+   mẫu này; giữ hồ sơ theo dõi, chưa cần sửa.
+2. **Nhãn thấp đa số báo đúng ✅** — 3 câu nhãn thấp fresh: #4 và #5 là `weak +
+   language_mismatch`, tức máy tuyên bố đúng bản chất "không chấm được vì khác ngôn
+   ngữ" (đúng triết lý thiết kế); #1 là báo oan còn sót (1/3), và nó ở mức `weak`
+   không cờ — phía an toàn, không phải mức báo động. So với vòng 1 (2/3 báo oan ở
+   mức nặng nhất `ungrounded`), chiều sai đã đổi hẳn.
+
+### Vết còn lại ghi hồ sơ (không chặn đóng)
+
+Trường hợp #1 chỉ ra giới hạn kế tiếp của attribution theo từ-trùng: câu dịch có
+thể trùng *từ chức năng đã fold* với một chunk Việt không liên quan nhiều hơn là
+trùng *thuật ngữ* với chunk Anh là bằng chứng thật. Đây là mức tinh vi mà một bộ
+chấm không-model chấp nhận đánh đổi (plan §1: ưu tiên cơ chế không-LLM); sửa tiếp
+chỉ đáng làm nếu số liệu tương lai cho thấy nó gây nhiễu thật — hiện tại 1/82 câu,
+ở mức weak, phía an toàn.
+
+### Quyết định hành vi cho `ungrounded`: GIỮ "CHỈ BÁO" — lý do bằng số
+
+- Sau sửa, `ungrounded` bắn **0/82** trên corpus này; lần duy nhất nó từng bắn
+  (vòng 1) là báo oan. Tức tín hiệu này **chưa có base-rate dương tính thật nào
+  được đo** để thiết kế hành vi tự động quanh nó.
+- Hai vòng đối chiếu tay không tìm thấy mệnh đề bịa sự kiện nào trong 15 câu
+  grounded — trên corpus + model + prompt hiện tại, bịa thật là hiện tượng hiếm
+  hơn độ phân giải của bộ 82 câu.
+- Hành vi "thú nhận thiếu nguồn" hay "tìm thêm" kích hoạt bởi một tín hiệu như vậy
+  sẽ chỉ chạy trên báo oan (xác suất đo được ≈ 100% các lần bắn tới nay) — model tự
+  nghi ngờ câu trả lời đúng, trả giá UX thật để phòng một lỗi chưa quan sát được.
+- Chip "bám nguồn x%" + tooltip câu chưa đủ nguồn trên web đã đưa đúng thông tin
+  này cho người dùng — đúng tinh thần giám sát-thay-vì-chặn của plan.
+- **Mở lại khi nào:** nếu đổi model sinh / prompt / corpus làm `ungrounded` bắn
+  thật (baseline này là thước so), hoặc khi D5 red-team tạo được câu bịa có chủ
+  đích — lúc đó có base-rate thật để cân hành vi.
+
+**D3a đóng** với: bộ chấm không-model chạy trên mọi câu trả lời `/rag/chat` (0 lời
+gọi model thêm), baseline faithfulness có theo dõi trong git, hai vòng đối chiếu tay
+0 dương tính giả, và một quyết định hành vi có số liệu chống lưng.
