@@ -40,7 +40,25 @@ không cần model sinh — đúng bất biến ngân sách inference và chạy
 không GPU. Bỏ cờ này để đo thêm `answer_pass_rate` bằng model sinh thật
 (chỉ nên đo trên máy đích, cấu hình model cuối cùng).
 
-## Ghi baseline (một lần, trên cấu hình model cuối — plan §9a.6)
+## Baseline đã ghi (21/08/2026)
+
+Đo bởi chính job CI `retrieval-eval` (run #15 trên main, commit `2f0ddfa`) với
+model `qwen3-embedding:0.6b` **thật** — cùng môi trường mà gate chạy, nên
+baseline và các lần đo sau so sánh cùng-điều-kiện tuyệt đối:
+
+| Metric | Toàn bộ (82) | single (70) | cross (12) |
+| --- | --- | --- | --- |
+| recall@5 | **0.8659** | 0.8857 | 0.7500 |
+| MRR | **0.7341** | 0.7588 | 0.5903 |
+| doc_hit_rate | **0.7683** | 0.8000 | 0.5833 |
+
+11 câu miss tập trung vào vùng chủ đề trùng lấn giữa các tài liệu kỹ thuật
+(Qdrant point/version giữa `versioned_ingestion` ↔ `current_architecture`,
+legacy SQLite, vai trò worker/Ollama) — đúng headroom mà P4-2 contextual
+retrieval và P4-3 reranker nhắm cải thiện. Không chỉnh dataset để làm đẹp số:
+baseline là hiện trạng thật.
+
+## Ghi lại baseline (chỉ khi đổi model embedding hoặc corpus — plan §9a.6)
 
 ```powershell
 # API + Ollama đang chạy (launcher). Từ backend/:
