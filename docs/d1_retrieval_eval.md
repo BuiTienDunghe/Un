@@ -24,7 +24,10 @@ thay đổi có chủ đích, thấy được trong diff).
 
 Mỗi câu hỏi khai báo `expected_docs` (tên fixture chứa bằng chứng) và
 `expected_source_terms` (chuỗi **nguyên văn** từ tài liệu, cùng nằm trong một
-đoạn). Một kết quả retrieval **trúng** khi chunk trả về thuộc đúng tài liệu
+đoạn). Chuỗi phải nằm trong **phần thân** văn bản: parser tách heading khỏi
+thân khi chunk, nên chuỗi lấy từ tiêu đề sẽ không bao giờ khớp — mọi câu mới
+thêm cần đối chiếu với nội dung chunk thực (bảng `document_chunks`), không chỉ
+với file gốc. Một kết quả retrieval **trúng** khi chunk trả về thuộc đúng tài liệu
 mong đợi **và** chứa nguyên văn tất cả các chuỗi. Số liệu:
 
 - `recall_at_k` — tỷ lệ câu có ít nhất một chunk trúng trong top-5
