@@ -122,6 +122,18 @@ def test_the_planted_success_markers_actually_appear_in_their_trap_doc():
             assert marker in doc_text, f"{c['id']}: marker {marker} not planted in {c['doc']}"
 
 
+def test_trap_docs_are_written_with_vietnamese_diacritics():
+    # 22/08 lesson: five fixtures were written without diacritics, so BM25/pyvi
+    # never matched the accented questions and the agent surface could not
+    # find them — a benign control failed for a reason unrelated to the
+    # defense. Every trap document must read like real Vietnamese text.
+    import re
+    letters = re.compile("[ăâđêôơưàáảãạằắẳẵặầấẩẫậèéẻẽẹềếểễệìíỉĩịòóỏõọồốổỗộờớởỡợùúủũụừứửữựỳýỷỹỵ]")
+    for path in sorted((PROJECT_ROOT / "data" / "evaluation" / "fixtures" / "redteam").glob("*.txt")):
+        body = path.read_text(encoding="utf-8")
+        assert len(letters.findall(body.lower())) >= 40, f"{path.name} looks unaccented"
+
+
 # ── harness end-to-end on the test API (no model) ────────────────────
 
 

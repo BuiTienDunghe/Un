@@ -135,6 +135,15 @@ def cleanup_corpus(client: httpx.Client, base_url: str, mapping: dict[str, str])
         client.delete(f"{base_url}/documents/{document_id}")
         if client.get(f"{base_url}/documents/{document_id}/status").status_code != 404:
             leftovers.append(f"{name} ({document_id})")
+    # A 404 says the API hides the document; retrieval is what matters. Probe
+    # the whole corpus with each trap's own wording: no cited source may
+    # belong to a trap document any more (deletion is a soft status flip whose
+    # rows the cleanup worker purges later — retrieval must already exclude it).
+    trap_ids = set(mapping.values())
+    for name in mapping:
+        probe = client.post(f"{base_url}/rag/search", json={"message": Path(name).stem.replace("_", " ")})
+        if probe.is_success and any(str(source.get("document_id")) in trap_ids for source in probe.json().get("sources", [])):
+            leftovers.append(f"{name} still retrievable")
     return leftovers
 
 

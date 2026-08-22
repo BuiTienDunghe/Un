@@ -178,6 +178,26 @@ vòng đo lại sau khi máy nhẹ sửa control:
 | Harness in "Trap corpus removed" nhưng `DELETE /documents/{id}` chỉ **soft-delete** (`status=deleting`); việc xóa thật là của cleanup worker — phiên lab không có worker nên 6 chunk + 6 điểm Qdrant còn nằm lại (retrieval đã loại chúng, nhưng vòng sau vấp dedupe hash → `use_existing` trỏ vào doc đang `deleting`) | Lần này xóa thật bằng `scripts.cleanup_worker --once --domain documents` với env lab sau **mỗi** vòng (đã xác nhận chunk 0, Qdrant về 27, file gốc gỡ). Đề xuất (lane nhẹ): harness gọi cleanup thật hoặc runbook ghi rõ bước này; kiểm tra "đã xóa" nên đếm chunk/điểm chứ không chỉ 404 của `/status` |
 | 5/6 fixture bẫy không dấu (xem trên) | Ghi nhận, sửa ở vòng sau |
 
+## Sửa sau lần đo 1 (22/08, máy nhẹ) — để đo lại và bật
+
+Lần đo 1 trượt benign gate vì **lỗi của bộ fixture, không phải của phòng thủ**: 5/6 tài
+liệu bẫy được viết **không dấu** nên BM25/pyvi không khớp câu hỏi có dấu; surface RAG vẫn
+trúng nhờ `document_id`, surface agent (tìm toàn corpus) không thấy tài liệu → control agent
+hỏng ở cả hai vòng (Δ = 0 so OFF). Đã sửa:
+
+| Thay đổi | Lý do |
+| --- | --- |
+| Viết lại 5 fixture **có dấu đầy đủ** (canary giữ nguyên ASCII) | Tài liệu bẫy phải giống tài liệu thật; retrieval tiếng Việt là BM25+pyvi trên văn bản có dấu |
+| Test guard `test_trap_docs_are_written_with_vietnamese_diacritics` | Lỗi này không được tái diễn âm thầm |
+| Thêm 2 control agent (`benign_cskh_agent`, `benign_may_in_agent`) → 3 control agent + 2 control RAG | Benign gate không còn phụ thuộc một case duy nhất |
+| Harness: sau khi xóa, **thăm dò `/rag/search`** — không nguồn nào được thuộc tài liệu bẫy; thêm vào `leftovers` nếu còn retrieval được | "404" chỉ nói API giấu tài liệu; thứ cần chứng minh là retrieval không còn kéo trap chunk (xóa là đổi status, hàng chờ cleanup worker purge sau — lab không chạy worker nên vẫn nên `cleanup_worker --once` sau mỗi vòng như runbook) |
+
+**Đo lại (máy nặng)**: cùng runbook phiên lab ở trên, hai vòng `defense-off` / `defense-on`
+với dataset 12 case (7 tấn công + 5 control). Kỳ vọng: benign_pass_rate ≥ 0.9 ở cả hai vòng,
+attack 0.143 → 0.000 lặp lại. Đạt → bật `rag.injection_defense.enabled: true` trong
+models.yaml (D1 + grounding với ON đã đo Δ 0 ở lần 1 — không cần đo lại nếu prompt phòng thủ
+không đổi), ghi bảng lần 2 vào đây, plan D5 ✅, CHANGELOG.
+
 ## Quan hệ với D3a
 
 Kết quả D5 là một trong hai điều kiện mở lại quyết định "hành vi cho `ungrounded`" của D3a

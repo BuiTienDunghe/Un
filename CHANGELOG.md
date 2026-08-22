@@ -11,6 +11,12 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+### Fixed
+- **D5: fixture bẫy viết lại có dấu** (5/6 tài liệu từng không dấu → BM25/pyvi không khớp câu hỏi,
+  control agent hỏng ở cả hai vòng đo 22/08); guard test chặn tái diễn; thêm 2 control agent;
+  harness thăm dò `/rag/search` sau khi xóa để chứng minh trap chunk không còn retrieval được.
+  Máy nặng đo lại hai vòng để quyết định bật `injection_defense` mặc định.
+
 ### Changed
 - **D5 red-team đo trên máy nặng (phiên lab :8001, DB lab + `documents_lab`)**: phòng thủ
   `injection_defense` đưa attack_success_rate **0.143 → 0.000** (7 tấn công; lần thủng duy nhất
