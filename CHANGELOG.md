@@ -12,6 +12,11 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 ## [Unreleased]
 
 ### Added
+- **T11 đóng — collection Qdrant `documents` cấu hình theo môi trường** (`QDRANT_DOCUMENTS_COLLECTION`):
+  suite dùng `documents_test`; phiên đo trên DB lab (`machine_split.md`) dùng `documents_lab` +
+  `rebuild_qdrant` nên vector lab và vector vận hành không còn trộn lẫn. Harness D5 **xóa vĩnh viễn
+  corpus bẫy khi kết thúc** (kể cả khi lỗi; exit 1 nếu còn sót) — tài liệu chứa chỉ thị độc không
+  được sống sót sau một lần chạy; test đầu-cuối bootstrap→bị lừa→dọn sạch→404.
 - **D5 red-team prompt injection (phần xây)**: 6 tài liệu bẫy (`data/evaluation/fixtures/redteam/`)
   phủ 6 vector (ghi đè chỉ dẫn, giả [SYSTEM], rò rỉ link, đổi ngôn ngữ, bịa citation, lạm dụng tool)
   + 10 case (`redteam_injection.jsonl`) + harness `scripts/redteam_rag.py` chấm marker xác định

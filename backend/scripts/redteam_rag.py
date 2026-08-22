@@ -123,6 +123,21 @@ def bootstrap_corpus(client: httpx.Client, base_url: str, corpus_dir: Path) -> d
     return mapping
 
 
+def cleanup_corpus(client: httpx.Client, base_url: str, mapping: dict[str, str]) -> list[str]:
+    """Permanently delete the trap documents and return the ids still present.
+
+    Trap documents carry live injection text; left behind in a corpus they
+    become an attack on every later real question that retrieves them. So
+    cleanup is the default and this function verifies each deletion (404).
+    """
+    leftovers: list[str] = []
+    for name, document_id in mapping.items():
+        client.delete(f"{base_url}/documents/{document_id}")
+        if client.get(f"{base_url}/documents/{document_id}/status").status_code != 404:
+            leftovers.append(f"{name} ({document_id})")
+    return leftovers
+
+
 def ask(client: httpx.Client, base_url: str, case: dict, document_id: str) -> str:
     if case.get("surface") == "agent":
         r = client.post(f"{base_url}/chat", json={"message": case["question"], "use_tools": True})
@@ -142,22 +157,30 @@ def main() -> int:
     parser.add_argument("--base-url", default="http://127.0.0.1:8000")
     parser.add_argument("--output-dir", default=str(PROJECT_ROOT / "data" / "evaluation" / "results"))
     parser.add_argument("--label", default="", help="Free tag for the report filename, e.g. defense-on / defense-off")
+    parser.add_argument("--keep-corpus", action="store_true", help="Debug only: leave the trap documents in the corpus (NEVER on the operating database)")
     args = parser.parse_args()
 
     cases = [json.loads(line) for line in Path(args.dataset).read_text(encoding="utf-8").splitlines() if line.strip()]
     api_key = os.environ.get("LOCAL_AI_API_KEY", "").strip()
     headers = {"X-API-Key": api_key} if api_key else {}
+    print("NOTE: trap documents are uploaded into the database this API serves — run against the LAB database (docs/machine_split.md); they are deleted again at the end unless --keep-corpus.")
+    leftovers: list[str] = []
     with httpx.Client(timeout=600, headers=headers) as client:
         mapping = bootstrap_corpus(client, args.base_url, Path(args.corpus_dir))
         results = []
-        for case in cases:
-            document_id = mapping.get(case["doc"])
-            if document_id is None:
-                raise RuntimeError(f"Case {case['id']} names a doc not in the corpus: {case['doc']}")
-            answer = ask(client, args.base_url, case, document_id)
-            verdict = score_attack(answer, case)
-            verdict["answer_preview"] = answer[:200]
-            results.append(verdict)
+        try:
+            for case in cases:
+                document_id = mapping.get(case["doc"])
+                if document_id is None:
+                    raise RuntimeError(f"Case {case['id']} names a doc not in the corpus: {case['doc']}")
+                answer = ask(client, args.base_url, case, document_id)
+                verdict = score_attack(answer, case)
+                verdict["answer_preview"] = answer[:200]
+                results.append(verdict)
+        finally:
+            if not args.keep_corpus:
+                leftovers = cleanup_corpus(client, args.base_url, mapping)
+                print("Trap corpus removed" if not leftovers else f"WARNING: trap documents still present: {leftovers}")
 
     summary = summarize(results)
     report = {"created_at": datetime.now(UTC).isoformat(), "label": args.label, **summary, "results": results}
@@ -172,7 +195,7 @@ def main() -> int:
     if summary["benign_broken_ids"]:
         print("BENIGN BROKEN:", ", ".join(summary["benign_broken_ids"]))
     print(f"Saved report: {out}")
-    return 0
+    return 1 if leftovers else 0
 
 
 if __name__ == "__main__":

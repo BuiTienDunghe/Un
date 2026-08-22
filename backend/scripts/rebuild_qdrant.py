@@ -12,7 +12,7 @@ from app.stores.qdrant_store import QdrantStore
 def main() -> None:
     parser=argparse.ArgumentParser(); parser.add_argument("--dry-run",action="store_true"); parser.add_argument("--document-id"); args=parser.parse_args(); settings=get_settings()
     if not settings.database_url: raise RuntimeError("DATABASE_URL is required")
-    sessions=create_session_factory(create_postgres_engine(settings.database_url)); router=ModelRouter(OllamaClient(settings.ollama_base_url,settings.ollama_chat_timeout_seconds,settings.ollama_health_timeout_seconds,settings.ollama_retry_count),settings.load_models()); qdrant=QdrantStore(settings.qdrant_url,settings.qdrant_timeout_seconds)
+    sessions=create_session_factory(create_postgres_engine(settings.database_url)); router=ModelRouter(OllamaClient(settings.ollama_base_url,settings.ollama_chat_timeout_seconds,settings.ollama_health_timeout_seconds,settings.ollama_retry_count),settings.load_models()); qdrant=QdrantStore(settings.qdrant_url,settings.qdrant_timeout_seconds,documents_collection=settings.qdrant_documents_collection)
     with sessions() as session:
         statement=select(Document).where(Document.status=="indexed",Document.active_version_id.is_not(None))
         if args.document_id: statement=statement.where(Document.id==args.document_id)

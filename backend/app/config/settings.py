@@ -101,6 +101,11 @@ class Settings(BaseSettings):
     # poison the runtime collection (a 3-dim collection makes every real
     # 1024-dim memory write fail with a dimension mismatch).
     qdrant_memories_collection: str = "memories"
+    # T11: documents vectors likewise live in a named collection. The
+    # operating machine keeps the default; a measuring session that points
+    # DATABASE_URL at the lab database sets this to e.g. documents_lab (and
+    # runs scripts.rebuild_qdrant once) so the two corpora never mix.
+    qdrant_documents_collection: str = "documents"
     max_upload_size_bytes: int = 52_428_800
     max_message_length: int = 10_000
     conversation_history_limit: int = 12

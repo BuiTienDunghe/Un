@@ -42,7 +42,7 @@ def migrate(database_path: Path) -> tuple[int, int]:
             connection.execute("UPDATE documents SET content_hash = ? WHERE id = ?", (hashlib.sha256(target.read_bytes()).hexdigest(), str(document["id"])))
     connection.commit()
     connection.close()
-    qdrant = QdrantStore(settings.qdrant_url, settings.qdrant_timeout_seconds)
+    qdrant = QdrantStore(settings.qdrant_url, settings.qdrant_timeout_seconds, documents_collection=settings.qdrant_documents_collection)
     migrated_vectors = qdrant.migrate_legacy_document_points()
     return moved, migrated_vectors
 

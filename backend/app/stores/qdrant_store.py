@@ -26,10 +26,15 @@ class QdrantStore:
     collection_name = "documents"
     memories_collection_name = "memories"
 
-    def __init__(self, url: str, timeout: float, memories_collection: str | None = None) -> None:
+    def __init__(self, url: str, timeout: float, memories_collection: str | None = None, documents_collection: str | None = None) -> None:
         self.client = QdrantClient(url=url, timeout=timeout)
         if memories_collection:
             self.memories_collection_name = memories_collection
+        # T11: the documents collection is per environment too, so a lab
+        # database (docs/machine_split.md) or the test suite never shares
+        # vectors with the operating corpus.
+        if documents_collection:
+            self.collection_name = documents_collection
         self.retry_count = 2
 
     def healthcheck(self) -> bool:

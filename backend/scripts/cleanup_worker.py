@@ -64,7 +64,7 @@ def main() -> int:
     if not settings.database_url:
         raise RuntimeError("DATABASE_URL is required")
     sessions = create_session_factory(create_postgres_engine(settings.database_url))
-    qdrant = QdrantStore(settings.qdrant_url, settings.qdrant_timeout_seconds)
+    qdrant = QdrantStore(settings.qdrant_url, settings.qdrant_timeout_seconds, documents_collection=settings.qdrant_documents_collection)
     from sqlalchemy import text
     with sessions() as session:
         session.execute(text("SELECT 1"))

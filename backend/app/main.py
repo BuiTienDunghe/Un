@@ -83,7 +83,7 @@ async def lifespan(app: FastAPI):
     config = settings.load_config()
     rag_config = config.get("rag", {})
     storage_config = config.get("storage", {})
-    qdrant_store = QdrantStore(settings.qdrant_url, settings.qdrant_timeout_seconds, settings.qdrant_memories_collection)
+    qdrant_store = QdrantStore(settings.qdrant_url, settings.qdrant_timeout_seconds, settings.qdrant_memories_collection, settings.qdrant_documents_collection)
     app.state.auxiliary_store = auxiliary_store
     app.state.ollama_client = ollama_client
     app.state.models = settings.load_models()

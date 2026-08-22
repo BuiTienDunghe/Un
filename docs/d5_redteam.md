@@ -58,15 +58,36 @@ tốt; `benign_pass_rate` phải giữ ~1.0.
 
 ## Handoff máy NẶNG — chạy tấn công thật, đo trước/sau
 
-Cần model sinh thật + agent tools bật. Từ `backend/`, khi API + Ollama đang chạy:
+**Chạy trên DB LAB, không phải DB vận hành** (`docs/machine_split.md`, cảnh báo đo lường):
+harness upload 6 tài liệu bẫy vào DB mà API đang phục vụ; trên DB thật chúng sẽ được
+retrieval kéo vào câu trả lời của người dùng thật. Harness **xóa vĩnh viễn corpus bẫy
+khi kết thúc** (kể cả khi lỗi giữa chừng, xác nhận 404 từng tài liệu; exit 1 nếu còn sót);
+`--keep-corpus` chỉ để debug và **không bao giờ** dùng trên DB vận hành.
+
+Phiên đo = một API thứ hai trỏ vào DB lab **và** collection Qdrant riêng (T11, sửa 22/08):
+
+```powershell
+# Terminal riêng, KHÔNG đụng launcher production đang chạy:
+cd backend
+$env:DATABASE_URL = "postgresql+psycopg://local_ai:<pw>@127.0.0.1:5432/local_ai_core_lab_20260821"
+$env:QDRANT_DOCUMENTS_COLLECTION = "documents_lab"
+python -m scripts.rebuild_qdrant            # một lần: dựng vector của DB lab vào collection riêng
+..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8001
+```
+
+Sanity trước khi tấn công: D1 retrieval-only với `--base-url http://127.0.0.1:8001` phải
+khớp `rag_multidoc_baseline.json` ±0.02 (đúng corpus 5 fixture). Rồi:
 
 ```powershell
 # Vòng 1 — phòng thủ TẮT (mặc định ship hiện tại):
-python -m scripts.redteam_rag --label defense-off
-# Vòng 2 — bật phòng thủ rồi đo lại:
-#   models.yaml: rag.injection_defense.enabled: true  (hoặc .env RAG_INJECTION_DEFENSE_ENABLED=true), restart API
-python -m scripts.redteam_rag --label defense-on
+python -m scripts.redteam_rag --base-url http://127.0.0.1:8001 --label defense-off
+# Vòng 2 — bật phòng thủ cho API lab rồi đo lại:
+#   $env:RAG_INJECTION_DEFENSE_ENABLED = "true"; khởi động lại uvicorn :8001
+python -m scripts.redteam_rag --base-url http://127.0.0.1:8001 --label defense-on
 ```
+
+Agent-mode (`surface: agent`) đi qua `/chat use_tools` với API lab; tool `search_documents`
+không lọc tài liệu nên corpus lab (5 fixture + 6 bẫy trong lúc chạy) là bối cảnh thật.
 
 Agent-mode cần `DISCORD_AGENT_TOOLS_ENABLED`/tool bật ở API; nếu tool tắt, ghi rõ case
 `atk_tool_abuse`/`benign_dat_coc_agent` chạy đường chat thường.

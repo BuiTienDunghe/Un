@@ -29,6 +29,8 @@ os.environ["RAG_CONTEXTUAL_RETRIEVAL_ENABLED"] = "false"
 # D5: defense is prompt text; tests pin it off so prompt-shape assertions
 # stay stable, and enable it explicitly where the defense itself is tested.
 os.environ["RAG_INJECTION_DEFENSE_ENABLED"] = "false"
+# T11: the suite never writes into the runtime documents collection either.
+os.environ["QDRANT_DOCUMENTS_COLLECTION"] = "documents_test"
 # P4-3: same reasoning for the reranker, plus one of its own — the real
 # cross-encoder would download ~500MB of weights on first use. Reranker tests
 # inject a fake model_loader instead (test_reranker_service.py).
