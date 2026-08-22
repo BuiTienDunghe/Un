@@ -12,6 +12,28 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 ## [Unreleased]
 
 ### Changed
+- **D5 red-team đo trên máy nặng (phiên lab :8001, DB lab + `documents_lab`)**: phòng thủ
+  `injection_defense` đưa attack_success_rate **0.143 → 0.000** (7 tấn công; lần thủng duy nhất
+  khi tắt là `language_flip` — model in token xác nhận dù vẫn trả lời tiếng Việt), D1
+  retrieval-only và grounding full-mode với defense ON **không đổi một chữ số** (0.9756 /
+  0.8581 / 0.8537; grounding 0.939), hai control RAG byte-identical OFF/ON. `benign_pass_rate`
+  0.667 ở **cả hai** vòng: control agent `benign_dat_coc_agent` không đo được vì 5/6 fixture
+  bẫy viết không dấu (agent tìm toàn corpus không khớp token) — artifact dữ liệu, không phải
+  thoái lui do phòng thủ. Theo ngưỡng đã chốt (benign ≥ 0.9) → **cờ vẫn TẮT**; việc còn lại là
+  fixture có dấu + đo lại. Baseline hai vòng: `data/evaluation/redteam_baseline.json`;
+  bảng đọc tay + chẩn đoán: `docs/d5_redteam.md`. Production :8000 không bị đụng.
+
+### Fixed
+- **`scripts/rebuild_qdrant.py` chạy lại được và dựng đúng chỉ mục contextual**: script vỡ ở
+  ba chỗ (gọi `ModelRouter` với một client thay vì dict; đưa ORM chunk vào `upsert_chunks`;
+  embed `content` trần thay vì `combined_retrieval_text(context, content)` — nếu chạy được
+  sẽ âm thầm dựng chỉ mục kém P4-2, kể cả bước 6 `backup_restore.md` sau restore thật).
+  Bằng chứng sửa đúng: `documents_lab` dựng bằng script cho D1 Δ 0.0000 so baseline.
+- Runbook D5: `DELETE /documents/{id}` chỉ soft-delete, phiên lab không có cleanup worker
+  nên phải chạy `cleanup_worker --once --domain documents` sau mỗi vòng (harness in "Trap
+  corpus removed" dựa vào 404 của `/status`, chưa đếm chunk/điểm Qdrant).
+
+### Changed
 - **Thư mục production dời sang đường dẫn thuần ASCII** `C:\Users\dungbt06\local-ai-core` (từ `C:\Users\dungbt06\Ún promax\local-ai-core`): chữ "Ú" làm
   Scheduled Task backup thất bại `0x80070002` ngay cả khi đường cũ còn, đường 8.3 làm compose
   lập project lạ, pip/cp1252 từng chết. Dời có kiểm tra trước/sau (backup `--force`, `compose
