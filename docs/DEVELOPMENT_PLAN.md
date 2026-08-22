@@ -186,8 +186,8 @@ Khảo sát 15/08/2026 trên các dự án mã nguồn mở uy tín nhất phân
 | P4-1 | **Mở rộng bộ eval**: 3–5 tài liệu thật + 30 câu đa tài liệu + eval trong CI (gate: không tụt quá 2 điểm) | Baseline mới thay bộ 1-tài-liệu đã bão hòa | 2 buổi |
 | P4-2 | **Contextual retrieval** (Anthropic): sinh 50–100 token ngữ cảnh/chunk lúc index bằng model local. **Lane nhẹ ✅ 21/08**: cột `retrieval_context` (migration `20260821_25`), sinh context ngoài transaction chung cho cả hai đường index, embedding + BM25 cùng index context+content qua một helper, citation giữ nguyên văn, 8 test; thiết kế + runbook đo: `docs/p4_progress.md`. **Lane nặng ✅ 21/08 (`PC-dungbt`)**: ĐẠT ngưỡng — MRR tổng 0.734→0.797, MRR cross 0.590→0.799, recall cross 1.0, 0 câu hit→miss, 32.7s/tài liệu; cờ BẬT mặc định, máy nhẹ override `RAG_CONTEXTUAL_RETRIEVAL_ENABLED=false` | MRR đa tài liệu tăng ≥ 5 điểm (kỳ vọng theo paper: −49% failure) | 3 buổi |
 | P4-3 ✅ | **Bật reranker** cross-encoder (`RerankerService.from_config` + `RAG_RERANKER_ENABLED` theo máy, warmup fail-fast lúc startup, CI ghim tắt, launcher tự ghim tắt khi máy thiếu extra `[rerank]`) — **ĐÓNG 21/08 (`PC-dungbt`)**: recall@5 0.915→0.976, MRR 0.797→0.858, MRR cross 0.799→0.861, 7 miss→hit / 2 hit→miss, +35ms p50 trên GPU (~990ms trên CPU → máy không GPU ghim tắt); `candidate_limit` 15 | ✅ Kết hợp P4-2: recall failure 13.4% → 2.4% trên bộ D1 (paper: −67%) | 1–2 buổi |
-| P4-4 | **Postgres FTS thay BM25 in-process** (tsvector + GIN + unaccent) | Không tụt chất lượng; RAM không tăng theo corpus; nhất quán đa process | 3–4 buổi |
-| P4-5 | **Chunk visualization** (học RAGFlow): xem chunk của tài liệu trong UI, đánh dấu chunk kém | Người dùng tự chẩn đoán được "tại sao trả lời sai" | 3 buổi |
+| P4-4 | **Chỉ mục sparse vào PostgreSQL** thay BM25 in-process — **thiết kế chốt 23/08: `docs/p4_4_design.md`** (lexeme pyvi lưu thành `text[]` + GIN, tf/len theo chunk, DF tính trong truy vấn; BM25 chấm trong app vì `ts_rank_cd` không có IDF; **không dùng `tsvector`** vì parser tách đôi từ ghép `danh_thiếp`). Ghi chú: pyvi **đã dùng từ trước** (`vi_tokenizer.py`), mô tả cũ "FTS + pyvi/tsvector" là lỗi thời | Không tụt chất lượng (D1 Δ ≤ 0.02 cả ba chỉ số, đo trên DB lab); RAM không tăng theo corpus; hết rebuild + hết truy vấn fingerprint mỗi query; nhất quán đa process; **không** nhắm 2 câu miss cuối (đó là việc tầng rerank) | 3–4 buổi |
+| P4-5 | **Chunk visualization** (học RAGFlow): xem chunk của tài liệu trong UI, đánh dấu chunk kém — **đi SAU P4-4** vì chỉ khi lexeme/tf nằm trong DB thì màn hình mới trả lời được "từ nào của câu hỏi khớp chunk này" (`docs/p4_4_design.md` §12) | Người dùng tự chẩn đoán được "tại sao trả lời sai" | 3 buổi |
 
 ### P5 — Năng lực mở rộng *(tương lai, chọn lọc theo nhu cầu thật)*
 
@@ -230,7 +230,7 @@ Khảo sát 15/08/2026 trên các dự án mã nguồn mở uy tín nhất phân
 | Ngay, trên máy hiện tại | **D1 → D5**, xen D3a | Chạy chủ yếu trên logic + retrieval, gần như không thêm tải model; D1 là thước đo cho mọi mục sau |
 | Song song, GPU cloud free | D2 | Không đụng máy nhà; tái dùng benchmark 19/08 làm nghiệm thu |
 | Sau khi có D1 | D3b, D4 | Digest và trace cần thước đo + sử liệu để chứng minh giá trị thay vì chỉ thêm tính năng |
-| Máy mạnh (đã có, 21/08) | ~~P4-2/P4-3~~ ✅ → P4-4 FTS+pyvi, P4-5, phần đo D3a/D5; D3c sau D2 | Máy mạnh `PC-dungbt` đã vận hành; D3c cần cả D2 lẫn máy |
+| Máy mạnh (đã có, 21/08) | ~~P4-2/P4-3~~ ✅, ~~phần đo D3a/D5~~ ✅ → phần đo P4-4 (xây ở lane nhẹ), P4-5; D3c sau D2 | Máy mạnh `PC-dungbt` đã vận hành; D3c cần cả D2 lẫn máy |
 
 ---
 
@@ -239,7 +239,7 @@ Khảo sát 15/08/2026 trên các dự án mã nguồn mở uy tín nhất phân
 ```
 Web UI ─┐                                  ┌─ Qdrant (vector index)
         ├─ FastAPI ── services ── Postgres ┤
-Discord ─┘    │                            └─ FTS (tsvector, P4-4)
+Discord ─┘    │                            └─ Sparse index (lexeme text[] + GIN, P4-4)
               ├─ Auth layer (P0-2 → P3-1)
               ├─ Memory hub (P1-5): một kho, hai kênh đọc/ghi
               ├─ Agent core (P2-2): planner + tools (RAG/memory/status), trace từng bước
@@ -316,7 +316,7 @@ Discord ─┘    │                            └─ FTS (tsvector, P4-4)
 3. **Mở lại P4** theo đúng thứ tự đã phân tích — mỗi mục một thí nghiệm chấm bằng D1:
    - **P4-2 contextual retrieval** ✅ **ĐÓNG 21/08** (đo trên máy nặng `PC-dungbt`): ĐẠT ngưỡng, cờ `rag.contextual_retrieval.enabled` BẬT mặc định. recall@5 0.866 → **0.915**, MRR 0.734 → **0.797**, doc_hit 0.768 → **0.842**; nhóm cross recall 0.750 → **1.000**, MRR 0.590 → **0.799**; 4 câu miss→hit, 0 câu hit→miss. Chi phí: 1 lời gọi model/chunk lúc index (27 chunk / 144s cho corpus 5 tài liệu), đường hỏi-đáp **không thêm lời gọi nào** — bất biến ngân sách inference còn nguyên. Baseline D1 đã ghi lại; CI gate chuyển sang đo bản trần theo `rag_multidoc_baseline_bare.json` vì runner không có model sinh. Nhật ký: `docs/p4_progress.md`.
    - **P4-3 reranker** ✅ **ĐÓNG 21/08** (đo trên máy nặng `PC-dungbt`): ĐẠT cả ba điều kiện, cờ `rag.reranker.enabled` BẬT mặc định với `candidate_limit` 15. recall@5 0.915 → **0.976**, MRR 0.797 → **0.858**, MRR cross 0.799 → **0.861**; **cả 7 câu miss còn lại của P4-2 thành hit**, đổi lại 2 câu tụt khỏi top-5 (vẫn đúng tài liệu, chỉ trượt chunk mang nguyên văn). Chi phí là **độ trễ, không phải lời gọi model sinh**: `/rag/search` p50 587 → 622ms (**+35ms**, trần đã chốt 300ms). Bài học ghi lại: extra `[rerank]` kéo về torch CPU-only, đo nhầm trên đó thì +990ms và mục này đã trượt — máy bật reranker phải có GPU + torch CUDA, máy khác ghim `RAG_RERANKER_ENABLED=false`. `candidate_limit` 30 kém hơn 15 ở mọi chỉ số xếp hạng (MRR/doc_hit; recall@5 hòa) lẫn tốc độ. Nhật ký: `docs/p4_progress.md`.
-   - **P4-4** Postgres FTS + pyvi → **P4-5** chunk visualization. Headroom P4-4 nhắm: 2 câu còn miss (`p3_khoa_brute_force`, `p3_refresh_khong_xoay`) — cả hai đòi khớp **nguyên văn** hai cụm trong cùng một chunk, đúng thứ FTS mạnh hơn cross-encoder ngữ nghĩa.
+   - **P4-4** chỉ mục sparse vào PostgreSQL (thiết kế: `docs/p4_4_design.md`) → **P4-5** chunk visualization. Đính chính 23/08: P4-4 **không** nhắm 2 câu miss cuối (`p3_khoa_brute_force`, `p3_refresh_khong_xoay`) — audit cho thấy chunk đúng đã nằm trong ứng viên, cross-encoder mới là nơi quyết định; P4-4 nhắm G8 (RAM/rebuild/đa tiến trình) — cả hai đòi khớp **nguyên văn** hai cụm trong cùng một chunk, đúng thứ FTS mạnh hơn cross-encoder ngữ nghĩa.
 4. **D2 distillation** (cloud free hoặc máy mới nếu GPU đủ) → chỉ sau khi D2 đạt mới xét mở **D3c** multi-step planning (vẫn dạng có-điều-kiện + cap theo bất biến ngân sách inference).
 5. **D3b digest nền + D4 LLMOps** xen kẽ sau D1; nợ còn lại (T5, T7–T9, T11–T13) dọn khi đụng vùng, T10 hẹn 2027.
 

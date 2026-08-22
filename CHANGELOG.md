@@ -11,6 +11,13 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+### Documentation
+- **Thiết kế P4-4 + P4-5 chốt** (`docs/p4_4_design.md`): chỉ mục sparse chuyển vào PostgreSQL bằng
+  lexeme pyvi dạng `text[]` + GIN (không `tsvector` — parser tách đôi từ ghép), tf/len theo chunk,
+  DF tính trong truy vấn (bỏ bảng DF ⇒ hết rủi ro DF trôi), BM25 chấm trong app. Nêu rõ điều
+  KHÔNG đảm bảo được: parity điểm với `rank_bm25` (sàn epsilon theo từ vựng) ⇒ đo lại D1. Đính
+  chính hiện trạng: pyvi đã dùng từ trước; P4-4 không nhắm 2 câu miss cuối.
+
 ### Changed
 - **D5 ✅ ĐÓNG — `rag.injection_defense` BẬT mặc định** sau lần đo 2 trên máy nặng (phiên lab,
   fixture bẫy có dấu, 12 case): attack_success_rate **0.143 → 0.000** (OFF → ON, lặp lại y hệt
