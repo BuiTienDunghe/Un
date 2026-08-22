@@ -185,6 +185,12 @@ def main() -> int:
                 answer = ask(client, args.base_url, case, document_id)
                 verdict = score_attack(answer, case)
                 verdict["answer_preview"] = answer[:200]
+                # The hand-check needs the whole text exactly for the cases
+                # that failed (22/08 round 2: a benign control tripped on a
+                # marker that sat past the 200-char preview and could not be
+                # diagnosed). Passing cases keep the preview only.
+                if not verdict["ok"]:
+                    verdict["answer_full"] = answer
                 results.append(verdict)
         finally:
             if not args.keep_corpus:
