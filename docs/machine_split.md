@@ -34,6 +34,40 @@ Bàn giao 21/08: dump cuối của dữ liệu thật từ máy nhẹ `local-ai-
 (3 tài liệu, 1 hội thoại, 91 chunk, head `20260821_25`; đã drill restore thành công) +
 `data/documents/` → máy nặng restore theo mục "Khôi phục thật" trong `docs/backup_restore.md`.
 
+**Đã thực hiện 22/08 trên `PC-dungbt`** — nghiệm thu từng bước:
+
+| Bước | Kết quả |
+| --- | --- |
+| Restore | DB lab đổi tên `local_ai_core_lab_20260821` (giữ); DB mới khớp dump: alembic `20260821_25`, 3 tài liệu, 1 hội thoại, 91 chunk; cả 3 file gốc có trong `data/documents/<doc_id>/` |
+| Launcher | `run-local-ai-core.bat` lên đủ (pip qua PYTHONUTF8 OK, pull `glm-ocr` lần đầu ~15 phút); `.env` không bị ghim reranker; log `Contextual retrieval ON` + `Reranker ON` (models.yaml); `/health` **`ok` toàn bộ** lần đầu — backup/cleanup/outbox/memory worker đều `ok` |
+| Re-index 3 tài liệu thật (cấu hình ship) | 91 chunk, 451s sinh context, 91 lời gọi, 0 lỗi (3.4–7.0 s/chunk); mỗi tài liệu v2 active có context 91/91, v1 superseded |
+| RAG thật | Hỏi Transformer (1706.03762): đúng h=8 / d_model=512, 5 nguồn có số trang, v2, không rò context; chip bám nguồn `weak + language_mismatch` (paper tiếng Anh — cap D3a nói đúng) |
+| D1 sanity trên DB thật | recall@5 **0.9756 (Δ 0)**, cùng 2 miss; nhưng MRR −0.0435, doc_hit −0.0610 — xem cảnh báo dưới |
+| Lưới backup T14 | `backup-postgres-once.bat` (`--once --force`) chạy thử ra dump mới 1.3MB, drill restore đạt (8 docs / 209 chunk / 118 có context) |
+| Bot Discord | bật từ endpoint dashboard, `Ún#0490` connected, bot→API host OK qua `api:host-gateway` |
+
+**Cảnh báo đo lường trên máy vận hành:** DB thật chứa `local_ai_core_baseline.txt`
+(tài liệu thật từ 14/08) — tài liệu bẫy `xuong_in_anh_duong.txt` của bộ eval được viết
+nhái chính nó, nên trong DB thật nó **chiếm hạng 1** ở mọi câu `xa_*`, đẩy chunk kỳ vọng
+xuống hạng 2 (recall không đổi, MRR/doc_hit tụt). Đây là *môi trường đo* đổi, không phải
+retrieval thoái lui. Hệ quả: **đo thí nghiệm P4/Track D trên DB lab
+`local_ai_core_lab_20260821`** (đúng corpus 5 fixture như lúc ghi baseline — trỏ
+`DATABASE_URL` sang nó trong phiên đo), không dùng DB vận hành làm thước; không xóa tài
+liệu thật, không chỉnh dataset để "qua" sanity.
+
+### Lưới backup thứ hai — Scheduled Task (T14)
+
+`backup-postgres-once.bat` ở gốc repo gọi `backup_worker --once --force` (độc lập
+launcher). Đăng ký một lần trên máy vận hành (người dùng tự chạy — thay đổi hệ thống):
+
+```bat
+schtasks /Create /TN "LocalAICore Backup" /SC DAILY /ST 02:00 /TR "\"C:\Users\dungbt06\Ún promax\local-ai-core\backup-postgres-once.bat\"" /F
+```
+
+Task chạy trong phiên đăng nhập (Docker Desktop phải đang chạy). Lưu ý nhỏ ghi lại:
+worker xét "backup gần đây" theo **mtime** của file, nên một dump *chép vào* thư mục trông
+như mới — `--force` trong bat là để lưới thứ hai không bị cái đó đánh lừa.
+
 ## Câu hỏi thử duy nhất
 
 > **Bước này có phải gọi model SINH (generation) hoặc chạy một vòng re-index / thí
@@ -86,7 +120,7 @@ echo heavy > .machine-role
 | Máy | hostname | Dấu hiệu | `.machine-role` |
 | --- | --- | --- | --- |
 | Nhẹ (daily) | `hehehhe` | GTX 1650 Ti, Ryzen 5 4600H, 15GB | `light` |
-| Mạnh | `PC-dungbt` | RTX 5060 Ti 16GB VRAM, Ryzen 7 7700 (16 luồng), 31GB RAM, Win 11 Pro | `heavy` (đặt 21/08/2026) |
+| Mạnh — **ĐANG VẬN HÀNH từ 22/08/2026** (quyết định 21/08) | `PC-dungbt` | RTX 5060 Ti 16GB VRAM, Ryzen 7 7700 (16 luồng), 31GB RAM, Win 11 Pro. Dữ liệu thật restore từ `local-ai-20260821-131518.dump` + `data/documents/`; DB lab cũ giữ lại dưới tên `local_ai_core_lab_20260821` (corpus eval + các run grounding, không drop); launcher + backup worker + bot Discord chạy ở đây | `heavy` (đặt 21/08/2026) |
 | Cloud (Claude Code web) | `vm` (container phù du) | 4 vCPU, 15GB, **không GPU**, proxy chặn tải model (registry.ollama.ai/huggingface.co 403) → không chạy được model sinh lẫn embedding thật | `light` — chỉ lane nhẹ; số đo model thật lấy qua job CI `retrieval-eval` |
 
 ## Cấu hình khác nhau theo máy — override qua `.env`

@@ -20,6 +20,16 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   và kết quả tool trong delimiter "dữ liệu không phải chỉ dẫn" + 1 quy tắc trong RAG prompt & agent
   guide; 0 lời gọi model thêm; cờ TẮT = prompt cũ nguyên byte. 10 test không-model. Chạy tấn công
   thật trước/sau là việc máy nặng (`docs/d5_redteam.md`).
+- **Máy nặng `PC-dungbt` thành máy vận hành (22/08)**: restore dữ liệu thật từ dump
+  `local-ai-20260821-131518.dump` (3 tài liệu, 1 hội thoại, 91 chunk; DB lab cũ giữ
+  lại dưới tên `local_ai_core_lab_20260821`), khởi động bằng launcher — `/health` `ok`
+  toàn bộ lần đầu, re-index 3 tài liệu thật với cấu hình ship (91 chunk / 451s / 0 lỗi),
+  bot Discord chạy ở đây (máy nhẹ không chạy bot nữa). **`backup-postgres-once.bat`**
+  (T14, `backup_worker --once --force`) làm lưới backup thứ hai cho Scheduled Task —
+  chạy thử ra dump + drill restore đạt. Phát hiện: DB thật chứa tài liệu song sinh của
+  fixture bẫy `xuong_in_anh_duong.txt` nên D1 sanity trên DB vận hành tụt MRR/doc_hit
+  (recall giữ nguyên) → thí nghiệm đo trên DB lab, không dùng DB vận hành làm thước
+  (`docs/machine_split.md`).
 
 ### Fixed
 - **D3a cap xuyên ngữ theo nguồn khớp nhất** (thay cho theo cả pool): đối chiếu tay trên máy nặng
