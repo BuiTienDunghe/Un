@@ -104,6 +104,30 @@ def worker_integration_resources():
             session.execute(delete(Document).where(Document.original_filename.like("worker-integration-%")))
 
 
+class _InertBotControl:
+    """Stand-in for BotControlService while the suite runs.
+
+    The real service shells out to the operator's `docker compose`. Tests that
+    merely walk the write endpoints (test_api_key_auth.py posts to
+    /api/bot/start and /api/bot/stop with a valid key) would therefore start or
+    stop a REAL Discord bot — on 22/08 the suite stopped the production bot on
+    the heavy machine (exit 137) minutes after it had been started. The light
+    machine never noticed because no bot container exists there. Tests that
+    need particular bot behaviour install their own stub with monkeypatch
+    (test_bot_control_and_timeseries.py); BotControlService itself is tested
+    directly with subprocess mocked.
+    """
+
+    def status(self) -> dict[str, object]:
+        return {"state": "stopped", "detail": None}
+
+    def start(self) -> dict[str, object]:
+        return {"state": "running", "detail": "stubbed by the test suite"}
+
+    def stop(self) -> dict[str, object]:
+        return {"state": "stopped", "detail": None}
+
+
 @pytest.fixture
 def client():
     database_url = _integration_database_url()
@@ -111,6 +135,9 @@ def client():
     with factory.begin() as session:
         session.execute(delete(Document))
     with TestClient(app) as test_client:
+        # Lifespan has just installed the real service; replace it before any
+        # test can reach an endpoint.
+        test_client.app.state.bot_control_service = _InertBotControl()
         yield test_client
     with factory.begin() as session:
         session.execute(delete(Document))

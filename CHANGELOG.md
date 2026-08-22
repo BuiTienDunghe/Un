@@ -32,6 +32,13 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   (`docs/machine_split.md`).
 
 ### Fixed
+- **Suite backend không còn dừng bot Discord thật**: `test_api_key_auth.py` đi qua mọi
+  write-endpoint với key đúng, trong đó `POST /api/bot/stop` chạy `BotControlService`
+  thật → `docker compose stop discord-bot` trên Docker của máy đang chạy. Máy nhẹ không
+  có bot nên không thấy; trên máy vận hành 22/08 bot chết (exit 137) đúng lúc suite kết
+  thúc. Fixture `client` trong `conftest.py` nay thay `app.state.bot_control_service` bằng
+  stub trơ cho cả suite; test cần hành vi riêng vẫn monkeypatch stub của mình. Nghiệm
+  thu: bật bot → chạy trọn suite (603 passed) → bot vẫn `running`.
 - **D3a cap xuyên ngữ theo nguồn khớp nhất** (thay cho theo cả pool): đối chiếu tay trên máy nặng
   cho thấy pool nguồn trộn Việt+Anh làm cap không bao giờ bật → câu dịch trung thành từ chunk
   tiếng Anh bị gắn `ungrounded` oan (2/3 nhãn thấp). Giờ bằng chứng của từng câu là nguồn trùng
