@@ -55,13 +55,39 @@ retrieval thoái lui. Hệ quả: **đo thí nghiệm P4/Track D trên DB lab
 `DATABASE_URL` sang nó trong phiên đo), không dùng DB vận hành làm thước; không xóa tài
 liệu thật, không chỉnh dataset để "qua" sanity.
 
+### Thư mục production thuần ASCII — di dời 22/08/2026
+
+Production từng nằm ở `C:\Users\dungbt06\Ún promax\local-ai-core`. Chữ **"Ú"** trong đường dẫn gây ra ba lỗi độc lập, tất cả đều
+ở *ranh giới* giữa công cụ Unicode và công cụ mã hoá cũ:
+
+| Lỗi | Cơ chế |
+| --- | --- |
+| Scheduled Task `LocalAICore Backup` thất bại `0x80070002` (không tìm thấy file) **ngay cả khi đường cũ còn** | `schtasks` lưu/giải mã đường dẫn qua code page, dấu "Ú" bị mất |
+| Gọi launcher qua đường 8.3 (`NPROMA~1\LOCAL-~1`) làm compose lập **project lạ `local-1`** (container/volume postgres rỗng, đã dọn) | compose lấy tên project từ tên thư mục; tên 8.3 khác tên thật |
+| `pip install -r requirements.txt` chết `UnicodeDecodeError` (cp1252) | đã vá bằng ASCII + `PYTHONUTF8=1`, nhưng cùng họ lỗi |
+
+Quyết định: **thư mục production phải thuần ASCII** — `C:\Users\dungbt06\local-ai-core`. Quy trình dời đã thực hiện
+(downtime ~12 phút, phần lớn là chờ đóng IDE đang giữ thư mục): backup `--force` →
+`stop-local-ai-core.bat` → `docker compose down` (**không** `-v`) → `Move-Item` (rename
+cùng ổ, tức thì) → `pip install -e .[rerank]` đăng ký lại editable (torch CUDA giữ nguyên) →
+`compose up --force-recreate` (project/volume không đổi, bind Qdrant tự trỏ đường mới) →
+launcher. Đếm DB trước/sau bằng nhau từng số. Hai việc đi kèm: ngoại lệ `git config
+--global safe.directory` chuyển sang đường mới (thư mục thuộc tài khoản `CodexSandboxOffline`),
+và **launcher khởi động qua `explorer.exe`** khi được gọi từ một phiên tự động — tiến trình
+con của phiên đó chết theo phiên (đã xảy ra 22/08 trưa).
+
+Bài học: đường dẫn có dấu không sai về nguyên tắc, nhưng mỗi công cụ hệ thống (schtasks,
+cmd 8.3, pip/cp1252) là một chỗ có thể mất dấu — production không nên đặt cược vào việc tất
+cả đều đúng. Thư mục cũ `…\Ún promax\` vẫn còn các thứ khác của người dùng (`.git`,
+`.agents`, `hehe.md`), không thuộc dự án, không tự xóa.
+
 ### Lưới backup thứ hai — Scheduled Task (T14)
 
 `backup-postgres-once.bat` ở gốc repo gọi `backup_worker --once --force` (độc lập
 launcher). Đăng ký một lần trên máy vận hành (người dùng tự chạy — thay đổi hệ thống):
 
 ```bat
-schtasks /Create /TN "LocalAICore Backup" /SC DAILY /ST 02:00 /TR "\"C:\Users\dungbt06\Ún promax\local-ai-core\backup-postgres-once.bat\"" /F
+schtasks /Create /TN "LocalAICore Backup" /SC DAILY /ST 02:00 /TR "\"C:\Users\dungbt06\local-ai-core\backup-postgres-once.bat\"" /F
 ```
 
 Task chạy trong phiên đăng nhập (Docker Desktop phải đang chạy). Lưu ý nhỏ ghi lại:
@@ -120,7 +146,7 @@ echo heavy > .machine-role
 | Máy | hostname | Dấu hiệu | `.machine-role` |
 | --- | --- | --- | --- |
 | Nhẹ (daily) | `hehehhe` | GTX 1650 Ti, Ryzen 5 4600H, 15GB | `light` |
-| Mạnh — **ĐANG VẬN HÀNH từ 22/08/2026** (quyết định 21/08) | `PC-dungbt` | RTX 5060 Ti 16GB VRAM, Ryzen 7 7700 (16 luồng), 31GB RAM, Win 11 Pro. Dữ liệu thật restore từ `local-ai-20260821-131518.dump` + `data/documents/`; DB lab cũ giữ lại dưới tên `local_ai_core_lab_20260821` (corpus eval + các run grounding, không drop); launcher + backup worker + bot Discord chạy ở đây | `heavy` (đặt 21/08/2026) |
+| Mạnh — **ĐANG VẬN HÀNH từ 22/08/2026** (quyết định 21/08) | `PC-dungbt` | RTX 5060 Ti 16GB VRAM, Ryzen 7 7700 (16 luồng), 31GB RAM, Win 11 Pro. **Thư mục production: `C:\Users\dungbt06\local-ai-core`** (dời 22/08 chiều từ `C:\Users\dungbt06\Ún promax\local-ai-core` — xem "Thư mục production thuần ASCII"). Dữ liệu thật restore từ `local-ai-20260821-131518.dump` + `data/documents/`; DB lab cũ giữ lại dưới tên `local_ai_core_lab_20260821` (corpus eval + các run grounding, không drop); launcher + backup worker + bot Discord chạy ở đây | `heavy` (đặt 21/08/2026) |
 | Cloud (Claude Code web) | `vm` (container phù du) | 4 vCPU, 15GB, **không GPU**, proxy chặn tải model (registry.ollama.ai/huggingface.co 403) → không chạy được model sinh lẫn embedding thật | `light` — chỉ lane nhẹ; số đo model thật lấy qua job CI `retrieval-eval` |
 
 ## Cấu hình khác nhau theo máy — override qua `.env`

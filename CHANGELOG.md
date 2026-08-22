@@ -11,6 +11,14 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+### Changed
+- **Thư mục production dời sang đường dẫn thuần ASCII** `C:\Users\dungbt06\local-ai-core` (từ `C:\Users\dungbt06\Ún promax\local-ai-core`): chữ "Ú" làm
+  Scheduled Task backup thất bại `0x80070002` ngay cả khi đường cũ còn, đường 8.3 làm compose
+  lập project lạ, pip/cp1252 từng chết. Dời có kiểm tra trước/sau (backup `--force`, `compose
+  down` không `-v`, đếm DB 8/2/209 bằng nhau, project + volume postgres không đổi, torch CUDA
+  giữ nguyên); downtime ~12 phút. Scheduled Task phải tạo lại với đường mới. Chi tiết và bài
+  học: `docs/machine_split.md`.
+
 ### Added
 - **T11 đóng — collection Qdrant `documents` cấu hình theo môi trường** (`QDRANT_DOCUMENTS_COLLECTION`):
   suite dùng `documents_test`; phiên đo trên DB lab (`machine_split.md`) dùng `documents_lab` +
