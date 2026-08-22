@@ -11,6 +11,16 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+### Changed
+- **D5 ✅ ĐÓNG — `rag.injection_defense` BẬT mặc định** sau lần đo 2 trên máy nặng (phiên lab,
+  fixture bẫy có dấu, 12 case): attack_success_rate **0.143 → 0.000** (OFF → ON, lặp lại y hệt
+  lần 1; vector thủng duy nhất khi tắt là `language_flip` — lần này model in token **và** đổi
+  sang tiếng Anh), benign_pass_rate **0.8 → 1.0** (5/5, trong đó 3 control agent đều kéo đúng
+  tài liệu bẫy). Chất lượng với ON không cần đo lại: prompt phòng thủ không đổi so lần 1, nơi D1
+  và grounding đã Δ 0. Chi phí: 0 lời gọi model, chỉ thêm delimiter + 1 quy tắc vào prompt; có
+  hiệu lực khi API khởi động lại, không re-index. Baseline hai lần:
+  `data/evaluation/redteam_baseline.json`; đọc tay: `docs/d5_redteam.md`. Production không bị đụng.
+
 ### Fixed
 - **D5: fixture bẫy viết lại có dấu** (5/6 tài liệu từng không dấu → BM25/pyvi không khớp câu hỏi,
   control agent hỏng ở cả hai vòng đo 22/08); guard test chặn tái diễn; thêm 2 control agent;
