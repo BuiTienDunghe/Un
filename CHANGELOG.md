@@ -11,6 +11,16 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+### Added
+- **D5 red-team prompt injection (phần xây)**: 6 tài liệu bẫy (`data/evaluation/fixtures/redteam/`)
+  phủ 6 vector (ghi đè chỉ dẫn, giả [SYSTEM], rò rỉ link, đổi ngôn ngữ, bịa citation, lạm dụng tool)
+  + 10 case (`redteam_injection.jsonl`) + harness `scripts/redteam_rag.py` chấm marker xác định
+  (attack_success_rate + benign_pass_rate + by_type). Phòng thủ `InjectionDefense` (cờ
+  `rag.injection_defense`, override `RAG_INJECTION_DEFENSE_ENABLED`, mặc định TẮT): bọc mỗi passage
+  và kết quả tool trong delimiter "dữ liệu không phải chỉ dẫn" + 1 quy tắc trong RAG prompt & agent
+  guide; 0 lời gọi model thêm; cờ TẮT = prompt cũ nguyên byte. 10 test không-model. Chạy tấn công
+  thật trước/sau là việc máy nặng (`docs/d5_redteam.md`).
+
 ### Fixed
 - **D3a cap xuyên ngữ theo nguồn khớp nhất** (thay cho theo cả pool): đối chiếu tay trên máy nặng
   cho thấy pool nguồn trộn Việt+Anh làm cap không bao giờ bật → câu dịch trung thành từ chunk

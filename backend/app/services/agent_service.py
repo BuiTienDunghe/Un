@@ -16,6 +16,7 @@ from time import perf_counter
 from typing import Any, Protocol
 
 from app.services.memory_service import MemoryService
+from app.services.injection_defense import InjectionDefense
 from app.services.model_router import ModelRouter
 
 
@@ -90,7 +91,9 @@ class AgentService:
         operational_service: StatusBackend,
         max_steps: int = 3,
         tool_result_max_chars: int = 2400,
+        defense: InjectionDefense | None = None,
     ) -> None:
+        self.defense = defense or InjectionDefense(enabled=False)
         self.router = router
         self.retrieval_service = retrieval_service
         self.memory_service = memory_service
@@ -106,7 +109,7 @@ class AgentService:
         the agent only adds its tool guidance and the tool traffic.
         """
         working: list[dict[str, Any]] = list(messages)
-        guide = {"role": "system", "content": AGENT_GUIDE}
+        guide = {"role": "system", "content": self.defense.agent_guide(AGENT_GUIDE)}
         insert_at = 1 if working and working[0].get("role") == "system" else 0
         working.insert(insert_at, guide)
 
@@ -131,7 +134,9 @@ class AgentService:
                     "arguments": call["arguments"], "content": None, "latency_ms": round_latency,
                 })
                 tool_started = perf_counter()
-                output = self._execute_tool(call["name"], call["arguments"])
+                # D5: tool output is untrusted data (document chunks, memory
+                # text); the defense marks it so before the model reads it.
+                output = self.defense.wrap_tool_result(self._execute_tool(call["name"], call["arguments"]))
                 steps.append({
                     "kind": "tool_result", "tool_name": call["name"], "arguments": None,
                     "content": output, "latency_ms": int((perf_counter() - tool_started) * 1000),

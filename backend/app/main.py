@@ -18,6 +18,7 @@ from app.services.auth_service import AuthService
 from app.services.postgres_bm25_service import PostgresBm25Service
 from app.services.chat_service import ChatService
 from app.services.chunk_context_service import ChunkContextService
+from app.services.injection_defense import InjectionDefense
 from app.services.logging_service import LoggingService
 from app.services.model_router import ModelRouter
 from app.services.postgres_document_service import PostgresDocumentService
@@ -142,6 +143,7 @@ async def lifespan(app: FastAPI):
     # extra, rather than on that machine's first question (P4-3).
     reranker_service.warmup()
     retrieval_service = PostgresRetrievalService(qdrant_store, router, postgres_sessions, PostgresBm25Service(postgres_sessions), reranker_service, str(rag_config.get("retrieval_mode", "hybrid")), int(rag_config.get("rrf_k", 60)))
+    injection_defense = InjectionDefense.from_config(rag_config, enabled_override=settings.rag_injection_defense_enabled)
     app.state.rag_service = RagService(
         router,
         logging_service,
@@ -151,6 +153,7 @@ async def lifespan(app: FastAPI):
         store=auxiliary_store,
         history_limit=settings.conversation_history_limit,
         condense_enabled=bool(rag_config.get("condense_enabled", True)),
+        defense=injection_defense,
     )
     agent_config = config.get("agent", {})
     app.state.agent_service = AgentService(
@@ -160,6 +163,7 @@ async def lifespan(app: FastAPI):
         app.state.operational_service,
         max_steps=int(agent_config.get("max_steps", 3)),
         tool_result_max_chars=int(agent_config.get("tool_result_max_chars", 1200)),
+        defense=injection_defense,
     )
     # ChatService is built before the retrieval stack the agent needs, so the
     # agent is handed over here instead of through the constructor.

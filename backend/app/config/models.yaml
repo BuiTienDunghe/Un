@@ -108,6 +108,14 @@ rag:
   # Costs one extra (short, capped) general-model call per follow-up turn;
   # first turns and single-question calls never condense.
   condense_enabled: true
+  # D5 prompt-injection defense: wraps every retrieved passage / tool result in
+  # data-not-instructions delimiters and appends one rule to the RAG system
+  # prompt + agent guide. Prompt text only, zero extra model calls. OFF until the
+  # heavy machine measures attack-success-rate before/after with
+  # scripts/redteam_rag.py AND the D1 eval shows no quality cost
+  # (docs/d5_redteam.md). Per-machine override: RAG_INJECTION_DEFENSE_ENABLED.
+  injection_defense:
+    enabled: false
   # P4-3 reranker: a cross-encoder rescores the RRF candidates at QUERY time.
   # ON since 21/08/2026 — the D1 eval earned it (recall 0.915 -> 0.976, MRR
   # 0.797 -> 0.858, all 7 remaining P4-2 misses fixed; docs/p4_progress.md).

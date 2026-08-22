@@ -26,6 +26,9 @@ os.environ["DISCORD_AGENT_TOOLS_ENABLED"] = "false"
 # P4-2: models.yaml ships contextual retrieval ON; tests run the bare index path
 # unless a test enables the service explicitly (test_chunk_context.py does).
 os.environ["RAG_CONTEXTUAL_RETRIEVAL_ENABLED"] = "false"
+# D5: defense is prompt text; tests pin it off so prompt-shape assertions
+# stay stable, and enable it explicitly where the defense itself is tested.
+os.environ["RAG_INJECTION_DEFENSE_ENABLED"] = "false"
 # P4-3: same reasoning for the reranker, plus one of its own — the real
 # cross-encoder would download ~500MB of weights on first use. Reranker tests
 # inject a fake model_loader instead (test_reranker_service.py).

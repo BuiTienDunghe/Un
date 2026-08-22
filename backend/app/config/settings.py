@@ -69,6 +69,9 @@ class Settings(BaseSettings):
     # time, so the light machine pins it off and the heavy machine leaves it on
     # (docs/machine_split.md). Answer-time cost is unaffected either way.
     rag_contextual_retrieval_enabled: bool | None = None
+    # D5: per-machine override of models.yaml rag.injection_defense.enabled
+    # (prompt-only; no model cost either way). Unset = follow models.yaml.
+    rag_injection_defense_enabled: bool | None = None
     # P4-3: per-machine override of models.yaml rag.reranker.enabled. Same
     # semantics as above, but the reason to diverge is different: the reranker
     # needs the optional [rerank] extra (PyTorch), so a machine without it pins

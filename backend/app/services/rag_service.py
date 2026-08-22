@@ -6,6 +6,7 @@ from uuid import uuid4
 from collections.abc import Iterator
 
 from app.services.chat_service import ConversationNotFoundError, derive_conversation_title
+from app.services.injection_defense import InjectionDefense
 from app.services.logging_service import LoggingService
 from app.services.model_router import ModelRouter
 from app.stores.auxiliary_store import AuxiliaryStore
@@ -21,7 +22,7 @@ class InsufficientContextError(Exception):
 
 
 class RagService:
-    def __init__(self, router: ModelRouter, logging_service: LoggingService, retrieval_service: RetrievalBackend, default_top_k: int = 5, max_context_chunks: int = 5, store: AuxiliaryStore | None = None, history_limit: int = 12, condense_enabled: bool = True) -> None:
+    def __init__(self, router: ModelRouter, logging_service: LoggingService, retrieval_service: RetrievalBackend, default_top_k: int = 5, max_context_chunks: int = 5, store: AuxiliaryStore | None = None, history_limit: int = 12, condense_enabled: bool = True, defense: InjectionDefense | None = None) -> None:
         self.router = router
         self.logging_service = logging_service
         self.retrieval_service = retrieval_service
@@ -30,7 +31,11 @@ class RagService:
         self.store = store
         self.history_limit = max(1, history_limit)
         self.condense_enabled = condense_enabled
-        self.system_prompt = (Path(__file__).parents[1] / "prompts" / "rag_system.md").read_text(encoding="utf-8")
+        # D5: prompt-injection defense (flag, default off). The system prompt
+        # and every passage go through it so an OFF flag reproduces the
+        # measured prompt byte for byte.
+        self.defense = defense or InjectionDefense(enabled=False)
+        self.system_prompt = self.defense.system_prompt((Path(__file__).parents[1] / "prompts" / "rag_system.md").read_text(encoding="utf-8"))
         self.condense_prompt = (Path(__file__).parents[1] / "prompts" / "rag_condense.md").read_text(encoding="utf-8")
 
     def _resolve_conversation(self, question: str, conversation_id: str | None, user_id: str | None = None) -> tuple[str | None, bool]:
@@ -125,16 +130,21 @@ class RagService:
         sources = sources[: self.max_context_chunks]
         if not sources:
             raise InsufficientContextError("No indexed document context was found")
-        context = "\n\n".join(self._passage(index, source) for index, source in enumerate(sources))
+        context = "\n\n".join(self.defense.wrap_passage(self._passage_header(index, source), str(source["content"])) for index, source in enumerate(sources))
         return sources, context
 
     @staticmethod
-    def _passage(index: int, source: dict[str, object]) -> str:
+    def _passage_header(index: int, source: dict[str, object]) -> str:
         origin = str(source.get("filename", "unknown"))
         page = source.get("page_start")
         if page is not None:
             origin += f", page {page}" if source.get("page_end") in {None, page} else f", pages {page}-{source['page_end']}"
-        return f"[Source {index + 1}] ({origin})\n{source['content']}"
+        return f"[Source {index + 1}] ({origin})"
+
+    @classmethod
+    def _passage(cls, index: int, source: dict[str, object]) -> str:
+        """Historical passage layout (defense off); kept for callers/tests."""
+        return f"{cls._passage_header(index, source)}\n{source['content']}"
 
     def search(self, question: str, top_k: int | None = None, document_id: str | list[str] | None = None) -> tuple[list[dict[str, object]], int]:
         """Retrieval without generation: exactly the sources /rag/chat would cite.
