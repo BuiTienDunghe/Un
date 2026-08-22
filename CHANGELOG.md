@@ -20,6 +20,9 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   học: `docs/machine_split.md`.
 
 ### Added
+- **T14 đóng — lưới backup thứ hai chạy thật**: Scheduled Task `LocalAICore Backup` (02:00 hằng ngày,
+  user `dungbt06`, đường dẫn ASCII `C:\Users\dungbt06\local-ai-core`, tạo từ prompt admin) chạy thử
+  `Last Result: 0` và ra dump mới; cùng backup worker của launcher thành hai lưới độc lập.
 - **T11 đóng — collection Qdrant `documents` cấu hình theo môi trường** (`QDRANT_DOCUMENTS_COLLECTION`):
   suite dùng `documents_test`; phiên đo trên DB lab (`machine_split.md`) dùng `documents_lab` +
   `rebuild_qdrant` nên vector lab và vector vận hành không còn trộn lẫn. Harness D5 **xóa vĩnh viễn
