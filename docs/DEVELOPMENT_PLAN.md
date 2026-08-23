@@ -1,6 +1,6 @@
 # Kế hoạch phát triển tổng thể — Local AI Core
 
-**Phiên bản:** 1.2 · **Ngày:** 15/08/2026 · **Cập nhật:** 19/08 (agent-first) · 21/08/2026 (track D — kỹ năng AI + ngân sách inference) · **Trạng thái:** Đang hiệu lực
+**Phiên bản:** 1.2 · **Ngày:** 15/08/2026 · **Cập nhật:** 19/08 (agent-first) · 21/08/2026 (track D — kỹ năng AI + ngân sách inference) · 23/08/2026 (kết luận phản biện P4-4 — đo trước khi đổi schema) · **Trạng thái:** Đang hiệu lực
 **Thay thế:** các định hướng rải rác trong README và `docs/discord_memory_workflow_plan_v5_final.md` (phần roadmap; phần thiết kế memory của tài liệu đó vẫn là spec cho P1-3..P1-5)
 
 ---
@@ -48,6 +48,47 @@ agent design, LLMOps, AI security). Đi kèm là phân tích phần cứng 21/08
 phụ), và Ollama một máy chỉ phục vụ một request một lúc — việc nền chạy sai lúc sẽ chặn
 người dùng thật. Hệ quả: bất biến "ngân sách inference" ở §1 và số phận tách ba của mục
 agent nâng cao (D3a/D3b giữ, D3c gác). Chi tiết: §4, mục "Track D".
+
+### Điều chỉnh định hướng 23/08/2026 — đo trước khi đổi schema (kết luận phản biện P4-4)
+
+Bản thiết kế P4-4 v1 (`docs/p4_4_design.md`) đã qua một vòng **phản biện đối kháng 5 tác
+nhân** (2 bảo vệ, 2 công kích, 1 giám khảo). Kết quả: **giữ mục tiêu, không chọn v1 nguyên
+trạng** — không phải vì ý tưởng sai mà vì bản v1 tự vi phạm ngưỡng dừng dung lượng của
+chính nó (đo 2.28× ở cấu hình ship, ngưỡng dừng 2×) và chứa lỗi có thể **sai âm thầm**.
+v1 **không bị vứt**: nó được giữ nguyên làm phương án 1 trong hai, đặt cạnh v2 với ưu/nhược
+và quy tắc chọn ở **§9d** — máy vận hành chốt bằng số đo, không bằng lập luận. Ba hệ quả:
+
+1. **Đưa chỉ mục sparse vào PostgreSQL vẫn là đích đến.** Ba nỗi đau G8 (RAM theo corpus,
+   rebuild lại từ đầu, không nhất quán đa tiến trình) là thật và chỉ lớn dần theo số chunk;
+   không phương án rẻ nào xoá được cả ba.
+2. **Trình tự đảo lại: ĐO trước, viết migration sau.** Đây là bài học P4-3 lặp lại ở dạng
+   khác — ở P4-3 suýt kết luận sai vì đo trên torch CPU-only; ở đây v1 chốt `jsonb` cho
+   `retrieval_tf` mà chưa ai chạy `pg_column_size`, và riêng lựa chọn đó đẩy dung lượng từ
+   **1.06× lên 1.90×** corpus trần.
+3. **Tách phần rẻ khỏi phần đắt.** Phần "trì trệ mỗi lần mở lên" gỡ được bằng một thay đổi
+   trong tiến trình, **không cần schema** (P4-4a). Chỉ RAM và chấm-điểm-O(corpus) mới bắt
+   buộc xuống DB (P4-4b).
+
+**Bằng chứng định lượng** — đo thật trên corpus fixture D1 (27 chunk, máy nhẹ, tokenizer
+thật của repo); các mức lớn hơn là **ngoại suy tuyến tính, CHƯA ĐO**:
+
+| Corpus | RAM chỉ mục | Rebuild (câu hỏi đầu sau mỗi lần index/restart) | Chấm BM25 mỗi query |
+| --- | --- | --- | --- |
+| 27 (đo thật) | 0.07 MB | 0.147 s | 0.27 ms |
+| 1 000 | ~2.6 MB | ~5.4 s | ~10 ms |
+| 5 000 | ~13 MB | ~27 s | ~50 ms |
+| 10 000 | ~26 MB | ~54 s | ~100 ms |
+| 100 000 | ~260 MB | ~9 phút | ~1 s |
+
+Đọc bảng: **RAM không phải thứ đau trước** — 10 000 chunk mới tốn ~26 MB, không đáng gì.
+Thứ đau trước là hai cột bên phải, và chúng cần **hai lời giải khác nhau**: cột giữa do
+P4-4a xoá (98.1% thời gian rebuild là tách từ pyvi), cột phải **chỉ P4-4b** xoá được.
+
+**Ngưỡng kích hoạt P4-4b**: không ghim một mốc chunk cứng. Khi corpus vận hành chạm
+~5 000 chunk thì hai cột phải đã ở mức người dùng cảm nhận được. Lập luận ngược cũng có
+trọng lượng và được ghi nhận: **di trú khi dữ liệu còn nhỏ thì rẻ** — backfill 27–300 chunk
+là vài giây, còn 50 000 chunk kèm dựng GIN là một cửa sổ bảo trì thật trên hệ đang có người
+dùng. Vì vậy **thời điểm do người vận hành quyết, nhưng thứ tự (v2 → đo → code) không đổi**.
 
 ---
 
@@ -135,6 +176,8 @@ Khảo sát 15/08/2026 trên các dự án mã nguồn mở uy tín nhất phân
 | T12 | **Đánh bóng agent P2** (gom, không chặn dùng): UI hiện lại trace khi mở hội thoại cũ (messages cần trả kèm id); footer tool cho tin Discord; hủy vòng lặp khi client ngắt; map lỗi tools-với-provider-cloud thành 502 rõ nghĩa; tránh nạp memory hai lần khi bật cả «Ghi nhớ» lẫn «Công cụ»; **guard xuyên ngữ** — fact tiếng Anh vs tin Việt bị từ chối oan (an toàn nhưng mất coverage; hướng: prompt extractor v6 viết fact bằng ngôn ngữ tin gốc + re-benchmark) | Dọn khi đụng vào từng vùng | 2–3 buổi |
 | T13 | **Đánh bóng auth P3-1** (gom, không chặn dùng): đổi mật khẩu + admin reset qua UI; trang quản lý user trên dashboard (hiện chỉ API); token localStorage → cân nhắc cookie httpOnly nếu mở ra ngoài LAN; member-role staleness 15' ở surface thường; ẩn/hiện điều khiển theo role còn thiếu chỗ nào thì server vẫn chặn | Dọn khi đụng vào từng vùng | 2–3 buổi |
 | ~~T14~~ ✅ | **Backup chỉ sống trong phiên launcher** — đã đóng 22/08: `backup-postgres-once.bat` (`--once --force`) + Scheduled Task `LocalAICore Backup` hằng ngày 02:00 trên máy vận hành `PC-dungbt` (đường dẫn thuần ASCII sau khi dời thư mục; chạy bằng user, tạo từ prompt admin; `/Run` thử → `Last Result: 0`, dump mới). Bài học ghi `machine_split.md`: thư mục production thuần ASCII, launcher khởi động qua explorer để sống độc lập phiên | ✅ | 1 buổi |
+| T15 | **`replace_chunks` không ghi `locations`, `heading_path`, `token_count`** — `chunking.py:240-252` tính locations/heading_path rồi **vứt đi** ở đường ghi (`repositories.py:97-104`), nên mọi citation production trả `heading_path: null`; `PostgresBm25Service._IndexedChunk` khai báo hai trường này nhưng luôn nhận rỗng. Kèm lệch kiểu: chunker sinh `heading_path` dạng chuỗi `"A > B"`, cột DB là JSONB `list[str]`. Phát hiện từ vòng phản biện P4-4 23/08, đã xác minh độc lập | Ghi đủ 3 cột trong cùng transaction (chốt kiểu trước) + test đi qua **đường ghi thật** — test hiện tại dựng chunk bằng tay nên không bắt được | 0.5 buổi |
+| T16 | **`pyvi` chỉ ghim dải `>=0.1.1,<1.0`** (`requirements.txt:17`) — tách từ là đầu vào của BM25; bản pyvi khác trên máy khác đổi lexeme mà không có tín hiệu nào. Hiện chỉ lệch runtime, nhưng P4-4b sẽ **lưu lexeme xuống DB** nên khi đó lệch thành dữ liệu bẩn vĩnh viễn | Ghim đúng version + ghi `tokenizer_version` cạnh mọi dữ liệu dẫn xuất — **điều kiện tiên quyết của P4-4b** | 0.5 buổi |
 | T10 | **Script migration SQLite hết nhiệm vụ 07/2027**: `migrate_sqlite_to_postgres.py`, `migrate_sqlite_documents_to_postgres.py`, `migrate_document_storage.py`, `audit_sqlite_readonly.py` + 2 test đi kèm bị ghim bởi cam kết giữ SQLite archive read-only 1 năm | Gỡ sau review xóa archive (sớm nhất 19/07/2027) | 1 buổi (2027) |
 
 ### P1 — Một agent, hai kênh *(2–3 tuần · giá trị người dùng lớn nhất)* — **ĐÃ ĐÓNG 19/08** (nhật ký: `docs/p1_progress.md`)
@@ -170,24 +213,26 @@ Khảo sát 15/08/2026 trên các dự án mã nguồn mở uy tín nhất phân
 | P3-3 ✅ | **Biểu đồ thời gian trên dashboard**: `GET /api/dashboard/timeseries` từ `request_logs`, bucket theo ngày địa phương, SVG tự vẽ không thư viện | ✅ 2 chart 14 ngày (câu hỏi+lỗi; p50/p95) cập nhật cùng auto-refresh — sống 20/08 | 2 buổi |
 | P3-4 ✅ | **OCR console UI** `/ui/ocr.html` trên API có sẵn | ✅ Upload → theo dõi job (poll + progress + events) → xem kết quả trang → promote/tải zip/hủy/lịch sử, không cần curl | 3–4 buổi |
 
-### P4 — RAG nâng cao, có đo lường *(chạy nền liên tục, mỗi mục một thí nghiệm)* — **MỞ LẠI 21/08 trên máy mạnh** (P4-1≡D1 ✅, P4-2 ✅, P4-3 ✅; còn P4-4, P4-5)
+### P4 — RAG nâng cao, có đo lường *(chạy nền liên tục, mỗi mục một thí nghiệm)* — **MỞ LẠI 21/08 trên máy mạnh** (P4-1≡D1 ✅, P4-2 ✅, P4-3 ✅; còn P4-4a, P4-4b, P4-5)
 
 > Quyết định 20/08: P4 cần vòng lặp thí-nghiệm-nhanh (re-index + eval mỗi lần
 > chỉnh) — trên CPU hiện tại mỗi vòng mất nửa buổi nên gác tới khi chuyển máy.
 > Chỉ số chất lượng không phụ thuộc máy nên không mất gì khi đợi; khi có máy
 > mới: restore backup + pull model + đổi models.yaml (plan §8), cân nhắc nâng
 > model general trước rồi mới đo baseline P4-1 một lần trên cấu hình cuối.
-> Hướng thi công từng mục đã phân tích sẵn trong hội thoại 20/08: thứ tự
-> P4-1 → P4-4 (pyvi tách từ vào tsvector) → P4-2 → P4-3 (+T6) → P4-5; eval
-> trong CI theo phương án retrieval-only với model embedding 0.6b.
+> ~~Hướng thi công 20/08: P4-1 → P4-4 (pyvi tách từ vào tsvector) → P4-2 → P4-3
+> (+T6) → P4-5~~ — **lỗi thời 23/08**: thứ tự thực tế đã là P4-1 → P4-2 → P4-3, và
+> `tsvector` bị loại (parser mặc định tách đôi từ ghép pyvi nối bằng `_`). Thứ tự
+> còn lại chốt ở §9b. Eval trong CI vẫn theo phương án retrieval-only, embedding 0.6b.
 
 | ID | Hạng mục | Giả thuyết cần kiểm chứng bằng eval | Ước lượng |
 | --- | --- | --- | --- |
 | P4-1 | **Mở rộng bộ eval**: 3–5 tài liệu thật + 30 câu đa tài liệu + eval trong CI (gate: không tụt quá 2 điểm) | Baseline mới thay bộ 1-tài-liệu đã bão hòa | 2 buổi |
 | P4-2 | **Contextual retrieval** (Anthropic): sinh 50–100 token ngữ cảnh/chunk lúc index bằng model local. **Lane nhẹ ✅ 21/08**: cột `retrieval_context` (migration `20260821_25`), sinh context ngoài transaction chung cho cả hai đường index, embedding + BM25 cùng index context+content qua một helper, citation giữ nguyên văn, 8 test; thiết kế + runbook đo: `docs/p4_progress.md`. **Lane nặng ✅ 21/08 (`PC-dungbt`)**: ĐẠT ngưỡng — MRR tổng 0.734→0.797, MRR cross 0.590→0.799, recall cross 1.0, 0 câu hit→miss, 32.7s/tài liệu; cờ BẬT mặc định, máy nhẹ override `RAG_CONTEXTUAL_RETRIEVAL_ENABLED=false` | MRR đa tài liệu tăng ≥ 5 điểm (kỳ vọng theo paper: −49% failure) | 3 buổi |
 | P4-3 ✅ | **Bật reranker** cross-encoder (`RerankerService.from_config` + `RAG_RERANKER_ENABLED` theo máy, warmup fail-fast lúc startup, CI ghim tắt, launcher tự ghim tắt khi máy thiếu extra `[rerank]`) — **ĐÓNG 21/08 (`PC-dungbt`)**: recall@5 0.915→0.976, MRR 0.797→0.858, MRR cross 0.799→0.861, 7 miss→hit / 2 hit→miss, +35ms p50 trên GPU (~990ms trên CPU → máy không GPU ghim tắt); `candidate_limit` 15 | ✅ Kết hợp P4-2: recall failure 13.4% → 2.4% trên bộ D1 (paper: −67%) | 1–2 buổi |
-| P4-4 | **Chỉ mục sparse vào PostgreSQL** thay BM25 in-process — **thiết kế chốt 23/08: `docs/p4_4_design.md`** (lexeme pyvi lưu thành `text[]` + GIN, tf/len theo chunk, DF tính trong truy vấn; BM25 chấm trong app vì `ts_rank_cd` không có IDF; **không dùng `tsvector`** vì parser tách đôi từ ghép `danh_thiếp`). Ghi chú: pyvi **đã dùng từ trước** (`vi_tokenizer.py`), mô tả cũ "FTS + pyvi/tsvector" là lỗi thời | Không tụt chất lượng (D1 Δ ≤ 0.02 cả ba chỉ số, đo trên DB lab); RAM không tăng theo corpus; hết rebuild + hết truy vấn fingerprint mỗi query; nhất quán đa process; **không** nhắm 2 câu miss cuối (đó là việc tầng rerank) | 3–4 buổi |
-| P4-5 | **Chunk visualization** (học RAGFlow): xem chunk của tài liệu trong UI, đánh dấu chunk kém — **đi SAU P4-4** vì chỉ khi lexeme/tf nằm trong DB thì màn hình mới trả lời được "từ nào của câu hỏi khớp chunk này" (`docs/p4_4_design.md` §12) | Người dùng tự chẩn đoán được "tại sao trả lời sai" | 3 buổi |
+| P4-4a | **Gỡ tắc nghẽn rebuild BM25** — lane NHẸ, **không đụng schema**. Ba việc: (a) gọi `invalidate()` từ chính sự kiện activate version — hàm **đã có** (`postgres_bm25_service.py:79`) nhưng hiện **0 nơi gọi** trong `backend/app`; (b) bỏ truy vấn fingerprint khỏi đường query — hiện `search()` → `_ensure_index()` → `_current_fingerprint()` bắn một truy vấn DB **mỗi câu hỏi**; (c) dựng lại chỉ mục ở luồng nền, phục vụ chỉ mục cũ trong lúc dựng | Câu hỏi đầu sau mỗi lần khởi động không còn chờ rebuild (cột giữa của bảng ở §1 về ~0); mỗi query bớt 1 truy vấn DB; **D1 Δ = 0** vì không đổi thuật toán xếp hạng | 0.5–1 buổi |
+| P4-4b | **Chỉ mục sparse vào PostgreSQL** thay `rank_bm25` in-process. **Thiết kế v1 (`docs/p4_4_design.md`) đã bị phản biện bác 23/08 — phải có v2 trước khi viết một dòng code** (§1, "Điều chỉnh 23/08"). v2 bắt buộc chốt: ① `int[]` song song thay `retrieval_tf jsonb` (dung lượng 1.90× → **1.06×** corpus trần, đo trên fixture D1); ② lời giải cho bộ lọc ứng viên — `&&` trên `text[]` kéo trung bình **97.5%** corpus, **59/82** câu kéo đúng 100%, vì hư từ tiếng Việt gần như phổ quát nên "bộ lọc" không lọc gì (hướng: bảng posting); ③ vá lỗ sai-âm-thầm khi `N`/`df`/`avgdl` lấy từ ba tập khác nhau lúc hàng chưa backfill xong; ④ `tokenizer_version` cạnh lexeme (⇒ **T16 là điều kiện tiên quyết**); ⑤ sửa các số sai của v1 — corpus lab là **27** chunk chứ không phải 273, `top_k` là **15** ở lane nhẹ/CI chứ không phải 45; ⑥ bỏ cấu trúc `text[] & text[]` — **toán tử này không tồn tại** trong PostgreSQL. Tổng 22 mục sửa từ báo cáo phản biện. **Hai phương án v1/v2 kèm ưu-nhược và quy tắc chọn: §9d** | Không tụt chất lượng (D1 Δ ≤ 0.02 cả ba chỉ số, đo trên DB lab); RAM không tăng theo corpus; hết chấm điểm O(corpus) mỗi query; nhất quán đa tiến trình. **Không** nhắm 2 câu miss cuối — đó là việc của tầng rerank | 0.5 buổi (đo) + 3–4 buổi (code) |
+| P4-5 | **Chunk visualization** (học RAGFlow): xem chunk của tài liệu trong UI, đánh dấu chunk kém. **Đính chính 23/08: KHÔNG phụ thuộc P4-4** — `docs/p4_4_design.md` §12 nói ngược, nhưng cả 8 cột màn hình cần (`content`, `retrieval_context`, `chunk_index`, `page_start`, `page_end`, `section_title`, `block_type`, `content_hash`) **đã có sẵn** trong bảng `document_chunks`. Lane NHẸ, độc lập hoàn toàn, làm được ngay. Ghi chú: màn hình này chỉ hiện đúng `heading_path` **sau khi T15 được vá** | Người dùng tự chẩn đoán được "tại sao trả lời sai" | 3 buổi |
 
 ### P5 — Năng lực mở rộng *(tương lai, chọn lọc theo nhu cầu thật)*
 
@@ -230,7 +275,7 @@ Khảo sát 15/08/2026 trên các dự án mã nguồn mở uy tín nhất phân
 | Ngay, trên máy hiện tại | **D1 → D5**, xen D3a | Chạy chủ yếu trên logic + retrieval, gần như không thêm tải model; D1 là thước đo cho mọi mục sau |
 | Song song, GPU cloud free | D2 | Không đụng máy nhà; tái dùng benchmark 19/08 làm nghiệm thu |
 | Sau khi có D1 | D3b, D4 | Digest và trace cần thước đo + sử liệu để chứng minh giá trị thay vì chỉ thêm tính năng |
-| Máy mạnh (đã có, 21/08) | ~~P4-2/P4-3~~ ✅, ~~phần đo D3a/D5~~ ✅ → phần đo P4-4 (xây ở lane nhẹ), P4-5; D3c sau D2 | Máy mạnh `PC-dungbt` đã vận hành; D3c cần cả D2 lẫn máy |
+| Máy mạnh (đã có, 21/08) | ~~P4-2/P4-3~~ ✅, ~~phần đo D3a/D5~~ ✅ → **chỉ còn 1 việc nặng: đo `pg_column_size` + `EXPLAIN ANALYZE` cho P4-4b** (0.5 buổi). P4-4a và P4-5 là lane NHẸ hoàn toàn — không cần máy mạnh. D3c sau D2 | Máy mạnh `PC-dungbt` đang vận hành; D3c cần cả D2 lẫn máy |
 
 ---
 
@@ -316,7 +361,126 @@ Discord ─┘    │                            └─ Sparse index (lexeme tex
 3. **Mở lại P4** theo đúng thứ tự đã phân tích — mỗi mục một thí nghiệm chấm bằng D1:
    - **P4-2 contextual retrieval** ✅ **ĐÓNG 21/08** (đo trên máy nặng `PC-dungbt`): ĐẠT ngưỡng, cờ `rag.contextual_retrieval.enabled` BẬT mặc định. recall@5 0.866 → **0.915**, MRR 0.734 → **0.797**, doc_hit 0.768 → **0.842**; nhóm cross recall 0.750 → **1.000**, MRR 0.590 → **0.799**; 4 câu miss→hit, 0 câu hit→miss. Chi phí: 1 lời gọi model/chunk lúc index (27 chunk / 144s cho corpus 5 tài liệu), đường hỏi-đáp **không thêm lời gọi nào** — bất biến ngân sách inference còn nguyên. Baseline D1 đã ghi lại; CI gate chuyển sang đo bản trần theo `rag_multidoc_baseline_bare.json` vì runner không có model sinh. Nhật ký: `docs/p4_progress.md`.
    - **P4-3 reranker** ✅ **ĐÓNG 21/08** (đo trên máy nặng `PC-dungbt`): ĐẠT cả ba điều kiện, cờ `rag.reranker.enabled` BẬT mặc định với `candidate_limit` 15. recall@5 0.915 → **0.976**, MRR 0.797 → **0.858**, MRR cross 0.799 → **0.861**; **cả 7 câu miss còn lại của P4-2 thành hit**, đổi lại 2 câu tụt khỏi top-5 (vẫn đúng tài liệu, chỉ trượt chunk mang nguyên văn). Chi phí là **độ trễ, không phải lời gọi model sinh**: `/rag/search` p50 587 → 622ms (**+35ms**, trần đã chốt 300ms). Bài học ghi lại: extra `[rerank]` kéo về torch CPU-only, đo nhầm trên đó thì +990ms và mục này đã trượt — máy bật reranker phải có GPU + torch CUDA, máy khác ghim `RAG_RERANKER_ENABLED=false`. `candidate_limit` 30 kém hơn 15 ở mọi chỉ số xếp hạng (MRR/doc_hit; recall@5 hòa) lẫn tốc độ. Nhật ký: `docs/p4_progress.md`.
-   - **P4-4** chỉ mục sparse vào PostgreSQL (thiết kế: `docs/p4_4_design.md`) → **P4-5** chunk visualization. Đính chính 23/08: P4-4 **không** nhắm 2 câu miss cuối (`p3_khoa_brute_force`, `p3_refresh_khong_xoay`) — audit cho thấy chunk đúng đã nằm trong ứng viên, cross-encoder mới là nơi quyết định; P4-4 nhắm G8 (RAM/rebuild/đa tiến trình) — cả hai đòi khớp **nguyên văn** hai cụm trong cùng một chunk, đúng thứ FTS mạnh hơn cross-encoder ngữ nghĩa.
+   - **P4-4 / P4-5** — xem "Danh sách việc chốt 23/08" ngay dưới. Đính chính 23/08: P4-4 **không** nhắm 2 câu miss cuối (`p3_khoa_brute_force`, `p3_refresh_khong_xoay`) — audit cho thấy chunk đúng đã nằm trong ứng viên, cross-encoder mới là nơi quyết định. P4-4 nhắm **G8** (RAM / rebuild / đa tiến trình), không nhắm chất lượng xếp hạng.
+
+### 9c. Danh sách việc chốt 23/08 (thứ tự thi công, sau vòng phản biện P4-4)
+
+> Nguyên tắc của đợt này: **việc rẻ và độc lập đi trước, thay đổi schema đi sau cùng và
+> chỉ sau khi có số đo.** Sáu việc đầu không đụng schema, không cần máy mạnh, không phụ
+> thuộc lẫn nhau — hỏng một việc không chặn các việc còn lại.
+
+| # | Việc | Lane | Vì sao đi trước | Ước lượng |
+| --- | --- | --- | --- | --- |
+| 1 | **Vá T15** — `replace_chunks` ghi đủ `locations`/`heading_path`/`token_count` + test qua đường ghi thật | nhẹ | **Bug đang chảy máu ở production**: mọi citation trả `heading_path: null`. Không liên quan P4-4, không có lý do để đợi | 0.5 buổi |
+| 2 | **Viết `docs/p4_4_design.md` v2** (22 mục sửa) + đính chính các dòng plan đã lỗi thời | nhẹ | Bản v1 không được phép làm cơ sở để code; viết v2 là việc giấy tờ, rẻ nhất trong danh sách | 0.5–1 buổi |
+| 3 | **P4-4a** — gỡ tắc nghẽn rebuild (invalidate theo sự kiện, bỏ fingerprint khỏi query path, dựng nền) | nhẹ | Xoá ngay triệu chứng "câu hỏi đầu sau khởi động bị treo" mà không cần đợi P4-4b; D1 không đổi nên không cần đo lại | 0.5–1 buổi |
+| 4 | **T16** — ghim `pyvi` đúng version + khái niệm `tokenizer_version` | nhẹ | Điều kiện tiên quyết của P4-4b; rẻ và không rủi ro | 0.5 buổi |
+| 5 | **P4-5** chunk visualization | nhẹ | Đã xác minh độc lập với P4-4 (8/8 cột có sẵn). Hiện `heading_path` đúng thì cần #1 xong trước | 3 buổi |
+| 6 | **Thêm `p50_latency_ms`/`p95_latency_ms`** vào summary của `run_multidoc_mode` | nhẹ | P4-4a/P4-4b đều hứa cải thiện độ trễ mà bộ eval hiện **không** báo cáo độ trễ — không có thước thì không nghiệm thu được | 0.5 buổi |
+| 7 | **Đo 5 số ở §9d.4** trên DB lab máy nặng, rồi áp quy tắc chọn ở §9d.5 → chốt v1 / v2-A / v2-B / hoãn | **nặng** (riêng số #2 mô phỏng được ở lane nhẹ — làm trước) | Năm số này quyết định hình dạng schema của P4-4b. Đo **trước** khi viết migration — đúng bài học P4-3 | 0.5 buổi |
+| 8 | **P4-4b** code theo phương án đã chốt ở #7; cờ `rag.sparse_backend` mặc định `inprocess`, chỉ đổi mặc định sau khi D1 parity đạt | nhẹ (code) + nặng (đo) | Việc đắt nhất, đi cuối, và chỉ khởi động khi #2 và #7 xong | 3–4 buổi |
+
+**Ràng buộc chốt kèm**: P4-4b không được đổi mặc định nếu D1 lệch quá 0.02 ở bất kỳ chỉ số
+nào; đường `inprocess` phải sống song song cho tới khi baseline mới được ghi; và mọi baseline
+đã có (D1, P4-2, P4-3, D3a, D5) chỉ đo lại **một lần** trên cấu hình cuối của P4-4b.
+
+### 9d. P4-4b — hai phương án v1 và v2, ưu/nhược để chọn
+
+> **Mục đích của mục này**: hai bản thiết kế cùng nhắm G8 nhưng đánh đổi ngược nhau. Mục
+> này giữ **cả hai còn sống** để phiên agent trên máy vận hành (`PC-dungbt`) phân tích và
+> chốt bằng số đo thật, thay vì thừa kế một lựa chọn đã bị bác. **Chưa chọn = đúng trạng
+> thái hiện tại.** Bản v1 đầy đủ vẫn nằm ở `docs/p4_4_design.md`.
+
+#### 9d.0 — Bốn nỗi đau G8 và không gian lựa chọn
+
+Mọi phương án dưới đây được chấm trên đúng bốn nỗi đau, không thêm không bớt:
+
+| | G8-1 RAM theo corpus | G8-2 Rebuild chặn câu hỏi đầu | G8-3 Chấm điểm O(corpus)/query | G8-4 Đa tiến trình (`--workers`) |
+| --- | --- | --- | --- | --- |
+| **A — P4-4a** (đã chốt ở §9c#3, không đụng schema) | ❌ | ✅ *giấu* độ trễ (dựng nền) | ❌ | ❌ |
+| **B — chỉ lưu token xuống DB**, vẫn `rank_bm25` trong RAM | ❌ | ✅ *xoá* 98.1% chi phí (hết tách từ pyvi) | ❌ | ❌ |
+| **v1 — mảng `text[]` + GIN** (`docs/p4_4_design.md`) | ✅ | ✅ | ⚠️ **lý thuyết có, đo thật thì không** | ✅ |
+| **v2 — vá lỗi + giải bài toán chọn lọc** | ✅ | ✅ | ✅ *nếu* bộ lọc thật sự lọc | ✅ |
+
+A và B **không loại trừ** v1/v2 — chúng rẻ, độc lập, và A đã nằm trong danh sách §9c. Câu
+hỏi thật chỉ là **v1 hay v2**, và **có đáng làm bây giờ không**.
+
+#### 9d.1 — Phương án v1 (bản `docs/p4_4_design.md`, 23/08 sáng)
+
+Hình dạng: ba cột thêm vào `document_chunks` — `retrieval_lexemes text[]` (+ GIN),
+`retrieval_tf jsonb`, `retrieval_len int`; ứng viên lọc bằng `retrieval_lexemes && $1`;
+DF tính trong chính truy vấn; BM25 chấm trong app (vì `ts_rank_cd` không có IDF).
+
+**Ưu điểm**
+
+- **Thay đổi schema nhỏ nhất**: 3 cột trên bảng đã có, không bảng mới, không khoá ngoại mới, migration additive thuần — đúng bất biến §1.
+- **Ghi cùng transaction với chunk**: lexeme/tf/len sinh ngay ở `replace_chunks`, không có trạng thái dẫn xuất lệch pha, không cần worker đồng bộ.
+- **Dung lượng rẻ nhất trong các phương án có schema** — sau khi đổi `jsonb` → `int[]`: **1.06×** corpus trần (đo trên fixture D1 27 chunk: content 48 318 B; lexemes 32 658 B = 0.68×; tf `int[]` 18 560 B = 0.38×).
+- **Đọc dễ, ít bề mặt lỗi**: một hàng chunk = một chunk, mọi thứ dùng để chấm điểm nằm cùng hàng.
+- **Rollback rẻ**: tắt cờ `rag.sparse_backend` là quay lại `rank_bm25` ngay, không phải dọn bảng.
+
+**Nhược điểm** (⚠ = đã đo, ✎ = vá được trong v2)
+
+- ⚠ **Bộ lọc ứng viên không lọc.** `retrieval_lexemes && $1` kéo trung bình **97.5%** corpus, **59/82** câu kéo đúng **100%** — hư từ tiếng Việt (`của`, `là`, `và`, `khi`…) gần như có mặt ở mọi chunk. Nghĩa là **G8-3 không được giải**: vẫn chấm gần như toàn corpus, chỉ đổi chỗ chấm từ RAM sang DB→app.
+- ⚠ **Vượt ngưỡng dừng dung lượng của chính nó** ở bản gốc: `retrieval_tf jsonb` đo **1.90×** corpus trần và **2.28×** ở cấu hình ship (contextual retrieval BẬT), trong khi thiết kế tự đặt ngưỡng dừng 2×.
+- ⚠ **Dùng toán tử không tồn tại**: `text[] & text[]` không có trong PostgreSQL (toán tử giao mảng `&` chỉ có ở extension `intarray`, và chỉ cho `int[]`).
+- ⚠ **Sai âm thầm khi backfill dở**: `N`, `df`, `avgdl` lấy từ ba tập hàng khác nhau lúc một phần chunk chưa có lexeme → điểm BM25 sai mà **không lỗi nào bắn ra**, và gate D1 hiện không đủ nhạy để bắt (một câu thoái lui nằm gọn trong dung sai 0.02).
+- ✎ Thiếu `tokenizer_version` → đổi bản `pyvi` thì dữ liệu trong DB bẩn vĩnh viễn, không còn chỉ là lệch runtime (⇒ **T16**).
+- ✎ Vài số sai trong tài liệu (corpus lab **27** chunk chứ không phải 273; `top_k` **15** ở lane nhẹ/CI chứ không phải 45).
+- **Chi phí ghi**: ~166 mục GIN mỗi chunk (đo: 166 lexeme phân biệt/chunk) — ghi nặng hơn hẳn hiện tại, đổi lại đường đọc chưa chắc nhanh hơn (xem gạch đầu dòng đầu).
+
+#### 9d.2 — Phương án v2 (hướng, **chưa phải thiết kế hoàn chỉnh**)
+
+v2 = v1 đã vá 22 mục **cộng** một lời giải thật cho chọn lọc ứng viên. Phần "đã vá" là việc
+chắc chắn (đổi `int[]`, thêm `tokenizer_version`, vá lỗ `N`/`df`/`avgdl`, bỏ toán tử không
+tồn tại, sửa số). Phần "chọn lọc" còn **hai nhánh chưa đo**:
+
+**v2-A — cắt lexeme phổ quát theo DF, giữ nguyên hình dạng mảng.**
+Trước khi `&&`, bỏ khỏi câu hỏi những lexeme có `df/N` vượt ngưỡng (hư từ). Giữ toàn bộ ưu
+điểm dung lượng và migration của v1.
+
+- **Ưu**: rẻ nhất — không bảng mới, không đổi mô hình ghi; và **thử được trước khi cam kết bất cứ schema nào**, bằng cách mô phỏng trên chính chỉ mục RAM hiện tại.
+- **Nhược / rủi ro**: **chưa đo** — chưa biết ngưỡng nào cho selectivity chấp nhận được mà không làm hỏng đúng những câu cần khớp **nguyên văn**; ngưỡng DF là một siêu tham số mới phải chỉnh theo corpus; câu hỏi toàn hư từ có thể ra tập ứng viên rỗng.
+
+**v2-B — bảng posting (chỉ mục đảo thật).**
+`chunk_lexemes(lexeme, chunk_ref, tf)` + index theo `lexeme`; ứng viên = hợp các posting
+list của lexeme câu hỏi, cắt theo DF ngay trong kế hoạch truy vấn.
+
+- **Ưu**: giải **cấu trúc** bài toán chọn lọc — đây là cách mọi công cụ tìm kiếm thật làm; DF có sẵn từ `count(*)`; mở đường cắt top-N ngay trong DB.
+- **Nhược**: **dung lượng đảo ngược hoàn toàn ưu thế của v1.** Ước tính số học hàng (**chưa đo**, phải kiểm bằng `pg_total_relation_size`): 166 lexeme/chunk × 10 000 chunk = **1.66 triệu hàng**; header hàng ~24 B → heap ~80 MB + index theo lexeme ~46 MB ≈ **126 MB** cho corpus nội dung chỉ ~18 MB → **~7×**, so với ~1.06× của v1. Dùng thẳng `chunk_id String(128)` làm khoá còn tệ hơn (cần khoá thay thế kiểu số).
+- **Nhược**: bảng dẫn xuất tách rời → thêm một bất biến phải giữ (posting luôn khớp chunk đang active), thêm đường xoá/ghi đè, thêm chỗ để lệch.
+- **Nhược**: rollback không còn là "tắt cờ" — phải dọn bảng.
+
+#### 9d.3 — Đối chiếu trực tiếp
+
+| Tiêu chí | v1 (mảng, đã vá `int[]`) | v2-A (mảng + cắt DF) | v2-B (bảng posting) |
+| --- | --- | --- | --- |
+| Dung lượng thêm / corpus | **~1.06×** (đo) | ~1.06× (như v1) | **~7×** (ước tính, chưa đo) |
+| Giải được G8-3? | **Không** (đo: kéo 97.5%) | *Có thể* — chưa đo | **Có** (theo cấu trúc) |
+| Độ phức tạp migration | Thấp (3 cột) | Thấp (3 cột) | Trung bình (bảng + backfill + bất biến mới) |
+| Bề mặt lệch trạng thái | Nhỏ (cùng transaction) | Nhỏ | **Lớn** (bảng dẫn xuất riêng) |
+| Chi phí rollback | Tắt cờ | Tắt cờ | Tắt cờ **+ dọn bảng** |
+| Siêu tham số mới | 0 | **1** (ngưỡng DF) | 0–1 |
+| Thử được **trước** khi đổi schema? | Không | **Được** (mô phỏng trên chỉ mục RAM) | Không |
+| Trạng thái | Đã viết đầy đủ, đã bị bác 6 điểm | Hướng, chưa đo | Hướng, chưa đo |
+
+#### 9d.4 — Năm số máy 2 phải đo trước khi chốt
+
+Không chọn bằng lập luận. Chốt bằng năm số này, đo trên **DB lab** (`local_ai_core_lab_20260821`; production chỉ đọc):
+
+1. **Selectivity thật của `&&`** trên corpus vận hành hiện tại (không phải fixture 27 chunk) — bao nhiêu % chunk bị kéo, trung vị và p95, trên 82 câu D1.
+2. **Selectivity sau khi cắt DF** ở vài ngưỡng (`df/N` > 0.2 / 0.3 / 0.5) — và **quan trọng nhất**: có câu nào tụt khỏi tập ứng viên không. Đo này **mô phỏng được ngay trên chỉ mục RAM hiện tại, không cần migration** → làm **đầu tiên**, vì nếu v2-A đạt thì v2-B thành thừa.
+3. **`pg_column_size` thật** của `text[]` và `int[]` trên corpus vận hành (số fixture 27 chunk chỉ là chỉ dấu).
+4. **`pg_total_relation_size` của bảng posting** dựng thử trên lab — kiểm con số ~7× ở trên là đúng hay ước tính sai.
+5. **`EXPLAIN ANALYZE`** cả hai đường: planner có thật sự dùng GIN không, hay ở quy mô này nó chọn seq scan (rất có thể) — nếu là seq scan thì mọi lập luận về GIN đều vô nghĩa.
+
+#### 9d.5 — Quy tắc chọn (chốt TRƯỚC khi đo, để số liệu không bị đọc theo ý muốn)
+
+- Nếu **#2 cho thấy cắt DF hạ selectivity xuống < 30% mà không câu nào mất ứng viên đúng** → chọn **v2-A**. Rẻ nhất, giữ mọi ưu điểm của v1, giải được G8-3.
+- Nếu **#2 thất bại** *và* **#4 xác nhận bảng posting ≤ 3× corpus** → chọn **v2-B**.
+- Nếu **#2 thất bại** *và* **#4 ra ~7× như ước tính** → **không làm P4-4b bây giờ**: giữ A + B (§9c#3 và "chỉ lưu token"), vì lúc đó cái giá của G8-3 cao hơn chính nỗi đau, và corpus hiện tại chưa tới ngưỡng ~5 000 chunk ở §1.
+- **v1 nguyên bản không được chọn trong mọi trường hợp** — nếu số liệu ủng hộ hình dạng mảng thì đó là **v2-A** (v1 + `int[]` + `tokenizer_version` + vá `N`/`df`/`avgdl`), không phải v1.
+- Ràng buộc chung cho mọi nhánh: vẫn phải qua **D1 Δ ≤ 0.02** trên cả ba chỉ số, và đường `inprocess` sống song song cho tới khi baseline mới được ghi.
 4. **D2 distillation** (cloud free hoặc máy mới nếu GPU đủ) → chỉ sau khi D2 đạt mới xét mở **D3c** multi-step planning (vẫn dạng có-điều-kiện + cap theo bất biến ngân sách inference).
 5. **D3b digest nền + D4 LLMOps** xen kẽ sau D1; nợ còn lại (T5, T7–T9, T11–T13) dọn khi đụng vùng, T10 hẹn 2027.
 

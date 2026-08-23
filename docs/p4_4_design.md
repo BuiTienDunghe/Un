@@ -1,7 +1,25 @@
 # P4-4 — Chỉ mục sparse trong PostgreSQL (thay BM25 in-process) · P4-5 — Chunk visualization
 
-**Trạng thái 23/08/2026: THIẾT KẾ — chưa có dòng code nào.** Tài liệu này là bản chốt
-kỹ thuật để máy nặng/máy nhẹ thi công; mọi con số "sau" đều là **giả thuyết cần đo**,
+> 📄 **TRẠNG THÁI 23/08/2026 (chiều): đây là BẢN v1 — một trong HAI phương án đang cân
+> nhắc, chưa chọn.** Bản này đã qua vòng phản biện đối kháng 5 tác nhân và **không được
+> chọn nguyên trạng**, nhưng vẫn giữ nguyên vẹn ở đây để so sánh. Bảng ưu/nhược v1 vs v2,
+> năm số phải đo và quy tắc chọn nằm ở `docs/DEVELOPMENT_PLAN.md` **§9d**. Khi hai tài
+> liệu mâu thuẫn, **plan thắng**.
+>
+> **Đọc tài liệu này với 8 đính chính sau** — đây là những chỗ đã biết là sai, và là lý do
+> v1 không được chọn nguyên trạng:
+>
+> 1. `retrieval_tf jsonb` → phải là `int[]` song song với `retrieval_lexemes` (dung lượng **1.90× → 1.06×** corpus trần; bản gốc đo **2.28×** ở cấu hình ship, vượt chính ngưỡng dừng 2× của tài liệu này).
+> 2. Bộ lọc ứng viên `retrieval_lexemes && $1` **không lọc**: đo thật kéo trung bình **97.5%** corpus, **59/82** câu kéo 100% (hư từ tiếng Việt gần như phổ quát) ⇒ G8-3 chưa được giải.
+> 3. Toán tử `text[] & text[]` **không tồn tại** trong PostgreSQL (`&` giao mảng chỉ có ở extension `intarray`, chỉ cho `int[]`).
+> 4. `N` / `df` / `avgdl` lấy từ ba tập hàng khác nhau khi backfill còn dở → điểm BM25 **sai âm thầm**, gate D1 không đủ nhạy để bắt.
+> 5. Thiếu `tokenizer_version` cạnh lexeme (⇒ nợ **T16**: ghim `pyvi` đúng version).
+> 6. Corpus lab là **27** chunk, không phải 273.
+> 7. `top_k` là **15** ở lane nhẹ/CI, không phải 45.
+> 8. §12 nói **P4-5 phụ thuộc P4-4** — **sai**: cả 8 cột P4-5 cần đã có sẵn trong `document_chunks`, P4-5 làm được ngay và độc lập.
+
+**Trạng thái ban đầu 23/08/2026: THIẾT KẾ — chưa có dòng code nào.** Tài liệu này là bản
+chốt kỹ thuật để máy nặng/máy nhẹ thi công; mọi con số "sau" đều là **giả thuyết cần đo**,
 không phải kết quả. Nhật ký thi công sẽ ghi vào `docs/p4_progress.md` như P4-2/P4-3.
 
 Cơ sở: bản audit đường retrieval ngày 23/08 (hội thoại) — mọi khẳng định "hiện tại" dưới
