@@ -96,7 +96,7 @@ def test_warmup_is_a_noop_when_disabled():
     service.warmup()  # must not raise, must not load
 
 
-# ── Per-machine override (docs/machine_split.md) ─────────────────────
+# ── Per-environment override (DEVELOPMENT_PLAN.md 3e) ────────────────
 
 
 def test_from_config_follows_models_yaml_when_no_override():

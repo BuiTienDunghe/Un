@@ -31,7 +31,7 @@ class QdrantStore:
         if memories_collection:
             self.memories_collection_name = memories_collection
         # T11: the documents collection is per environment too, so a lab
-        # database (docs/machine_split.md) or the test suite never shares
+        # database (DEVELOPMENT_PLAN.md 3d) or the test suite never shares
         # vectors with the operating corpus.
         if documents_collection:
             self.collection_name = documents_collection

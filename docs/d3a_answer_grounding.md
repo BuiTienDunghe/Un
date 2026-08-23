@@ -7,7 +7,7 @@ sau khi sửa cap xuyên ngữ), đối chiếu tay hai vòng (10 + 8 câu): **c
 `data/evaluation/rag_multidoc_grounding_baseline.json` (grounding_rate **0.9390**,
 0 ungrounded, `language_mismatch` 3). Quyết định hành vi: **giữ "chỉ báo"** — lý do
 bằng số ở mục "Đo lại" cuối tài liệu.
-Mục Track D3a trong `docs/DEVELOPMENT_PLAN.md`; phân lane theo `docs/machine_split.md`.
+Mục Track D3a trong `docs/DEVELOPMENT_PLAN.md` §2b. *(Phân lane hai máy đã bỏ 24/08 — phần "lane nhẹ/nặng" dưới đây là ghi chép lịch sử; môi trường vận hành nay ở plan §3.)*
 
 ## Nó là gì
 

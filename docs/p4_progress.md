@@ -2,7 +2,7 @@
 
 Mỗi mục P4 là **một thí nghiệm**: thiết kế ngắn → code với cờ tắt → đo bằng bộ
 eval D1 (`docs/d1_retrieval_eval.md`) → chỉ bật mặc định khi số liệu chứng minh
-(bất biến plan §1). Phân lane theo `docs/machine_split.md`: phần *xây* (code,
+(bất biến plan §1). *(Phân lane hai máy đã bỏ 24/08 — plan §3; đoạn dưới là ghi chép lịch sử.)* Phân lane khi đó: phần *xây* (code,
 unit test) là lane nhẹ, phần *đo* (sinh context, re-index) là lane nặng.
 
 ## P4-2 — Contextual retrieval (Anthropic)
@@ -17,7 +17,7 @@ miss→hit và **0 câu hit→miss**. Baseline D1 đã ghi lại theo cấu hìn
 > index (32.7s/tài liệu trên RTX 5060 Ti → nhiều phút/tài liệu trên GTX 1650 Ti). Thêm
 > override theo máy `RAG_CONTEXTUAL_RETRIEVAL_ENABLED` (`.env`, không commit) qua một
 > `ChunkContextService.from_config` dùng chung cho API lẫn RQ worker — máy nhẹ đặt
-> `false`, máy mạnh để theo `models.yaml`. Quyết định: `docs/machine_split.md`.
+> `false`, máy mạnh để theo `models.yaml`. Cơ chế cờ nay ở `docs/DEVELOPMENT_PLAN.md` §3e.
 
 ### Thiết kế (và lý do từng quyết định)
 
@@ -270,7 +270,7 @@ Lần đo đầu suýt kết luận **KHÔNG ĐẠT**: `pip install -e .[rerank]
 CPU và `/rag/search` p50 vọt lên 1577ms — **+990ms**, gấp hơn ba lần trần 300ms.
 
 Đo một cross-encoder CPU trên máy có RTX 5060 Ti là đo sai cấu hình: plan §9a.6
-đòi chốt cấu hình *trước* khi đo, và `machine_split.md` xếp P4-3 vào lane NẶNG
+đòi chốt cấu hình *trước* khi đo, và phân lane khi đó xếp P4-3 vào lane NẶNG
 đúng vì nó dùng GPU. Sau khi cài bản CUDA (`torch 2.9.1+cu128`, Blackwell
 sm_120) và đo lại, **chất lượng y hệt từng con số** (cross-encoder chấm điểm xác
 định, không phụ thuộc thiết bị) còn độ trễ về +35ms.

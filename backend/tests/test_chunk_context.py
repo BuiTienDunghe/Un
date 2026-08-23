@@ -168,7 +168,7 @@ def test_index_without_the_flag_stays_bytewise_identical(client, mock_ollama, mo
     client.delete(f"/documents/{document_id}")
 
 
-# ── Per-machine override (docs/machine_split.md) ─────────────────────
+# ── Per-environment override (DEVELOPMENT_PLAN.md 3e) ────────────────
 
 
 def test_from_config_follows_models_yaml_when_no_override():

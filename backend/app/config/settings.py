@@ -66,8 +66,9 @@ class Settings(BaseSettings):
     # P4-2: per-machine override of models.yaml rag.contextual_retrieval.enabled.
     # Unset = follow models.yaml (shared, versioned); true/false = this machine
     # decides. Context generation is one general-model call per chunk at INDEX
-    # time, so the light machine pins it off and the heavy machine leaves it on
-    # (docs/machine_split.md). Answer-time cost is unaffected either way.
+    # time, so an environment without a generation model (CI) pins it off while
+    # the operating machine leaves it on (DEVELOPMENT_PLAN.md 3e). Answer-time
+    # cost is unaffected either way.
     rag_contextual_retrieval_enabled: bool | None = None
     # D5: per-machine override of models.yaml rag.injection_defense.enabled
     # (prompt-only; no model cost either way). Unset = follow models.yaml.

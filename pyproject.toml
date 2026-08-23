@@ -27,7 +27,7 @@ dynamic = ["version", "dependencies"]
 # at ~990ms added per question versus ~35ms on a GPU. If the machine has an
 # NVIDIA GPU, follow up with the CUDA wheel, e.g.
 #   pip install --index-url https://download.pytorch.org/whl/cu128 "torch==2.9.1+cu128"
-# Details and the measurement: docs/machine_split.md, docs/p4_progress.md.
+# Details and the measurement: docs/DEVELOPMENT_PLAN.md 3e, docs/p4_progress.md.
 rerank = ["sentence-transformers>=3.0,<4.0"]
 
 [project.urls]

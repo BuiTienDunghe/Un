@@ -98,8 +98,8 @@ rag:
   # time. Turning it off is safe but only takes effect on the next re-index:
   # chunks already carrying a context keep it until their version is replaced.
   # CI pins this off — its runner has no generation model (.github/workflows/ci.yml).
-  # Per-machine override: RAG_CONTEXTUAL_RETRIEVAL_ENABLED in .env (light machine
-  # = false, heavy = unset/true) — see docs/machine_split.md.
+  # Per-environment override: RAG_CONTEXTUAL_RETRIEVAL_ENABLED in .env
+  # (CI = false, operating machine = unset/true) — see DEVELOPMENT_PLAN.md 3e.
   contextual_retrieval:
     enabled: true
     context_tokens: 80

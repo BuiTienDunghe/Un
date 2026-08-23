@@ -172,7 +172,7 @@ def main() -> int:
     cases = [json.loads(line) for line in Path(args.dataset).read_text(encoding="utf-8").splitlines() if line.strip()]
     api_key = os.environ.get("LOCAL_AI_API_KEY", "").strip()
     headers = {"X-API-Key": api_key} if api_key else {}
-    print("NOTE: trap documents are uploaded into the database this API serves — run against the LAB database (docs/machine_split.md); they are deleted again at the end unless --keep-corpus.")
+    print("NOTE: trap documents are uploaded into the database this API serves — run against the LAB database (DEVELOPMENT_PLAN.md 3d); they are deleted again at the end unless --keep-corpus.")
     leftovers: list[str] = []
     with httpx.Client(timeout=600, headers=headers) as client:
         mapping = bootstrap_corpus(client, args.base_url, Path(args.corpus_dir))

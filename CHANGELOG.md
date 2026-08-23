@@ -12,6 +12,31 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 ## [Unreleased]
 
 ### Changed
+- **Plan v1.3 — một môi trường vận hành duy nhất; `docs/machine_split.md` đã gộp và xoá**
+  (24/08). Dự án thôi phân lane nhẹ/nặng: mọi việc từ nay làm trên `PC-dungbt`. Hợp đồng
+  vận hành (thư mục production thuần ASCII, Scheduled Task backup, DB nào cho việc gì,
+  cảnh báo đo lường trên DB thật, cờ cấu hình theo môi trường, quy tắc bảo mật) chuyển
+  nguyên vẹn vào plan **§3**; 20 tham chiếu tới `machine_split.md` trong code/test/docs/
+  CHANGELOG đã trỏ lại đúng mục. **Cơ chế override `.env` GIỮ NGUYÊN trong code** — CI
+  vẫn là môi trường thứ hai không GPU, không có extra `[rerank]`. `.machine-role` ngừng
+  dùng (vẫn gitignore để marker cũ không lọt vào git). Máy nhẹ `hehehhe` còn đúng vai
+  trò client LAN; quy tắc an toàn duy nhất còn lại: chỉ một máy chạy bot Discord và chạm
+  dữ liệu thật. Plan cũng nén lịch sử đã đóng còn một dòng mỗi mục (chi tiết ở
+  `p1..p4_progress.md`) và bổ sung **§4 — danh sách đầy đủ 14 việc còn lại** kèm thứ tự
+  thi công, phụ thuộc và ước lượng, để không mục nào rơi khi đổi phiên làm việc.
+- **Sửa hai chỗ số liệu yếu hơn kết luận trong báo cáo P4-4b** (plan §9.4): truy vấn dùng
+  cho `EXPLAIN` chỉ chọn lọc ~7% (GIN chạm 8/247 buffer) nên không đại diện cho workload
+  đo được ở 97.5–100%, và không thấy `ANALYZE` sau khi nạp corpus 1k/5k — con số 126.9 ms
+  vì thế không dùng làm căn cứ được. Corpus nhân bản giữ `df/N` không đổi nên là ước lượng
+  **bi quan** cho selectivity, không phải chặn dưới. Quyết định hoãn **không đổi**: nó đứng
+  trên số #1 (bộ lọc còn để lại 34.7% corpus ở ngưỡng an toàn — chỉ cắt ~3 lần).
+- Thứ tự mục trong plan: §9d.6 từng bị chèn trước §9d.5; đã sắp lại theo đúng số.
+
+### Added
+- **Hai nợ kỹ thuật mới từ vòng phản biện P4-4** (plan §4b): **T15** — `replace_chunks`
+  ghi thiếu `locations`/`heading_path`/`token_count` nên **mọi citation production trả
+  `heading_path: null`** (`chunking.py:240-252` tính rồi vứt ở `repositories.py:97-104`;
+  kèm lệch kiểu chuỗi vs JSONB `list[str]`). **T16** — `pyvi` chỉ ghim dải `>=0.1.1,<1.0`.
 - **P4-4b: HOÃN — quyết định bằng số đo, không viết migration** (máy vận hành, 23/08).
   Năm số ở plan §9d.4 đo xong trước khi đụng schema (đúng bài học P4-3): bộ lọc
   `retrieval_lexemes && $1` của v1 kéo **trung vị 100%** corpus (xác nhận G8-3 không được
@@ -76,14 +101,14 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   lập project lạ, pip/cp1252 từng chết. Dời có kiểm tra trước/sau (backup `--force`, `compose
   down` không `-v`, đếm DB 8/2/209 bằng nhau, project + volume postgres không đổi, torch CUDA
   giữ nguyên); downtime ~12 phút. Scheduled Task phải tạo lại với đường mới. Chi tiết và bài
-  học: `docs/machine_split.md`.
+  học: `docs/DEVELOPMENT_PLAN.md` §3.
 
 ### Added
 - **T14 đóng — lưới backup thứ hai chạy thật**: Scheduled Task `LocalAICore Backup` (02:00 hằng ngày,
   user `dungbt06`, đường dẫn ASCII `C:\Users\dungbt06\local-ai-core`, tạo từ prompt admin) chạy thử
   `Last Result: 0` và ra dump mới; cùng backup worker của launcher thành hai lưới độc lập.
 - **T11 đóng — collection Qdrant `documents` cấu hình theo môi trường** (`QDRANT_DOCUMENTS_COLLECTION`):
-  suite dùng `documents_test`; phiên đo trên DB lab (`machine_split.md`) dùng `documents_lab` +
+  suite dùng `documents_test`; phiên đo trên DB lab (`DEVELOPMENT_PLAN.md` §3) dùng `documents_lab` +
   `rebuild_qdrant` nên vector lab và vector vận hành không còn trộn lẫn. Harness D5 **xóa vĩnh viễn
   corpus bẫy khi kết thúc** (kể cả khi lỗi; exit 1 nếu còn sót) — tài liệu chứa chỉ thị độc không
   được sống sót sau một lần chạy; test đầu-cuối bootstrap→bị lừa→dọn sạch→404.
@@ -104,7 +129,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   chạy thử ra dump + drill restore đạt. Phát hiện: DB thật chứa tài liệu song sinh của
   fixture bẫy `xuong_in_anh_duong.txt` nên D1 sanity trên DB vận hành tụt MRR/doc_hit
   (recall giữ nguyên) → thí nghiệm đo trên DB lab, không dùng DB vận hành làm thước
-  (`docs/machine_split.md`).
+  (`docs/DEVELOPMENT_PLAN.md` §3).
 
 ### Fixed
 - **Suite backend không còn dừng bot Discord thật**: `test_api_key_auth.py` đi qua mọi
@@ -189,11 +214,11 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   **Lưu ý cài đặt:** extra `[rerank]` kéo về bản **torch CPU-only** trên PyPI —
   đo trên đó thì mỗi câu hỏi đắt thêm ~990ms (28× so với GPU). Máy có GPU NVIDIA
   cài thêm torch từ index `cu128`; máy không có thì ghim `RAG_RERANKER_ENABLED=false`
-  (`docs/machine_split.md`).
+  (`docs/DEVELOPMENT_PLAN.md` §3).
 - **Override contextual retrieval theo máy**: biến `.env` `RAG_CONTEXTUAL_RETRIEVAL_ENABLED`
   (không đặt = theo `models.yaml`; `true`/`false` = máy này tự quyết) qua
   `ChunkContextService.from_config` dùng chung cho API lẫn RQ worker — máy nhẹ tắt
-  sinh context lúc index, máy mạnh giữ bật (`docs/machine_split.md`). Test cô lập
+  sinh context lúc index, máy mạnh giữ bật (`docs/DEVELOPMENT_PLAN.md` §3). Test cô lập
   cờ này (`false`) để suite chạy đường index trần trừ khi test bật tường minh.
 
 ### Changed

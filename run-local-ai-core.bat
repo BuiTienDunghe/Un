@@ -56,8 +56,8 @@ if not exist ".env" (
 
 REM P4-3: models.yaml ships the cross-encoder reranker ON, but the [rerank]
 REM extra (sentence-transformers + torch) is deliberately not in
-REM requirements.txt. A machine without it must decide per machine
-REM (docs/machine_split.md); decide it here, once, visibly in .env, instead
+REM requirements.txt. A machine without it must decide per environment
+REM (DEVELOPMENT_PLAN.md 3e); decide it here, once, visibly in .env, instead
 REM of letting the API refuse to start behind an already-opened browser tab.
 findstr /B /C:"RAG_RERANKER_ENABLED=" ".env" >nul 2>&1
 if errorlevel 1 (
@@ -66,7 +66,7 @@ if errorlevel 1 (
         echo [SETUP] Reranker extra not installed on this machine: pinning RAG_RERANKER_ENABLED=false in .env
         echo [SETUP] To enable it later: pip install -e .[rerank]  ^(GPU torch recommended^), then remove that line.
         >>".env" echo.
-        >>".env" echo # Added by run-local-ai-core.bat - [rerank] extra not installed on this machine, see docs/machine_split.md
+        >>".env" echo # Added by run-local-ai-core.bat - [rerank] extra not installed on this machine, see docs/DEVELOPMENT_PLAN.md
         >>".env" echo RAG_RERANKER_ENABLED=false
     )
 )

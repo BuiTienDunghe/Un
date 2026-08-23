@@ -17,7 +17,7 @@ rank-bm25>=0.2.2,<1.0
 pyvi>=0.1.1,<1.0
 loguru>=0.7,<1.0
 # sentence-transformers (keo theo PyTorch ~0.65-2.5GB) da chuyen sang optional
-# extra cho reranker (P4-3, BAT mac dinh tu 21/08): pip install -e .[rerank] - may khong cai thi launcher tu ghim RAG_RERANKER_ENABLED=false (docs/machine_split.md)
+# extra cho reranker (P4-3, BAT mac dinh tu 21/08): pip install -e .[rerank] - may khong cai thi launcher tu ghim RAG_RERANKER_ENABLED=false (docs/DEVELOPMENT_PLAN.md)
 psutil>=6.0,<8.0
 SQLAlchemy>=2.0,<3.0
 alembic>=1.14,<2.0

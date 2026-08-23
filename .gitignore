@@ -22,7 +22,8 @@ htmlcov/
 .coverage
 coverage.xml
 
-# ── Machine role marker (per-machine, set once — see docs/machine_split.md) ──
+# ── Retired 24/08: two-machine lane split is gone (DEVELOPMENT_PLAN.md 3).
+# Kept ignored so a stale marker on any old checkout never lands in git. ──
 .machine-role
 
 # ── IDE / Editor ──

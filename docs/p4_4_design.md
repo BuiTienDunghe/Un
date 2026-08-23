@@ -170,7 +170,7 @@ dương, mọi chunk có ít nhất một từ khớp đều có điểm > 0 ⇒
 
 Override theo máy: `RAG_SPARSE_BACKEND` trong `.env`, cùng khuôn resolver
 `from_config(..., enabled_override=...)` như `ChunkContextService`/`RerankerService`/
-`InjectionDefense` — một idiom duy nhất cho mọi cờ theo máy (`docs/machine_split.md`).
+`InjectionDefense` — một idiom duy nhất cho mọi cờ theo môi trường (`docs/DEVELOPMENT_PLAN.md` §3e).
 
 ---
 
@@ -187,7 +187,7 @@ Chốt **trước** khi đo (không sửa sau khi thấy số):
 | Rebuild | không còn khái niệm rebuild; xác nhận **0 truy vấn fingerprint** trong log một phiên hỏi |
 
 Nơi đo: **DB lab** (`local_ai_core_lab_20260821` + collection `documents_lab`) theo cảnh báo
-đo lường trong `docs/machine_split.md` — DB vận hành có `local_ai_core_baseline.txt` làm
+đo lường trong `docs/DEVELOPMENT_PLAN.md` §3d — DB vận hành có `local_ai_core_baseline.txt` làm
 lệch `xa_*`, không dùng làm thước.
 
 Đặc biệt: **đây là mục P4 đầu tiên mà máy nhẹ tự đo được** (retrieval-only chỉ cần embedding

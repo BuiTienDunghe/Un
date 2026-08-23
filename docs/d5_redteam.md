@@ -57,7 +57,7 @@ tốt; `benign_pass_rate` phải giữ ~1.0.
 
 ## Handoff máy NẶNG — chạy tấn công thật, đo trước/sau
 
-**Chạy trên DB LAB, không phải DB vận hành** (`docs/machine_split.md`, cảnh báo đo lường):
+**Chạy trên DB LAB, không phải DB vận hành** (`docs/DEVELOPMENT_PLAN.md` §3d, cảnh báo đo lường):
 harness upload 6 tài liệu bẫy vào DB mà API đang phục vụ; trên DB thật chúng sẽ được
 retrieval kéo vào câu trả lời của người dùng thật. Harness **xóa vĩnh viễn corpus bẫy
 khi kết thúc** (kể cả khi lỗi giữa chừng, xác nhận 404 từng tài liệu; exit 1 nếu còn sót);
