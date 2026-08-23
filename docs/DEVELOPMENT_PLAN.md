@@ -377,7 +377,7 @@ Discord ─┘    │                            └─ Sparse index (lexeme tex
 | 4 | **T16** — ghim `pyvi` đúng version + khái niệm `tokenizer_version` | nhẹ | Điều kiện tiên quyết của P4-4b; rẻ và không rủi ro | 0.5 buổi |
 | 5 | **P4-5** chunk visualization | nhẹ | Đã xác minh độc lập với P4-4 (8/8 cột có sẵn). Hiện `heading_path` đúng thì cần #1 xong trước | 3 buổi |
 | 6 | **Thêm `p50_latency_ms`/`p95_latency_ms`** vào summary của `run_multidoc_mode` | nhẹ | P4-4a/P4-4b đều hứa cải thiện độ trễ mà bộ eval hiện **không** báo cáo độ trễ — không có thước thì không nghiệm thu được | 0.5 buổi |
-| 7 | **Đo 5 số ở §9d.4** trên DB lab máy nặng, rồi áp quy tắc chọn ở §9d.5 → chốt v1 / v2-A / v2-B / hoãn | **nặng** (riêng số #2 mô phỏng được ở lane nhẹ — làm trước) | Năm số này quyết định hình dạng schema của P4-4b. Đo **trước** khi viết migration — đúng bài học P4-3 | 0.5 buổi |
+| 7 | ✅ **ĐÃ ĐO 23/08** (máy vận hành) → **HOÃN P4-4b** (§9d.6). Việc #8 do đó **không khởi động**; #1–#6 giữ nguyên | **nặng** (riêng số #2 mô phỏng được ở lane nhẹ — làm trước) | Năm số này quyết định hình dạng schema của P4-4b. Đo **trước** khi viết migration — đúng bài học P4-3 | 0.5 buổi |
 | 8 | **P4-4b** code theo phương án đã chốt ở #7; cờ `rag.sparse_backend` mặc định `inprocess`, chỉ đổi mặc định sau khi D1 parity đạt | nhẹ (code) + nặng (đo) | Việc đắt nhất, đi cuối, và chỉ khởi động khi #2 và #7 xong | 3–4 buổi |
 
 **Ràng buộc chốt kèm**: P4-4b không được đổi mặc định nếu D1 lệch quá 0.02 ở bất kỳ chỉ số
@@ -473,6 +473,30 @@ Không chọn bằng lập luận. Chốt bằng năm số này, đo trên **DB 
 3. **`pg_column_size` thật** của `text[]` và `int[]` trên corpus vận hành (số fixture 27 chunk chỉ là chỉ dấu).
 4. **`pg_total_relation_size` của bảng posting** dựng thử trên lab — kiểm con số ~7× ở trên là đúng hay ước tính sai.
 5. **`EXPLAIN ANALYZE`** cả hai đường: planner có thật sự dùng GIN không, hay ở quy mô này nó chọn seq scan (rất có thể) — nếu là seq scan thì mọi lập luận về GIN đều vô nghĩa.
+
+#### 9d.6 — KẾT QUẢ ĐO 23/08 (máy vận hành) → **HOÃN P4-4b**
+
+Năm số ở §9d.4 đã đo xong trên `PC-dungbt` (production chỉ đọc; thí nghiệm ghi trong DB
+dùng-một-lần `local_ai_core_p44_test`). Áp quy tắc §9d.5 → **nhánh 3: không làm P4-4b bây
+giờ**; giữ A (P4-4a) + B (chỉ lưu token). Bảng đầy đủ, cách đo và điều kiện mở lại:
+`docs/p4_progress.md`, mục "P4-4b — chọn phương án bằng số đo".
+
+Ba con số quyết định, và **ba chỗ plan này ghi sai** (số liệu thắng, plan phải sửa):
+
+| Ghi ở §9d | Đo thật | Hệ quả |
+| --- | --- | --- |
+| v1-đã-vá "~1.06× corpus" | **3.65×** ở 118 chunk, **1.89×** ở 5 000 (hội tụ) | con số cũ **bỏ quên index GIN** (riêng GIN 2.29×) và lấy từ fixture 27 chunk; `text[]` thật là 1.21× chứ không phải 0.68× |
+| posting "~7× (ước tính)" | **12.32–12.64×**, ổn định mọi quy mô | ước tính bỏ qua chuỗi `lexeme` lặp mỗi hàng + index B-tree (40% tổng) |
+| v2-A "*có thể* giải G8-3" | **không** — planner chọn **Seq Scan** ở mọi quy mô đã đo, **126.9 ms** ở 5 000 chunk | ở đúng ngưỡng kích hoạt của §1, v2-A **chậm hơn** chấm BM25 in-process (~50 ms) |
+
+Cắt DF (v2-A) trượt vì **ngưỡng an toàn không ổn định giữa corpus**: production an toàn từ
+df/N 0.15 (28.4%), lab 0.15 đã mất một câu và chỉ an toàn từ 0.20 → ngưỡng chung 0.20 cho
+**34.7% / 40.7%**, đều trên mốc 30%. Không ngưỡng nào trong ba ngưỡng §9d.4 chỉ định
+(0.2/0.3/0.5) đạt < 30%.
+
+Mở lại khi corpus active vượt ~5 000 chunk **và** p95 `/rag/search` vượt ngân sách, **hoặc**
+khi có cách chọn lọc đo được < 30% **ổn định trên ≥ 2 corpus**. Khi đó **đo lại cả năm số** —
+tỷ lệ dung lượng và lựa chọn của planner đều phụ thuộc quy mô.
 
 #### 9d.5 — Quy tắc chọn (chốt TRƯỚC khi đo, để số liệu không bị đọc theo ý muốn)
 

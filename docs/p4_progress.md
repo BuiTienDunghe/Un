@@ -304,3 +304,168 @@ nhẹ, CI ghim cả hai cờ và exit 1 khi thiếu khóa, số liệu khớp t�
 Bài học ghi lại: **đo xong trên máy mạnh chưa phải là xong** — thay đổi mặc định
 (`models.yaml`) phải được thử qua con đường người dùng mới đi (launcher + `.env.example`),
 và hội đồng kiểm chứng độc lập bắt được đúng lớp lỗi mà người làm tính năng không nhìn thấy.
+
+---
+
+## P4-4b — chọn phương án bằng số đo (23/08/2026, máy vận hành `PC-dungbt`)
+
+**Kết luận: HOÃN P4-4b.** Không chọn v1, v2-A hay v2-B. Giữ hướng A (P4-4a, §9c#3) và
+B (chỉ lưu token xuống DB) — hai việc rẻ, không đụng schema. Quy tắc §9d.5 nhánh 3.
+
+Lượt này **không viết migration, không sửa schema, không đổi code retrieval** — đầu ra là
+số. Điều kiện đo: máy `PC-dungbt`, tokenizer thật của repo (`pyvi` qua `tokenize_vietnamese`),
+82 câu của `rag_multidoc_eval.jsonl`. Production `local_ai_core` **chỉ đọc**; mọi thí nghiệm
+ghi chạy trong DB dùng-một-lần `local_ai_core_p44_test` (đã xoá sau khi đo). API/bot không
+khởi động; chỉ container postgres được bật để đọc.
+
+### Số #1 + #2 — bộ lọc ứng viên `retrieval_lexemes && $1` (ĐO THẬT, mô phỏng không cần migration)
+
+"Chunk đúng" định nghĩa y hệt scorer D1: chunk thuộc `expected_docs` **và** chứa nguyên văn
+mọi `expected_source_terms` — tính từ văn bản chunk, không phụ thuộc retrieval hoạt động.
+Cả hai corpus đều có chunk đúng cho **cả 82 câu** (không câu nào vô nghiệm).
+
+**Corpus vận hành (118 chunk active, 4 179 lexeme phân biệt, 214.7 lexeme/chunk):**
+
+| Cấu hình | trung vị % corpus | p95 % | tối đa % | **câu MẤT chunk đúng** | ứng viên rỗng |
+| --- | --- | --- | --- | --- | --- |
+| không cắt (**v1 nguyên bản**) | **100.0%** | 100.0% | 100.0% | 0 | 0 |
+| cắt df/N > 0.02 | 3.8% | 6.8% | 8.5% | **39** | 0 |
+| cắt df/N > 0.05 | 7.6% | 14.4% | 16.9% | **10** | 0 |
+| cắt df/N > 0.10 | 19.5% | 29.7% | 36.4% | **1** | 0 |
+| cắt df/N > 0.15 | **28.4%** | 38.1% | 47.5% | **0** | 0 |
+| cắt df/N > 0.20 | 34.7% | 47.5% | 52.5% | 0 | 0 |
+| cắt df/N > 0.30 | 43.2% | 57.6% | 71.2% | 0 | 0 |
+| cắt df/N > 0.50 | 57.6% | 72.0% | 81.4% | 0 | 0 |
+
+**Corpus lab (27 chunk, fixture D1) — cùng 82 câu, cùng ngưỡng:**
+
+| Cấu hình | trung vị % | p95 % | câu MẤT |
+| --- | --- | --- | --- |
+| không cắt | 100.0% | 100.0% | 0 |
+| cắt 0.10 | 18.5% | 29.6% | **23** |
+| cắt **0.15** | 33.3% | 51.9% | **1** (`br_thoi_gian_giu_lai`) |
+| cắt 0.20 | 40.7% | 59.3% | 0 |
+
+**Đọc hai bảng cùng nhau — đây là lý do v2-A bị loại:**
+
+1. **v1 nguyên bản xác nhận không lọc**: trung vị **100%** corpus ở cả hai; trung bình 86.2%
+   (prod) / 99.0% (lab); 42/82 (prod) và 76/82 (lab) câu kéo **đúng 100%**. G8-3 không được
+   giải — chỉ chuyển chỗ chấm điểm từ RAM sang DB→app. Khớp phát hiện của máy nhẹ (97.5%).
+2. **Ngưỡng DF an toàn KHÔNG ổn định giữa hai corpus.** Prod an toàn từ **0.15**; lab 0.15 đã
+   **mất một câu**, an toàn từ **0.20**. Ngưỡng chung an toàn cho cả hai = 0.20 → **34.7%
+   (prod) và 40.7% (lab)** — **cả hai đều > 30%**.
+3. Ngay ở prod, ngưỡng đạt 28.4% (0.15) nằm **sát vách hỏng**: hạ thêm một nấc (0.10) là mất
+   câu. Một siêu tham số phải chỉnh lại mỗi khi corpus đổi, với biên an toàn 0.05, không phải
+   thứ đáng đưa vào đường retrieval production.
+
+⚠ **Lưu ý về dải ngưỡng**: §9d.4 chỉ định thử 0.2 / 0.3 / 0.5 — **không ngưỡng nào trong ba
+ngưỡng đó đạt < 30%** (thấp nhất 34.7%). Dải được quét rộng thêm (0.02 → 0.5) để biết đây là
+"sát ngưỡng" hay "chặn cứng"; kết quả cho thấy vùng < 30% mà an toàn **chỉ tồn tại trên một
+corpus**, không tồn tại trên cả hai. Quy tắc chọn không bị sửa.
+
+### Số #3 — `pg_column_size` thật (ĐO THẬT, corpus vận hành 118 chunk)
+
+| Thành phần | Kích thước | × content trần | × ship (ctx+content) |
+| --- | --- | --- | --- |
+| `content` (corpus trần) | 153.8 kB | 1.00× | — |
+| `indexed_text` (ship: contextual BẬT) | 192.0 kB | 1.25× | 1.00× |
+| `retrieval_lexemes text[]` | 185.3 kB | **1.21×** | 0.97× |
+| `retrieval_tf int[]` | 23.0 kB | 0.15× | 0.12× |
+| `retrieval_len int` | 0.5 kB | — | — |
+| **3 cột cộng lại** | 208.8 kB | **1.36×** | 1.09× |
+| **index GIN** (25 338 mục) | **352.0 kB** | **2.29×** | 1.83× |
+| **v2-A tổng phần thêm** (3 cột + GIN) | **560.8 kB** | **3.65×** | 2.92× |
+
+⚠ **Plan §9d.1 sai ở đây và phải sửa**: con số "**~1.06×** corpus" cho v1-đã-vá **không tính
+index GIN**, mà GIN là bắt buộc cho chính bộ lọc `&&` mà thiết kế dựa vào. Đo thật, phần
+thêm là **3.65× trần** ở corpus hiện tại — vượt xa ngưỡng dừng 2× của chính `p4_4_design.md`
+§7. Con số 1.06× cũng đo trên fixture 27 chunk (`text[]` 0.68×); trên corpus vận hành riêng
+`text[]` đã là **1.21×**, tức chỉ dấu từ fixture nhỏ lệch gần **2×**.
+
+### Số #4 — bảng posting v2-B (ĐO THẬT, `pg_total_relation_size`)
+
+| | 118 chunk | 1 000 chunk | 5 000 chunk |
+| --- | --- | --- | --- |
+| hàng posting | 25 338 | ~215 k | ~1.07 M |
+| **v2-B tổng (heap + index)** | 1.90 MB = **12.64×** trần | 15.74 MB = **12.38×** | 78.36 MB = **12.32×** |
+
+⚠ **Plan §9d.2 ước tính ~7× — đo thật ~12.3–12.6×, tệ hơn gần gấp đôi**, và tỷ lệ **ổn định
+ở mọi quy mô** (78.6 B/hàng thực tế so với ~24 B header giả định trong ước tính; ước tính bỏ
+qua chi phí lưu chuỗi `lexeme` lặp lại ở mỗi hàng và kích thước index B-tree trên `(lexeme,
+chunk_ref)` = 752 kB/1.90 MB, tức 40% tổng).
+
+### Số #5 — `EXPLAIN ANALYZE`: planner có dùng GIN không? (ĐO THẬT)
+
+Truy vấn `retrieval_lexemes && ARRAY['chu_kỳ','backup','postgres','giữ','dump']`:
+
+| Quy mô | Planner chọn | Thời gian |
+| --- | --- | --- |
+| 118 chunk | **Seq Scan** (247 buffers) | 3.0 ms |
+| 118 chunk, ép `enable_seqscan=off` | Bitmap Index Scan on GIN (8 heap blocks) | **0.04 ms** |
+| 1 000 chunk | **Seq Scan** | 24.2 ms |
+| **5 000 chunk** | **Seq Scan** | **126.9 ms** |
+| 118 chunk, posting (v2-B) | index scan + sort | 0.10 ms |
+
+**Planner không dùng GIN ở bất kỳ quy mô nào đã đo**, kể cả 5 000 chunk — đúng nghi ngờ của
+§9d.4#5. Lý do là chính số #1: khi bộ lọc kéo ~30–100% số hàng, seq scan **là** kế hoạch
+đúng; GIN chỉ thắng khi bộ lọc thực sự chọn lọc (ép tắt seq scan cho thấy GIN nhanh hơn 77×
+khi được dùng — nó *dùng được*, chỉ là không đáng dùng ở selectivity này).
+
+**Hệ quả nặng nhất, và là lý do chính của quyết định hoãn**: tại **5 000 chunk** — đúng ngưỡng
+kích hoạt P4-4b nêu ở plan §1 — v2-A mất **126.9 ms chỉ để LỌC ứng viên**, chưa tính chấm
+BM25 trong app trên ~30% corpus. Bảng ngoại suy ở §1 đặt chấm BM25 in-process hiện tại ở
+**~50 ms** cùng quy mô. Nghĩa là ở chính quy mô nó được thiết kế để cứu, **v2-A chậm hơn thứ
+nó thay thế**.
+
+### Quy mô lớn hơn — các tỷ lệ hội tụ về đâu (ĐO THẬT trên corpus nhân bản)
+
+| N chunk | content | 3 cột | GIN | **v2-A tổng** | **v2-B tổng** |
+| --- | --- | --- | --- | --- | --- |
+| 118 (thật) | 153.8 kB | 208.8 kB | 352.0 kB | **3.65×** | **12.64×** |
+| 1 000 | 1.27 MB | 1.73 MB | 936 kB | **2.08×** | **12.38×** |
+| 5 000 | 6.36 MB | 8.64 MB | 3.36 MB | **1.89×** | **12.32×** |
+
+v2-A **hội tụ về ~1.9×** (overhead cố định của GIN loãng dần) — vừa đủ lọt ngưỡng dừng 2×,
+nhưng sát. v2-B **ổn định ~12.3×**. *Ngoại suy*: nhân bản giữ nguyên từ vựng, mà corpus thật
+mở rộng từ vựng theo luật Heaps ⇒ hai tỷ lệ này là **chặn dưới** của chi phí thật ở cùng quy
+mô.
+
+### Áp quy tắc chọn §9d.5 (chốt trước khi đo, không sửa)
+
+| Nhánh quy tắc | Điều kiện | Kết quả đo | Phán |
+| --- | --- | --- | --- |
+| → **v2-A** | cắt DF hạ selectivity **< 30%** mà **0 câu mất** | ngưỡng an toàn chung hai corpus là 0.20 → **34.7% / 40.7%** | **KHÔNG ĐẠT** |
+| → **v2-B** | #2 thất bại **và** posting **≤ 3×** corpus | **12.32–12.64×** | **KHÔNG ĐẠT** |
+| → **hoãn** | #2 thất bại **và** #4 ra ~7× như ước tính | #2 thất bại; #4 = 12.3× (**tệ hơn** 7×) | **ĐẠT** |
+| v1 nguyên bản | không được chọn trong mọi trường hợp | — | loại |
+
+**Quyết định: HOÃN P4-4b.** Ba lý do bằng số, xếp theo sức nặng:
+
+1. **v2-A không giải được G8-3 ở quy mô mục tiêu**: 5 000 chunk → seq scan 126.9 ms để lọc,
+   so với ~50 ms chấm BM25 in-process hiện nay. Đây là số phủ quyết: bỏ công đổi schema để
+   nhận đường đọc chậm hơn.
+2. **v2-B đắt gấp 4× so với trần quy tắc**: 12.3× corpus, quy tắc cho phép ≤ 3×. Ở 5 000
+   chunk là 78 MB cho 6.4 MB nội dung.
+3. **Nỗi đau chưa tới**: corpus vận hành hiện **118 chunk active** (209 hàng kể cả version
+   superseded) — cách ngưỡng ~5 000 chunk ở §1 khoảng **40×**. Lập luận "di trú khi còn nhỏ
+   thì rẻ" vẫn đúng, nhưng nó chỉ đáng khi *biết* di trú sang hình dạng nào; hôm nay chưa
+   hình dạng nào qua được ngưỡng của chính plan.
+
+**Vẫn nên làm** (không đụng schema, đã nằm trong §9c): **P4-4a** (gỡ tắc rebuild — xoá 98.1%
+chi phí là tách từ pyvi) và hướng **B** (lưu token xuống DB, vẫn chấm bằng `rank_bm25` trong
+RAM) — B xoá luôn G8-2 mà không cần GIN, không cần bảng posting, không cần siêu tham số DF.
+
+**Mở lại P4-4b khi nào** — điều kiện đo được, không phải cảm tính:
+- corpus active vượt ~5 000 chunk **và** p95 `/rag/search` vượt ngân sách đã đặt; **hoặc**
+- có phương án chọn lọc mới đo được < 30% selectivity **ổn định trên ít nhất hai corpus**
+  (ví dụ: cắt theo hạng DF thay vì ngưỡng tuyệt đối, hoặc yêu cầu khớp ≥ 2 lexeme hiếm).
+- Khi mở lại: đo lại cả năm số, vì tỷ lệ dung lượng và lựa chọn của planner đều **phụ thuộc
+  quy mô** — bằng chứng là chính bảng hội tụ ở trên.
+
+### Điều phải sửa trong plan (số liệu mâu thuẫn ⇒ plan sai)
+
+| Chỗ | Ghi | Đo thật |
+| --- | --- | --- |
+| §9d.1, §9d.3 | v1-đã-vá "**~1.06×** corpus" | **3.65×** ở 118 chunk / **1.89×** ở 5 000 — con số cũ bỏ quên index GIN (2.29× riêng nó) và đo trên fixture 27 chunk |
+| §9d.2, §9d.3 | posting "**~7×**" (ước tính số học) | **12.32–12.64×**, ổn định mọi quy mô |
+| §9d.3 | v2-A "*Có thể* giải G8-3 — chưa đo" | **Không** — planner vẫn seq scan ở 5 000 chunk, 126.9 ms |

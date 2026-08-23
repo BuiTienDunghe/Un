@@ -11,6 +11,20 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+### Changed
+- **P4-4b: HOÃN — quyết định bằng số đo, không viết migration** (máy vận hành, 23/08).
+  Năm số ở plan §9d.4 đo xong trước khi đụng schema (đúng bài học P4-3): bộ lọc
+  `retrieval_lexemes && $1` của v1 kéo **trung vị 100%** corpus (xác nhận G8-3 không được
+  giải); cắt DF có ngưỡng an toàn **không ổn định giữa corpus** (production an toàn từ 0.15
+  → 28.4%, lab 0.15 mất một câu, an toàn từ 0.20 → 40.7%) nên v2-A trượt mốc 30%; bảng
+  posting v2-B đo **12.3–12.6× corpus** (plan ước tính ~7×) nên trượt trần 3×. Số phủ quyết:
+  `EXPLAIN ANALYZE` cho thấy planner chọn **Seq Scan ở mọi quy mô đã đo**, **126.9 ms** ở
+  5 000 chunk — tại đúng ngưỡng kích hoạt của §1, v2-A **chậm hơn** BM25 in-process (~50 ms).
+  Ba con số trong plan sai và đã sửa (v1 "1.06×" bỏ quên index GIN — thật là 1.89–3.65×;
+  posting "~7×" → 12.3×; "v2-A có thể giải G8-3" → không). Giữ P4-4a + hướng "chỉ lưu token";
+  điều kiện mở lại ghi trong `docs/p4_progress.md`. Không đổi schema, code retrieval hay
+  cấu hình vận hành.
+
 ### Documentation
 - **Thiết kế P4-4 + P4-5 chốt** (`docs/p4_4_design.md`): chỉ mục sparse chuyển vào PostgreSQL bằng
   lexeme pyvi dạng `text[]` + GIN (không `tsvector` — parser tách đôi từ ghép), tf/len theo chunk,
