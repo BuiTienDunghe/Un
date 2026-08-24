@@ -57,7 +57,9 @@ class QdrantStore:
                 id=str(uuid5(NAMESPACE_URL, f"local-ai-core:{document_id}:{version_id}:{index}")), vector=vector,
                 payload={"document_id": document_id, "filename": filename,
                          "chunk_index": index, "page": chunk.page_start, "page_start": chunk.page_start,
-                         "page_end": chunk.page_end, "heading_path": chunk.heading_path,
+                         # The payload keeps the joined display form every existing
+                         # point already carries; the structured list lives in Postgres (T15).
+                         "page_end": chunk.page_end, "heading_path": " > ".join(chunk.heading_path) if chunk.heading_path else None,
                          "section_title": chunk.section_title, "block_type": chunk.block_type,
                          "extraction_method": chunk.extraction_method,
                          **({"version_id": version_id, "chunk_id": chunk_ids[index], "content_hash": sha256(chunk.content.encode("utf-8")).hexdigest()} if isinstance(version_id, str) and chunk_ids else {"index_version": version_id})},

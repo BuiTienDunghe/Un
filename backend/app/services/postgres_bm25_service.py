@@ -131,10 +131,15 @@ class PostgresBm25Service:
             if not result and query_tokens:
                 wanted = set(query_tokens)
                 fallback = []
-                for chunk in self._chunks:
+                for position, chunk in enumerate(self._chunks):
                     if requested is not None and chunk.document_id not in requested:
                         continue
-                    overlap = sum(1 for token in tokenize_vietnamese(combined_retrieval_text(chunk.retrieval_context, chunk.content)) if token in wanted)
+                    # Reuse the per-chunk token counts BM25Okapi built from the
+                    # exact same tokenize_vietnamese output at index time.
+                    # Re-tokenizing the corpus here made every zero-score query
+                    # (typically an out-of-corpus question) cost a full rebuild
+                    # — ~98% of which is pyvi — scaling with corpus size.
+                    overlap = sum(count for token, count in self._index.doc_freqs[position].items() if token in wanted)
                     if overlap:
                         fallback.append((chunk, float(overlap)))
                 fallback.sort(key=lambda item: (-item[1], item[0].document_id, item[0].chunk_index))

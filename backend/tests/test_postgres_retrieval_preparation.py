@@ -145,3 +145,115 @@ def test_postgres_unavailable_is_not_hidden_by_bm25_cache():
             raise ConnectionError("postgres unavailable")
     with pytest.raises(ConnectionError, match="postgres unavailable"):
         PostgresBm25Service(UnavailableSessions()).search("keyword", 1)
+
+
+def test_replace_chunks_persists_chunker_metadata_t15(factory):
+    """T15: real chunker -> real write path must keep locations/heading_path/token_count.
+
+    The prior regression test built ORM chunks by hand with heading_path set,
+    so it stayed green while production wrote NULLs; this one goes through
+    chunk_pages + replace_chunks exactly like indexing does.
+    """
+    from app.postgres.repositories import PostgresDocumentRepository
+    from app.utils.chunking import chunk_pages
+
+    _cleanup(factory)
+    suffix = uuid4().hex
+    doc_id, version_id = f"doc_phase6a_{suffix}", f"ver_phase6a_{suffix}"
+    with factory.begin() as session:
+        document = Document(id=doc_id, original_filename=f"phase6a-{suffix}.md", stored_filename=f"{doc_id}.md", mime_type="text/markdown", content_hash=uuid4().hex * 2, status="indexed", source_available=True)
+        version = DocumentVersion(id=version_id, document_id=doc_id, version_number=1, status="active", activated_at=datetime.now(UTC), chunking_config={})
+        document.active_version_id = version_id
+        session.add_all((document, version))
+    chunks = chunk_pages([(1, "# Guide\n\n## Setup\n\nPHASE6A-T15-KEYWORD appears in the setup body.", "native")], 480, 80)
+    assert chunks and chunks[0].heading_path == ("Guide", "Setup")
+    with factory.begin() as session:
+        PostgresDocumentRepository(session).replace_chunks(doc_id, version_id, chunks)
+    with factory() as session:
+        stored = PostgresDocumentRepository(session).chunks_for_version(version_id)
+        assert stored[0].heading_path == ["Guide", "Setup"]
+        assert stored[0].locations and set(stored[0].locations[0]) == {"page", "start", "end"}
+        assert stored[0].locations[0]["page"] == 1
+        assert stored[0].token_count == chunks[0].token_count and stored[0].token_count > 0
+    hits = PostgresBm25Service(factory).search("PHASE6A-T15-KEYWORD", 5, doc_id)
+    assert hits and hits[0]["heading_path"] == "Guide > Setup"
+    assert hits[0]["locations"]
+    _cleanup(factory)
+
+
+def test_bm25_zero_score_fallback_reuses_index_tokens(factory, monkeypatch):
+    """The all-zero-score fallback must not re-tokenize the corpus per query.
+
+    A one-document corpus gives every token a non-positive BM25 score, forcing
+    the fallback; after the index is built, a search may tokenize exactly one
+    string: the question.
+    """
+    import app.services.postgres_bm25_service as module
+
+    _cleanup(factory)
+    doc_id, _, _ = _seed(factory)
+    bm25 = PostgresBm25Service(factory)
+    assert bm25.search("Transformer", 5) and bm25.rebuild_count == 1  # build outside the counted window
+    calls: list[str] = []
+    original = module.tokenize_vietnamese
+    monkeypatch.setattr(module, "tokenize_vietnamese", lambda text: (calls.append(text), original(text))[1])
+    # Single-word question: pyvi may fuse multi-word questions into compound
+    # tokens that no longer match the corpus tokens (same behavior before and
+    # after the reuse patch — the fallback compares tokenizer output only).
+    hits = bm25.search("Transformer", 5)
+    assert hits and hits[0]["document_id"] == doc_id
+    assert calls == ["Transformer"]
+    _cleanup(factory)
+
+
+def test_backfill_fills_pre_t15_rows_and_skips_drift(factory):
+    """Backfill fills NULL metadata from re-chunked stored pages, hash-guarded."""
+    from app.postgres.repositories import PostgresDocumentRepository
+    from app.utils.chunking import chunk_pages, count_tokens
+    from hashlib import sha256
+    from scripts.backfill_chunk_metadata import backfill
+
+    _cleanup(factory)
+    suffix = uuid4().hex
+    doc_id, version_id = f"doc_phase6a_{suffix}", f"ver_phase6a_{suffix}"
+    text = "# Guide\n\n## Setup\n\nBackfill body text for the setup section."
+    chunks = chunk_pages([(1, text, "native")], 480, 80)
+    with factory.begin() as session:
+        document = Document(id=doc_id, original_filename=f"phase6a-{suffix}.md", stored_filename=f"{doc_id}.md", mime_type="text/markdown", content_hash=uuid4().hex * 2, status="indexed", source_available=True)
+        version = DocumentVersion(id=version_id, document_id=doc_id, version_number=1, status="active", activated_at=datetime.now(UTC), chunking_config={})
+        document.active_version_id = version_id
+        session.add_all((document, version))
+        session.flush()
+        PostgresDocumentRepository(session).replace_pages(doc_id, version_id, [(1, text, "native")])
+        # Simulate a pre-T15 row: correct content/hash/pages, NULL metadata.
+        for index, chunk in enumerate(chunks):
+            session.add(DocumentChunk(id=f"chunk_{uuid4().hex}", chunk_uid=f"uid-{suffix}-{index}", document_id=doc_id, version_id=version_id, chunk_index=index, content=chunk.content, content_hash=sha256(chunk.content.encode()).hexdigest(), page_start=chunk.page_start, page_end=chunk.page_end, locations=None, heading_path=None, token_count=None, section_title=chunk.section_title, block_type=chunk.block_type, extraction_method="native", status="staging"))
+    report = backfill(factory, 480, 80, apply=False)
+    with factory() as session:
+        untouched = PostgresDocumentRepository(session).chunks_for_version(version_id)
+        assert all(row.token_count is None and row.heading_path is None for row in untouched)
+    assert report.versions_matched == 1 and report.chunks_heading_path == len(chunks)
+    report = backfill(factory, 480, 80, apply=True)
+    assert report.versions_matched == 1
+    with factory() as session:
+        filled = PostgresDocumentRepository(session).chunks_for_version(version_id)
+        assert filled[0].heading_path == ["Guide", "Setup"]
+        assert filled[0].locations and filled[0].locations[0]["page"] == 1
+        assert all(row.token_count == count_tokens(row.content) for row in filled)
+    # Drift guard: a version whose stored hash no longer matches must be left alone.
+    drift_doc, drift_ver = f"doc_phase6a_{uuid4().hex}", f"ver_phase6a_{uuid4().hex}"
+    with factory.begin() as session:
+        document = Document(id=drift_doc, original_filename=f"phase6a-drift-{suffix}.md", stored_filename=f"{drift_doc}.md", mime_type="text/markdown", content_hash=uuid4().hex * 2, status="indexed", source_available=True)
+        version = DocumentVersion(id=drift_ver, document_id=drift_doc, version_number=1, status="active", activated_at=datetime.now(UTC), chunking_config={})
+        document.active_version_id = drift_ver
+        session.add_all((document, version))
+        session.flush()
+        PostgresDocumentRepository(session).replace_pages(drift_doc, drift_ver, [(1, text, "native")])
+        session.add(DocumentChunk(id=f"chunk_{uuid4().hex}", chunk_uid=f"uid-drift-{suffix}", document_id=drift_doc, version_id=drift_ver, chunk_index=0, content="content that no longer matches the pages", content_hash="b" * 64, page_start=1, page_end=1, locations=None, heading_path=None, token_count=None, section_title=None, block_type="paragraph", extraction_method="native", status="staging"))
+    report = backfill(factory, 480, 80, apply=True)
+    assert report.versions_content_drift == 1
+    with factory() as session:
+        drifted = PostgresDocumentRepository(session).chunks_for_version(drift_ver)
+        assert drifted[0].heading_path is None and drifted[0].locations is None
+        assert drifted[0].token_count == count_tokens(drifted[0].content)  # content-derived fill still happens
+    _cleanup(factory)

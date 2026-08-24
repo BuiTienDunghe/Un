@@ -23,13 +23,18 @@ class DocumentChunk:
     page_start: int | None
     page_end: int | None
     locations: tuple[ChunkLocation, ...]
-    heading_path: str | None
+    # T15: ordered heading parts ("A", "B"), matching the JSONB list[str]
+    # column. Display surfaces join with " > "; never store the joined form.
+    heading_path: tuple[str, ...] | None
     section_title: str | None
     block_type: str
     extraction_method: str
     # P4-2: generated situating context. Only the retrieval indexes (embedding
     # input and BM25 tokens) see it; `content` stays the citation text.
     retrieval_context: str | None = None
+    # T15: size of `content` alone (not retrieval_context) in count_tokens
+    # units — the same budget unit chunk_tokens is expressed in.
+    token_count: int | None = None
 
 
 def combined_retrieval_text(retrieval_context: str | None, content: str) -> str:
@@ -117,7 +122,7 @@ def normalize_chunk(chunk: DocumentChunk | tuple[str, int | None, str]) -> Docum
     if isinstance(chunk, DocumentChunk):
         return chunk
     content, page, extraction_method = chunk
-    return DocumentChunk(content, page, page, (ChunkLocation(page, 0, len(content)),), None, None, "paragraph", extraction_method)
+    return DocumentChunk(content, page, page, (ChunkLocation(page, 0, len(content)),), None, None, "paragraph", extraction_method, token_count=count_tokens(content))
 
 
 def _blocks_from_pages(pages: Iterable[tuple[int | None, str, str]], table_token_limit: int) -> list[_Block]:
@@ -242,16 +247,18 @@ def _make_chunk(blocks: list[_Block]) -> DocumentChunk:
     paths = {block.heading_path for block in blocks}
     types = {block.block_type for block in blocks}
     methods = {block.extraction_method for block in blocks}
-    heading_path = " > ".join(blocks[-1].heading_path) if len(paths) == 1 and blocks[-1].heading_path else None
+    heading_path = blocks[-1].heading_path if len(paths) == 1 and blocks[-1].heading_path else None
+    content = _join_blocks(blocks)
     return DocumentChunk(
-        content=_join_blocks(blocks),
+        content=content,
         page_start=min(pages) if pages else None,
         page_end=max(pages) if pages else None,
         locations=locations,
         heading_path=heading_path,
-        section_title=blocks[-1].heading_path[-1] if heading_path else None,
+        section_title=heading_path[-1] if heading_path else None,
         block_type=next(iter(types)) if len(types) == 1 else "mixed",
         extraction_method=next(iter(methods)) if len(methods) == 1 else "mixed",
+        token_count=count_tokens(content),
     )
 
 

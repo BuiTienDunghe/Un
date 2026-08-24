@@ -17,8 +17,10 @@ def _as_record(chunk: DocumentChunk) -> ChunkRecord:
     Only payload metadata travels to Qdrant (retrieval re-reads content from
     PostgreSQL), so the mapping mirrors what the live index path sends."""
     locations = tuple(ChunkLocation(loc.get("page"), int(loc.get("start", 0)), int(loc.get("end", 0))) for loc in (chunk.locations or []))
-    heading = " > ".join(chunk.heading_path) if chunk.heading_path else None
-    return ChunkRecord(chunk.content, chunk.page_start, chunk.page_end, locations, heading, chunk.section_title, chunk.block_type or "paragraph", chunk.extraction_method or "native", chunk.retrieval_context)
+    # T15: the dataclass carries heading parts as a tuple; QdrantStore joins
+    # them into the display string when building the payload.
+    heading = tuple(chunk.heading_path) if chunk.heading_path else None
+    return ChunkRecord(chunk.content, chunk.page_start, chunk.page_end, locations, heading, chunk.section_title, chunk.block_type or "paragraph", chunk.extraction_method or "native", chunk.retrieval_context, token_count=chunk.token_count)
 
 def main() -> None:
     parser=argparse.ArgumentParser(); parser.add_argument("--dry-run",action="store_true"); parser.add_argument("--document-id"); args=parser.parse_args(); settings=get_settings()
