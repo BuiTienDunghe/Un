@@ -16,16 +16,19 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   **cùng ổ đĩa** với database, `backup_sources.py` tồn tại nhưng **0 nơi gọi**, `.env` không có bản
   sao nào — và khi kiểm tra thật thì phát hiện **02:00 hai đêm 23–24/08 không ra dump** (Docker
   Desktop tắt, Scheduled Task thất bại im lặng, `/health` chỉ sống cùng launcher nên không ai hay).
-  Giờ mỗi backup thành công làm đủ ba việc trong cùng `run_once` (launcher lẫn Scheduled Task dùng
-  chung): dump → **zip toàn bộ `data/documents/` kèm manifest SHA-256** (442 nguồn, xoay vòng
-  14 ngày/giữ 3 như dump) → **mirror cả hai sang `BACKUP_MIRROR_DIR`** — chép thiếu-theo-tên, kỷ
-  luật `.part`-rồi-đổi-tên như dump, mirror chết chỉ ra warning không làm hỏng backup chính.
+  Giờ mỗi backup thành công làm hai việc trong cùng `run_once` (launcher lẫn Scheduled Task dùng
+  chung): dump → **zip toàn bộ `data/documents/` kèm manifest SHA-256** (455 nguồn, xoay vòng
+  14 ngày/giữ 3 như dump). Cơ chế **mirror sang `BACKUP_MIRROR_DIR`** (chép thiếu-theo-tên, kỷ luật
+  `.part`-rồi-đổi-tên, mirror chết chỉ ra warning không làm hỏng backup chính) đã viết và có test,
+  nhưng **để TẮT**: máy chỉ có một SSD vật lý (C: và D: là hai partition của cùng thanh KIOXIA
+  1863 GB), nên mọi đích trên máy là bản sao giả — thà biết mình có một bản còn hơn tin có hai.
+  Bật lại khi có USB/NAS: bỏ comment một dòng trong `.env`.
   Chuông độc lập launcher: `check_operational_alerts --dump-max-age-hours 48` — thử trên chính sự
   cố thật: đỏ (55.2h, exit 2) trước khi vá, xanh (0.0h) sau khi backup chạy lại. `.env` có cặp
   `backup-env-once.ps1`/`restore-env.ps1` (AES-256 + PBKDF2 200k, round-trip và sai-passphrase đều
   có kiểm). **Nói thật giới hạn**: C: và D: là hai partition của cùng một đĩa vật lý — mirror hiện
-  tại chống hỏng filesystem/xoá nhầm, không chống chết đĩa; bước tay còn lại là trỏ mirror ra
-  ngoài máy và chạy script mã hoá `.env` một lần (passphrase cất ngoài máy). 6 test mới.
+  tại chống hỏng filesystem/xoá nhầm, không chống chết đĩa — nên rủi ro một-máy ở plan §8 **giữ
+  mức Cao**, không hạ, cho tới khi có đích ngoài máy thật. 6 test mới.
 - **Việc #2 đóng — đặt thước trước khi tối ưu** (24/08, ba phần). **(1)** Eval multidoc tổng hợp
   độ trễ đã thu sẵn từng câu thành `latency: {measured, p50, p95, max}` — **report-only, không vào
   gate CI, không vào baseline** (bài học P4-3: đo latency trên runner không GPU là đo sai cấu hình);
