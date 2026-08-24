@@ -59,7 +59,7 @@ Tài liệu này là **nguồn sự thật duy nhất** cho định hướng và
 | Phase | Trạng thái | Kết quả chốt |
 | --- | --- | --- |
 | **P0** — Nền móng tin cậy | ✅ | CI GitHub Actions (P0-1) · API key cho endpoint ghi/xoá (P0-2) · bảng `message_sources` giữ citation (P0-3) · backup tự động + restore drill (P0-4) · `pyproject.toml` + CHANGELOG (P0-5) · `alembic check` xanh trong CI (P0-6) |
-| **P0.5** — Nợ audit 18/08 | Một phần | T1–T4, T6, T11, T14, T15 ✅ đã trả. **Còn T5, T7, T8, T9, T10, T12, T13, T16** → §4 |
+| **P0.5** — Nợ audit 18/08 | Một phần | T1–T4, T6, T11, T14, T15, T17 ✅ đã trả. **Còn T5, T7, T8, T9, T10, T12, T13, T16** → §4 |
 | **P1** — Một agent, hai kênh | ✅ 19/08 | `/docs` kèm nguồn · condense câu hỏi nối tiếp (eval 10/10, MRR 0.950 vs 0.787) · memory hub một kho hai kênh · pipeline người-duyệt end-to-end. Nhật ký: `docs/p1_progress.md` |
 | **P2** — Agent tự hành | ✅ 20/08 | Memory tự áp dụng theo ngưỡng + guard xác định (extractor → `qwen3.5:9b`, poison 49% → 21.6%) · vòng lặp agent + tool use native, trace `agent_traces` · bộ lệnh `/ask` `/docs` `/memory` `/status` `/ping` · timeline hành động agent + thu hồi 1 click. Nhật ký: `docs/p2_progress.md` |
 | **P3** — Đa người dùng & quản trị | ✅ 20/08 | Tài khoản + RBAC admin/member, JWT 15' + refresh thu-hồi-được · điều khiển bot Discord từ dashboard · biểu đồ thời gian · OCR console UI. Nhật ký: `docs/p3_progress.md` |
@@ -181,6 +181,7 @@ pip install -e ".[rerank]" && pip install --index-url https://download.pytorch.o
 
 | # | Việc | Loại | Phụ thuộc | Ước lượng |
 | --- | --- | --- | --- | --- |
+| 0 | ~~**T17** — `DocxParser` mất bảng, textbox và heading (79–92% thân tài liệu)~~ | ✅ Đóng 24/08 | — | (xong, làm trước để đọc tài liệu đủ) |
 | 1 | ~~**T15** — `replace_chunks` ghi thiếu 3 cột → citation mất `heading_path`~~ | ✅ Đóng 24/08 | — | (xong, kèm backfill 209 chunk) |
 | 2 | **Eval báo cáo độ trễ** — thêm `p50_latency_ms`/`p95_latency_ms` vào `run_multidoc_mode` | 🔧 Hạ tầng đo | — | 0.5 buổi |
 | 3 | **P4-4a** — gỡ tắc nghẽn rebuild BM25 | ⚡ Hiệu năng | #2 (để nghiệm thu) | 0.5–1 buổi |
@@ -200,6 +201,26 @@ pip install -e ".[rerank]" && pip install --index-url https://download.pytorch.o
 | — | **P5** — năng lực mở rộng | 🔭 Tương lai | Có use case thật | §4f |
 
 ### 4b. Bug và nợ đang chảy máu
+
+**#0 · T17 — ✅ ĐÓNG 24/08. `DocxParser` chỉ đọc `document.paragraphs`.**
+
+Phát hiện khi khảo sát 3 file docx thật (`data/uploads/`, không nạp vào DB). python-docx cố ý để bảng ở `document.tables` riêng, còn textbox nằm sâu trong `w:txbxContent` — parser cũ bỏ cả hai, và vứt luôn `paragraph.style.name` nên heading theo style của Word không bao giờ thành `#` mà chunker tìm.
+
+| Đo trên thân tài liệu (`<w:t>`) | Sổ tay 45tr | Paper RAG | Paper Attention |
+| --- | --- | --- | --- |
+| Parser **cũ** | 78.7% | 90.1% | 92.3% |
+| Parser **mới** | **100.3%** | **103.0%** | **103.3%** |
+| Chunk bảng (cũ: 0) | 20 | 9 | 17 |
+
+*(>100% vì thêm ký tự `#`, `|`, `---`. Đối chiếu Word: sổ tay 48.462/59.296 = 81.7% → khớp.)*
+
+Ba bẫy đã xử lý: **(1)** duyệt `body` theo **đúng thứ tự tài liệu** thay vì hai danh sách rời (`.paragraphs` + `.tables` mất interleaving lẫn bảng lồng trong ô); **(2)** Word ghi shape **hai lần** — `mc:Choice` và bản VML `mc:Fallback` — lấy cả hai là nhân đôi nội dung (Attention: 44 `txbxContent` → **22 thật**); **(3)** ô bảng chứa `|` hoặc xuống dòng sẽ giả mạo cột / cắt sớm bảng, nên escape và làm phẳng.
+
+**Bài học đo lường**: chỉ số "tỷ lệ chunk có heading" của bản cũ *cao hơn* bản mới (paper RAG 76% vs 46%) nhưng là **dương tính giả toàn phần** — cả 22 chunk mang đúng một nhãn sai `"Save the modified PDF document"` (dòng đánh số khớp nhánh số của `_HEADING_PATTERN`). Bản mới sinh 3 đường mục **đúng**. Đếm tỷ lệ mà không kiểm nội dung thì chọn nhầm phương án.
+
+**Không sửa được, đã ghi rõ**: docx không có phân trang cố định và cả 3 file **không có page break nào** (`lastRenderedPageBreak` = 0) → `page_start` vẫn `None`, citation từ docx không nói được số trang. Ảnh trong docx cũng không qua OCR ([smart_parser.py:34](backend/app/parsers/smart_parser.py:34) chặn cứng chỉ `.pdf`) — để ngỏ, chưa có nhu cầu thật.
+
+Test: 4 test dựng docx bằng python-docx ngay trong test (repo PUBLIC, không commit nhị phân bên thứ ba).
 
 **#1 · T15 — ✅ ĐÓNG 24/08.** `replace_chunks` ghi đủ `locations`/`heading_path`/`token_count`; lệch kiểu chốt về **list** (chunker mang tuple heading parts, DB JSONB `list[str]`, Qdrant payload giữ dạng chuỗi join như mọi point cũ). `token_count` hoá ra **chưa từng được chunker tính** — đã thêm (`count_tokens(content)`). Test mới đi qua **đường ghi thật** (chunker → `replace_chunks` → BM25 đọc lại, fixture có heading) thay cho test dựng chunk bằng tay từng che lỗi. **Backfill production `scripts/backfill_chunk_metadata.py`**: dry-run rồi apply, 11 version khớp `content_hash` 100% (0 drift), 209/209 chunk điền `token_count`, 150 `heading_path`, 162 `locations`; 7 version page-mismatch (micro-drift T7: đường thread ghi page=None) chỉ điền heading/token, bỏ locations — đúng guard. **Không đụng** `retrieval_context`/embedding/Qdrant nên thứ hạng D1 không đổi. 75/118 chunk active giờ trả heading_path thật trong citation.
 
@@ -298,7 +319,7 @@ Phân rã câu hỏi đa tài liệu thành nhiều lượt retrieval (đúng đ
 3. **#3 P4-4a** — xoá triệu chứng "câu hỏi đầu sau khởi động bị treo".
 4. **#4 P4-5** — mục có giá trị người dùng lớn nhất trong danh sách.
 
-~~Bốn việc gộp ~5 buổi~~ **Cập nhật 24/08: #1 (T15 + backfill) và §4c#3(d) (vá fallback) đã xong.** Còn lại: #2 (thước đo, kèm **đo thật rebuild trên corpus production** thay hàng ngoại suy 118) → #3 (P4-4a, chọn giữa (c) và phương án B bằng số của #2) → #4 (P4-5). Không mục nào đụng schema trừ khi #3 chọn B (một migration additive).
+~~Bốn việc gộp ~5 buổi~~ **Cập nhật 24/08: #0 (T17 docx), #1 (T15 + backfill) và §4c#3(d) (vá fallback) đã xong.** T17 làm trước theo yêu cầu đúng: thước đo chất lượng không có nghĩa nếu tầng đọc tài liệu bỏ mất 1/5 nội dung. Còn lại: #2 (thước đo, kèm **đo thật rebuild trên corpus production** thay hàng ngoại suy 118) → #3 (P4-4a, chọn giữa (c) và phương án B bằng số của #2) → #4 (P4-5). Không mục nào đụng schema trừ khi #3 chọn B (một migration additive).
 
 ### 4f. P5 — Năng lực mở rộng *(chỉ làm khi có use case thật)*
 

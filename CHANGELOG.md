@@ -12,6 +12,24 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 ## [Unreleased]
 
 ### Fixed
+- **T17 đóng — `DocxParser` đọc thiếu 1/5 tài liệu** (24/08, làm **trước** mọi việc khác vì thước đo
+  chất lượng vô nghĩa nếu tầng đọc bỏ mất nội dung). Parser cũ chỉ lấy `document.paragraphs`:
+  python-docx để bảng ở `document.tables` riêng và textbox nằm trong `w:txbxContent`, nên cả hai bị
+  bỏ; `paragraph.style.name` cũng bị vứt nên heading theo style của Word không bao giờ thành `#` mà
+  chunker tìm. Đo trên 3 tài liệu thật, phần thân phục hồi được: **78.7 → 100.3 %** (sổ tay 45 trang),
+  **90.1 → 103.0 %** (paper RAG), **92.3 → 103.3 %** (paper Attention); chunk bảng từ **0 → 20/9/17**.
+  Phần mất không ngẫu nhiên — nó là bảng kết quả và khung tóm tắt, thứ mật độ thông tin cao nhất, và
+  vì cả embedding lẫn BM25 index `retrieval_context + content` nên nội dung đó trước đây **không tìm
+  được bằng bất kỳ đường nào**. Ba bẫy đã xử lý: duyệt `body` đúng thứ tự tài liệu (hai danh sách rời
+  làm mất interleaving lẫn bảng lồng trong ô) · Word ghi shape **hai lần** `mc:Choice` + `mc:Fallback`
+  nên lấy cả hai là nhân đôi (Attention 44 `txbxContent` → **22 thật**) · ô bảng chứa `|` hoặc xuống
+  dòng bị escape/làm phẳng để không giả mạo cột hay cắt sớm bảng. **Bài học đo lường**: tỷ lệ chunk
+  có heading của bản CŨ *cao hơn* bản mới (76 % vs 46 % ở paper RAG) nhưng là **dương tính giả toàn
+  phần** — 22 chunk cùng mang một nhãn sai `"Save the modified PDF document"` (dòng đánh số khớp
+  nhánh số của `_HEADING_PATTERN`); bản mới sinh 3 đường mục đúng. **Không sửa được, ghi rõ**: docx
+  không có phân trang cố định, cả 3 file đều `lastRenderedPageBreak = 0`, nên `page_start` vẫn `None`
+  — citation từ docx không nói được số trang; ảnh trong docx cũng chưa qua OCR. Test dựng docx bằng
+  python-docx ngay trong test, không commit nhị phân bên thứ ba (repo PUBLIC).
 - **T15 đóng — citation production hết `heading_path: null`** (24/08). `replace_chunks` giờ ghi đủ
   `locations`/`heading_path`/`token_count` mà chunker vẫn tính rồi vứt; `token_count` hoá ra **chưa
   từng được chunker tính** — đã thêm (`count_tokens(content)`). Lệch kiểu chốt về **list**: dataclass
