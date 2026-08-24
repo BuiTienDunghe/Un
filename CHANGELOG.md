@@ -28,7 +28,12 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   `backup-env-once.ps1`/`restore-env.ps1` (AES-256 + PBKDF2 200k, round-trip và sai-passphrase đều
   có kiểm). **Nói thật giới hạn**: C: và D: là hai partition của cùng một đĩa vật lý — mirror hiện
   tại chống hỏng filesystem/xoá nhầm, không chống chết đĩa — nên rủi ro một-máy ở plan §8 **giữ
-  mức Cao**, không hạ, cho tới khi có đích ngoài máy thật. 6 test mới.
+  mức Cao**, không hạ. **Quyết định 25/08**: backup ở lại trong dự án (`data/backups/`, gitignore
+  chặn, đi theo folder khi copy), không USB, không cloud — chết SSD là mất sạch, và đó là đánh đổi
+  đã cân nhắc chứ không phải việc chưa làm. Mirror giữ trong code, bật lại bằng một dòng comment.
+  Kèm `backup-env-once.bat` / `restore-env.bat` bấm-đúp-là-chạy (bọc `.ps1` vì ExecutionPolicy và
+  vì bấm đúp `.ps1` chỉ mở Notepad — cùng lý do launcher là `.bat`); mặc định ghi vào
+  `data/backups/env/.env.enc`, đã xác minh gitignore chặn. 6 test mới.
 - **Việc #2 đóng — đặt thước trước khi tối ưu** (24/08, ba phần). **(1)** Eval multidoc tổng hợp
   độ trễ đã thu sẵn từng câu thành `latency: {measured, p50, p95, max}` — **report-only, không vào
   gate CI, không vào baseline** (bài học P4-3: đo latency trên runner không GPU là đo sai cấu hình);
