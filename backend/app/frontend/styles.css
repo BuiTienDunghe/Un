@@ -712,3 +712,22 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round
   .empty-state { padding-top: 5vh; }
   .topbar { padding: 8px 10px; }
 }
+
+/* P4-5/citation: "[Source N]" trong câu trả lời là nút mở đúng thẻ nguồn thứ N.
+   Trước đây nó là chữ chết — người đọc thấy số nhưng không mở được nguồn. */
+.cite {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 5px; margin: 0 2px;
+  font: 600 11px/1 Inter, system-ui, sans-serif; vertical-align: 1px;
+  color: var(--accent, #4f8cff); background: color-mix(in srgb, var(--accent, #4f8cff) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent, #4f8cff) 35%, transparent);
+  border-radius: 9px; cursor: pointer; transition: background .15s;
+}
+.cite:hover { background: color-mix(in srgb, var(--accent, #4f8cff) 26%, transparent); }
+.source-item { transition: background .3s; border-radius: var(--radius-m); }
+.source-item.source-hit { background: color-mix(in srgb, var(--accent, #4f8cff) 16%, transparent); }
+.source-open {
+  display: inline-block; margin-top: 7px; font-size: 12px;
+  color: var(--accent, #4f8cff); text-decoration: none;
+}
+.source-open:hover { text-decoration: underline; }

@@ -5,9 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <title>Chunks — Local AI Core</title>
-<link rel="stylesheet" href="/ui/styles.css?v=14">
+<link rel="stylesheet" href="/ui/styles.css?v=15">
 <style>
-  .ck-wrap { max-width: 900px; margin: 0 auto; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+  /* styles.css dat body{overflow:hidden} cho layout chat co dinh, nen moi trang
+     kieu tai lieu phai TU dung khung cuon rieng -- dung khuon .dash/.dash-inner
+     cua dashboard. Thieu buoc nay thi 40 000px noi dung nam trong khung 720px
+     va banh xe chuot vo tac dung. */
+  .ck-scroll { height: 100dvh; overflow-y: auto; background: var(--bg); }
+  .ck-wrap { max-width: 900px; margin: 0 auto; padding: 18px 20px 48px; display: flex; flex-direction: column; gap: 14px; }
   .ck-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
   .ck-head h1 { margin: 0; font-size: 1.2rem; }
   .ck-toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
@@ -29,6 +34,7 @@
 </style>
 </head>
 <body>
+<div class="ck-scroll">
 <div class="ck-wrap">
   <div class="ck-head">
     <a class="btn ghost" href="/ui/index.html">← Chat</a>
@@ -43,6 +49,7 @@
   <div class="muted" id="ck-notice"></div>
   <div id="ck-list" style="display:flex;flex-direction:column;gap:10px"></div>
 </div>
-<script src="/ui/chunks.js?v=1"></script>
+</div>
+<script src="/ui/chunks.js?v=2"></script>
 </body>
 </html>

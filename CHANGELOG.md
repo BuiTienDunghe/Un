@@ -11,6 +11,39 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+### Fixed
+- **Bốn lỗi giao diện người dùng báo + bốn lỗi cùng họ tìm thêm khi audit** (25/08, tái hiện và
+  nghiệm thu bằng trình duyệt thật trên dữ liệu production, không phải bằng suy luận).
+  **(1) Trang «Đoạn» không cuộn được** — `styles.css:79` đặt `body{overflow:hidden}` cho layout chat
+  cố định, nên 41 954 px nội dung bị nhồi vào khung 720 px và bánh xe chuột vô tác dụng. Dashboard
+  không dính vì `.dash` tự làm khung cuộn; chunks/ocr thì không. Cả hai giờ dùng đúng khuôn
+  `.dash/.dash-inner` (`.ck-scroll`/`.ocr-scroll`) — `ocr.html` là **lỗi tiềm ẩn chưa ai báo**, sẽ
+  đứng hình ngay khi kết quả OCR dài hơn một màn hình. **(2) F5 mất hội thoại** — bộ đọc deep-link
+  `#c=<id>` có sẵn ở `app.js:1471` nhưng **không nơi nào GHI hash**; thêm `syncConversationUrl()`
+  gọi ở 6 điểm (mở hội thoại · hội thoại mới nhận id từ server · newChat · 3 nhánh bỏ id) bằng
+  `replaceState` để không rác lịch sử duyệt. Nghiệm thu: tải lại trang → 16 tin nhắn và tiêu đề
+  khôi phục đúng. **(3) `[Source N]` là chữ chết** — model viết marker theo `rag_system.md` quy tắc
+  2 nhưng `inlineMd` không có luật nào cho nó. Giờ thành nút bấm mở đúng thẻ nguồn thứ N và làm nó
+  nổi bật; mỗi thẻ nguồn thêm link «Xem đoạn trong tài liệu →» sang trang P4-5. Bắt cả `[Nguồn N]`
+  vì quy tắc 3 buộc trả lời tiếng Việt nên model hay tự dịch marker — **vá ở frontend, không đụng
+  prompt** (prompt đang được D1/D5 đo baseline; đổi là phải đo lại, bất biến #4). **(4) 6 file chưa
+  vào tài liệu** — không phải lỗi code: `.docx` có trong whitelist, file lưu giữ nguyên đuôi nên
+  `SmartParser` chọn đúng `DocxParser`, `accept` của ô chọn file có `.docx`, giới hạn 50 MB.
+  Đã nạp: `pdf_retrieval_augmented_qa.docx` (35 chunk) và `mphatlalatsane_facilitators_manual.pdf`
+  (37 chunk) — corpus **118 → 190 chunk**.
+- **Bốn lỗi audit tìm thêm, người dùng chưa báo**: **27 nút vô hình** — `iconBtn("copy")`/`("edit")`
+  trỏ `#i-copy`/`#i-edit` **chưa bao giờ có trong sprite**, nên «Sao chép tin nhắn», «Sửa và gửi
+  lại», «Đổi tên hội thoại» vẽ ra **0×0 px** (đo trên trình duyệt); đã thêm hai symbol, nút giờ
+  15×15. **Xoá đánh dấu chunk hỏng sau re-index** — `remove_feedback` chỉ đối chiếu `chunk_uid`
+  trong khi đường đọc đối chiếu uid **hoặc** `content_hash`, nên một đánh dấu sống qua re-index vẫn
+  HIỆN nhưng bấm «Bỏ đánh dấu» chỉ nhận 404 và huy hiệu quay lại; đã cho hai đường dùng chung một
+  quy tắc, kèm test khoá. **Dashboard giấu 3 thành phần** — `componentLabels` thiếu `backup`,
+  `backup_worker`, `memory_ingestion` nên khi backup hỏng, đầu trang báo suy giảm mà mọi đèn đều
+  xanh; giờ hiện đủ 12/12. **Bấm đúp «Tải thêm»** trên trang chunks tải trùng trang 1 và nhảy hẳn
+  trang 2 (hai lần bấm cùng đọc `offset` cũ); thêm cờ cửa duy nhất.
+- **Đính chính báo cáo trước**: 7 test tôi vẫn báo là "lỗi có sẵn" mấy phiên nay **thuần do Ollama
+  tắt**. Chạy lại với đủ stack: **636 pass, 0 fail** — suite xanh 100%.
+
 ### Added
 - **P4-5 đóng cả hai phase — mở hộp đen chunking** (25/08, thiết kế `docs/p4_5_design.md` duyệt
   nguyên trạng). Trang mới «Đoạn» cạnh mỗi tài liệu: xem tài liệu bị cắt thành đoạn nào đúng như bộ

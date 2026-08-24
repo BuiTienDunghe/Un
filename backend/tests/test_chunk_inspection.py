@@ -185,3 +185,30 @@ def test_endpoints_return_200_404_409_and_write_feedback(client):
     assert client.delete(f"/documents/{doc_id}/chunks/{chunk_id}/feedback").status_code == 204
     assert client.delete(f"/documents/{doc_id}/chunks/{chunk_id}/feedback").status_code == 404
     _cleanup(factory)
+
+
+def test_a_mark_that_survived_reindex_can_also_be_removed(factory):
+    """Regression: the delete path must use the SAME rule as the read path.
+
+    Matching only on chunk_uid meant a mark carried across a reindex by
+    content_hash still SHOWED on screen but could not be removed — the user
+    pressed "Bỏ đánh dấu", got a 404, and the badge came back on reload.
+    """
+    _cleanup(factory)
+    doc_id, version_id = _seed_document(factory)
+    service = ChunkInspectionService(factory)
+    service.add_feedback(doc_id, service.list_chunks(doc_id)["chunks"][0]["chunk_id"], note="đánh trước")
+
+    with factory.begin() as session:
+        session.get(DocumentVersion, version_id).status = "superseded"
+        fresh = DocumentVersion(id=f"ver_p45_{uuid4().hex}", document_id=doc_id, version_number=2, status="active", activated_at=datetime.now(UTC), chunking_config={})
+        session.add(fresh)
+        session.flush()
+        session.get(Document, doc_id).active_version_id = fresh.id
+        PostgresDocumentRepository(session).replace_chunks(doc_id, fresh.id, chunk_pages([(1, TEXT, "native")], 20, 0))
+
+    carried = service.list_chunks(doc_id)["chunks"][0]
+    assert carried["feedback"] is not None                      # sống qua re-index
+    assert service.remove_feedback(doc_id, carried["chunk_id"]) is True   # và gỡ được
+    assert service.list_chunks(doc_id)["chunks"][0]["feedback"] is None
+    _cleanup(factory)

@@ -262,6 +262,16 @@ function inlineMd(text) {
   html = html.replace(/(^|[\s(])\*([^*\s][^*]*)\*/g, "$1<em>$2</em>");
   html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
     (_, label, url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`);
+  // Model trich dan theo quy uoc "[Source N]" cua _passage_header (rag_service.py).
+  // De nguyen thi do la chu chet: nguoi doc thay so nhung khong mo duoc nguon.
+  // Doi thanh nut tro toi dung the nguon thu N ngay duoi cau tra loi.
+  // Prompt (rag_system.md quy tac 2) buoc marker tieng Anh, nhung quy tac 3
+  // buoc tra loi tieng Viet -> model hay tu dich thanh "[Nguon 1]". Bat ca hai
+  // dang o day thay vi sua prompt: prompt dang duoc D1/D5 do baseline, doi la
+  // phai do lai (bat bien #4). Marker sai so (vd [Source 99] bia ra) van thanh
+  // nut nhung tro thanh vo hai -- handler khong tim thay the nguon thi bo qua.
+  html = html.replace(/\[\s*(?:Source|Ngu[oồ]n)\s*(\d+)\s*\]/gi,
+    (_, number) => `<button type="button" class="cite" data-cite="${number}" title="Xem nguồn ${number}">${number}</button>`);
   return html;
 }
 
@@ -333,6 +343,23 @@ function bindCodeCopy(root) {
     button.onclick = () => copyText(button.closest(".codeblock").querySelector("code").textContent);
   }
 }
+
+/* Nut [Source N] trong cau tra loi -> mo bang nguon va lam noi dung the thu N.
+   Uy quyen o document: cau tra loi duoc ve lai lien tuc trong luc stream, nen
+   gan onclick tung nut se mat sau moi lan repaint. */
+document.addEventListener("click", (event) => {
+  const cite = event.target.closest?.(".cite[data-cite]");
+  if (!cite) return;
+  const body = cite.closest(".msg-body");
+  const details = body?.querySelector("details.sources");
+  if (!details) return;                       // luot khong co nguon: nut tro thanh vo hai
+  details.open = true;
+  const item = details.querySelector(`.source-item[data-cite="${cite.dataset.cite}"]`);
+  if (!item) return;
+  item.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  item.classList.add("source-hit");
+  setTimeout(() => item.classList.remove("source-hit"), 1600);
+});
 
 /* ── Toast & dialogs ───────────────────────────────────────────── */
 function toast(message, kind = "") {
@@ -494,6 +521,7 @@ function addAssistantMessage() {
         `<svg class="chev" width="14" height="14"><use href="#i-chev"/></svg></summary>`;
       sources.forEach((source, order) => {
         const item = el("div", "source-item");
+        item.dataset.cite = String(order + 1);   // dich cua nut [Source N] trong cau tra loi
         const head = el("div", "source-head");
         head.append(el("span", "n", String(order + 1)), el("span", "source-file", source.filename || "?"));
         const pageStart = source.page_start ?? source.page;
@@ -506,6 +534,13 @@ function addAssistantMessage() {
         item.append(head);
         const excerpt = source.excerpt || source.content;
         if (excerpt) item.append(el("div", "source-excerpt", String(excerpt).slice(0, 400)));
+        if (source.document_id) {
+          // P4-5: xem doan nay nam o dau trong tai lieu, bi cat ra sao.
+          const open = el("a", "source-open", "Xem đoạn trong tài liệu →");
+          open.href = `/ui/chunks.html?document_id=${encodeURIComponent(source.document_id)}`;
+          open.target = "_blank"; open.rel = "noopener";
+          item.append(open);
+        }
         details.append(item);
       });
       wrap.querySelector(".msg-body").insertBefore(details, metaRow);
@@ -673,7 +708,11 @@ async function sendPrompt(prompt) {
         model = meta.model_used || null;
         if (meta.conversation_id) {
           streamConversationId = meta.conversation_id;
-          if (state.conversationId === startingConversationId) state.conversationId = meta.conversation_id;
+          if (state.conversationId === startingConversationId) {
+            state.conversationId = meta.conversation_id;
+            // Hoi thoai vua sinh ra: ghi vao URL ngay, truoc khi nguoi dung kip F5.
+            syncConversationUrl();
+          }
         }
         if (state.mode === "rag") handle.setSources(meta.sources || []);
       },
@@ -709,11 +748,13 @@ async function sendPrompt(prompt) {
       // hội thoại khác mà xóa ID sẽ khiến openConversation bỏ dở, kẹt skeleton.
       if (isNewConversation && !handle.text && state.conversationId === streamConversationId) {
         state.conversationId = null;
+        syncConversationUrl();
       }
       handle.finish({ model, stopped: true });
       loadConversations(true);
     } else if (error.code === "CONVERSATION_NOT_FOUND") {
       state.conversationId = null;
+      syncConversationUrl();
       handle.fail(`${error.message} Tin nhắn tiếp theo sẽ tạo cuộc trò chuyện mới.`, retry);
       loadConversations();
     } else {
@@ -849,11 +890,22 @@ async function loadConversations(quiet = false) {
   renderConversations();
 }
 
+/* Giu hoi thoai dang mo trong URL (#c=<id>) de F5 khong quay ve trang chu.
+   Boot da doc san deep-link nay tu truoc (xem initApp), nhung khong noi nao GHI
+   -> reload luon mat hoi thoai. replaceState thay vi location.hash: khong day
+   them muc vao lich su duyet, nen nut Back van tro ve trang truoc do. */
+function syncConversationUrl() {
+  const target = state.conversationId ? `#c=${encodeURIComponent(state.conversationId)}` : "";
+  const url = location.pathname + location.search + target;
+  if (location.hash !== target) history.replaceState(null, "", url);
+}
+
 async function openConversation(id) {
   // Bấm lại hội thoại đang mở là no-op: không được phép hủy stream đang chạy.
   if (state.conversationId === id) { closeDrawers(); return; }
   if (state.generating) state.abort?.abort();
   state.conversationId = id;
+  syncConversationUrl();
   setMode("general");
   setTopbarTitle();
   renderConversations();
@@ -880,7 +932,9 @@ async function openConversation(id) {
     clearMessages();
     toast(error.message, "error");
     if (error.status === 404) {
+      // Deep-link toi hoi thoai da bi xoa: don URL de F5 lan nua khong lap lai loi.
       state.conversationId = null;
+      syncConversationUrl();
       setTopbarTitle();
       loadConversations();
     }
@@ -890,6 +944,7 @@ async function openConversation(id) {
 function newChat() {
   state.abort?.abort();
   state.conversationId = null;
+  syncConversationUrl();
   clearMessages();
   state.memoryOn = prefs.memoryDefault;
   syncMemoryChip();

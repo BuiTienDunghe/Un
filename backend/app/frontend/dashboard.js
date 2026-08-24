@@ -182,10 +182,14 @@ function render(stats, health, metrics, models, conversations) {
     $("health-grid").replaceChildren(el("div", "muted", "Không tải được trạng thái hệ thống."));
   }
   if (health) {
+    // Phai phu HET khoa /health tra ve. Thieu mot khoa thi thanh phan do khong
+    // bao gio hien: dau trang bao "suy giam" trong khi moi den deu xanh —
+    // backup/backup_worker/memory_ingestion tung roi vao dung cai bay do.
     const componentLabels = {
       postgres: "PostgreSQL", redis: "Redis", qdrant: "Qdrant", ollama: "Ollama",
       worker_ocr: "Worker OCR", worker_index: "Worker Index", worker_memory: "Worker Memory",
       outbox_dispatcher: "Outbox", cleanup_worker: "Cleanup",
+      backup: "Sao lưu", backup_worker: "Worker sao lưu", memory_ingestion: "Nạp ghi nhớ",
     };
     const healthGrid = $("health-grid");
     healthGrid.replaceChildren();

@@ -151,7 +151,17 @@ function render() {
   $("ck-more").hidden = state.done;
 }
 
+/* Chan bam dup: hai lan bam lien tiep cung doc offset cu -> tai trung trang 1
+   va nhay han trang 2. Co cua duy nhat, tha o finally de loi mang khong khoa
+   nut vinh vien. */
+let loading = false;
 async function loadPage() {
+  if (loading) return;
+  loading = true;
+  try { await loadPageOnce(); } finally { loading = false; }
+}
+
+async function loadPageOnce() {
   const data = await api(`/documents/${documentId}/chunks?limit=${state.limit}&offset=${state.offset}`);
   state.meta = data;
   state.chunks.push(...data.chunks);

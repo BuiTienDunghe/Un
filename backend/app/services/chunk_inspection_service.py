@@ -13,7 +13,7 @@ applying.
 """
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import sessionmaker
 
 from app.postgres.models import ChunkFeedback, Document, DocumentChunk, DocumentVersion, new_id
@@ -133,8 +133,16 @@ class ChunkInspectionService:
             chunk = session.get(DocumentChunk, chunk_id)
             if chunk is None or chunk.document_id != document_id:
                 raise ChunkNotFoundError(chunk_id)
+            # Phai dung CUNG quy tac voi duong doc (feedback_for: uid HOAC
+            # content_hash). Neu chi doi chieu uid thi mot danh dau song qua
+            # re-index (khop bang hash) van HIEN tren man hinh nhung khong the
+            # go — nguoi dung bam "Bo danh dau" chi nhan 404 va huy hieu quay lai.
             existing = session.scalar(
-                select(ChunkFeedback).where(ChunkFeedback.chunk_uid == chunk.chunk_uid, ChunkFeedback.label == label)
+                select(ChunkFeedback).where(
+                    ChunkFeedback.document_id == document_id,
+                    ChunkFeedback.label == label,
+                    or_(ChunkFeedback.chunk_uid == chunk.chunk_uid, ChunkFeedback.content_hash == chunk.content_hash),
+                )
             )
             if existing is None:
                 return False

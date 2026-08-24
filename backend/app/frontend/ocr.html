@@ -5,9 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <title>OCR Console — Local AI Core</title>
-<link rel="stylesheet" href="/ui/styles.css?v=14">
+<link rel="stylesheet" href="/ui/styles.css?v=15">
 <style>
-  .ocr-wrap { max-width: 1080px; margin: 0 auto; padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+  /* Cung ly do nhu chunks.html: styles.css dat body{overflow:hidden} cho layout
+     chat co dinh, nen trang nay khong cuon duoc ngay khi ket qua OCR dai hon
+     mot man hinh. Khung cuon rieng, dung khuon .dash/.dash-inner. */
+  .ocr-scroll { height: 100dvh; overflow-y: auto; background: var(--bg); }
+  .ocr-wrap { max-width: 1080px; margin: 0 auto; padding: 18px 20px 48px; display: flex; flex-direction: column; gap: 16px; }
   .ocr-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .ocr-head h1 { margin: 0; font-size: 1.25rem; }
   .progress-track { height: 8px; border-radius: 6px; background: rgba(128,128,128,.25); overflow: hidden; }
@@ -19,6 +23,7 @@
 </style>
 </head>
 <body>
+<div class="ocr-scroll">
 <div class="ocr-wrap">
   <div class="ocr-head">
     <a class="btn ghost" href="/ui/dashboard.html">← Bảng điều khiển</a>
@@ -62,6 +67,7 @@
       <tbody id="ocr-history"><tr><td colspan="4" class="muted">Đang tải…</td></tr></tbody>
     </table>
   </section>
+</div>
 </div>
 <script src="/ui/ocr.js?v=2" defer></script>
 </body>
