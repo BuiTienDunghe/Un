@@ -58,7 +58,9 @@ def _cleanup(factory):
 def test_postgres_bm25_exact_keyword_active_only_cache_and_citation(factory):
     _cleanup(factory); doc_id, version_id, _ = _seed(factory)
     _seed(factory, content="unrelated sparse corpus control text")
-    bm25 = PostgresBm25Service(factory)
+    # TTL 0: this test asserts change-DETECTION semantics (supersede then
+    # search sees it), which the production TTL amortizes by design.
+    bm25 = PostgresBm25Service(factory, fingerprint_ttl_seconds=0)
     first = bm25.search("Transformer", 5, doc_id)
     second = bm25.search("Transformer", 5, doc_id)
     assert first and first[0]["version_id"] == version_id
@@ -287,4 +289,44 @@ def test_active_chunk_count_matches_bm25_snapshot_predicate(factory):
     bm25.search("warmup", 5)
     assert counted == len(bm25._chunks) == 1
     assert bm25._chunks[0].document_id == doc_id
+    _cleanup(factory)
+
+
+def test_bm25_ttl_amortizes_fingerprint_and_invalidate_bypasses_it(factory):
+    """P4-4a: external writes wait out the TTL; invalidate() does not.
+
+    The TTL trades freshness of OTHER-process writes (RQ worker, cleanup
+    container) for one fingerprint query per window instead of per question;
+    same-process writes go through invalidate() and stay immediate.
+    """
+    _cleanup(factory)
+    first_doc, _, _ = _seed(factory)
+    bm25 = PostgresBm25Service(factory, fingerprint_ttl_seconds=3600)
+    assert bm25.search("Transformer", 5) and bm25.rebuild_count == 1
+    # A write this service was never told about (another process, in effect).
+    _seed(factory, content="Transformer second corpus document")
+    hits = bm25.search("Transformer", 10)
+    assert {hit["document_id"] for hit in hits} == {first_doc} and bm25.rebuild_count == 1
+    bm25.invalidate()
+    hits = bm25.search("Transformer", 10)
+    assert len({hit["document_id"] for hit in hits}) == 2 and bm25.rebuild_count == 2
+    _cleanup(factory)
+
+
+def test_document_service_delete_invalidates_bm25_immediately(factory):
+    """The real wiring: a same-process delete is visible on the very next search."""
+    from pathlib import Path
+    from app.services.postgres_document_service import PostgresDocumentService
+
+    _cleanup(factory)
+    doc_id, _, _ = _seed(factory)
+    bm25 = PostgresBm25Service(factory, fingerprint_ttl_seconds=3600)
+    assert bm25.search("Transformer", 5, doc_id) and bm25.rebuild_count == 1
+    service = PostgresDocumentService(
+        factory, None, None, None, None, Path("."), 480, 80, None,
+        on_corpus_change=bm25.invalidate,
+    )
+    service.delete_document(doc_id)
+    # TTL is an hour, yet the deletion is reflected immediately via invalidate().
+    assert bm25.search("Transformer", 5, doc_id) == [] and bm25.rebuild_count == 2
     _cleanup(factory)

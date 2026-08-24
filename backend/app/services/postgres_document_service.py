@@ -46,12 +46,16 @@ class PostgresDocumentService:
 
     allowed_file_types = {".pdf": {"application/pdf"}, ".docx": {"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}, ".txt": {"text/plain"}, ".md": {"text/markdown", "text/plain"}}
 
-    def __init__(self, session_factory: sessionmaker, embedding_cache: EmbeddingCacheStore, qdrant: QdrantStore, router: ModelRouter, logging_service: LoggingService, documents_path: Path, chunk_tokens: int, chunk_overlap_tokens: int, ocr_service: OCRService, job_queue: object | None = None, job_max_attempts: int = 3, chunk_context: object | None = None) -> None:
+    def __init__(self, session_factory: sessionmaker, embedding_cache: EmbeddingCacheStore, qdrant: QdrantStore, router: ModelRouter, logging_service: LoggingService, documents_path: Path, chunk_tokens: int, chunk_overlap_tokens: int, ocr_service: OCRService, job_queue: object | None = None, job_max_attempts: int = 3, chunk_context: object | None = None, on_corpus_change: object | None = None) -> None:
         self.sessions, self.embedding_cache, self.qdrant, self.router = session_factory, embedding_cache, qdrant, router
         self.logging_service, self.documents_path = logging_service, documents_path
         self.chunk_tokens, self.chunk_overlap_tokens, self.parser = chunk_tokens, chunk_overlap_tokens, SmartParser(ocr_service)
         self._lock = threading.Lock()
         self.job_queue, self.job_max_attempts = job_queue, job_max_attempts
+        # P4-4a: called after any commit that changes the ACTIVE corpus, so the
+        # in-process sparse index drops its cache immediately instead of
+        # waiting out the fingerprint TTL. Purely in-memory, never raises.
+        self.on_corpus_change = on_corpus_change
         # P4-2: optional contextual-retrieval annotator; None or disabled means
         # both index paths behave exactly as before.
         self.chunk_context = chunk_context
@@ -390,6 +394,7 @@ class PostgresDocumentService:
             if row.status == "deleted": return
             row.status, row.deleted_requested_at = "deleting", datetime.now(UTC)
             PostgresDocumentRepository(session).create_document_delete_job(document_id, self.job_max_attempts)
+        self._notify_corpus_change()
 
     def remove_source(self, document_id: str) -> None:
         self._load(document_id)
@@ -398,6 +403,9 @@ class PostgresDocumentService:
             row = session.get(Document, document_id)
             if row:
                 row.source_available = False
+        # source_available rides in every sparse result's payload; refresh now
+        # rather than after the fingerprint TTL.
+        self._notify_corpus_change()
 
     def set_retention(self, document_id: str, pinned: bool | None, retention_policy: str | None) -> dict[str, object]:
         with self.sessions.begin() as session:
@@ -450,6 +458,7 @@ class PostgresDocumentService:
                     from loguru import logger
                     logger.warning("Using thread fallback system activation for run {}", run_id)
                     PostgresDocumentRepository(session).activate(run_id, system_context=True)
+                self._notify_corpus_change()
                 self.logging_service.log_request("/documents/index", None, 0, "ok")
             except Exception as error:
                 with self.sessions.begin() as session:
@@ -516,6 +525,11 @@ class PostgresDocumentService:
         if checkpoint and not checkpoint(): raise PermissionError("worker lost job ownership before activation")
         with self.sessions.begin() as session:
             PostgresDocumentRepository(session).activate(run_id, job_id, worker_id)
+        self._notify_corpus_change()
+
+    def _notify_corpus_change(self) -> None:
+        if self.on_corpus_change is not None:
+            self.on_corpus_change()
 
     def _set_stage(self, run_id: str, stage: str, **values: object) -> None:
         with self.sessions.begin() as session:

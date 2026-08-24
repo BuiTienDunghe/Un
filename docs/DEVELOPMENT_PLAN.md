@@ -188,7 +188,7 @@ pip install -e ".[rerank]" && pip install --index-url https://download.pytorch.o
 | 0 | ~~**T17** — `DocxParser` mất bảng, textbox và heading (79–92% thân tài liệu)~~ | ✅ Đóng 24/08 | — | (xong, làm trước để đọc tài liệu đủ) |
 | 1 | ~~**T15** — `replace_chunks` ghi thiếu 3 cột → citation mất `heading_path`~~ | ✅ Đóng 24/08 | — | (xong, kèm backfill 209 chunk) |
 | 2 | ~~**Eval báo cáo độ trễ** + đo thật rebuild + đếm chunk active~~ | ✅ Đóng 24/08 | — | (xong: p50/p95/**max** trong eval · benchmark đo thật · `active_chunks` vào metrics + alert 2 500) |
-| 3 | **P4-4a** — gỡ tắc nghẽn rebuild BM25 | ⚡ Hiệu năng | #2 (để nghiệm thu) | 0.5–1 buổi |
+| 3 | **P4-4a** — ~~(a) invalidate + (b) fingerprint~~ ✅ 25/08 (thiết kế TTL, xem §4c#3); (c)/B **gác chờ chuông 2 500 chunk** | ⚡ Hiệu năng | — | (phần còn lại: sau) |
 | 4 | **P4-5** — chunk visualization | ✨ Tính năng | ~~#1~~ đã thoả (T15 đóng) | 3 buổi |
 | 5 | **T16** — ghim `pyvi` đúng version + `tokenizer_version` | 🔧 Nợ | — | 0.5 buổi |
 | 6 | **D4** — LLMOps / observability | 📊 Track D | — | 3–4 buổi |
@@ -265,8 +265,8 @@ Ba việc:
 
 | | Việc | Hiện trạng đã xác minh |
 | --- | --- | --- |
-| (a) | Gọi `invalidate()` từ chính sự kiện activate version | Hàm **đã có** (`postgres_bm25_service.py:79`) nhưng **0 nơi gọi** trong `backend/app` |
-| (b) | Bỏ truy vấn fingerprint khỏi đường query | `search()` → `_ensure_index()` → `_current_fingerprint()` bắn một truy vấn DB **mỗi câu hỏi** |
+| (a) | ✅ **25/08**: `on_corpus_change` trên `PostgresDocumentService` → `bm25.invalidate` (main.py nối dây) | Gọi sau activate (cả hai đường), delete, remove_source — ghi **cùng tiến trình** thấy ngay ở câu hỏi kế tiếp |
+| (b) | ✅ **25/08 — chọn TTL thay vì bỏ hẳn**: fingerprint chạy tối đa 1 lần/5 s thay vì mỗi câu hỏi | Bỏ hẳn + invalidate-only sẽ **mù vĩnh viễn** với ghi từ tiến trình khác (RQ worker, cleanup container) — thiết kế TTL không cần chốt từ-chối-khởi-động nào, an toàn với mọi hình dạng triển khai; ghi ngoài tiến trình được thấy trong ≤5 s |
 | (c) | Dựng lại chỉ mục ở luồng nền, phục vụ chỉ mục cũ trong lúc dựng | Hiện dựng lười ở câu hỏi đầu tiên sau mỗi lần khởi động — cả request phải chờ. **Cân nhắc phương án B trước** (xem dưới) |
 | (d) | ✅ **Đã vá 24/08**: đường fallback token-overlap tách từ lại **toàn corpus mỗi query** zero-score (câu hỏi ngoài corpus) | `search()` giờ dùng lại `doc_freqs` BM25Okapi đã dựng — cùng token, cùng công thức, thứ hạng giữ nguyên từng điểm; test khoá "1 lời gọi tokenizer mỗi query" |
 
@@ -282,7 +282,7 @@ Vì sao đáng làm — **đo thật 24/08 trên corpus production 118 chunk** (
 
 Hai hệ quả của số mới: **(1)** chấm warm @5 000 chunk ~160 ms ≈ **26% của p50 622 ms** — lớn hơn nhiều so với ước cũ (~50 ms), nên "phần BM25 trong tổng độ trễ" là cò súng đúng cho P4-4b (§9.5) và sẽ kêu quanh ~2 500–3 000 chunk, khớp ngưỡng cảnh báo đã đặt; **(2)** cột giữa vẫn là nỗi đau P4-4a nhắm — và **p95 không nhìn thấy nó** (một câu chậm trong 82 câu nằm ở max, không ở p95), nên eval giờ báo cả `max_latency_ms`.
 
-Nghiệm thu: câu hỏi đầu sau mỗi lần khởi động không còn chờ rebuild · mỗi query bớt 1 truy vấn DB · **D1 Δ = 0** (không đổi thuật toán xếp hạng) · **ràng buộc (b)**: fingerprint là cơ chế *duy nhất* để tiến trình API thấy corpus đổi từ tiến trình khác — chỉ được bỏ khi `ingestion_execution_backend == "thread"`; cấu hình `rq` + invalidate-only phải **từ chối khởi động** (đúng khuôn `RerankerUnavailableError`).
+Nghiệm thu (a)+(b) đã đạt 25/08: mỗi query trong cửa sổ TTL bớt 1 truy vấn DB (đo: 5.7 ms/lần) · ghi cùng tiến trình thấy ngay (test wiring thật: delete → search kế tiếp trống dù TTL 1 giờ) · **D1 Δ = 0** hiển nhiên — không đổi thuật toán xếp hạng, chỉ đổi *khi nào* kiểm tra thay đổi. Ràng buộc từ-chối-khởi-động cũ **không còn cần**: TTL giữ fingerprint sống ở mọi cấu hình. Còn lại của mục này: (c) dựng nền vs **B** — gác chờ chuông 2 500 chunk (cold hiện chỉ ~0.5 s).
 
 **Phương án B — lưu lexeme pyvi xuống DB** *(1–1.5 buổi, một migration additive)*: nhật ký đo 23/08 kết luận "vẫn nên làm" cả A lẫn B (`p4_progress.md`), và §9.1 xếp B **xoá** 98.1% chi phí rebuild trong khi A(c) chỉ **giấu** nó sau một bài toán concurrency. §4e cũ loại B vì muốn "không đụng schema" — lý do đó phải được cân nhắc tường minh khi làm #3, không được im lặng. B phụ thuộc T16 (`tokenizer_version` phải nằm cạnh lexeme đã lưu).
 

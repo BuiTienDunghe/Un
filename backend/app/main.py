@@ -118,11 +118,16 @@ async def lifespan(app: FastAPI):
         else None
     )
     chunk_context_service = ChunkContextService.from_config(router, rag_config, enabled_override=settings.rag_contextual_retrieval_enabled)
+    # Created before the document service so its invalidate() can ride along as
+    # the corpus-change callback (P4-4a): a thread-path activation or delete in
+    # this process refreshes the sparse index immediately, while the fingerprint
+    # TTL inside the service still catches writes from other processes.
+    bm25_service = PostgresBm25Service(postgres_sessions)
     app.state.document_service = PostgresDocumentService(
         postgres_sessions, PostgresEmbeddingCacheStore(postgres_sessions), qdrant_store, router, logging_service, settings.documents_path,
         int(rag_config.get("chunk_tokens", rag_config.get("chunk_size", 480))),
         int(rag_config.get("chunk_overlap_tokens", rag_config.get("chunk_overlap", 80))), ocr_service, queue, settings.job_max_attempts,
-        chunk_context=chunk_context_service,
+        chunk_context=chunk_context_service, on_corpus_change=bm25_service.invalidate,
     )
     app.state.operational_service = OperationalService(
         postgres_sessions,
@@ -142,7 +147,7 @@ async def lifespan(app: FastAPI):
     # Fail here, on a machine that turned the reranker on without the [rerank]
     # extra, rather than on that machine's first question (P4-3).
     reranker_service.warmup()
-    retrieval_service = PostgresRetrievalService(qdrant_store, router, postgres_sessions, PostgresBm25Service(postgres_sessions), reranker_service, str(rag_config.get("retrieval_mode", "hybrid")), int(rag_config.get("rrf_k", 60)))
+    retrieval_service = PostgresRetrievalService(qdrant_store, router, postgres_sessions, bm25_service, reranker_service, str(rag_config.get("retrieval_mode", "hybrid")), int(rag_config.get("rrf_k", 60)))
     injection_defense = InjectionDefense.from_config(rag_config, enabled_override=settings.rag_injection_defense_enabled)
     app.state.rag_service = RagService(
         router,

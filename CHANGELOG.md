@@ -12,6 +12,21 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 ## [Unreleased]
 
 ### Added
+- **P4-4a (a)+(b) đóng — bớt một truy vấn DB mỗi câu hỏi, bằng TTL chứ không bằng niềm tin**
+  (25/08). Trước: mỗi `/rag/*` bắn một truy vấn fingerprint chỉ để hỏi "corpus có đổi không" (đo
+  24/08: 5.7 ms), gần như luôn trả lời không. Thiết kế chọn **hai lớp**: ghi **cùng tiến trình**
+  (activate đường thread, delete, remove_source) gọi `invalidate()` qua callback `on_corpus_change`
+  mới trên `PostgresDocumentService` — thấy ngay ở câu hỏi kế tiếp, giữ trải nghiệm upload-rồi-hỏi;
+  ghi **khác tiến trình** (RQ worker, cleanup container) được fingerprint bắt như cũ nhưng chạy tối
+  đa **1 lần/5 s** thay vì mỗi câu. Cố ý KHÔNG chọn bỏ-hẳn-fingerprint như phác thảo cũ: invalidate-
+  only sẽ mù vĩnh viễn với ghi ngoài tiến trình ở bất kỳ cấu hình đa tiến trình nào — lỗi im lặng,
+  không tự lành; TTL xoá luôn nhu cầu "từ chối khởi động khi cấu hình rq" mà phác thảo cũ phải kèm.
+  Test: TTL 1 giờ + ghi ngoài → không thấy (đúng thiết kế), `invalidate()` → thấy ngay; wiring thật
+  delete→search-kế-tiếp-trống. Phần đắt của P4-4a — (c) dựng nền vs phương án B — **gác chờ chuông
+  2 500 chunk** (cold đo được chỉ ~0.5 s, chưa ai đau). **P4-5 có bản thiết kế chờ duyệt**
+  (`docs/p4_5_design.md`): 2 phase (chỉ-xem không đụng schema · đánh dấu qua bảng `chunk_feedback`
+  mới — cột trên `document_chunks` sẽ mất sạch mỗi lần re-index vì `replace_chunks` xoá-tạo-lại),
+  API + UI + nghiệm thu ghi sẵn, **chưa code dòng nào** đúng bất biến #8.
 - **Lưới backup vá xong ba lỗ — rủi ro một-máy hạ Cao → Trung** (24/08). Trước đó: dump nằm
   **cùng ổ đĩa** với database, `backup_sources.py` tồn tại nhưng **0 nơi gọi**, `.env` không có bản
   sao nào — và khi kiểm tra thật thì phát hiện **02:00 hai đêm 23–24/08 không ra dump** (Docker

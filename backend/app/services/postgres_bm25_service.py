@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from threading import RLock
+from time import monotonic
 
 from rank_bm25 import BM25Okapi
 from sqlalchemy.orm import sessionmaker
@@ -35,12 +36,25 @@ class _IndexedChunk:
 
 
 class PostgresBm25Service:
-    """Process-local sparse index rebuilt from PostgreSQL active chunks only."""
+    """Process-local sparse index rebuilt from PostgreSQL active chunks only.
 
-    def __init__(self, session_factory: sessionmaker) -> None:
+    Change detection is two-layered (P4-4a, 25/08). Writes in THIS process
+    (thread-path activation, delete, source removal) call invalidate() and are
+    visible on the very next search — the interactive upload-then-ask flow
+    stays immediate. Writes from OTHER processes (RQ index worker, the cleanup
+    container) are caught by the fingerprint query, which no longer runs on
+    every search but at most once per `fingerprint_ttl_seconds`. That amortizes
+    the per-question DB round-trip (measured 5.7 ms) without the failure mode
+    an invalidate-only design would have: under any multi-process setup it
+    would simply never see external writes, silently and permanently.
+    """
+
+    def __init__(self, session_factory: sessionmaker, fingerprint_ttl_seconds: float = 5.0) -> None:
         self.sessions = session_factory
+        self.fingerprint_ttl_seconds = fingerprint_ttl_seconds
         self._lock = RLock()
         self._fingerprint: tuple[tuple[object, ...], ...] | None = None
+        self._checked_at: float | None = None
         self._index: BM25Okapi | None = None
         self._chunks: list[_IndexedChunk] = []
         self.rebuild_count = 0
@@ -78,11 +92,18 @@ class PostgresBm25Service:
 
     def invalidate(self) -> None:
         with self._lock:
-            self._fingerprint, self._index, self._chunks = None, None, []
+            self._fingerprint, self._checked_at, self._index, self._chunks = None, None, None, []
 
     def _ensure_index(self) -> None:
+        with self._lock:
+            # Inside the TTL window an existing index is served as-is; a
+            # same-process write has reset _checked_at via invalidate(), so
+            # this shortcut never hides our own writes.
+            if self._index is not None and self._checked_at is not None and monotonic() - self._checked_at < self.fingerprint_ttl_seconds:
+                return
         fingerprint = self._current_fingerprint()
         with self._lock:
+            self._checked_at = monotonic()
             if fingerprint == self._fingerprint:
                 return
             chunks = self._snapshot()
