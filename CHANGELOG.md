@@ -12,6 +12,18 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 ## [Unreleased]
 
 ### Added
+- **P4-5 đóng cả hai phase — mở hộp đen chunking** (25/08, thiết kế `docs/p4_5_design.md` duyệt
+  nguyên trạng). Trang mới «Đoạn» cạnh mỗi tài liệu: xem tài liệu bị cắt thành đoạn nào đúng như bộ
+  truy xuất index (chỉ version active), mỗi thẻ hiện trang/mục/token/loại, khối context P4-2 tách
+  nền riêng, và **phần overlap với chunk trước tô xám** — chỗ nhìn ra bệnh biên chunk đang kìm
+  MRR/doc_hit. Đánh dấu «đoạn kém» lưu ở bảng mới `chunk_feedback` (migration `20260825_26`,
+  additive + downgrade đã drill), **cố ý không** nằm trên `document_chunks` vì `replace_chunks`
+  xoá-tạo-lại hàng mỗi re-index — cột ở đó sẽ mất sạch đánh dấu im lặng (họ lỗi T15); cầu nối qua
+  re-index là `content_hash`, có test đi qua đường ghi thật chứng minh: re-index cùng nội dung →
+  đánh dấu còn, đổi nội dung → thôi áp. API `GET /documents/{id}/chunks` + `POST/DELETE
+  .../feedback` (idempotent); service riêng, không SQL trong router. Xác minh bằng mắt trên
+  production: 50 chunk của `1409.3215v3.pdf`, 49/50 hiện overlap, lọc client-side chạy. 6 test mới;
+  0 lời gọi model thêm.
 - **P4-4a (a)+(b) đóng — bớt một truy vấn DB mỗi câu hỏi, bằng TTL chứ không bằng niềm tin**
   (25/08). Trước: mỗi `/rag/*` bắn một truy vấn fingerprint chỉ để hỏi "corpus có đổi không" (đo
   24/08: 5.7 ms), gần như luôn trả lời không. Thiết kế chọn **hai lớp**: ghi **cùng tiến trình**

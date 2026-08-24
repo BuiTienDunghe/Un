@@ -15,6 +15,7 @@ from app.routers import agent, auth, bot, chat, conversations, dashboard, discor
 from app.security.api_key import require_api_key_for_read
 from app.security.auth import require_admin
 from app.services.auth_service import AuthService
+from app.services.chunk_inspection_service import ChunkInspectionService
 from app.services.postgres_bm25_service import PostgresBm25Service
 from app.services.chat_service import ChatService
 from app.services.chunk_context_service import ChunkContextService
@@ -143,6 +144,7 @@ async def lifespan(app: FastAPI):
         backup_max_age_hours=float(storage_config.get("backup_interval_hours", 24)),
     )
     app.state.ocr_job_service = OcrJobService(router, settings.ocr_runs_path, auxiliary_store, ocr_service)
+    app.state.chunk_inspection_service = ChunkInspectionService(postgres_sessions)
     reranker_service = RerankerService.from_config(rag_config, enabled_override=settings.rag_reranker_enabled)
     # Fail here, on a machine that turned the reranker on without the [rerank]
     # extra, rather than on that machine's first question (P4-3).

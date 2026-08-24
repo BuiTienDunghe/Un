@@ -180,6 +180,30 @@ class DocumentChunk(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=True)
 
 
+class ChunkFeedback(Base):
+    """P4-5 phase 2: a mark on a chunk, living OUTSIDE document_chunks.
+
+    replace_chunks deletes and recreates chunk rows on every reindex, so a
+    column there would silently lose every mark. chunk_uid pins the mark
+    within a version; content_hash is the bridge across reindexing — identical
+    content in a new version can be matched back to its marks, changed content
+    is a different chunk and old marks stop applying.
+    """
+
+    __tablename__ = "chunk_feedback"
+    __table_args__ = (
+        UniqueConstraint("chunk_uid", "label", name="uq_chunk_feedback_uid_label"),
+    )
+
+    id: Mapped[str] = mapped_column(String(128), primary_key=True, default=lambda: new_id("cfb"))
+    chunk_uid: Mapped[str] = mapped_column(String(128), index=True)
+    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"), index=True)
+    content_hash: Mapped[str] = mapped_column(String(64))
+    label: Mapped[str] = mapped_column(String(32), default="bad")
+    note: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=True)
+
+
 class Job(Base):
     __tablename__ = "jobs"
     __table_args__ = (

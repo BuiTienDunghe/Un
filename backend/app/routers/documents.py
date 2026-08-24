@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 
-from app.schemas.document_schema import DocumentStatusResponse, IndexRequest, IndexResponse, IngestionStatusResponse, ReplaceSourceResponse, RetentionRequest, UploadResponse
+from app.schemas.document_schema import ChunkFeedbackRequest, ChunkFeedbackResponse, ChunkListResponse, DocumentStatusResponse, IndexRequest, IndexResponse, IngestionStatusResponse, ReplaceSourceResponse, RetentionRequest, UploadResponse
+from app.services.chunk_inspection_service import ChunkNotFoundError, DocumentNotFoundForInspection, DocumentNotIndexedError
 from app.services.postgres_document_service import DocumentAlreadyIndexingError, DocumentNotFoundError, IngestionNotFoundError, SourceUnavailableError
 from app.stores.qdrant_store import QdrantDimensionMismatchError
 
@@ -121,3 +122,33 @@ def document_status(document_id: str, request: Request) -> DocumentStatusRespons
         return DocumentStatusResponse(**request.app.state.document_service.status(document_id))
     except DocumentNotFoundError as error:
         raise HTTPException(status_code=404, detail={"error_code": "DOCUMENT_NOT_FOUND", "message": f"Document {error} does not exist"}) from error
+
+
+@router.get("/{document_id}/chunks", response_model=ChunkListResponse)
+def list_chunks(document_id: str, request: Request, limit: int = 50, offset: int = 0) -> ChunkListResponse:
+    """P4-5: the active version's chunks, exactly as the retriever indexes them."""
+    try:
+        return ChunkListResponse(**request.app.state.chunk_inspection_service.list_chunks(document_id, limit, offset))
+    except DocumentNotFoundForInspection:
+        raise HTTPException(status_code=404, detail="Document not found")
+    except DocumentNotIndexedError:
+        raise HTTPException(status_code=409, detail="Document has no active indexed version yet")
+
+
+@router.post("/{document_id}/chunks/{chunk_id}/feedback", response_model=ChunkFeedbackResponse, dependencies=[Depends(require_api_key), Depends(require_admin)])
+def add_chunk_feedback(document_id: str, chunk_id: str, payload: ChunkFeedbackRequest, request: Request) -> ChunkFeedbackResponse:
+    try:
+        return ChunkFeedbackResponse(**request.app.state.chunk_inspection_service.add_feedback(document_id, chunk_id, payload.label, payload.note))
+    except (DocumentNotFoundForInspection, ChunkNotFoundError):
+        raise HTTPException(status_code=404, detail="Document or chunk not found")
+    except DocumentNotIndexedError:
+        raise HTTPException(status_code=409, detail="Document has no active indexed version yet")
+
+
+@router.delete("/{document_id}/chunks/{chunk_id}/feedback", status_code=204, dependencies=[Depends(require_api_key), Depends(require_admin)])
+def remove_chunk_feedback(document_id: str, chunk_id: str, request: Request, label: str = "bad") -> None:
+    try:
+        if not request.app.state.chunk_inspection_service.remove_feedback(document_id, chunk_id, label):
+            raise HTTPException(status_code=404, detail="No such feedback")
+    except ChunkNotFoundError:
+        raise HTTPException(status_code=404, detail="Document or chunk not found")

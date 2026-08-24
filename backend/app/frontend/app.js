@@ -951,6 +951,13 @@ function renderDocuments() {
           : `đang xử lý (${doc.status})`;
     main.append(el("div", `doc-meta${metaClass}`, metaText));
     main.onclick = () => { if (!checkbox.disabled) { checkbox.checked = !checkbox.checked; checkbox.onchange(); } };
+    // P4-5: soi tài liệu bị cắt thành đoạn nào — mở trang chunks riêng.
+    const chunksBtn = el("a", "btn ghost", "Đoạn");
+    chunksBtn.href = `/ui/chunks.html?document_id=${encodeURIComponent(doc.document_id)}`;
+    chunksBtn.target = "_blank";
+    chunksBtn.rel = "noopener";
+    chunksBtn.title = `Xem ${doc.filename} bị cắt thành những đoạn nào`;
+    chunksBtn.hidden = doc.status !== "indexed";
     const deleteBtn = iconBtn("trash", `Xóa tài liệu ${doc.filename}`);
     deleteBtn.hidden = isMemberRole(); // P3-1: member không xóa được tài liệu chung
     deleteBtn.onclick = async () => {
@@ -967,7 +974,7 @@ function renderDocuments() {
       } catch (error) { toast(error.message, "error"); }
       loadDocuments();
     };
-    row.append(checkbox, main, deleteBtn);
+    row.append(checkbox, main, chunksBtn, deleteBtn);
     list.append(row);
   }
   syncDocsUi();

@@ -82,3 +82,51 @@ class DocumentStatusResponse(BaseModel):
     last_accessed_at: str | None = None
     ingestion: dict[str, object] | None = None
     error_message: str | None = None
+
+
+class ChunkFeedbackInfo(BaseModel):
+    label: str
+    note: str | None = None
+    created_at: str | None = None
+
+
+class ChunkItem(BaseModel):
+    chunk_id: str
+    chunk_index: int
+    content: str
+    retrieval_context: str | None = None
+    token_count: int | None = None
+    page_start: int | None = None
+    page_end: int | None = None
+    # The JSONB list form, deliberately: joining with " > " is presentation,
+    # done by the UI, not by the data contract.
+    heading_path: list[str] = []
+    section_title: str | None = None
+    block_type: str
+    locations: list[dict] = []
+    content_hash: str
+    feedback: ChunkFeedbackInfo | None = None
+
+
+class ChunkListResponse(BaseModel):
+    document_id: str
+    version_id: str
+    version_number: int
+    filename: str
+    total_chunks: int
+    total_tokens: int
+    limit: int
+    offset: int
+    chunks: list[ChunkItem]
+
+
+class ChunkFeedbackRequest(BaseModel):
+    label: str = "bad"
+    note: str | None = None
+
+
+class ChunkFeedbackResponse(BaseModel):
+    chunk_id: str
+    chunk_uid: str
+    label: str
+    note: str | None = None

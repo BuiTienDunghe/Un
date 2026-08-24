@@ -507,3 +507,32 @@ Cách tái lập: `DATABASE_URL=<prod> python scripts/benchmark_bm25_rebuild.py`
 (in human-readable + một JSON blob). Cold đo trên service mới nguyên trong cùng
 tiến trình; muốn cold tuyệt đối (nguội cache OS) thì chạy process mới — hai lần
 chạy cách nhau cho 0.476 s và 0.522 s, chênh trong nhiễu.
+
+
+## P4-5 — chunk visualization: ĐÓNG cả 2 phase (25/08/2026)
+
+Thiết kế duyệt nguyên trạng (`docs/p4_5_design.md`), ship trong một phiên:
+
+- **API**: `GET /documents/{id}/chunks` (phân trang, chỉ version active — đúng
+  predicate BM25 snapshot, 404/409 phân biệt chưa-tồn-tại vs chưa-index) ·
+  `POST/DELETE .../chunks/{chunk_id}/feedback` (API key + admin, idempotent qua
+  ràng buộc `uq_chunk_feedback_uid_label`). Service mới `ChunkInspectionService`
+  — không SQL trong router.
+- **Schema**: bảng `chunk_feedback` (migration `20260825_26`, additive, drill
+  downgrade→upgrade chạy sạch trên DB test). Quyết định lõi giữ đúng thiết kế:
+  đánh dấu KHÔNG nằm trên `document_chunks` vì `replace_chunks` xoá-tạo-lại
+  hàng mỗi lần re-index; cầu nối qua re-index là `content_hash`.
+- **Test then chốt** (6 test mới, đi qua `replace_chunks` thật): đánh dấu →
+  re-index version mới cùng nội dung → `chunk_id` đổi, `content_hash` giữ,
+  **đánh dấu còn**; version 3 đổi nội dung → **đánh dấu không còn áp**.
+- **UI**: `chunks.html`/`chunks.js` (vanilla, không build step), vào từ nút
+  «Đoạn» cạnh mỗi tài liệu indexed. Xác minh bằng mắt trên production
+  (`1409.3215v3.pdf`, 50 chunk): 50 thẻ · 50 khối context P4-2 tách nền riêng ·
+  46/50 heading thật · **49/50 chunk tô xám phần overlap với chunk trước** —
+  đúng thứ cần nhìn để chẩn đoán bệnh biên chunk · lọc client-side chạy
+  (40/50 khớp "BLEU").
+- Không lời gọi model nào thêm (bất biến #7); D1 Δ = 0 hiển nhiên (không đụng
+  retrieval).
+
+Ghi chú vận hành: trang đọc không cần key; nút đánh dấu cần API key + quyền
+admin (đặt trong trang Chat — cùng localStorage).

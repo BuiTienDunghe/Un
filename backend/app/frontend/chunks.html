@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Chunks — Local AI Core</title>
+<link rel="stylesheet" href="/ui/styles.css?v=14">
+<style>
+  .ck-wrap { max-width: 900px; margin: 0 auto; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+  .ck-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .ck-head h1 { margin: 0; font-size: 1.2rem; }
+  .ck-toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .ck-toolbar input[type="search"] { flex: 1; min-width: 220px; padding: 7px 10px; border-radius: 8px; border: 1px solid rgba(128,128,128,.35); background: transparent; color: inherit; }
+  .ck-card { border: 1px solid rgba(128,128,128,.3); border-radius: 10px; padding: 12px 14px; }
+  .ck-card.flagged { border-color: #d9534f; }
+  .ck-meta { display: flex; gap: 10px; flex-wrap: wrap; font-size: .8rem; opacity: .75; }
+  .ck-heading { font-size: .85rem; margin-top: 4px; font-weight: 600; }
+  .ck-heading.none { opacity: .45; font-weight: 400; font-style: italic; }
+  .ck-context { background: rgba(240,200,60,.14); border-left: 3px solid rgba(240,200,60,.7); padding: 6px 10px; margin: 8px 0 0; font-size: .82rem; white-space: pre-wrap; }
+  .ck-content { margin-top: 8px; white-space: pre-wrap; font-size: .88rem; line-height: 1.45; }
+  .ck-content.table { font-family: ui-monospace, Consolas, monospace; font-size: .8rem; overflow-x: auto; white-space: pre; }
+  /* Ranh giới cắt: phần lặp lại từ chunk trước tô xám — đây là chỗ nhìn ra bệnh biên chunk. */
+  .ck-overlap { background: rgba(128,128,128,.18); border-radius: 3px; }
+  .ck-actions { margin-top: 8px; display: flex; gap: 8px; align-items: center; }
+  .ck-note { font-size: .78rem; opacity: .8; }
+  #ck-notice { min-height: 1.2em; }
+  .ck-badge { font-size: .72rem; padding: 1px 8px; border-radius: 10px; background: #d9534f; color: #fff; }
+</style>
+</head>
+<body>
+<div class="ck-wrap">
+  <div class="ck-head">
+    <a class="btn ghost" href="/ui/index.html">← Chat</a>
+    <h1 id="ck-title">Chunks</h1>
+    <span class="muted" id="ck-sub">Tài liệu bị cắt thành những đoạn nào — đúng như bộ truy xuất nhìn thấy (P4-5).</span>
+  </div>
+  <div class="ck-toolbar panel" style="padding:10px 12px">
+    <input type="search" id="ck-filter" placeholder="Lọc theo từ khoá (trên trang đã tải)…">
+    <span class="muted" id="ck-count"></span>
+    <button class="btn ghost" id="ck-more" hidden>Tải thêm</button>
+  </div>
+  <div class="muted" id="ck-notice"></div>
+  <div id="ck-list" style="display:flex;flex-direction:column;gap:10px"></div>
+</div>
+<script src="/ui/chunks.js?v=1"></script>
+</body>
+</html>

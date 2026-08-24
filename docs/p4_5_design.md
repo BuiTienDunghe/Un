@@ -1,6 +1,6 @@
 # P4-5 — Chunk visualization: thiết kế để duyệt TRƯỚC khi code
 
-**Ngày:** 25/08/2026 · **Trạng thái:** CHỜ DUYỆT — chưa có dòng code nào
+**Ngày:** 25/08/2026 · **Trạng thái:** ✅ ĐÃ SHIP cả 2 phase (25/08, duyệt nguyên trạng) — tài liệu này giữ làm hồ sơ thiết kế; nghiệm thu ghi ở `p4_progress.md`
 **Bài học áp dụng:** RAGFlow (plan §10 — "chunking giải thích được"); bất biến #8 (chốt schema trước khi viết); nghiệm thu đã ghi ở plan §4c#4.
 
 ---

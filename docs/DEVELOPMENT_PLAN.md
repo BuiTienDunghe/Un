@@ -63,7 +63,7 @@ Tài liệu này là **nguồn sự thật duy nhất** cho định hướng và
 | **P1** — Một agent, hai kênh | ✅ 19/08 | `/docs` kèm nguồn · condense câu hỏi nối tiếp (eval 10/10, MRR 0.950 vs 0.787) · memory hub một kho hai kênh · pipeline người-duyệt end-to-end. Nhật ký: `docs/p1_progress.md` |
 | **P2** — Agent tự hành | ✅ 20/08 | Memory tự áp dụng theo ngưỡng + guard xác định (extractor → `qwen3.5:9b`, poison 49% → 21.6%) · vòng lặp agent + tool use native, trace `agent_traces` · bộ lệnh `/ask` `/docs` `/memory` `/status` `/ping` · timeline hành động agent + thu hồi 1 click. Nhật ký: `docs/p2_progress.md` |
 | **P3** — Đa người dùng & quản trị | ✅ 20/08 | Tài khoản + RBAC admin/member, JWT 15' + refresh thu-hồi-được · điều khiển bot Discord từ dashboard · biểu đồ thời gian · OCR console UI. Nhật ký: `docs/p3_progress.md` |
-| **P4** — RAG nâng cao | Một phần | P4-1≡D1 ✅ · P4-2 ✅ · P4-3 ✅ · **P4-4a, P4-4b (hoãn), P4-5 còn lại** → §4. Nhật ký: `docs/p4_progress.md` |
+| **P4** — RAG nâng cao | Một phần | P4-1≡D1 ✅ · P4-2 ✅ · P4-3 ✅ · P4-4a(a,b) ✅ 25/08 · **P4-5 ✅ 25/08** · còn P4-4a(c)/B + P4-4b (gác chờ chuông 2 500 chunk) → §9. Nhật ký: `docs/p4_progress.md` |
 | **P5** — Năng lực mở rộng | Chưa mở | Danh mục chọn lọc theo nhu cầu thật → §4f |
 
 ### 2b. Track D — kỹ năng AI engineer
@@ -189,7 +189,7 @@ pip install -e ".[rerank]" && pip install --index-url https://download.pytorch.o
 | 1 | ~~**T15** — `replace_chunks` ghi thiếu 3 cột → citation mất `heading_path`~~ | ✅ Đóng 24/08 | — | (xong, kèm backfill 209 chunk) |
 | 2 | ~~**Eval báo cáo độ trễ** + đo thật rebuild + đếm chunk active~~ | ✅ Đóng 24/08 | — | (xong: p50/p95/**max** trong eval · benchmark đo thật · `active_chunks` vào metrics + alert 2 500) |
 | 3 | **P4-4a** — ~~(a) invalidate + (b) fingerprint~~ ✅ 25/08 (thiết kế TTL, xem §4c#3); (c)/B **gác chờ chuông 2 500 chunk** | ⚡ Hiệu năng | — | (phần còn lại: sau) |
-| 4 | **P4-5** — chunk visualization | ✨ Tính năng | ~~#1~~ đã thoả (T15 đóng) | 3 buổi |
+| 4 | ~~**P4-5** — chunk visualization~~ | ✅ Đóng 25/08 (cả 2 phase — xem/đánh dấu; `docs/p4_5_design.md` + `p4_progress.md`) | — | (xong) |
 | 5 | **T16** — ghim `pyvi` đúng version + `tokenizer_version` | 🔧 Nợ | — | 0.5 buổi |
 | 6 | **D4** — LLMOps / observability | 📊 Track D | — | 3–4 buổi |
 | 7 | **D3b** — digest nền có luật nhường | ✨ Track D | — | 3 buổi |
@@ -316,7 +316,7 @@ Vai trò chiến lược: **lối thoát phần cứng** — bước phụ của
 
 Phân rã câu hỏi đa tài liệu thành nhiều lượt retrieval (đúng điểm yếu cross-doc thấy khi test 2 paper 20/08). Gác vì độ trễ cộng dồn 5–8 lượt gọi/câu không cứu được bằng phần cứng. Điều kiện mở lại: **D2 đạt**. Khi mở cũng chỉ dạng **có điều kiện** (heuristic rẻ phát hiện câu cần phân rã, ~90% câu single-hop đi đường cũ) + **cap cứng** tổng lượt gọi mỗi câu.
 
-### 4e. Thứ tự đề xuất cho phiên làm việc tới
+### 4e. Thứ tự đề xuất cho phiên làm việc tới *(mục lịch sử — cả bốn việc đã đóng 24–25/08)*
 
 1. **#1 T15** — bug production, rẻ nhất, mở khoá #4.
 2. **#2 độ trễ trong eval** — cần trước để nghiệm thu #3.
