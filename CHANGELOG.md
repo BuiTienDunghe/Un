@@ -11,6 +11,23 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+### Added
+- **Việc #2 đóng — đặt thước trước khi tối ưu** (24/08, ba phần). **(1)** Eval multidoc tổng hợp
+  độ trễ đã thu sẵn từng câu thành `latency: {measured, p50, p95, max}` — **report-only, không vào
+  gate CI, không vào baseline** (bài học P4-3: đo latency trên runner không GPU là đo sai cấu hình);
+  `max` đi kèm vì cơn treo rebuild là *một* câu trong 82 — p95 không chạm tới nó theo cấu trúc.
+  **(2)** `scripts/benchmark_bm25_rebuild.py` (chỉ đọc) thay con số nền "98.1% rebuild là pyvi"
+  (ngoại suy fixture 27 chunk, không có mục đo nào) bằng số thật trên production 118 chunk:
+  cold **0.48–0.52 s** · rebuild steady-state **0.383 s** trong đó pyvi **92.9%** · chấm warm
+  **3.6–4.3 ms** (ngoại suy cũ ~1.2 ms — **lệch ~3×**) · fallback all-zero sau bản vá **4.5 ms**
+  (trước vá ≈ nguyên một lần rebuild). Hệ quả: ở 5 000 chunk BM25 warm ~160 ms ≈ 26% p50 — cò súng
+  mở lại P4-4b đổi từ "p95 vượt ngân sách" (câm: BM25 hôm nay 0.6% tổng, và treo rebuild nằm ở max)
+  sang "**phần BM25 trong p50 ≥ ~15%**" (plan §9.5), sẽ kêu quanh 2 500–3 000 chunk. **(3)** Số
+  chunk active giờ nhìn thấy được: `metrics.active_chunks` (đúng predicate BM25 snapshot, có test
+  khoá tương đương) + `check_operational_alerts.py --chunk-warn` (mặc định **2 500** = nửa ngưỡng
+  P4-4b, exit 2 khi chạm) — điều kiện §9.5 thôi là "khi nào ai đó chợt nhớ ra". Plan §7 thêm bốn
+  hàng theo dõi (p95 ≤ 1 200 ms làm lưới chung; max chốt ngưỡng sau P4-4a; BM25-share; chunk active).
+
 ### Fixed
 - **T17 đóng — `DocxParser` đọc thiếu 1/5 tài liệu** (24/08, làm **trước** mọi việc khác vì thước đo
   chất lượng vô nghĩa nếu tầng đọc bỏ mất nội dung). Parser cũ chỉ lấy `document.paragraphs`:

@@ -257,3 +257,34 @@ def test_backfill_fills_pre_t15_rows_and_skips_drift(factory):
         assert drifted[0].heading_path is None and drifted[0].locations is None
         assert drifted[0].token_count == count_tokens(drifted[0].content)  # content-derived fill still happens
     _cleanup(factory)
+
+
+def test_active_chunk_count_matches_bm25_snapshot_predicate(factory):
+    """metrics()/alerts count active chunks with the BM25 snapshot's predicate.
+
+    Plan section 9.5 reopens P4-4b on this number, so it must count exactly
+    what the sparse index serves — not chunks of superseded or torn-down
+    versions.
+    """
+    from sqlalchemy import func, select
+    from app.postgres.models import DocumentChunk as ChunkRow
+
+    _cleanup(factory)
+    doc_id, _, _ = _seed(factory)                       # active
+    torn_doc, _, _ = _seed(factory, content="second corpus control text")
+    with factory.begin() as session:                    # tear the second one down
+        document = session.get(Document, torn_doc)
+        document.active_version_id, document.status = None, "uploaded"
+    with factory() as session:
+        counted = session.scalar(
+            select(func.count())
+            .select_from(ChunkRow)
+            .join(Document, Document.id == ChunkRow.document_id)
+            .join(DocumentVersion, DocumentVersion.id == Document.active_version_id)
+            .where(ChunkRow.version_id == DocumentVersion.id, Document.status == "indexed", DocumentVersion.status == "active")
+        ) or 0
+    bm25 = PostgresBm25Service(factory)
+    bm25.search("warmup", 5)
+    assert counted == len(bm25._chunks) == 1
+    assert bm25._chunks[0].document_id == doc_id
+    _cleanup(factory)

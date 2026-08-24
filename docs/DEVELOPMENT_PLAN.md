@@ -183,7 +183,7 @@ pip install -e ".[rerank]" && pip install --index-url https://download.pytorch.o
 | --- | --- | --- | --- | --- |
 | 0 | ~~**T17** — `DocxParser` mất bảng, textbox và heading (79–92% thân tài liệu)~~ | ✅ Đóng 24/08 | — | (xong, làm trước để đọc tài liệu đủ) |
 | 1 | ~~**T15** — `replace_chunks` ghi thiếu 3 cột → citation mất `heading_path`~~ | ✅ Đóng 24/08 | — | (xong, kèm backfill 209 chunk) |
-| 2 | **Eval báo cáo độ trễ** — thêm `p50_latency_ms`/`p95_latency_ms` vào `run_multidoc_mode` | 🔧 Hạ tầng đo | — | 0.5 buổi |
+| 2 | ~~**Eval báo cáo độ trễ** + đo thật rebuild + đếm chunk active~~ | ✅ Đóng 24/08 | — | (xong: p50/p95/**max** trong eval · benchmark đo thật · `active_chunks` vào metrics + alert 2 500) |
 | 3 | **P4-4a** — gỡ tắc nghẽn rebuild BM25 | ⚡ Hiệu năng | #2 (để nghiệm thu) | 0.5–1 buổi |
 | 4 | **P4-5** — chunk visualization | ✨ Tính năng | ~~#1~~ đã thoả (T15 đóng) | 3 buổi |
 | 5 | **T16** — ghim `pyvi` đúng version + `tokenizer_version` | 🔧 Nợ | — | 0.5 buổi |
@@ -266,17 +266,17 @@ Ba việc:
 | (c) | Dựng lại chỉ mục ở luồng nền, phục vụ chỉ mục cũ trong lúc dựng | Hiện dựng lười ở câu hỏi đầu tiên sau mỗi lần khởi động — cả request phải chờ. **Cân nhắc phương án B trước** (xem dưới) |
 | (d) | ✅ **Đã vá 24/08**: đường fallback token-overlap tách từ lại **toàn corpus mỗi query** zero-score (câu hỏi ngoài corpus) | `search()` giờ dùng lại `doc_freqs` BM25Okapi đã dựng — cùng token, cùng công thức, thứ hạng giữ nguyên từng điểm; test khoá "1 lời gọi tokenizer mỗi query" |
 
-Vì sao đáng làm, theo số đo (đo thật trên fixture 27 chunk; các mức lớn hơn là **ngoại suy tuyến tính, chưa đo**) — **98.1% thời gian rebuild là tách từ pyvi**:
+Vì sao đáng làm — **đo thật 24/08 trên corpus production 118 chunk** (`scripts/benchmark_bm25_rebuild.py`, chỉ đọc; nhật ký đầy đủ ở `p4_progress.md` mục "P4-4a — số nền"). Số cũ từ fixture 27 chunk đã bị thay: tỷ lệ pyvi thật là **92.9%** (từng ghi 98.1%), chấm điểm warm thật **~3.8 ms** (ngoại suy cũ ~1.2 ms — lệch ~3×, đúng kiểu lỗi fixture-27 mà §6 cảnh báo):
 
-| Corpus | RAM chỉ mục | Rebuild (câu hỏi đầu sau mỗi lần khởi động) | Chấm BM25 mỗi query |
+| Corpus | Câu hỏi đầu sau khởi động (cold, gồm pyvi init) | Rebuild steady-state | Chấm BM25 warm mỗi query |
 | --- | --- | --- | --- |
-| 27 (đo thật) | 0.07 MB | 0.147 s | 0.27 ms |
-| 118 (production hiện tại) | ~0.3 MB | ~0.64 s | ~1.2 ms |
-| 1 000 | ~2.6 MB | ~5.4 s | ~10 ms |
-| 5 000 | ~13 MB | ~27 s | ~50 ms |
-| 10 000 | ~26 MB | ~54 s | ~100 ms |
+| **118 (đo thật 24/08)** | **0.48–0.52 s** | **0.383 s** = tokenize 0.356 s (**92.9%**) + snapshot 12.4 ms + fingerprint 5.7 ms + build 8.9 ms | **3.6–4.3 ms** |
+| 1 000 *(ngoại suy tuyến tính từ hàng trên)* | ~4 s | ~3.2 s | ~32 ms |
+| 5 000 *(ngoại suy)* | ~20 s | ~16 s | **~160 ms** |
 
-**RAM không phải thứ đau trước** — 10 000 chunk mới tốn ~26 MB. Đau trước là hai cột phải. P4-4a xoá cột giữa; cột phải chỉ P4-4b xoá được (§9).
+Đường fallback all-zero (câu ngoài corpus) sau bản vá 24/08: **4.5 ms** — trước vá nó trả nguyên một lần rebuild (~0.38 s @118, lớn dần theo corpus). Hàng RAM đã bỏ: chưa từng là nỗi đau (bảng cũ tự xác nhận ~26 MB @10 000).
+
+Hai hệ quả của số mới: **(1)** chấm warm @5 000 chunk ~160 ms ≈ **26% của p50 622 ms** — lớn hơn nhiều so với ước cũ (~50 ms), nên "phần BM25 trong tổng độ trễ" là cò súng đúng cho P4-4b (§9.5) và sẽ kêu quanh ~2 500–3 000 chunk, khớp ngưỡng cảnh báo đã đặt; **(2)** cột giữa vẫn là nỗi đau P4-4a nhắm — và **p95 không nhìn thấy nó** (một câu chậm trong 82 câu nằm ở max, không ở p95), nên eval giờ báo cả `max_latency_ms`.
 
 Nghiệm thu: câu hỏi đầu sau mỗi lần khởi động không còn chờ rebuild · mỗi query bớt 1 truy vấn DB · **D1 Δ = 0** (không đổi thuật toán xếp hạng) · **ràng buộc (b)**: fingerprint là cơ chế *duy nhất* để tiến trình API thấy corpus đổi từ tiến trình khác — chỉ được bỏ khi `ingestion_execution_backend == "thread"`; cấu hình `rq` + invalidate-only phải **từ chối khởi động** (đúng khuôn `RerankerUnavailableError`).
 
@@ -319,7 +319,7 @@ Phân rã câu hỏi đa tài liệu thành nhiều lượt retrieval (đúng đ
 3. **#3 P4-4a** — xoá triệu chứng "câu hỏi đầu sau khởi động bị treo".
 4. **#4 P4-5** — mục có giá trị người dùng lớn nhất trong danh sách.
 
-~~Bốn việc gộp ~5 buổi~~ **Cập nhật 24/08: #0 (T17 docx), #1 (T15 + backfill) và §4c#3(d) (vá fallback) đã xong.** T17 làm trước theo yêu cầu đúng: thước đo chất lượng không có nghĩa nếu tầng đọc tài liệu bỏ mất 1/5 nội dung. Còn lại: #2 (thước đo, kèm **đo thật rebuild trên corpus production** thay hàng ngoại suy 118) → #3 (P4-4a, chọn giữa (c) và phương án B bằng số của #2) → #4 (P4-5). Không mục nào đụng schema trừ khi #3 chọn B (một migration additive).
+~~Bốn việc gộp ~5 buổi~~ **Cập nhật 24/08: #0 (T17 docx), #1 (T15 + backfill), #2 (thước đo: eval p50/p95/max · benchmark rebuild đo thật · đếm chunk active + cảnh báo) và §4c#3(d) (vá fallback) đã xong.** Còn lại theo thứ tự: #3 (P4-4a — số đo mới nghiêng về giữ (a)+(b) rẻ, còn (c) vs B cân bằng số: cold chỉ 0.5 s hôm nay, 16–20 s @5 000) → #4 (P4-5). Còn lại: #2 (thước đo, kèm **đo thật rebuild trên corpus production** thay hàng ngoại suy 118) → #3 (P4-4a, chọn giữa (c) và phương án B bằng số của #2) → #4 (P4-5). Không mục nào đụng schema trừ khi #3 chọn B (một migration additive).
 
 ### 4f. P5 — Năng lực mở rộng *(chỉ làm khi có use case thật)*
 
@@ -378,6 +378,10 @@ Discord ─┘    │                            └─ BM25 in-process (rank_bm
 | Grounding rate (D3a) | — | **0.9390** | giữ ≥ 0.90, 0 dương tính giả |
 | Attack success rate (D5) | 0.143 (defense OFF) | **0.000** | giữ 0.000 |
 | `/rag/search` p50 | 587 ms | 622 ms | ≤ 900 ms |
+| `/rag/search` p95 | 617 ms | 643 ms | ≤ 1 200 ms — lưới an toàn chung, bắt mọi thoái lui bất kể nguồn |
+| `/rag/search` max | — | eval báo từ 24/08 | theo dõi; chốt ngưỡng **sau khi** P4-4a xoá rebuild (hiện max chính là câu đầu sau khởi động — p95 mù với nó) |
+| Phần BM25 trong p50 (warm ms ÷ p50) | — | **~0.6%** (3.8/622, đo 24/08) | **≥ 15% → xét mở P4-4b** (§9.5) — cò súng đúng: canh chính chi phí P4-4b chữa |
+| Chunk active | 118 | 118 (`metrics.active_chunks`) | cảnh báo **2 500** (`check_operational_alerts --chunk-warn`) · xét P4-4b ở **5 000** |
 | Memory bị thu hồi | — | — | < 30% |
 | CI | ✅ 3 job + eval gate | | xanh trên main |
 
@@ -477,7 +481,9 @@ Ghi lại để không mang đi làm căn cứ về sau. **Không** làm đổi 
 
 ### 9.5 — Điều kiện mở lại
 
-Mở lại P4-4b khi corpus active vượt **~5 000 chunk** *và* p95 `/rag/search` vượt ngân sách, **hoặc** khi có cách chọn lọc đo được **< 30% ổn định trên ≥ 2 corpus đủ lớn** (corpus lab 27 chunk quá nhỏ để `df` mang nghĩa thống kê — nó không phải phép thử hợp lệ).
+Mở lại P4-4b khi corpus active vượt **~5 000 chunk** *và* **phần BM25 trong p50 `/rag/search` vượt ~15%** (warm ms từ `benchmark_bm25_rebuild.py` chia p50 từ eval), **hoặc** khi có cách chọn lọc đo được **< 30% ổn định trên ≥ 2 corpus đủ lớn** (corpus lab 27 chunk quá nhỏ để `df` mang nghĩa thống kê — nó không phải phép thử hợp lệ).
+
+*Sửa 24/08 — vế cũ "p95 vượt ngân sách" là cò súng câm, hai lỗi đo được:* **(1)** BM25 warm chỉ chiếm ~0.6% p50 hôm nay và ~26% ở 5 000 chunk (ngoại suy từ số thật) — tổng p95 622→~780 ms vẫn dưới mọi ngân sách hợp lý rất lâu sau khi chính BM25 đã thành vấn đề; canh tổng để phát hiện một thành phần là canh nhiệt độ ngoài trời để biết bếp cháy. **(2)** cơn treo rebuild là **một** câu trong 82 — nó nằm ở `max_latency_ms`, p95 không chạm tới theo cấu trúc. p95 ≤ 1 200 ms vẫn giữ ở §7 nhưng với vai trò lưới an toàn chung, không phải điều kiện P4-4b.
 
 Khi mở lại: **đo lại cả năm số**, vì tỷ lệ dung lượng lẫn lựa chọn của planner đều phụ thuộc quy mô. **v1 nguyên bản không được chọn trong mọi trường hợp** — nếu số liệu ủng hộ hình dạng mảng thì đó là v2-A. Ràng buộc chung: phải qua **D1 Δ ≤ 0.02** trên cả ba chỉ số, và đường `inprocess` sống song song cho tới khi baseline mới được ghi.
 

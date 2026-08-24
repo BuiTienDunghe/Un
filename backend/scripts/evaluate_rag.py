@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 from datetime import UTC, datetime
 from pathlib import Path
@@ -102,6 +103,29 @@ def reciprocal_rank(sources: list[dict[str, object]], expected_terms: list[str])
     return 0.0
 
 
+def latency_summary(results: list[dict[str, object]]) -> dict[str, object] | None:
+    """p50/p95/max of the per-case `/rag/*` latency the server reported.
+
+    Report-only, by design twice over: latency depends on the machine and the
+    configuration (CI has no GPU and pins the reranker off — the P4-3 lesson,
+    where a CPU-torch measurement nearly failed a shipping feature), so it
+    never joins the regression gate or the recorded baseline. `max` rides
+    along because the pain P4-4a targets — the first question after a restart
+    paying the whole BM25 rebuild — is a single slow case that p95 over 82
+    cases structurally cannot see. `measured` counts the cases that actually
+    carried a latency: percentiles from a partial run must not be compared
+    with a full one.
+    """
+    values = sorted(int(item["latency_ms"]) for item in results if item.get("latency_ms") is not None)
+    if not values:
+        return None
+
+    def nearest_rank(quantile: float) -> int:
+        return values[max(0, math.ceil(quantile * len(values)) - 1)]
+
+    return {"measured": len(values), "p50_latency_ms": nearest_rank(0.50), "p95_latency_ms": nearest_rank(0.95), "max_latency_ms": values[-1]}
+
+
 def score_multidoc_sources(sources: list[dict[str, object]], expected_ids: set[str], expected_terms: list[str]) -> tuple[float, bool]:
     """(reciprocal rank of the first hit, top-1 document correctness).
 
@@ -178,6 +202,7 @@ def run_multidoc_mode(client: httpx.Client, base_url: str, cases: list[dict], ma
         "recall_at_k": rate(results, "source_recall"),
         "mrr": mean_rr(results),
         "doc_hit_rate": rate(results, "doc_hit"),
+        "latency": latency_summary(results),
         "answer_pass_rate": rate(answered, "answer_pass") if answered else None,
         "grounding": grounding_summary,
         "by_group": {group: {"cases": len(items), "recall_at_k": rate(items, "source_recall"), "mrr": mean_rr(items), "doc_hit_rate": rate(items, "doc_hit")} for group in groups for items in [[item for item in results if item["group"] == group]]},

@@ -469,3 +469,41 @@ RAM) — B xoá luôn G8-2 mà không cần GIN, không cần bảng posting, kh
 | §9d.1, §9d.3 (nay §9.2–§9.3) | v1-đã-vá "**~1.06×** corpus" | **3.65×** ở 118 chunk / **1.89×** ở 5 000 — con số cũ bỏ quên index GIN (2.29× riêng nó) và đo trên fixture 27 chunk |
 | §9d.2, §9d.3 (nay §9.2–§9.3) | posting "**~7×**" (ước tính số học) | **12.32–12.64×**, ổn định mọi quy mô |
 | §9d.3 (nay §9.3; xem thêm §9.4#1) | v2-A "*Có thể* giải G8-3 — chưa đo" | **Không** — planner vẫn seq scan ở 5 000 chunk, 126.9 ms |
+
+## P4-4a — số nền đo thật (24/08/2026, máy vận hành `PC-dungbt`, production chỉ đọc)
+
+Trước ngày này, toàn bộ lý do làm P4-4a đứng trên một con số **không có mục đo
+nào** — "98.1% thời gian rebuild là tách từ pyvi", ngoại suy từ fixture 27 chunk,
+đúng kiểu suy diễn mà §6 của plan ghi là đã sai ~2× hai lần. Script
+`backend/scripts/benchmark_bm25_rebuild.py` (chỉ SELECT, không ghi gì) thay nó
+bằng số đo trên corpus production 118 chunk / 267 748 ký tự / 57 505 token:
+
+| Đại lượng | Đo được | Số cũ (ngoại suy fixture 27) |
+| --- | --- | --- |
+| **Câu hỏi đầu sau khởi động** (cold, gồm pyvi init) | **0.48–0.52 s** (2 lần chạy) | ~0.64 s |
+| **Rebuild steady-state** | **0.383 s** | — |
+| — trong đó tokenize pyvi | 0.356 s = **92.9%** | "98.1%" |
+| — snapshot DB | 12.4 ms | — |
+| — fingerprint | 5.7 ms (đây là truy vấn mà P4-4a(b) muốn bỏ khỏi mỗi query) | — |
+| — dựng BM25Okapi | 8.9 ms | — |
+| **Chấm điểm warm mỗi query** (median 7 lần × 3 câu kiểu D1) | **3.6–4.3 ms** | **~1.2 ms — lệch ~3×** |
+| **Fallback all-zero** (câu ngoài corpus, SAU bản vá 24/08) | **4.5 ms** | trước vá: ≈ nguyên một lần rebuild (~0.38 s) |
+
+Ba kết luận rút được:
+
+1. **Hướng cũ đúng, biên độ cũ phóng đại nhẹ**: pyvi thống trị rebuild (92.9%,
+   không phải 98.1%) — phương án B (lưu token xuống DB) vẫn xoá được gần trọn
+   chi phí; các phần còn lại (snapshot + build ≈ 21 ms) không đáng một thiết kế nền.
+2. **Chấm warm lệch 3× so với ngoại suy** ⇒ ở 5 000 chunk, BM25 warm ~160 ms
+   ≈ **26% của p50 622 ms** (không phải ~50 ms như bảng cũ). Vì thế cò súng mở lại
+   P4-4b đổi từ "p95 vượt ngân sách" (câm — BM25 hôm nay chỉ 0.6% tổng) sang
+   "**phần BM25 trong p50 vượt ~15%**", sẽ kêu quanh 2 500–3 000 chunk — khớp
+   ngưỡng cảnh báo `--chunk-warn 2500` mới thêm vào `check_operational_alerts.py`.
+3. **p95 mù với cơn treo rebuild theo cấu trúc** (một câu chậm trong 82 nằm ở
+   max): eval từ 24/08 báo `latency: {measured, p50, p95, max}` — report-only,
+   không vào gate, không vào baseline (bài học P4-3 về đo sai cấu hình).
+
+Cách tái lập: `DATABASE_URL=<prod> python scripts/benchmark_bm25_rebuild.py`
+(in human-readable + một JSON blob). Cold đo trên service mới nguyên trong cùng
+tiến trình; muốn cold tuyệt đối (nguội cache OS) thì chạy process mới — hai lần
+chạy cách nhau cho 0.476 s và 0.522 s, chênh trong nhiễu.

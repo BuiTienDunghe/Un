@@ -14,6 +14,8 @@ from app.postgres.models import (
     DiscordMemory,
     DiscordMemoryCandidate,
     Document,
+    DocumentChunk,
+    DocumentVersion,
     IngestionRun,
     Job,
     OutboxEvent,
@@ -227,6 +229,17 @@ class OperationalService:
             result.update({
                 "backend": "postgres",
                 "documents_indexed": session.scalar(select(func.count()).select_from(Document).where(Document.status == "indexed")) or 0,
+                # Size of the sparse-index corpus, with the exact predicate the
+                # BM25 snapshot uses. Plan section 9.5 reopens P4-4b partly on
+                # this number crossing ~5000; until it is visible somewhere,
+                # that condition is "whenever somebody happens to remember".
+                "active_chunks": session.scalar(
+                    select(func.count())
+                    .select_from(DocumentChunk)
+                    .join(Document, Document.id == DocumentChunk.document_id)
+                    .join(DocumentVersion, DocumentVersion.id == Document.active_version_id)
+                    .where(DocumentChunk.version_id == DocumentVersion.id, Document.status == "indexed", DocumentVersion.status == "active")
+                ) or 0,
                 "jobs_failed": session.scalar(select(func.count()).select_from(Job).where(Job.status == "failed")) or 0,
                 "jobs_retrying": session.scalar(select(func.count()).select_from(Job).where(Job.status == "retrying")) or 0,
                 "jobs_stale": session.scalar(select(func.count()).select_from(Job).where(Job.status == "running", Job.lease_expires_at < datetime.now(UTC))) or 0,
