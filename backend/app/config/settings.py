@@ -205,6 +205,15 @@ class Settings(BaseSettings):
         return self.backups_path / "sources"
 
     @property
+    def env_backups_path(self) -> Path:
+        return self.backups_path / "env"
+
+    @property
+    def env_file_path(self) -> Path:
+        """The .env this installation actually loads (see model_config above)."""
+        return PROJECT_ROOT / ".env"
+
+    @property
     def backup_mirror_path(self) -> Path | None:
         return Path(self.backup_mirror_dir) if self.backup_mirror_dir else None
 

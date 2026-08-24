@@ -31,9 +31,15 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   mức Cao**, không hạ. **Quyết định 25/08**: backup ở lại trong dự án (`data/backups/`, gitignore
   chặn, đi theo folder khi copy), không USB, không cloud — chết SSD là mất sạch, và đó là đánh đổi
   đã cân nhắc chứ không phải việc chưa làm. Mirror giữ trong code, bật lại bằng một dòng comment.
-  Kèm `backup-env-once.bat` / `restore-env.bat` bấm-đúp-là-chạy (bọc `.ps1` vì ExecutionPolicy và
-  vì bấm đúp `.ps1` chỉ mở Notepad — cùng lý do launcher là `.bat`); mặc định ghi vào
-  `data/backups/env/.env.enc`, đã xác minh gitignore chặn. 6 test mới.
+  **`.env` tự vào backup mỗi đêm dạng văn bản thường, chỉ ghi khi nội dung đổi** — bỏ yêu cầu
+  passphrase khỏi đường mặc định sau khi nhận ra nó thừa: `.env` vốn đã nằm dạng thường ở gốc dự án
+  nên bản sao cạnh nó dưới `data/backups/` (gitignore chặn) không hở thêm gì, trong khi passphrase
+  thêm đúng một cách để mất backup vĩnh viễn — phá chính mục đích backup. Khôi phục = chép file về.
+  Ghi-khi-đổi biến thư mục thành lịch sử chỉnh sửa thay vì 14 bản y hệt; test bắt được lỗi hai lần
+  sửa trong cùng một giây trùng tên file (bản sau đè bản trước, mất đúng bản cũ người ta cần) — đã
+  thêm hậu tố đếm. `backup-env-once.bat` / `restore-env.bat` giữ lại cho trường hợp bản sao **rời
+  khỏi máy** (gửi đi, cloud, ổ chung); bấm-đúp-là-chạy, bọc `.ps1` vì ExecutionPolicy và vì bấm đúp
+  `.ps1` chỉ mở Notepad. 8 test mới.
 - **Việc #2 đóng — đặt thước trước khi tối ưu** (24/08, ba phần). **(1)** Eval multidoc tổng hợp
   độ trễ đã thu sẵn từng câu thành `latency: {measured, p50, p95, max}` — **report-only, không vào
   gate CI, không vào baseline** (bài học P4-3: đo latency trên runner không GPU là đo sai cấu hình);

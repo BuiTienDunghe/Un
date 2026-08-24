@@ -221,6 +221,8 @@ def test_run_once_archives_sources_and_mirrors_both(tmp_path: Path, monkeypatch)
         load_storage_config=lambda: {"backup_interval_hours": 24, "backups_ttl_days": 14, "backups_keep_minimum": 3},
         postgres_backups_path=backups / "postgres",
         sources_backups_path=backups / "sources",
+        env_backups_path=backups / "env",
+        env_file_path=tmp_path / ".env",
         backup_mirror_path=mirror,
         documents_path=documents,
     )
@@ -249,6 +251,8 @@ def test_run_once_backup_survives_a_dead_mirror(tmp_path: Path, monkeypatch):
         load_storage_config=lambda: {"backup_interval_hours": 24, "backups_ttl_days": 14, "backups_keep_minimum": 3},
         postgres_backups_path=backups / "postgres",
         sources_backups_path=backups / "sources",
+        env_backups_path=backups / "env",
+        env_file_path=tmp_path / ".env",
         backup_mirror_path=tmp_path / "mirror",
         documents_path=documents,
     )
@@ -257,3 +261,37 @@ def test_run_once_backup_survives_a_dead_mirror(tmp_path: Path, monkeypatch):
 
     assert "created" in result  # the dump itself succeeded
     assert any("mirror failed" in warning for warning in result.get("warnings", []))
+
+
+def test_env_is_copied_plainly_and_only_when_it_changed(tmp_path: Path):
+    """.env travels in the backup as plain text, on purpose.
+
+    It already sits in plain text at the project root, so a copy under the
+    gitignored backup folder adds no exposure — while a passphrase would add a
+    way to lose the backup for good. Encryption is for copies leaving the
+    machine (backup-env-once.bat), not for this one.
+    """
+    from scripts.backup_postgres import ENV_PATTERN, archive_env
+
+    env_file, out = tmp_path / ".env", tmp_path / "envbak"
+    env_file.write_text("TOKEN=first\n", encoding="utf-8")
+
+    first, changed = archive_env(env_file, out)
+    assert changed and first is not None and first.read_text(encoding="utf-8") == "TOKEN=first\n"
+
+    # Unchanged .env must not pile up one identical copy per night.
+    same, changed_again = archive_env(env_file, out)
+    assert not changed_again and same == first
+    assert len(list(out.glob(ENV_PATTERN))) == 1
+
+    env_file.write_text("TOKEN=second\n", encoding="utf-8")
+    second, changed_third = archive_env(env_file, out)
+    assert changed_third and second != first
+    # The old copy stays: the folder is a history of edits, not a single mirror.
+    assert len(list(out.glob(ENV_PATTERN))) == 2
+
+
+def test_a_missing_env_is_not_an_error(tmp_path: Path):
+    from scripts.backup_postgres import archive_env
+
+    assert archive_env(tmp_path / "nope.env", tmp_path / "out") == (None, False)

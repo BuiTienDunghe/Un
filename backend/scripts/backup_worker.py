@@ -16,7 +16,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from app.config.settings import get_settings
-from scripts.backup_postgres import BACKUP_PREFIX, BACKUP_SUFFIX, create_backup, list_backups, mirror_files, rotate_backups, rotate_files
+from scripts.backup_postgres import BACKUP_PREFIX, BACKUP_SUFFIX, ENV_PATTERN, archive_env, create_backup, list_backups, mirror_files, rotate_backups, rotate_files
 from scripts.backup_sources import SOURCES_PATTERN, archive_sources
 
 HEARTBEAT_NAME = "backup-worker.heartbeat"
@@ -57,6 +57,18 @@ def run_once(settings, docker_service: str | None, force: bool = False) -> dict[
         result["sources_archive"], result["sources_count"] = str(archive), count
     except Exception as error:
         warnings.append(f"sources archive failed: {error}")
+    # .env is the third thing a rebuilt machine needs and neither git nor the
+    # dump carries it. Copied only when it changed, so this folder reads as a
+    # history of edits. Best-effort like the sources archive.
+    env_dir = settings.env_backups_path
+    try:
+        env_copy, changed = archive_env(settings.env_file_path, env_dir)
+        if changed:
+            rotate_files(env_dir, ENV_PATTERN, ttl_days, keep_minimum)
+        result["env_backup"] = str(env_copy) if env_copy else None
+        result["env_changed"] = changed
+    except Exception as error:
+        warnings.append(f"env copy failed: {error}")
     # Second copy on another volume. Same TTL policy on the mirror side, so a
     # dead mirror path cannot silently fill up either.
     mirror_dir = settings.backup_mirror_path
@@ -64,8 +76,10 @@ def run_once(settings, docker_service: str | None, force: bool = False) -> dict[
         try:
             copied = mirror_files(output_dir, mirror_dir / "postgres", f"{BACKUP_PREFIX}*{BACKUP_SUFFIX}")
             copied += mirror_files(sources_dir, mirror_dir / "sources", SOURCES_PATTERN)
+            copied += mirror_files(env_dir, mirror_dir / "env", ENV_PATTERN)
             rotate_files(mirror_dir / "postgres", f"{BACKUP_PREFIX}*{BACKUP_SUFFIX}", ttl_days, keep_minimum)
             rotate_files(mirror_dir / "sources", SOURCES_PATTERN, ttl_days, keep_minimum)
+            rotate_files(mirror_dir / "env", ENV_PATTERN, ttl_days, keep_minimum)
             result["mirrored"] = [str(item) for item in copied]
         except Exception as error:
             warnings.append(f"mirror failed: {error}")

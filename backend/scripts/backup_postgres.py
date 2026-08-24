@@ -123,6 +123,43 @@ def mirror_files(source_dir: Path, mirror_dir: Path, pattern: str) -> list[Path]
     return copied
 
 
+ENV_PATTERN = "env-*.txt"
+
+
+def archive_env(env_file: Path, output_dir: Path) -> tuple[Path | None, bool]:
+    """Keep a plain copy of .env, but only when its content changed.
+
+    .env holds the tokens and passwords that neither git nor a pg_dump carries,
+    so a machine rebuilt from backups alone cannot start without it. The copy is
+    deliberately NOT encrypted: .env already sits in plain text at the project
+    root, so a copy beside it under gitignored data/backups/ adds no exposure a
+    reader does not already have — while a passphrase would add a way to lose
+    the backup for good. Encrypt with backup-env-once.bat instead when the copy
+    is going somewhere less private than this machine.
+
+    Writing only on change turns the folder into a short history of .env edits
+    rather than 14 identical files.
+    """
+    if not env_file.is_file():
+        return None, False
+    content = env_file.read_bytes()
+    existing = _files_newest_first(output_dir, ENV_PATTERN)
+    if existing and existing[0].read_bytes() == content:
+        return existing[0], False
+    output_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
+    # Names carry seconds, so two edits inside one second would collide and the
+    # second would silently overwrite the first — losing exactly the older
+    # version someone would want back.
+    target = output_dir / f"env-{stamp}.txt"
+    suffix = 2
+    while target.exists():
+        target = output_dir / f"env-{stamp}-{suffix}.txt"
+        suffix += 1
+    target.write_bytes(content)
+    return target, True
+
+
 def newest_file_age_hours(output_dir: Path, pattern: str = f"{BACKUP_PREFIX}*{BACKUP_SUFFIX}") -> float | None:
     """Age of the newest matching file in hours; None when there is none.
 
