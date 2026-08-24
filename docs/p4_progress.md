@@ -269,7 +269,7 @@ Lần đo đầu suýt kết luận **KHÔNG ĐẠT**: `pip install -e .[rerank]
 `torch 2.13.0+cpu` (bản mặc định trên PyPI cho Windows), nên cross-encoder chạy
 CPU và `/rag/search` p50 vọt lên 1577ms — **+990ms**, gấp hơn ba lần trần 300ms.
 
-Đo một cross-encoder CPU trên máy có RTX 5060 Ti là đo sai cấu hình: plan §9a.6
+Đo một cross-encoder CPU trên máy có RTX 5060 Ti là đo sai cấu hình: plan cũ §9a.6 (nay §6)
 đòi chốt cấu hình *trước* khi đo, và phân lane khi đó xếp P4-3 vào lane NẶNG
 đúng vì nó dùng GPU. Sau khi cài bản CUDA (`torch 2.9.1+cu128`, Blackwell
 sm_120) và đo lại, **chất lượng y hệt từng con số** (cross-encoder chấm điểm xác
@@ -309,8 +309,8 @@ và hội đồng kiểm chứng độc lập bắt được đúng lớp lỗi 
 
 ## P4-4b — chọn phương án bằng số đo (23/08/2026, máy vận hành `PC-dungbt`)
 
-**Kết luận: HOÃN P4-4b.** Không chọn v1, v2-A hay v2-B. Giữ hướng A (P4-4a, §9c#3) và
-B (chỉ lưu token xuống DB) — hai việc rẻ, không đụng schema. Quy tắc §9d.5 nhánh 3.
+**Kết luận: HOÃN P4-4b.** Không chọn v1, v2-A hay v2-B. Giữ hướng A (P4-4a, §9c#3 — nay plan §4c#3) và
+B (chỉ lưu token xuống DB) — hai việc rẻ, không đụng schema. Quy tắc §9d.5 (nay plan §9.3, bảng áp quy tắc) nhánh 3.
 
 Lượt này **không viết migration, không sửa schema, không đổi code retrieval** — đầu ra là
 số. Điều kiện đo: máy `PC-dungbt`, tokenizer thật của repo (`pyvi` qua `tokenize_vietnamese`),
@@ -358,7 +358,7 @@ Cả hai corpus đều có chunk đúng cho **cả 82 câu** (không câu nào v
    câu. Một siêu tham số phải chỉnh lại mỗi khi corpus đổi, với biên an toàn 0.05, không phải
    thứ đáng đưa vào đường retrieval production.
 
-⚠ **Lưu ý về dải ngưỡng**: §9d.4 chỉ định thử 0.2 / 0.3 / 0.5 — **không ngưỡng nào trong ba
+⚠ **Lưu ý về dải ngưỡng**: §9d.4 (nay plan §9.3) chỉ định thử 0.2 / 0.3 / 0.5 — **không ngưỡng nào trong ba
 ngưỡng đó đạt < 30%** (thấp nhất 34.7%). Dải được quét rộng thêm (0.02 → 0.5) để biết đây là
 "sát ngưỡng" hay "chặn cứng"; kết quả cho thấy vùng < 30% mà an toàn **chỉ tồn tại trên một
 corpus**, không tồn tại trên cả hai. Quy tắc chọn không bị sửa.
@@ -376,7 +376,7 @@ corpus**, không tồn tại trên cả hai. Quy tắc chọn không bị sửa.
 | **index GIN** (25 338 mục) | **352.0 kB** | **2.29×** | 1.83× |
 | **v2-A tổng phần thêm** (3 cột + GIN) | **560.8 kB** | **3.65×** | 2.92× |
 
-⚠ **Plan §9d.1 sai ở đây và phải sửa**: con số "**~1.06×** corpus" cho v1-đã-vá **không tính
+⚠ **Plan §9d.1 (nay §9.2/§9.3) sai ở đây và phải sửa**: con số "**~1.06×** corpus" cho v1-đã-vá **không tính
 index GIN**, mà GIN là bắt buộc cho chính bộ lọc `&&` mà thiết kế dựa vào. Đo thật, phần
 thêm là **3.65× trần** ở corpus hiện tại — vượt xa ngưỡng dừng 2× của chính `p4_4_design.md`
 §7. Con số 1.06× cũng đo trên fixture 27 chunk (`text[]` 0.68×); trên corpus vận hành riêng
@@ -389,7 +389,7 @@ thêm là **3.65× trần** ở corpus hiện tại — vượt xa ngưỡng d�
 | hàng posting | 25 338 | ~215 k | ~1.07 M |
 | **v2-B tổng (heap + index)** | 1.90 MB = **12.64×** trần | 15.74 MB = **12.38×** | 78.36 MB = **12.32×** |
 
-⚠ **Plan §9d.2 ước tính ~7× — đo thật ~12.3–12.6×, tệ hơn gần gấp đôi**, và tỷ lệ **ổn định
+⚠ **Plan §9d.2 (nay §9.2/§9.3) ước tính ~7× — đo thật ~12.3–12.6×, tệ hơn gần gấp đôi**, và tỷ lệ **ổn định
 ở mọi quy mô** (78.6 B/hàng thực tế so với ~24 B header giả định trong ước tính; ước tính bỏ
 qua chi phí lưu chuỗi `lexeme` lặp lại ở mỗi hàng và kích thước index B-tree trên `(lexeme,
 chunk_ref)` = 752 kB/1.90 MB, tức 40% tổng).
@@ -407,7 +407,7 @@ Truy vấn `retrieval_lexemes && ARRAY['chu_kỳ','backup','postgres','giữ','d
 | 118 chunk, posting (v2-B) | index scan + sort | 0.10 ms |
 
 **Planner không dùng GIN ở bất kỳ quy mô nào đã đo**, kể cả 5 000 chunk — đúng nghi ngờ của
-§9d.4#5. Lý do là chính số #1: khi bộ lọc kéo ~30–100% số hàng, seq scan **là** kế hoạch
+§9d.4#5 (nay plan §9.3/§9.4). Lý do là chính số #1: khi bộ lọc kéo ~30–100% số hàng, seq scan **là** kế hoạch
 đúng; GIN chỉ thắng khi bộ lọc thực sự chọn lọc (ép tắt seq scan cho thấy GIN nhanh hơn 77×
 khi được dùng — nó *dùng được*, chỉ là không đáng dùng ở selectivity này).
 
@@ -430,7 +430,7 @@ nhưng sát. v2-B **ổn định ~12.3×**. *Ngoại suy*: nhân bản giữ ngu
 mở rộng từ vựng theo luật Heaps ⇒ hai tỷ lệ này là **chặn dưới** của chi phí thật ở cùng quy
 mô.
 
-### Áp quy tắc chọn §9d.5 (chốt trước khi đo, không sửa)
+### Áp quy tắc chọn §9d.5 — nay plan §9.3 (chốt trước khi đo, không sửa)
 
 | Nhánh quy tắc | Điều kiện | Kết quả đo | Phán |
 | --- | --- | --- | --- |
@@ -447,11 +447,11 @@ mô.
 2. **v2-B đắt gấp 4× so với trần quy tắc**: 12.3× corpus, quy tắc cho phép ≤ 3×. Ở 5 000
    chunk là 78 MB cho 6.4 MB nội dung.
 3. **Nỗi đau chưa tới**: corpus vận hành hiện **118 chunk active** (209 hàng kể cả version
-   superseded) — cách ngưỡng ~5 000 chunk ở §1 khoảng **40×**. Lập luận "di trú khi còn nhỏ
+   superseded) — cách ngưỡng ~5 000 chunk (plan §9.5) khoảng **40×**. Lập luận "di trú khi còn nhỏ
    thì rẻ" vẫn đúng, nhưng nó chỉ đáng khi *biết* di trú sang hình dạng nào; hôm nay chưa
    hình dạng nào qua được ngưỡng của chính plan.
 
-**Vẫn nên làm** (không đụng schema, đã nằm trong §9c): **P4-4a** (gỡ tắc rebuild — xoá 98.1%
+**Vẫn nên làm** (không đụng schema, đã nằm trong §9c — nay plan §4c): **P4-4a** (gỡ tắc rebuild — xoá 98.1%
 chi phí là tách từ pyvi) và hướng **B** (lưu token xuống DB, vẫn chấm bằng `rank_bm25` trong
 RAM) — B xoá luôn G8-2 mà không cần GIN, không cần bảng posting, không cần siêu tham số DF.
 
@@ -466,6 +466,6 @@ RAM) — B xoá luôn G8-2 mà không cần GIN, không cần bảng posting, kh
 
 | Chỗ | Ghi | Đo thật |
 | --- | --- | --- |
-| §9d.1, §9d.3 | v1-đã-vá "**~1.06×** corpus" | **3.65×** ở 118 chunk / **1.89×** ở 5 000 — con số cũ bỏ quên index GIN (2.29× riêng nó) và đo trên fixture 27 chunk |
-| §9d.2, §9d.3 | posting "**~7×**" (ước tính số học) | **12.32–12.64×**, ổn định mọi quy mô |
-| §9d.3 | v2-A "*Có thể* giải G8-3 — chưa đo" | **Không** — planner vẫn seq scan ở 5 000 chunk, 126.9 ms |
+| §9d.1, §9d.3 (nay §9.2–§9.3) | v1-đã-vá "**~1.06×** corpus" | **3.65×** ở 118 chunk / **1.89×** ở 5 000 — con số cũ bỏ quên index GIN (2.29× riêng nó) và đo trên fixture 27 chunk |
+| §9d.2, §9d.3 (nay §9.2–§9.3) | posting "**~7×**" (ước tính số học) | **12.32–12.64×**, ổn định mọi quy mô |
+| §9d.3 (nay §9.3; xem thêm §9.4#1) | v2-A "*Có thể* giải G8-3 — chưa đo" | **Không** — planner vẫn seq scan ở 5 000 chunk, 126.9 ms |

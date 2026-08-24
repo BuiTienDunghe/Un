@@ -1,6 +1,6 @@
 # Kế hoạch phát triển tổng thể — Local AI Core
 
-**Phiên bản:** 1.3 · **Ngày:** 15/08/2026 · **Cập nhật:** 19/08 (agent-first) · 21/08 (track D + ngân sách inference) · 23/08 (đo trước khi đổi schema) · **24/08 (một môi trường vận hành duy nhất — gộp `machine_split.md`, nén lịch sử, liệt kê đầy đủ việc còn lại)** · **Trạng thái:** Đang hiệu lực
+**Phiên bản:** 1.3.1 · **Ngày:** 15/08/2026 · **Cập nhật:** 19/08 (agent-first) · 21/08 (track D + ngân sách inference) · 23/08 (đo trước khi đổi schema) · 24/08 (một môi trường vận hành duy nhất — gộp `machine_split.md`, nén lịch sử, liệt kê đầy đủ việc còn lại) · **24/08 v1.3.1 (T15 đóng kèm backfill; vá fallback BM25; sửa 5 lỗi tài liệu từ review đối kháng — KPI doc_hit, §3e, con trỏ §9x, §9.3 hàng 3, đối sách backup §8)** · **Trạng thái:** Đang hiệu lực
 
 **Thay thế:** plan v1.2 và `docs/machine_split.md` (đã gộp vào §3, file đã xoá). Phần thiết kế memory của `docs/discord_memory_workflow_plan_v5_final.md` vẫn là spec cho P1-3..P1-5.
 
@@ -59,7 +59,7 @@ Tài liệu này là **nguồn sự thật duy nhất** cho định hướng và
 | Phase | Trạng thái | Kết quả chốt |
 | --- | --- | --- |
 | **P0** — Nền móng tin cậy | ✅ | CI GitHub Actions (P0-1) · API key cho endpoint ghi/xoá (P0-2) · bảng `message_sources` giữ citation (P0-3) · backup tự động + restore drill (P0-4) · `pyproject.toml` + CHANGELOG (P0-5) · `alembic check` xanh trong CI (P0-6) |
-| **P0.5** — Nợ audit 18/08 | Một phần | T1–T4, T6, T11, T14 ✅ đã trả. **Còn T5, T7, T8, T9, T10, T12, T13, T15, T16** → §4 |
+| **P0.5** — Nợ audit 18/08 | Một phần | T1–T4, T6, T11, T14, T15 ✅ đã trả. **Còn T5, T7, T8, T9, T10, T12, T13, T16** → §4 |
 | **P1** — Một agent, hai kênh | ✅ 19/08 | `/docs` kèm nguồn · condense câu hỏi nối tiếp (eval 10/10, MRR 0.950 vs 0.787) · memory hub một kho hai kênh · pipeline người-duyệt end-to-end. Nhật ký: `docs/p1_progress.md` |
 | **P2** — Agent tự hành | ✅ 20/08 | Memory tự áp dụng theo ngưỡng + guard xác định (extractor → `qwen3.5:9b`, poison 49% → 21.6%) · vòng lặp agent + tool use native, trace `agent_traces` · bộ lệnh `/ask` `/docs` `/memory` `/status` `/ping` · timeline hành động agent + thu hồi 1 click. Nhật ký: `docs/p2_progress.md` |
 | **P3** — Đa người dùng & quản trị | ✅ 20/08 | Tài khoản + RBAC admin/member, JWT 15' + refresh thu-hồi-được · điều khiển bot Discord từ dashboard · biểu đồ thời gian · OCR console UI. Nhật ký: `docs/p3_progress.md` |
@@ -157,7 +157,7 @@ Phân lane hai máy đã bỏ, nhưng **CI vẫn là một môi trường thứ 
 | `RAG_INJECTION_DEFENSE_ENABLED` | *(không đặt → true)* | *(theo mặc định)* | D5: bọc passage/tool-result, 0 lời gọi thêm |
 | `QDRANT_DOCUMENTS_COLLECTION` | `documents` | `documents_test` | T11: cô lập vector index theo môi trường |
 
-Cả bốn dùng chung một idiom `from_config(..., enabled_override=...)`; log khởi động ghi rõ nguồn quyết định (`source=env|models.yaml`). Launcher tự ghim `RAG_RERANKER_ENABLED=false` khi máy thiếu extra `[rerank]` — đúng bất biến #5.
+Ba cờ bật/tắt (contextual, reranker, injection defense) dùng chung một idiom `from_config(..., enabled_override=...)`; log khởi động ghi rõ nguồn quyết định (`source=env|models.yaml`). `QDRANT_DOCUMENTS_COLLECTION` là tên collection chứ không phải cờ — nó đọc thẳng từ `settings`, không qua resolver và không log nguồn (biến này từng gây trộn vector lab/prod — T11; thêm log khởi động cho nó gom vào T9). Launcher tự ghim `RAG_RERANKER_ENABLED=false` khi máy thiếu extra `[rerank]` — đúng bất biến #5.
 
 Bật reranker mà **không** cài extra thì API **từ chối khởi động** với `RerankerUnavailableError` kèm đúng lệnh cần chạy. Bản `sentence-transformers` mặc định trên PyPI là **CPU-only**; máy có GPU NVIDIA cần:
 
@@ -181,10 +181,10 @@ pip install -e ".[rerank]" && pip install --index-url https://download.pytorch.o
 
 | # | Việc | Loại | Phụ thuộc | Ước lượng |
 | --- | --- | --- | --- | --- |
-| 1 | **T15** — `replace_chunks` ghi thiếu 3 cột → citation mất `heading_path` | 🐞 Bug production | — | 0.5 buổi |
+| 1 | ~~**T15** — `replace_chunks` ghi thiếu 3 cột → citation mất `heading_path`~~ | ✅ Đóng 24/08 | — | (xong, kèm backfill 209 chunk) |
 | 2 | **Eval báo cáo độ trễ** — thêm `p50_latency_ms`/`p95_latency_ms` vào `run_multidoc_mode` | 🔧 Hạ tầng đo | — | 0.5 buổi |
 | 3 | **P4-4a** — gỡ tắc nghẽn rebuild BM25 | ⚡ Hiệu năng | #2 (để nghiệm thu) | 0.5–1 buổi |
-| 4 | **P4-5** — chunk visualization | ✨ Tính năng | #1 (để `heading_path` đúng) | 3 buổi |
+| 4 | **P4-5** — chunk visualization | ✨ Tính năng | ~~#1~~ đã thoả (T15 đóng) | 3 buổi |
 | 5 | **T16** — ghim `pyvi` đúng version + `tokenizer_version` | 🔧 Nợ | — | 0.5 buổi |
 | 6 | **D4** — LLMOps / observability | 📊 Track D | — | 3–4 buổi |
 | 7 | **D3b** — digest nền có luật nhường | ✨ Track D | — | 3 buổi |
@@ -201,13 +201,7 @@ pip install -e ".[rerank]" && pip install --index-url https://download.pytorch.o
 
 ### 4b. Bug và nợ đang chảy máu
 
-**#1 · T15 — `replace_chunks` ghi thiếu `locations`, `heading_path`, `token_count`** *(0.5 buổi)*
-
-`chunking.py:240-252` tính `locations` và `heading_path` rồi **vứt đi** ở đường ghi (`repositories.py:97-104`). Hệ quả: **mọi citation production trả `heading_path: null`**; `PostgresBm25Service._IndexedChunk` khai báo hai trường này nhưng luôn nhận rỗng.
-
-Kèm một lệch kiểu phải chốt trước khi vá: chunker sinh `heading_path` dạng chuỗi `"A > B"`, cột DB là JSONB `list[str]`.
-
-Nghiệm thu: ghi đủ 3 cột trong cùng transaction + **test đi qua đường ghi thật** — test hiện tại dựng chunk bằng tay nên không bắt được lỗi này.
+**#1 · T15 — ✅ ĐÓNG 24/08.** `replace_chunks` ghi đủ `locations`/`heading_path`/`token_count`; lệch kiểu chốt về **list** (chunker mang tuple heading parts, DB JSONB `list[str]`, Qdrant payload giữ dạng chuỗi join như mọi point cũ). `token_count` hoá ra **chưa từng được chunker tính** — đã thêm (`count_tokens(content)`). Test mới đi qua **đường ghi thật** (chunker → `replace_chunks` → BM25 đọc lại, fixture có heading) thay cho test dựng chunk bằng tay từng che lỗi. **Backfill production `scripts/backfill_chunk_metadata.py`**: dry-run rồi apply, 11 version khớp `content_hash` 100% (0 drift), 209/209 chunk điền `token_count`, 150 `heading_path`, 162 `locations`; 7 version page-mismatch (micro-drift T7: đường thread ghi page=None) chỉ điền heading/token, bỏ locations — đúng guard. **Không đụng** `retrieval_context`/embedding/Qdrant nên thứ hạng D1 không đổi. 75/118 chunk active giờ trả heading_path thật trong citation.
 
 **#5 · T16 — `pyvi` chỉ ghim dải `>=0.1.1,<1.0`** *(0.5 buổi)*
 
@@ -248,7 +242,8 @@ Ba việc:
 | --- | --- | --- |
 | (a) | Gọi `invalidate()` từ chính sự kiện activate version | Hàm **đã có** (`postgres_bm25_service.py:79`) nhưng **0 nơi gọi** trong `backend/app` |
 | (b) | Bỏ truy vấn fingerprint khỏi đường query | `search()` → `_ensure_index()` → `_current_fingerprint()` bắn một truy vấn DB **mỗi câu hỏi** |
-| (c) | Dựng lại chỉ mục ở luồng nền, phục vụ chỉ mục cũ trong lúc dựng | Hiện dựng lười ở câu hỏi đầu tiên sau mỗi lần khởi động — cả request phải chờ |
+| (c) | Dựng lại chỉ mục ở luồng nền, phục vụ chỉ mục cũ trong lúc dựng | Hiện dựng lười ở câu hỏi đầu tiên sau mỗi lần khởi động — cả request phải chờ. **Cân nhắc phương án B trước** (xem dưới) |
+| (d) | ✅ **Đã vá 24/08**: đường fallback token-overlap tách từ lại **toàn corpus mỗi query** zero-score (câu hỏi ngoài corpus) | `search()` giờ dùng lại `doc_freqs` BM25Okapi đã dựng — cùng token, cùng công thức, thứ hạng giữ nguyên từng điểm; test khoá "1 lời gọi tokenizer mỗi query" |
 
 Vì sao đáng làm, theo số đo (đo thật trên fixture 27 chunk; các mức lớn hơn là **ngoại suy tuyến tính, chưa đo**) — **98.1% thời gian rebuild là tách từ pyvi**:
 
@@ -262,13 +257,17 @@ Vì sao đáng làm, theo số đo (đo thật trên fixture 27 chunk; các mứ
 
 **RAM không phải thứ đau trước** — 10 000 chunk mới tốn ~26 MB. Đau trước là hai cột phải. P4-4a xoá cột giữa; cột phải chỉ P4-4b xoá được (§9).
 
-Nghiệm thu: câu hỏi đầu sau mỗi lần khởi động không còn chờ rebuild · mỗi query bớt 1 truy vấn DB · **D1 Δ = 0** (không đổi thuật toán xếp hạng).
+Nghiệm thu: câu hỏi đầu sau mỗi lần khởi động không còn chờ rebuild · mỗi query bớt 1 truy vấn DB · **D1 Δ = 0** (không đổi thuật toán xếp hạng) · **ràng buộc (b)**: fingerprint là cơ chế *duy nhất* để tiến trình API thấy corpus đổi từ tiến trình khác — chỉ được bỏ khi `ingestion_execution_backend == "thread"`; cấu hình `rq` + invalidate-only phải **từ chối khởi động** (đúng khuôn `RerankerUnavailableError`).
+
+**Phương án B — lưu lexeme pyvi xuống DB** *(1–1.5 buổi, một migration additive)*: nhật ký đo 23/08 kết luận "vẫn nên làm" cả A lẫn B (`p4_progress.md`), và §9.1 xếp B **xoá** 98.1% chi phí rebuild trong khi A(c) chỉ **giấu** nó sau một bài toán concurrency. §4e cũ loại B vì muốn "không đụng schema" — lý do đó phải được cân nhắc tường minh khi làm #3, không được im lặng. B phụ thuộc T16 (`tokenizer_version` phải nằm cạnh lexeme đã lưu).
 
 **#4 · P4-5 — Chunk visualization** *(3 buổi, học RAGFlow)*
 
 Xem chunk của tài liệu trong UI, đánh dấu chunk kém, để người dùng tự chẩn đoán "tại sao trả lời sai".
 
-**Đính chính 23/08: KHÔNG phụ thuộc P4-4.** `docs/p4_4_design.md` §12 nói ngược, nhưng cả 8 cột màn hình cần — `content`, `retrieval_context`, `chunk_index`, `page_start`, `page_end`, `section_title`, `block_type`, `content_hash` — **đã có sẵn** trong bảng `document_chunks`. Chỉ cần **#1 (T15)** xong trước thì `heading_path` mới hiện đúng.
+**Đính chính 23/08: KHÔNG phụ thuộc P4-4.** `docs/p4_4_design.md` §12 nói ngược, nhưng cả 8 cột màn hình cần — `content`, `retrieval_context`, `chunk_index`, `page_start`, `page_end`, `section_title`, `block_type`, `content_hash` — **đã có sẵn** trong bảng `document_chunks`. ~~Chỉ cần #1 (T15) xong trước~~ **T15 đã đóng 24/08** — `heading_path`/`locations`/`token_count` giờ có dữ liệu thật (75/118 chunk active mang heading), màn hình dùng được **9 cột** (thêm `locations` để tô vị trí trong tài liệu gốc).
+
+Nghiệm thu P4-5: `GET /documents/{id}/chunks` phân trang trả đủ 9 cột, `heading_path` khác `null` với tài liệu có heading · UI hiện chunk theo `chunk_index`, tô vùng `page_start`–`page_end` · "đánh dấu chunk kém" chốt nơi lưu (cột `status` hay bảng mới) **trước khi code** · test 3 tầng theo §6 · **0 lời gọi model thêm** (bất biến #7). Nếu phần "đánh dấu" kéo ước lượng quá 3 buổi thì tách nó thành mục riêng, ship phần chỉ-đọc trước.
 
 **#14 · P4-4b — Chỉ mục sparse vào PostgreSQL** — ⛔ **HOÃN**, xem §9 (thiết kế, số đo, điều kiện mở lại).
 
@@ -299,7 +298,7 @@ Phân rã câu hỏi đa tài liệu thành nhiều lượt retrieval (đúng đ
 3. **#3 P4-4a** — xoá triệu chứng "câu hỏi đầu sau khởi động bị treo".
 4. **#4 P4-5** — mục có giá trị người dùng lớn nhất trong danh sách.
 
-Bốn việc này gộp lại ~5 buổi và không đụng schema, không đụng migration, không cần đo lại baseline nào.
+~~Bốn việc gộp ~5 buổi~~ **Cập nhật 24/08: #1 (T15 + backfill) và §4c#3(d) (vá fallback) đã xong.** Còn lại: #2 (thước đo, kèm **đo thật rebuild trên corpus production** thay hàng ngoại suy 118) → #3 (P4-4a, chọn giữa (c) và phương án B bằng số của #2) → #4 (P4-5). Không mục nào đụng schema trừ khi #3 chọn B (một migration additive).
 
 ### 4f. P5 — Năng lực mở rộng *(chỉ làm khi có use case thật)*
 
@@ -353,13 +352,15 @@ Discord ─┘    │                            └─ BM25 in-process (rank_bm
 | --- | --- | --- | --- |
 | recall@5 | 0.866 | **0.976** | ≥ 0.95 ✅ |
 | MRR | 0.734 | **0.858** | ≥ 0.90 |
-| doc_hit | 0.768 | 0.842 | ≥ 0.90 |
+| doc_hit | 0.768 | 0.854 | ≥ 0.90 |
 | MRR cross-doc | 0.590 | **0.861** | ≥ 0.85 ✅ |
 | Grounding rate (D3a) | — | **0.9390** | giữ ≥ 0.90, 0 dương tính giả |
 | Attack success rate (D5) | 0.143 (defense OFF) | **0.000** | giữ 0.000 |
 | `/rag/search` p50 | 587 ms | 622 ms | ≤ 900 ms |
 | Memory bị thu hồi | — | — | < 30% |
 | CI | ✅ 3 job + eval gate | | xanh trên main |
+
+> **Tuyên bố 24/08 về hai ô chưa đạt (MRR 0.858, doc_hit 0.854 / mục tiêu 0.90):** khoảng cách được **chấp nhận, chu kỳ này không có việc nào nhắm trực tiếp vào nó** — hai câu miss còn lại đã chẩn đoán là bài toán *biên chunk* (`p4_progress.md`: rerank kéo chunk lân cận lên trên chunk mang nguyên văn), và P4-5 (#4) chính là công cụ làm biên chunk nhìn thấy được. Xét lại sau khi có #2 (p50/p95) và #4. Khoảng trống được tuyên bố ở đây để nó không bị coi là bị bỏ quên.
 
 ---
 
@@ -372,7 +373,7 @@ Discord ─┘    │                            └─ BM25 in-process (rank_bm
 | Extractor tự áp dụng memory sai → trí nhớ bẩn | **Cao — đã đo 19/08**: confidence là hằng 1.0 ở mọi lỗi (τ vô nghĩa); 2b lọt 49% độc, 9b + guard còn 21.6% | Extractor 9b + guard evidence/overlap; giám sát + thu hồi 1 click là lưới chính; benchmark lại sau mỗi thay đổi extractor |
 | Việc nền của agent chặn request tương tác (Ollama 1 slot/máy) | Trung — tăng nếu thêm D3b | Bất biến #7; luật nhường của D3b là điều kiện nghiệm thu, không phải tuỳ chọn |
 | Prompt injection qua tài liệu/tin nhắn | Trung — tăng theo multi-user | ✅ D5 đóng: defense BẬT mặc định, attack 0.000. Đo lại khi đổi model sinh hoặc prompt hệ thống |
-| **Chỉ còn một máy — hỏng máy là mất môi trường thi công** | **Trung, mới từ 24/08** | Lưới backup: dump hằng ngày 02:00 (§3c) + `data/documents/` + `.env` giữ ngoài git. Restore drill mỗi quý theo `docs/backup_restore.md`. Code luôn ở GitHub |
+| **Chỉ còn một máy — hỏng máy/ổ là mất cả DB lẫn dump** | **Cao, mới từ 24/08** | ⚠ Đối sách hiện tại **chưa đủ**: dump nằm **cùng ổ** với DB (`backup_restore.md` nói thẳng đây là việc ngoài phạm vi hệ thống); `backup_sources.py` cho `data/documents/` **tồn tại nhưng 0 nơi gọi**; `.env` không có bản sao nào. Việc phải làm (thêm vào T-list): trỏ/chép `BACKUP_DIR` sang ổ khác hoặc NAS · đưa `backup_sources.py` vào Scheduled Task 02:00 · cất `.env` mã hoá ngoài máy · đặt RPO 24h / RTO 1 buổi + mục "dựng máy mới từ zero" trong `backup_restore.md`. Code luôn ở GitHub |
 | Corpus lớn dần làm BM25 in-process chậm | Thấp hôm nay (118 chunk), tăng dần | P4-4a xoá tắc nghẽn rebuild; theo dõi p95 `/rag/search` sau khi có #2; P4-4b mở lại theo điều kiện §9 |
 
 ---
@@ -442,7 +443,7 @@ Discord ─┘    │                            └─ BM25 in-process (rank_bm
 | --- | --- | --- |
 | v1-đã-vá "~1.06× corpus" | **3.65×** @118, **1.89×** @5 000 | **bỏ quên index GIN** (riêng nó 2.29×); `text[]` thật 1.21× chứ không phải 0.68× (suy từ fixture 27 chunk) |
 | posting "~7× (ước tính)" | **12.32–12.64×** | ước tính bỏ qua chuỗi `lexeme` lặp mỗi hàng + B-tree (40% tổng) |
-| v2-A "*có thể* giải G8-3" | không | planner chọn Seq Scan ở mọi quy mô đã đo |
+| v2-A "*có thể* giải G8-3" | chưa kết luận được | phán quyết cũ dựa trên số #5 — §9.4#1 chỉ ra EXPLAIN thiếu `ANALYZE` và truy vấn không đại diện; giữ trạng thái *chưa chứng minh* |
 
 ### 9.4 — Hai chỗ số liệu yếu hơn kết luận của nó
 

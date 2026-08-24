@@ -3,7 +3,7 @@
 > 📄 **TRẠNG THÁI 23/08/2026 (chiều): đây là BẢN v1 — một trong HAI phương án đang cân
 > nhắc, chưa chọn.** Bản này đã qua vòng phản biện đối kháng 5 tác nhân và **không được
 > chọn nguyên trạng**, nhưng vẫn giữ nguyên vẹn ở đây để so sánh. Bảng ưu/nhược v1 vs v2,
-> năm số phải đo và quy tắc chọn nằm ở `docs/DEVELOPMENT_PLAN.md` **§9d**. Khi hai tài
+> năm số phải đo và quy tắc chọn nằm ở `docs/DEVELOPMENT_PLAN.md` **§9.3–§9.5** (đánh số lại 24/08; tên cũ §9d). Khi hai tài
 > liệu mâu thuẫn, **plan thắng**.
 >
 > **Đọc tài liệu này với 8 đính chính sau** — đây là những chỗ đã biết là sai, và là lý do
@@ -271,7 +271,7 @@ Học từ RAGFlow: cho người dùng **tự chẩn đoán "vì sao trả lời
 ## 13. Ghi chú: dòng P4-4 trong plan đã lỗi thời
 
 `docs/DEVELOPMENT_PLAN.md` ghi P4-4 là *"Postgres FTS thay BM25 in-process (tsvector + GIN +
-unaccent)"* và §9b ghi *"P4-4 FTS + pyvi"*. Audit 23/08 cho thấy: **pyvi đã dùng từ lâu**
+unaccent)"* và plan cũ §9b (nay §4) ghi *"P4-4 FTS + pyvi"*. Audit 23/08 cho thấy: **pyvi đã dùng từ lâu**
 (`vi_tokenizer.py:8`, gọi ở `postgres_bm25_service.py:90,114`), nên vế "thêm pyvi" là mô tả
 sai hiện trạng; và `tsvector` là lựa chọn sai kỹ thuật cho lexeme có `_` (mục 1). Dòng plan
 sẽ được sửa để trỏ vào tài liệu này.

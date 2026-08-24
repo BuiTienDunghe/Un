@@ -3,7 +3,7 @@
 Gỡ khoảng trống G7 (bộ eval 1 tài liệu đã bão hòa 100%): bộ eval mới chạy trên
 **toàn corpus, không lọc tài liệu** — chọn đúng tài liệu giữa các ứng viên chính
 là năng lực được đo. Đây là thước đo cho mọi thí nghiệm P4 và các mục Track D
-sau này (plan §4, §9b).
+sau này (plan §4; số mục cũ §9b đã đổi 24/08).
 
 ## Thành phần
 
@@ -95,7 +95,7 @@ embedding nên gate vẫn so được, nhưng nếu job `retrieval-eval` báo l�
 thống (không phải một câu lẻ) thì nghi ngờ khác biệt môi trường trước khi nghi
 ngờ thoái lui, và đo lại một lượt trên máy nặng để phân định.
 
-## Ghi lại baseline (chỉ khi đổi model embedding hoặc corpus — plan §9a.6)
+## Ghi lại baseline (chỉ khi đổi model embedding hoặc corpus — quy tắc plan cũ §9a.6, nay thuộc kỷ luật đo §6 của plan)
 
 ```powershell
 # API + Ollama đang chạy (launcher). Từ backend/:
@@ -106,7 +106,7 @@ python -m scripts.evaluate_rag --multidoc-dataset ..\data\evaluation\rag_multido
 ```
 
 Baseline ghi kèm tên model embedding; gate từ chối so sánh nếu model hiện tại
-khác model lúc ghi (đổi model là phải đo lại — đúng plan §9a.6).
+khác model lúc ghi (đổi model là phải đo lại — quy tắc plan cũ §9a.6, nay §6).
 
 ## Gate trong CI — đo **bản trần**, gate theo baseline trần
 

@@ -11,7 +11,42 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+### Fixed
+- **T15 đóng — citation production hết `heading_path: null`** (24/08). `replace_chunks` giờ ghi đủ
+  `locations`/`heading_path`/`token_count` mà chunker vẫn tính rồi vứt; `token_count` hoá ra **chưa
+  từng được chunker tính** — đã thêm (`count_tokens(content)`). Lệch kiểu chốt về **list**: dataclass
+  chunker mang tuple heading parts, cột JSONB nhận `list[str]`, Qdrant payload giữ nguyên dạng chuỗi
+  join (mọi point cũ đã ở dạng đó); `rebuild_qdrant.py` sửa theo. Test mới đi qua **đường ghi thật**
+  (chunker → `replace_chunks` → BM25 đọc lại, fixture có heading) thay cho test dựng chunk bằng tay
+  từng che lỗi. **Backfill production** `scripts/backfill_chunk_metadata.py` (dry-run mặc định,
+  `--apply` để ghi, guard `content_hash` từng chunk): 11 version khớp hash **100 %** (0 drift),
+  209/209 chunk điền `token_count`, 150 `heading_path`, 162 `locations`; 7 version page-mismatch
+  (micro-drift T7: đường thread ghi page=None) chỉ điền heading/token, **bỏ** locations đúng guard.
+  Không đụng `retrieval_context`/embedding/Qdrant — thứ hạng D1 không đổi; 75/118 chunk active giờ
+  trả heading thật trong citation.
+- **BM25 fallback không còn tách từ lại toàn corpus mỗi query** (24/08). Đường token-overlap (chạy
+  khi mọi điểm BM25 ≤ 0 — điển hình là câu hỏi ngoài corpus) gọi `tokenize_vietnamese` trên **từng
+  chunk mỗi lần hỏi**, tức trả nguyên chi phí một lần rebuild (~98 % là pyvi) ngay trong đường trả
+  lời, lớn dần theo corpus. Giờ dùng lại `doc_freqs` mà `BM25Okapi` đã dựng từ đúng token đó lúc
+  index — cùng phép đếm, thứ hạng giữ nguyên từng điểm; test khoá bất biến "mỗi query tokenize đúng
+  một chuỗi: câu hỏi".
+
 ### Changed
+- **Plan v1.3.1 — sửa 5 lỗi tài liệu tìm ra qua review đối kháng 2 agent** (24/08): (1) KPI §7
+  `doc_hit` 0.842 là số P4-2 chép nhầm → **0.854** (baseline JSON 0.8537); (2) §3e "cả bốn cờ dùng
+  chung idiom" → đúng là **ba** (`QDRANT_DOCUMENTS_COLLECTION` là tên collection đọc thẳng từ
+  settings, không log nguồn — biến từng gây trộn vector lab/prod ở T11); (3) toàn bộ con trỏ
+  `§9a/§9b/§9c/§9d` chết sau lượt đánh số lại 24/08 đã vá ở `p4_4_design.md` (banner "plan thắng"
+  trỏ vào mục không tồn tại), `d1_retrieval_eval.md`, `p4_progress.md`, CHANGELOG; (4) §9.3 hàng
+  "v2-A không giải được G8-3" hạ xuống **chưa kết luận được** — phán quyết cũ đứng trên số #5 mà
+  chính §9.4 đã vô hiệu (EXPLAIN thiếu `ANALYZE`, truy vấn không đại diện); (5) §8 ô đối sách rủi ro
+  một-máy viết đúng thực tế: dump nằm **cùng ổ** với DB, `backup_sources.py` tồn tại nhưng 0 nơi
+  gọi, `.env` không có bản sao — mức rủi ro nâng Trung → **Cao**, kèm danh sách việc phải làm. Kèm
+  ba bổ sung: §7 **tuyên bố tường minh** hai KPI trượt (MRR/doc_hit) được chấp nhận chu kỳ này và
+  đường gián tiếp qua P4-5; §4c#3 giữ **phương án B** (lưu lexeme xuống DB — nhật ký 23/08 ghi "vẫn
+  nên làm" nhưng §4 cũ làm rơi) làm ứng viên cạnh (c), kèm ràng buộc (b) chỉ hợp lệ ở backend
+  `thread`; nghiệm thu P4-5 (trước đây không có dòng nào).
+
 - **Plan v1.3 — một môi trường vận hành duy nhất; `docs/machine_split.md` đã gộp và xoá**
   (24/08). Dự án thôi phân lane nhẹ/nặng: mọi việc từ nay làm trên `PC-dungbt`. Hợp đồng
   vận hành (thư mục production thuần ASCII, Scheduled Task backup, DB nào cho việc gì,
@@ -30,7 +65,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   vì thế không dùng làm căn cứ được. Corpus nhân bản giữ `df/N` không đổi nên là ước lượng
   **bi quan** cho selectivity, không phải chặn dưới. Quyết định hoãn **không đổi**: nó đứng
   trên số #1 (bộ lọc còn để lại 34.7% corpus ở ngưỡng an toàn — chỉ cắt ~3 lần).
-- Thứ tự mục trong plan: §9d.6 từng bị chèn trước §9d.5; đã sắp lại theo đúng số.
+- Thứ tự mục trong plan: §9d.6 từng bị chèn trước §9d.5; đã sắp lại theo đúng số *(24/08: phụ lục đánh số lại thành §9.1–§9.5)*.
 
 ### Added
 - **Hai nợ kỹ thuật mới từ vòng phản biện P4-4** (plan §4b): **T15** — `replace_chunks`
@@ -38,7 +73,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   `heading_path: null`** (`chunking.py:240-252` tính rồi vứt ở `repositories.py:97-104`;
   kèm lệch kiểu chuỗi vs JSONB `list[str]`). **T16** — `pyvi` chỉ ghim dải `>=0.1.1,<1.0`.
 - **P4-4b: HOÃN — quyết định bằng số đo, không viết migration** (máy vận hành, 23/08).
-  Năm số ở plan §9d.4 đo xong trước khi đụng schema (đúng bài học P4-3): bộ lọc
+  Năm số ở plan §9d.4 (nay §9.3) đo xong trước khi đụng schema (đúng bài học P4-3): bộ lọc
   `retrieval_lexemes && $1` của v1 kéo **trung vị 100%** corpus (xác nhận G8-3 không được
   giải); cắt DF có ngưỡng an toàn **không ổn định giữa corpus** (production an toàn từ 0.15
   → 28.4%, lab 0.15 mất một câu, an toàn từ 0.20 → 40.7%) nên v2-A trượt mốc 30%; bảng
