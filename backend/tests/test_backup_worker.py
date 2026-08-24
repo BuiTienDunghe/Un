@@ -139,3 +139,121 @@ def test_a_dump_still_being_written_is_not_counted_as_a_recovery_point(tmp_path:
     # health endpoint claim a fresh recovery point that cannot restore.
     assert _service(tmp_path)._backup_status() == ("pending", None)
     assert list_backups(tmp_path) == []
+
+
+# ── 24/08: the second net gets a second location, and a bell ──────────────────
+
+from scripts.backup_postgres import mirror_files, newest_file_age_hours, rotate_files
+from scripts.backup_sources import SOURCES_PATTERN, archive_sources
+
+
+def test_mirror_copies_only_missing_files_and_never_leaves_a_part(tmp_path: Path):
+    source, mirror = tmp_path / "src", tmp_path / "mir"
+    _dump(source, "local-ai-20260101-000000.dump")
+    _dump(source, "local-ai-20260102-000000.dump")
+    _dump(mirror, "local-ai-20260101-000000.dump")  # already mirrored
+
+    copied = mirror_files(source, mirror, "local-ai-*.dump")
+
+    assert [item.name for item in copied] == ["local-ai-20260102-000000.dump"]
+    assert len(list(mirror.glob("*.dump"))) == 2
+    assert list(mirror.glob("*.part")) == []
+    # Idempotent: a second pass copies nothing.
+    assert mirror_files(source, mirror, "local-ai-*.dump") == []
+
+
+def test_rotate_files_applies_the_same_policy_to_source_archives(tmp_path: Path):
+    for day in range(5):
+        path = tmp_path / f"sources-2026010{day}-000000.zip"
+        path.write_bytes(b"PK fake")
+        stamp = time.time() - (90 + day) * 86400
+        os.utime(path, (stamp, stamp))
+
+    removed = rotate_files(tmp_path, "sources-*.zip", retention_days=14, keep_minimum=3)
+
+    assert len(removed) == 2 and len(list(tmp_path.glob("sources-*.zip"))) == 3
+
+
+def test_newest_file_age_hours_is_the_alert_scripts_question(tmp_path: Path):
+    assert newest_file_age_hours(tmp_path) is None  # no dump at all = alert
+    _dump(tmp_path, "local-ai-20260101-000000.dump", age_days=3)
+    age = newest_file_age_hours(tmp_path)
+    assert age is not None and 71 < age < 73
+
+
+def test_archive_sources_zips_originals_with_manifest_and_no_part(tmp_path: Path):
+    documents = tmp_path / "documents"
+    (documents / "doc_a").mkdir(parents=True)
+    (documents / "doc_a" / "original.md").write_text("alpha body", encoding="utf-8")
+    (documents / "doc_b").mkdir()
+    (documents / "doc_b" / "original.pdf").write_bytes(b"%PDF fake")
+    (documents / "doc_b" / "derived.txt").write_text("not archived", encoding="utf-8")
+
+    archive, count = archive_sources(documents, tmp_path / "out")
+
+    assert count == 2 and archive.exists() and list((tmp_path / "out").glob("*.part")) == []
+    from zipfile import ZipFile
+    with ZipFile(archive) as zip_file:
+        names = set(zip_file.namelist())
+        assert names == {"doc_a/original.md", "doc_b/original.pdf", "manifest.json"}
+        import json as json_module
+        manifest = json_module.loads(zip_file.read("manifest.json"))
+        assert {entry["path"] for entry in manifest} == {"doc_a\original.md", "doc_b\original.pdf"} or {entry["path"] for entry in manifest} == {"doc_a/original.md", "doc_b/original.pdf"}
+
+
+def test_run_once_archives_sources_and_mirrors_both(tmp_path: Path, monkeypatch):
+    """The nightly cycle: dump -> rotate -> sources -> mirror, one call."""
+    from types import SimpleNamespace
+    import scripts.backup_worker as worker
+
+    documents = tmp_path / "data" / "documents"
+    (documents / "doc_a").mkdir(parents=True)
+    (documents / "doc_a" / "original.md").write_text("alpha", encoding="utf-8")
+    backups = tmp_path / "data" / "backups"
+    mirror = tmp_path / "mirror"
+
+    def fake_create_backup(url, output_dir, docker_service):
+        return _dump(Path(output_dir), "local-ai-20260110-000000.dump")
+
+    monkeypatch.setattr(worker, "create_backup", fake_create_backup)
+    settings = SimpleNamespace(
+        database_url="postgresql+psycopg://u:p@127.0.0.1:5432/db",
+        load_storage_config=lambda: {"backup_interval_hours": 24, "backups_ttl_days": 14, "backups_keep_minimum": 3},
+        postgres_backups_path=backups / "postgres",
+        sources_backups_path=backups / "sources",
+        backup_mirror_path=mirror,
+        documents_path=documents,
+    )
+
+    result = worker.run_once(settings, docker_service=None, force=True)
+
+    assert result["sources_count"] == 1
+    assert (mirror / "postgres" / "local-ai-20260110-000000.dump").exists()
+    assert list((mirror / "sources").glob("sources-*.zip"))
+    assert "warnings" not in result
+
+
+def test_run_once_backup_survives_a_dead_mirror(tmp_path: Path, monkeypatch):
+    """A failed second copy must never undo a successful first one."""
+    from types import SimpleNamespace
+    import scripts.backup_worker as worker
+
+    documents = tmp_path / "data" / "documents"
+    documents.mkdir(parents=True)
+    backups = tmp_path / "data" / "backups"
+
+    monkeypatch.setattr(worker, "create_backup", lambda url, output_dir, docker_service: _dump(Path(output_dir), "local-ai-20260110-000000.dump"))
+    monkeypatch.setattr(worker, "mirror_files", lambda *args: (_ for _ in ()).throw(OSError("mirror drive is gone")))
+    settings = SimpleNamespace(
+        database_url="postgresql+psycopg://u:p@127.0.0.1:5432/db",
+        load_storage_config=lambda: {"backup_interval_hours": 24, "backups_ttl_days": 14, "backups_keep_minimum": 3},
+        postgres_backups_path=backups / "postgres",
+        sources_backups_path=backups / "sources",
+        backup_mirror_path=tmp_path / "mirror",
+        documents_path=documents,
+    )
+
+    result = worker.run_once(settings, docker_service=None, force=True)
+
+    assert "created" in result  # the dump itself succeeded
+    assert any("mirror failed" in warning for warning in result.get("warnings", []))

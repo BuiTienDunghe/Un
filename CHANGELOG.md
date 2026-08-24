@@ -12,6 +12,20 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 ## [Unreleased]
 
 ### Added
+- **Lưới backup vá xong ba lỗ — rủi ro một-máy hạ Cao → Trung** (24/08). Trước đó: dump nằm
+  **cùng ổ đĩa** với database, `backup_sources.py` tồn tại nhưng **0 nơi gọi**, `.env` không có bản
+  sao nào — và khi kiểm tra thật thì phát hiện **02:00 hai đêm 23–24/08 không ra dump** (Docker
+  Desktop tắt, Scheduled Task thất bại im lặng, `/health` chỉ sống cùng launcher nên không ai hay).
+  Giờ mỗi backup thành công làm đủ ba việc trong cùng `run_once` (launcher lẫn Scheduled Task dùng
+  chung): dump → **zip toàn bộ `data/documents/` kèm manifest SHA-256** (442 nguồn, xoay vòng
+  14 ngày/giữ 3 như dump) → **mirror cả hai sang `BACKUP_MIRROR_DIR`** — chép thiếu-theo-tên, kỷ
+  luật `.part`-rồi-đổi-tên như dump, mirror chết chỉ ra warning không làm hỏng backup chính.
+  Chuông độc lập launcher: `check_operational_alerts --dump-max-age-hours 48` — thử trên chính sự
+  cố thật: đỏ (55.2h, exit 2) trước khi vá, xanh (0.0h) sau khi backup chạy lại. `.env` có cặp
+  `backup-env-once.ps1`/`restore-env.ps1` (AES-256 + PBKDF2 200k, round-trip và sai-passphrase đều
+  có kiểm). **Nói thật giới hạn**: C: và D: là hai partition của cùng một đĩa vật lý — mirror hiện
+  tại chống hỏng filesystem/xoá nhầm, không chống chết đĩa; bước tay còn lại là trỏ mirror ra
+  ngoài máy và chạy script mã hoá `.env` một lần (passphrase cất ngoài máy). 6 test mới.
 - **Việc #2 đóng — đặt thước trước khi tối ưu** (24/08, ba phần). **(1)** Eval multidoc tổng hợp
   độ trễ đã thu sẵn từng câu thành `latency: {measured, p50, p95, max}` — **report-only, không vào
   gate CI, không vào baseline** (bài học P4-3: đo latency trên runner không GPU là đo sai cấu hình);

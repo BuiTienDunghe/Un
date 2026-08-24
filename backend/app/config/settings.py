@@ -82,6 +82,12 @@ class Settings(BaseSettings):
     rag_reranker_enabled: bool | None = None
     superseded_version_grace_days: int = 7
     backup_dir: str = "data/backups"
+    # Second copy of every dump/source archive, e.g. another volume or a
+    # cloud-synced folder. Unset = mirroring off. NOTE: on this machine C: and
+    # D: are partitions of ONE physical disk — a mirror there survives a
+    # C: filesystem loss or an accidental delete, not a dead disk; a true
+    # off-disk destination (USB/NAS/cloud) is what closes the §8 risk fully.
+    backup_mirror_dir: str | None = None
     log_dir: str = "data/logs"
     ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_chat_timeout_seconds: float = 120.0
@@ -193,6 +199,14 @@ class Settings(BaseSettings):
         # Keeps the layout the manual script has always written to, so old and
         # new backups sit in one directory.
         return self.backups_path / "postgres"
+
+    @property
+    def sources_backups_path(self) -> Path:
+        return self.backups_path / "sources"
+
+    @property
+    def backup_mirror_path(self) -> Path | None:
+        return Path(self.backup_mirror_dir) if self.backup_mirror_dir else None
 
     def load_config(self) -> dict[str, Any]:
         with self.models_path.open("r", encoding="utf-8") as handle:
