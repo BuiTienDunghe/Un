@@ -14,7 +14,12 @@ pymupdf4llm>=0.0.17,<1.0
 pymupdf>=1.24,<2.0
 python-docx>=1.1,<2.0
 rank-bm25>=0.2.2,<1.0
-pyvi>=0.1.1,<1.0
+# T16: EXACT pin, not a range. pyvi output IS the BM25 lexeme set, so a
+# different release resegments every chunk and moves retrieval ranking with
+# no signal anywhere. Bumping this line is a RETRIEVAL CHANGE: re-run the eval
+# gate and re-record data/evaluation/rag_multidoc_baseline.json, which stamps
+# the tokenizer it was measured with. See backend/app/utils/vi_tokenizer.py.
+pyvi==0.1.1
 loguru>=0.7,<1.0
 # sentence-transformers (keo theo PyTorch ~0.65-2.5GB) da chuyen sang optional
 # extra cho reranker (P4-3, BAT mac dinh tu 21/08): pip install -e .[rerank] - may khong cai thi launcher tu ghim RAG_RERANKER_ENABLED=false (docs/DEVELOPMENT_PLAN.md)

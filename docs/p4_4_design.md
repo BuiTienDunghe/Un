@@ -13,7 +13,7 @@
 > 2. Bộ lọc ứng viên `retrieval_lexemes && $1` **không lọc**: đo thật kéo trung bình **97.5%** corpus, **59/82** câu kéo 100% (hư từ tiếng Việt gần như phổ quát) ⇒ G8-3 chưa được giải.
 > 3. Toán tử `text[] & text[]` **không tồn tại** trong PostgreSQL (`&` giao mảng chỉ có ở extension `intarray`, chỉ cho `int[]`).
 > 4. `N` / `df` / `avgdl` lấy từ ba tập hàng khác nhau khi backfill còn dở → điểm BM25 **sai âm thầm**, gate D1 không đủ nhạy để bắt.
-> 5. Thiếu `tokenizer_version` cạnh lexeme (⇒ nợ **T16**: ghim `pyvi` đúng version).
+> 5. Thiếu `tokenizer_version` cạnh lexeme (⇒ nợ **T16** — ✅ đóng 25/08: `pyvi==0.1.1` ghim cứng, `TOKENIZER_VERSION` đọc ngược từ gói đã cài; khi P4-4b mở lại thì cột lexeme **phải** mang theo giá trị này, đã có sẵn để ghi).
 > 6. Corpus lab là **27** chunk, không phải 273.
 > 7. `top_k` là **15** ở lane nhẹ/CI, không phải 45.
 > 8. §12 nói **P4-5 phụ thuộc P4-4** — **sai**: cả 8 cột P4-5 cần đã có sẵn trong `document_chunks`, P4-5 làm được ngay và độc lập.

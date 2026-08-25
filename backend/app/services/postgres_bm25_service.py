@@ -5,12 +5,13 @@ from datetime import datetime
 from threading import RLock
 from time import monotonic
 
+from loguru import logger
 from rank_bm25 import BM25Okapi
 from sqlalchemy.orm import sessionmaker
 
 from app.postgres.repositories import PostgresDocumentRepository
 from app.utils.chunking import combined_retrieval_text
-from app.utils.vi_tokenizer import tokenize_vietnamese
+from app.utils.vi_tokenizer import TOKENIZER_VERSION, tokenize_vietnamese
 
 
 @dataclass(frozen=True)
@@ -111,6 +112,14 @@ class PostgresBm25Service:
             self._index = BM25Okapi([tokenize_vietnamese(combined_retrieval_text(chunk.retrieval_context, chunk.content)) for chunk in chunks]) if chunks else None
             self._fingerprint = fingerprint
             self.rebuild_count += 1
+        # T16: every lexeme in the index just built came out of this tokenizer.
+        # The index is ephemeral, so the version is not stored beside it — it is
+        # logged beside it, which is the same guarantee for data that dies with
+        # the process: a ranking that moved after a reinstall is explainable.
+        logger.bind(
+            event="bm25_rebuilt", chunks=len(chunks), tokenizer_version=TOKENIZER_VERSION,
+            rebuild_count=self.rebuild_count,
+        ).info("BM25 rebuilt over {} chunks ({})", len(chunks), TOKENIZER_VERSION)
 
     @staticmethod
     def _result(chunk: _IndexedChunk, score: float) -> dict[str, object]:

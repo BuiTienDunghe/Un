@@ -143,6 +143,10 @@ def score_multidoc_sources(sources: list[dict[str, object]], expected_ids: set[s
 def run_multidoc_mode(client: httpx.Client, base_url: str, cases: list[dict], mapping: dict[str, str], retrieval_only: bool, output_dir: Path, baseline_path: Path | None, tolerance: float, write_baseline: Path | None) -> int:
     models = client.get(f"{base_url}/models")
     embedding_model = models.json().get("models", {}).get("embedding", {}).get("name") if models.is_success else None
+    # T16: read from the SERVER, not from this process's own imports — the
+    # harness may run from a different checkout, and it is the server's
+    # tokenizer that produced the lexemes these numbers were measured over.
+    tokenizer_version = models.json().get("tokenizer_version") if models.is_success else None
 
     results: list[dict[str, object]] = []
     for case in cases:
@@ -197,6 +201,7 @@ def run_multidoc_mode(client: httpx.Client, base_url: str, cases: list[dict], ma
         "created_at": datetime.now(UTC).isoformat(),
         "mode": "multidoc-retrieval" if retrieval_only else "multidoc-full",
         "embedding_model": embedding_model,
+        "tokenizer_version": tokenizer_version,
         "corpus": sorted(mapping),
         "cases": count,
         "recall_at_k": rate(results, "source_recall"),
@@ -221,7 +226,7 @@ def run_multidoc_mode(client: httpx.Client, base_url: str, cases: list[dict], ma
     print(f"Saved report: {output_path}")
 
     if write_baseline:
-        baseline = {"created_at": summary["created_at"], "embedding_model": embedding_model, "cases": count, "recall_at_k": summary["recall_at_k"], "mrr": summary["mrr"], "doc_hit_rate": summary["doc_hit_rate"]}
+        baseline = {"created_at": summary["created_at"], "embedding_model": embedding_model, "tokenizer_version": tokenizer_version, "cases": count, "recall_at_k": summary["recall_at_k"], "mrr": summary["mrr"], "doc_hit_rate": summary["doc_hit_rate"]}
         write_baseline.write_text(json.dumps(baseline, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(f"Recorded baseline: {write_baseline}")
 
@@ -235,6 +240,13 @@ def run_multidoc_mode(client: httpx.Client, base_url: str, cases: list[dict], ma
         baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
         if baseline.get("embedding_model") not in {None, embedding_model}:
             print(f"Baseline embedding model {baseline.get('embedding_model')} != current {embedding_model}; re-record the baseline on the final configuration.")
+            return 1
+        # T16: same rule, same reason. A different word segmenter is a different
+        # sparse index, so the recorded numbers describe a retrieval stack that
+        # no longer exists — comparing against them would either hide a real
+        # regression or invent one. Fail loudly instead of gating on nonsense.
+        if baseline.get("tokenizer_version") not in {None, tokenizer_version}:
+            print(f"Baseline tokenizer {baseline.get('tokenizer_version')} != current {tokenizer_version}; re-record the baseline on the final configuration.")
             return 1
         failed = [
             f"{metric} {summary[metric]:.3f} < baseline {baseline[metric]:.3f} - {tolerance}"
