@@ -536,3 +536,56 @@ Thiết kế duyệt nguyên trạng (`docs/p4_5_design.md`), ship trong một p
 
 Ghi chú vận hành: trang đọc không cần key; nút đánh dấu cần API key + quyền
 admin (đặt trong trang Chat — cùng localStorage).
+## P4-6 — cross-encoder cắt cụt passage: chẩn đoán + QUY TẮC CHỌN (chốt 25/08 TRƯỚC khi đo)
+
+### Chẩn đoán (đo trên DB lab, corpus 5 fixture — đúng §3d)
+
+Hai câu `p3_khoa_brute_force` và `p3_refresh_khong_xoay` trượt từ 21/08, nhật ký
+khi đó ghi là "headroom cho P4-4/P4-5". Đo lại hôm nay bằng chính màn hình chunk
+và các tầng truy xuất, **bốn giả thuyết bị loại bằng số**:
+
+| Tầng | chunk 2 của `p3_progress.md` (chunk chứa đủ đáp án) |
+| --- | --- |
+| Cắt đoạn | ✅ Cả 4 cụm nguyên văn nằm **nguyên vẹn** trong chunk 2 — chunker đúng |
+| BM25 | ✅ hạng **1** cả hai câu, cách biệt lớn (11.55 vs 9.98 · 21.95 vs 11.41) |
+| Dense (Qdrant) | ✅ hạng 2 và 3 |
+| RRF (k=60) | ✅ hạng **1** và **2** — hợp nhất đúng |
+| **Cross-encoder rerank** | ❌ **văng khỏi top-5 cả hai câu** |
+
+**Nguyên nhân gốc — cắt cụt âm thầm, không phải triết lý xếp hạng.**
+`reranker_service.py:rerank` chấm cặp `(question, content)` với
+`CrossEncoder(model_name)` khởi tạo **không đặt `max_length`** → dùng mặc định
+**512 token** của `mmarco-mMiniLMv2-L12-H384-v1`. Chunk 2 dài **778 token**, và
+cả bốn cụm mang đáp án nằm ở token **583–743**, tức **toàn bộ ở phía sau điểm
+cắt**. Cross-encoder chấm chunk 2 bằng 512 token đầu (nói về chuyện khác) rồi
+kết luận chunk 3 (531 token) và chunk 4 (385 token) — hai chunk lọt gần trọn —
+liên quan hơn. Tokenizer có in cảnh báo `778 > 512` nhưng không ai đọc.
+
+**Mức lan rộng — đây không phải chuyện 2 câu:**
+
+| Corpus | chunk vượt 512 token | trung vị | dài nhất |
+| --- | --- | --- | --- |
+| Lab (27 chunk) | **10 = 37%** | 471 | 778 (1.5×) |
+| **Production (190 chunk)** | **123 = 65%** | **536** | 1494 (**2.9×**) |
+
+Gốc của gốc: `models.yaml rag.chunk_tokens: 480` đếm bằng **bộ đếm regex** của
+`chunking.count_tokens`, còn cross-encoder đếm bằng **subword tokenizer**. Tiếng
+Việt qua subword nở ~1.6×. Hai bộ phận cùng dùng chữ "token" với hai cái thước
+khác nhau — thiên lệch có hệ thống chống lại mọi chunk dài.
+
+### QUY TẮC CHỌN — chốt trước khi đo, không sửa sau
+
+Sửa bằng **cửa sổ trượt ở tầng rerank**: cắt `content` thành các cửa sổ
+≤ giới hạn model (chồng lấn), chấm từng cửa sổ, **lấy điểm cao nhất** làm điểm
+của chunk. Không đụng chunking, không re-index, không đổi schema.
+
+Nhận nếu **đồng thời**:
+1. **recall@5 ≥ 0.9756 và MRR ≥ 0.8581 và doc_hit ≥ 0.8537** — tức không tụt
+   dưới baseline hiện hành ở bất kỳ chỉ số nào (`rag_multidoc_baseline.json`).
+2. **Ít nhất một trong hai câu** `p3_khoa_brute_force` / `p3_refresh_khong_xoay`
+   chuyển từ miss sang hit.
+3. **Không câu nào đang hit chuyển thành miss** — 7 câu P4-3 cứu được phải giữ.
+4. **p50 `/rag/search` ≤ 900 ms** (trần §7) và **p95 ≤ 1200 ms**.
+
+Từ chối và giữ nguyên hiện trạng nếu bất kỳ điều kiện nào trượt. Không chỉnh
+dataset, không nới ngưỡng sau khi thấy số — bài học P4-4b.
