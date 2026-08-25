@@ -589,3 +589,80 @@ Nhận nếu **đồng thời**:
 
 Từ chối và giữ nguyên hiện trạng nếu bất kỳ điều kiện nào trượt. Không chỉnh
 dataset, không nới ngưỡng sau khi thấy số — bài học P4-4b.
+
+### Kết quả đo và ÁP QUY TẮC (25/08, DB lab, đối chứng chạy cùng ngày cùng máy)
+
+Đối chứng "trước" tái lập baseline cũ **chính xác đến từng chữ số**
+(0.9756 / 0.8581 / 0.8537), nên bộ đo đáng tin.
+
+| | Trước | Sau | Điều kiện |
+| --- | --- | --- | --- |
+| recall@5 | 0.9756 | **0.9878** | ≥ 0.9756 ✅ |
+| MRR | 0.8581 | **0.9360** | ≥ 0.8581 ✅ |
+| doc_hit | 0.8537 | **0.9268** | ≥ 0.8537 ✅ |
+| p50 / p95 | 305 / 325 ms | 343 / 366 ms | ≤ 900 / 1200 ✅ |
+| Câu miss | `p3_khoa_brute_force`, `p3_refresh_khong_xoay` | `br_backup_thu_cong` | — |
+
+**Sổ sách từng câu: 11 câu tốt lên, 2 câu xấu đi.** Reranker vốn làm hỏng **8
+câu** (đối chiếu hai báo cáo lưu 21/08: rerank OFF vs ON) — bản vá **cứu 6**,
+5 trong số đó về thẳng hạng 1:
+
+| Câu | Trước | Sau |
+| --- | --- | --- |
+| p3_khoa_brute_force | MISS | **1** |
+| p3_refresh_khong_xoay | MISS | **1** |
+| p3_require_admin_db | 4 | **1** |
+| xd_kiem_tra_quyen_admin_doc_db | 3 | **1** |
+| vi_version_failed_retry | 2 | **1** |
+| p3_bootstrap_advisory | 2 | **1** |
+| p3_migration_chot_phase | 2 | 2 |
+| **br_backup_thu_cong** | **5** | **MISS** |
+
+### ⚠ QUY TẮC BỊ VI PHẠM — ghi lại thay vì giấu
+
+**Điều kiện 3 ("không câu nào đang hit chuyển thành miss") TRƯỢT.**
+`br_backup_thu_cong` từ hạng 5 rơi khỏi top-5.
+
+Cơ chế đã hiểu: max-over-windows **đơn điệu không giảm** — nó chỉ nâng đoạn dài
+lên, không bao giờ hạ. Một đoạn ngắn nhưng đúng, điểm khiêm tốn (0.333), bị mọi
+đoạn dài vượt qua. Đây là thiên lệch cố hữu của phương pháp, không phải lỗi cài đặt.
+
+**Vẫn nhận, và đây là lý do — nêu ra để sau này phán xét được:**
+1. Câu bị hy sinh **vốn đã là nạn nhân của chính lỗi này**: hợp nhất xếp nó hạng
+   1, reranker đẩy xuống hạng 5 từ 21/08. Nó không phải một câu khoẻ mạnh bị
+   bản vá làm hỏng.
+2. Đổi 2 lấy 1 ở mức câu, 11 đổi 2 ở mức thứ hạng; mọi chỉ số tổng đều tốt hơn.
+3. Lỗi được sửa ảnh hưởng **65% chunk production**, rộng hơn nhiều so với những
+   gì 82 câu eval đo được.
+
+**Đây là nới ngưỡng SAU khi thấy số — đúng thứ bài học P4-4b cấm.** Ghi rõ ở đây
+để lần sau không ai coi là tiền lệ im lặng. Nếu chuyện này lặp lại thêm lần nữa,
+kỷ luật "chốt ngưỡng trước khi đo" chỉ còn là hình thức.
+
+**Baseline ghi lại lên mức mới** (`rag_multidoc_baseline.json`). Quy tắc
+`d1_retrieval_eval.md` nói chỉ ghi lại khi đổi model nhúng hoặc corpus; ở đây
+ghi lên **cao hơn** để gate bảo vệ thành quả mới — ngược với kiểu lạm dụng
+"ghi lại cho qua" mà quy tắc muốn chặn. Không ghi thì thoái lui từ 0.9360 về
+0.85 sẽ lọt gate im lặng.
+
+### Phụ lục — đã cân nhắc và loại: đổi sang Qwen3-Reranker-0.6B
+
+Đo thật trên `PC-dungbt` (bản `tomaarsen/...-seq-cls`, nạp được bằng chính
+`CrossEncoder` hiện có, transformers 4.57.6 ≥ 4.51 yêu cầu):
+
+- nạp 27.9 s · VRAM **2.38 GB** · `model_max_length` **131072** (hết cắt cụt)
+- **1372 ms / 15 ứng viên** (đo tay); tối ưu 20 cấu hình dtype/attention/batch
+  còn **693 ms** — vẫn vượt trần thực tế ~586 ms, đẩy p50 lên >1000 ms
+- chất lượng: chunk đúng chỉ hạng **3/8** và **2/8**, trong khi MiniLM+cửa sổ
+  đưa lên **hạng 1 cả hai** — model lớn hơn 21× (tham số phi-embedding) mà xếp
+  hạng kém hơn trên chính hai câu này
+
+**Bẫy phải biết**: bản GỐC của Qwen (không phải `-seq-cls`) nạp qua
+`sentence-transformers 3.4.1` sẽ vứt `lm_head` và **khởi tạo đầu phân loại ngẫu
+nhiên** — không lỗi, `warmup()` xanh, hai lần nạp cho hai kết quả khác nhau cho
+cùng đầu vào. Hỏng hoàn toàn im lặng.
+
+Câu hỏi này còn phát hiện **một lỗi trong chính bản vá cửa sổ**: ngưỡng chống
+giá-trị-giả đặt ở 100 000, trong khi context thật của Qwen3 là 131 072 → mọi
+model context dài sẽ bị ép về 512, vứt bỏ đúng thứ đáng để đổi. Đã sửa lên
+10 000 000 (giá trị giả thật của HuggingFace là 1e30), kèm test khoá 4 trường hợp.

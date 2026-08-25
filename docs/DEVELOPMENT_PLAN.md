@@ -190,6 +190,7 @@ pip install -e ".[rerank]" && pip install --index-url https://download.pytorch.o
 | 2 | ~~**Eval báo cáo độ trễ** + đo thật rebuild + đếm chunk active~~ | ✅ Đóng 24/08 | — | (xong: p50/p95/**max** trong eval · benchmark đo thật · `active_chunks` vào metrics + alert 2 500) |
 | 3 | **P4-4a** — ~~(a) invalidate + (b) fingerprint~~ ✅ 25/08 (thiết kế TTL, xem §4c#3); (c)/B **gác chờ chuông 2 500 chunk** | ⚡ Hiệu năng | — | (phần còn lại: sau) |
 | 4 | ~~**P4-5** — chunk visualization~~ | ✅ Đóng 25/08 (cả 2 phase — xem/đánh dấu; `docs/p4_5_design.md` + `p4_progress.md`) | — | (xong) |
+| 4b | ~~**P4-6** — cross-encoder cắt cụt 65% chunk (778 token vs cửa sổ 512)~~ | ✅ Đóng 25/08 — cửa sổ trượt; MRR 0.858→0.936, doc_hit 0.854→0.927 | — | (xong) |
 | 5 | **T16** — ghim `pyvi` đúng version + `tokenizer_version` | 🔧 Nợ | — | 0.5 buổi |
 | 6 | **D4** — LLMOps / observability | 📊 Track D | — | 3–4 buổi |
 | 7 | **D3b** — digest nền có luật nhường | ✨ Track D | — | 3 buổi |
@@ -367,6 +368,7 @@ Discord ─┘    │                            └─ BM25 in-process (rank_bm
 | Review | Thay đổi lớn qua review đối kháng — đã chứng minh hiệu quả hai lần: 17 lỗi thật (UI, 08/18) và 6 lỗi thiết kế + 3 số sai (P4-4, 23/08) |
 | Release | Tag `vX.Y.Z` + CHANGELOG; mỗi phase đóng = một minor version |
 | Migration | Additive-only; mỗi migration có `downgrade`; restore drill mỗi quý |
+| **Đơn vị** | Bài học 25/08 (P4-6): `chunk_tokens: 480` đếm bằng thước **đếm-từ regex** của chunker, cross-encoder đếm bằng **subword** — tiếng Việt nở ~1.6× giữa hai thước, và 65% chunk vượt cửa sổ model mà không ai biết. Mọi giới hạn độ dài phải ghi rõ **đơn vị của bộ phận nào**; cảnh báo `N > max` của thư viện phải được đọc, không để chìm trong log. |
 | **Số liệu** | Mọi con số trong tài liệu phải ghi rõ **đo thật** hay **ngoại suy**, và trên corpus nào. Bài học 23/08: hai ước tính dung lượng sai 2–3 lần vì bỏ quên index và suy từ fixture 27 chunk |
 
 ---
@@ -375,9 +377,9 @@ Discord ─┘    │                            └─ BM25 in-process (rank_bm
 
 | KPI | Baseline D1 (21/08) | Sau P4-2+P4-3 | Mục tiêu |
 | --- | --- | --- | --- |
-| recall@5 | 0.866 | **0.976** | ≥ 0.95 ✅ |
-| MRR | 0.734 | **0.858** | ≥ 0.90 |
-| doc_hit | 0.768 | 0.854 | ≥ 0.90 |
+| recall@5 | 0.866 | **0.988** | ≥ 0.95 ✅ |
+| MRR | 0.734 | **0.936** | ≥ 0.90 ✅ |
+| doc_hit | 0.768 | **0.927** | ≥ 0.90 ✅ |
 | MRR cross-doc | 0.590 | **0.861** | ≥ 0.85 ✅ |
 | Grounding rate (D3a) | — | **0.9390** | giữ ≥ 0.90, 0 dương tính giả |
 | Attack success rate (D5) | 0.143 (defense OFF) | **0.000** | giữ 0.000 |
@@ -389,7 +391,7 @@ Discord ─┘    │                            └─ BM25 in-process (rank_bm
 | Memory bị thu hồi | — | — | < 30% |
 | CI | ✅ 3 job + eval gate | | xanh trên main |
 
-> **Tuyên bố 24/08 về hai ô chưa đạt (MRR 0.858, doc_hit 0.854 / mục tiêu 0.90):** khoảng cách được **chấp nhận, chu kỳ này không có việc nào nhắm trực tiếp vào nó** — hai câu miss còn lại đã chẩn đoán là bài toán *biên chunk* (`p4_progress.md`: rerank kéo chunk lân cận lên trên chunk mang nguyên văn), và P4-5 (#4) chính là công cụ làm biên chunk nhìn thấy được. Xét lại sau khi có #2 (p50/p95) và #4. Khoảng trống được tuyên bố ở đây để nó không bị coi là bị bỏ quên.
+> **Đóng 25/08 — cả hai ô đã đạt (P4-6).** Chẩn đoán 24/08 đoán sai thủ phạm: không phải *biên chunk* mà là **cross-encoder cắt cụt passage** — chunk đúng dài 778 token, cụm mang đáp án nằm ở token 583–743, tức sau điểm cắt 512. Chunker, BM25, dense và RRF đều xếp nó hạng 1–2; chỉ tầng chấm lại đánh rơi. Chính màn hình chunk (P4-5) là thứ dẫn tới phép đo này. Sửa bằng **cửa sổ trượt ở tầng rerank**: MRR 0.858→0.936, doc_hit 0.854→0.927, recall 0.976→0.988; 11 câu tốt lên, 2 xấu đi. ⚠ Đánh đổi có ghi chép: điều kiện nghiệm thu tự chốt bị vi phạm ở đúng một câu — xem `p4_progress.md` mục P4-6.
 
 ---
 

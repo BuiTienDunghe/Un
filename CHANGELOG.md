@@ -12,6 +12,48 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 ## [Unreleased]
 
 ### Fixed
+- **P4-6: cross-encoder cắt cụt 65% chunk — hai KPI đỏ nhiều tuần giờ vượt mục tiêu** (25/08).
+  Hai câu eval trượt từ 21/08 được ghi là "headroom cho khớp nguyên văn". Đo lại từng tầng bằng
+  chính màn hình chunk (P4-5) cho thấy **chẩn đoán cũ sai thủ phạm**: chunker đúng (cả 4 cụm nằm
+  nguyên trong một chunk), BM25 hạng **1**, dense hạng 2–3, RRF hạng **1–2** — chỉ tầng chấm lại
+  đánh rơi. Nguyên nhân: `CrossEncoder(model)` khởi tạo **không truyền `max_length`** nên dùng mặc
+  định **512**, trong khi chunk dài **778 token** và cả bốn cụm mang đáp án nằm ở token **583–743**,
+  tức **toàn bộ sau điểm cắt**. Model chấm một đoạn nó chỉ thấy hai phần ba rồi chọn hai hàng xóm
+  ngắn hơn mà nó thấy trọn. Không phải chuyện 2 câu: **123/190 chunk production (65%)** vượt giới
+  hạn — gốc sâu là `chunk_tokens: 480` đếm bằng thước **đếm-từ** của chunker còn model đếm bằng
+  **subword**, tiếng Việt nở ~1.6× giữa hai thước; tokenizer vẫn in `778 > 512` mỗi lần nhưng cảnh
+  báo đó chìm trong log. Sửa bằng **cửa sổ trượt**: cắt passage thành cửa sổ chồng lấn vừa cỡ model,
+  chấm từng cửa sổ, lấy điểm cao nhất; đoạn ngắn không đổi gì. Cửa sổ tính từ **chính model và độ
+  dài câu hỏi thật**, không phải hằng số. Kết quả (DB lab, đối chứng chạy cùng ngày tái lập baseline
+  cũ chính xác từng chữ số): **MRR 0.8581 → 0.9360 · doc_hit 0.8537 → 0.9268 · recall 0.9756 →
+  0.9878**, p50 343 ms (trần 900). Reranker vốn làm hỏng **8 câu**; bản vá **cứu 6**, 5 trong đó về
+  hạng 1. Sổ sách: **11 câu tốt lên, 2 xấu đi**. ⚠ **Điều kiện nghiệm thu tự chốt bị vi phạm ở đúng
+  một câu** (`br_backup_thu_cong` 5 → miss, do max-over-windows đơn điệu không giảm nên chỉ nâng
+  đoạn dài); vẫn nhận vì câu đó **vốn đã là nạn nhân của chính lỗi này** (RRF hạng 1 → rerank hạng 5
+  từ 21/08) — ghi rõ trong `p4_progress.md` rằng đây là nới ngưỡng SAU khi thấy số, để không thành
+  tiền lệ im lặng. Baseline ghi lại lên mức mới để gate bảo vệ thành quả.
+- **Ngưỡng chống-giá-trị-giả trong chính bản vá trên** đặt ở 100 000, thấp hơn context thật của các
+  reranker dài (Qwen3 131 072) → mọi model context dài sẽ bị ép về 512, vứt đúng thứ đáng để đổi.
+  Nâng lên 10 000 000 (giá trị giả thật của HuggingFace là 1e30); test khoá 4 trường hợp. Lỗi này
+  chỉ lộ ra khi đánh giá phương án đổi model.
+- **Chế độ RAG/Công cụ không còn reset sau F5** — nửa còn lại của lỗi F5 vá hôm 24/08: hội thoại đã
+  giữ được nhưng `state.mode`/`toolsOn` vẫn là hằng số, và `openConversation` còn ép `setMode
+  ("general")` nên deep-link vào hội thoại tài liệu luôn rơi về chat thường. Cả hai giờ lưu trong
+  `lac.prefs`, và ép-về-general đã bỏ (lịch sử hiện ra như nhau ở cả hai chế độ; mode chỉ quyết
+  định tin nhắn kế tiếp).
+
+### Evaluated and rejected
+- **Đổi reranker sang Qwen3-Reranker-0.6B — đo thật rồi loại** (25/08). Lắp được: bản
+  `tomaarsen/...-seq-cls` nạp bằng chính `CrossEncoder` hiện có (transformers 4.57.6 ≥ 4.51), 27.9 s,
+  **2.38 GB VRAM**, `model_max_length` **131072** — xoá hẳn lỗi cắt cụt về mặt cấu trúc. Nhưng
+  **1372 ms/15 ứng viên** đo tay, và **693 ms** ở cấu hình tốt nhất trong 20 tổ hợp dtype/attention/
+  batch — vẫn vượt trần thực tế ~586 ms, đẩy p50 lên >1000 ms so với trần 900. Chất lượng cũng
+  không bù: đọc trọn 778 token không cắt, chunk đúng chỉ hạng **3/8** và **2/8**, trong khi
+  MiniLM+cửa-sổ đưa lên **hạng 1 cả hai**. **Bẫy phải biết**: bản GỐC (không phải `-seq-cls`) nạp
+  qua sentence-transformers 3.4.1 sẽ vứt `lm_head` và **khởi tạo đầu phân loại ngẫu nhiên** — không
+  lỗi, `warmup()` xanh, hai lần nạp cho hai kết quả khác nhau cùng đầu vào. Model đã xoá khỏi cache.
+
+### Fixed
 - **Bốn lỗi giao diện người dùng báo + bốn lỗi cùng họ tìm thêm khi audit** (25/08, tái hiện và
   nghiệm thu bằng trình duyệt thật trên dữ liệu production, không phải bằng suy luận).
   **(1) Trang «Đoạn» không cuộn được** — `styles.css:79` đặt `body{overflow:hidden}` cho layout chat

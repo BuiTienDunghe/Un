@@ -225,7 +225,7 @@ function readStore(key, fallback) {
   try { return { ...fallback, ...JSON.parse(localStorage.getItem(key) || "{}") }; }
   catch { return { ...fallback }; }
 }
-const prefs = readStore("lac.prefs", { theme: "system", enterToSend: true, memoryDefault: false });
+const prefs = readStore("lac.prefs", { theme: "system", enterToSend: true, memoryDefault: false, mode: "general", toolsOn: false });
 const savePrefs = () => localStorage.setItem("lac.prefs", JSON.stringify(prefs));
 
 const titles = readStore("lac.titles", {});
@@ -233,9 +233,12 @@ const saveTitles = () => localStorage.setItem("lac.titles", JSON.stringify(title
 
 const state = {
   conversationId: null,
-  mode: "general",           // general | rag
+  // Khoi phuc sau F5: giu dung che do nguoi dung dang lam viec. Truoc day hai
+  // truong nay la hang so nen tai lai trang giua luc hoi tai lieu se roi ve
+  // chat thuong ma khong bao gi -- nua con lai cua loi F5 da vá 24/08.
+  mode: prefs.mode === "rag" ? "rag" : "general",   // general | rag
   memoryOn: prefs.memoryDefault,
-  toolsOn: false,            // agent mode (P2-2): opt-in per session
+  toolsOn: Boolean(prefs.toolsOn),                  // agent mode (P2-2)
   generating: false,
   abort: null,
   conversations: [],
@@ -906,7 +909,9 @@ async function openConversation(id) {
   if (state.generating) state.abort?.abort();
   state.conversationId = id;
   syncConversationUrl();
-  setMode("general");
+  // KHONG ep setMode("general") o day nua: lich su hien ra giong nhau o ca hai
+  // che do, mode chi quyet dinh tin nhan KE TIEP. Ep ve general khien deep-link
+  // vao mot hoi thoai tai lieu luon rot ve chat thuong.
   setTopbarTitle();
   renderConversations();
   closeDrawers();
@@ -1342,6 +1347,8 @@ const MODE_TEXT = {
 
 function setMode(mode) {
   state.mode = mode;
+  prefs.mode = mode;
+  savePrefs();
   for (const radio of document.querySelectorAll('#mode-seg input')) radio.checked = radio.value === mode;
   updateModeUi();
 }
@@ -1426,7 +1433,12 @@ function bindEvents() {
     radio.addEventListener("change", () => { if (radio.checked) setMode(radio.value); });
   }
   $("memory-chip").onclick = () => { state.memoryOn = !state.memoryOn; syncMemoryChip(); };
-  $("tools-chip").onclick = () => { state.toolsOn = !state.toolsOn; syncToolsChip(); };
+  $("tools-chip").onclick = () => {
+    state.toolsOn = !state.toolsOn;
+    prefs.toolsOn = state.toolsOn;
+    savePrefs();
+    syncToolsChip();
+  };
   $("docs-chip").onclick = () => openDocs(!docsOpen());
 
   // Sidebar
@@ -1517,6 +1529,9 @@ function init() {
   renderSuggestions();
   bindEvents();
   syncMemoryChip();
+  // Dong bo radio/chip voi che do vua khoi phuc tu prefs.
+  for (const radio of document.querySelectorAll('#mode-seg input')) radio.checked = radio.value === state.mode;
+  syncToolsChip();
   updateModeUi();
   syncSendState();
   clearMessages();

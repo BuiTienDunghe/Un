@@ -93,3 +93,31 @@ def test_a_broken_reranker_fails_the_request_loudly_on_both_paths(client, monkey
         assert response.status_code == 503, endpoint
         # The app's error handler flattens HTTPException detail to the top level.
         assert response.json()["error_code"] == "RERANKER_UNAVAILABLE", endpoint
+
+
+def test_window_accepts_a_real_long_context_and_still_rejects_the_sentinel():
+    """A long-context reranker must keep its context (P4-6 follow-up).
+
+    The first version guarded against HuggingFace's "no limit" sentinel with a
+    100_000 ceiling. That number sits BELOW real long contexts — Qwen3-Reranker
+    reports 131072, BGE-reranker-m3 8192 — so swapping in such a model would
+    have silently fallen back to 512 and thrown away the whole reason for the
+    swap, with nothing in the logs to say so.
+    """
+    from types import SimpleNamespace
+    from app.services.reranker_service import RerankerService
+
+    class Tokenizer:
+        def __init__(self, limit): self.model_max_length = limit
+        def encode(self, text, **kwargs): return [0] * 10
+
+    service = RerankerService(True, "x", 15)
+
+    def window(limit):
+        return service._model_window(SimpleNamespace(max_length=None, tokenizer=Tokenizer(limit)), "câu hỏi")
+
+    assert window(512) == 498                    # today's MiniLM, unchanged
+    assert window(8192) == 8178                  # BGE-reranker-m3
+    assert window(131072) == 131058              # Qwen3-Reranker keeps its context
+    assert window(int(1e30)) == 498              # the sentinel still falls back
+    assert window(0) == 498 and window(None) == 498
