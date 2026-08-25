@@ -112,10 +112,17 @@ class OllamaClient:
                         f"Model {model} is unavailable. Run: ollama pull {model}"
                     )
                 response.raise_for_status()
-                message = response.json().get("message", {})
+                body = response.json()
+                message = body.get("message", {})
                 content = message.get("content")
                 if not isinstance(content, str):
                     raise OllamaUnavailableError("Ollama returned an invalid chat response")
+                # Same counts, same body, same reason as chat() — without this
+                # every agent-tools turn (ALL Discord session turns) logged
+                # tokens NULL precisely on the expensive multi-call turns.
+                # Later rounds overwrite earlier ones; the recorded pair is the
+                # FINAL round's, which carries the full accumulated prompt.
+                record_usage(body.get("prompt_eval_count"), body.get("eval_count"))
                 raw_tool_calls = message.get("tool_calls")
                 raw_tool_calls = raw_tool_calls if isinstance(raw_tool_calls, list) else []
                 tool_calls = []

@@ -104,7 +104,17 @@ class LoggingService:
         self, endpoint: str, model_used: str | None, latency_ms: int, status: str, error_code: str | None = None,
         message_id: int | None = None, tokens_in: int | None = None, tokens_out: int | None = None, prompt_hash: str | None = None,
     ) -> None:
-        self.store.log_request(endpoint, model_used, latency_ms, status, error_code, message_id=message_id, tokens_in=tokens_in, tokens_out=tokens_out, prompt_hash=prompt_hash)
+        # Telemetry is best-effort BY CONTRACT. The D4-lite review reproduced
+        # the alternative: with Ollama down AND Postgres down, the error branch
+        # called this before raising its clean 502 — the store raised first and
+        # the user got a generic 500 with the real cause erased. A recorder
+        # that can turn one outage into a worse-looking one is not a recorder.
+        try:
+            self.store.log_request(endpoint, model_used, latency_ms, status, error_code, message_id=message_id, tokens_in=tokens_in, tokens_out=tokens_out, prompt_hash=prompt_hash)
+        except Exception as error:
+            logger.bind(event="telemetry_write_failed", endpoint=endpoint, status=status).warning(
+                "request_logs write failed ({}); the request itself is unaffected", type(error).__name__
+            )
         logger.bind(endpoint=endpoint, model_used=model_used, latency_ms=latency_ms, status=status, error_code=error_code, message_id=message_id, tokens_in=tokens_in, tokens_out=tokens_out).info(
             "request completed"
         )

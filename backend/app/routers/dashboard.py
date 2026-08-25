@@ -43,19 +43,28 @@ def dashboard_timeseries(request: Request, days: int = 14) -> dict[str, object]:
     local_day = func.date(RequestLog.created_at + offset)
 
     with request.app.state.postgres_sessions() as database:
+        # Status semantics, post D4-lite: "ok" completed; "stopped" the USER
+        # aborted the stream (a real question, not a failure); "error" failed.
+        # Percentiles take completed turns only — error rows carry a synthetic
+        # latency_ms=0 (measured: one such row dragged p50 from 12000 to
+        # 10000), and stopped rows carry a duration cut short by the user, so
+        # both would describe the corpus of answers with numbers that are not
+        # answer latencies.
         question_rows = database.execute(
             select(
                 local_day.label("day"),
                 func.count(),
-                func.percentile_cont(0.5).within_group(RequestLog.latency_ms),
-                func.percentile_cont(0.95).within_group(RequestLog.latency_ms),
+                func.percentile_cont(0.5).within_group(RequestLog.latency_ms).filter(RequestLog.status == "ok"),
+                func.percentile_cont(0.95).within_group(RequestLog.latency_ms).filter(RequestLog.status == "ok"),
             )
-            .where(RequestLog.endpoint.in_(QUESTION_ENDPOINTS), RequestLog.created_at >= since)
+            .where(RequestLog.endpoint.in_(QUESTION_ENDPOINTS), RequestLog.status.in_(["ok", "stopped"]), RequestLog.created_at >= since)
             .group_by(local_day)
         ).all()
+        # A user pressing Stop is not an incident; before this filter a single
+        # stopped stream painted the chart's first-ever red bar.
         error_rows = database.execute(
             select(local_day.label("day"), func.count())
-            .where(RequestLog.status != "ok", RequestLog.created_at >= since)
+            .where(RequestLog.status == "error", RequestLog.created_at >= since)
             .group_by(local_day)
         ).all()
 

@@ -213,9 +213,11 @@ class RagService:
         def generate() -> Iterator[str]:
             answer_parts: list[str] = []
             completed = False
+            last_token_at = perf_counter()
             try:
                 for token in tokens:
                     answer_parts.append(token)
+                    last_token_at = perf_counter()
                     yield token
                 completed = True
             finally:
@@ -223,12 +225,27 @@ class RagService:
                     # A stopped stream keeps its partial answer, and the
                     # citations it was already grounded in go with it.
                     usage = consume_usage()
-                    message_id = self._persist_turn(conversation_id, question, "".join(answer_parts), model_used, sources)
+                    # On a client abort this finally does NOT run at the
+                    # disconnect: starlette cancels the response task and the
+                    # suspended generator waits for the garbage collector —
+                    # measured 7 to 90+ seconds later. perf_counter() HERE
+                    # would record the GC schedule, not the turn (a ~600 ms
+                    # aborted stream was logged as 10069 ms). The last token
+                    # is the honest end of a stopped turn.
+                    ended_at = perf_counter() if completed else last_token_at
+                    try:
+                        message_id = self._persist_turn(conversation_id, question, "".join(answer_parts), model_used, sources)
+                    except Exception:
+                        # Worse case of the same delay: the conversation was
+                        # deleted inside the abort-to-collection window, so the
+                        # FK is gone. The transcript is genuinely lost; the
+                        # measurement must not vanish with it.
+                        message_id = None
                     # "stopped" was previously not recorded at all — one more
                     # reason 142/142 rows said ok. A turn the user cut short is
                     # a real turn with a real duration.
                     self.logging_service.log_request(
-                        "/rag/chat", model_used, int((perf_counter() - started) * 1000),
+                        "/rag/chat", model_used, int((ended_at - started) * 1000),
                         "ok" if completed else "stopped",
                         message_id=message_id, tokens_in=usage["tokens_in"], tokens_out=usage["tokens_out"], prompt_hash=self.prompt_hash,
                     )

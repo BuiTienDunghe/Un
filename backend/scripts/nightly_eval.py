@@ -65,6 +65,19 @@ def wait_for_health(port: int, timeout_seconds: float) -> bool:
 
 def main() -> int:
     started = datetime.now(UTC).isoformat()
+    # EVERY exit goes through finish(): the review found two paths (an
+    # exception before the try, a subprocess timeout inside it) that previously
+    # crashed straight out — no log line, no ATTENTION file — making "the eval
+    # did not run" indistinguishable from "the eval passed" at 09:30.
+    try:
+        return _run(started)
+    except Exception:
+        import traceback
+
+        return finish(started, returncode=98, output=traceback.format_exc())
+
+
+def _run(started: str) -> int:
     env = {
         **os.environ,
         "PYTHONUTF8": "1",
@@ -79,18 +92,31 @@ def main() -> int:
     try:
         # Health only answers after lifespan finished, which includes the
         # reranker warmup — so healthy means the shipped config really loaded.
-        if not wait_for_health(LAB_PORT, timeout_seconds=180):
+        healthy = wait_for_health(LAB_PORT, timeout_seconds=180)
+        # Reproduced by the review: with the port already occupied, OUR uvicorn
+        # dies on bind ([Errno 10048], sent to DEVNULL) while whoever holds the
+        # port answers /health — and the eval would silently measure a foreign
+        # server (possibly production, whose twin documents fail the gate, or
+        # pass it against the wrong corpus). Healthy is only meaningful while
+        # our own process is alive to be the thing that answered.
+        if api.poll() is not None:
+            return finish(started, returncode=96, output=f"lab API exited with {api.returncode} before serving — port {LAB_PORT} already in use? Refusing to eval whatever answered /health.")
+        if not healthy:
             return finish(started, returncode=97, output="lab API never became healthy (Ollama or Docker down?)")
-        eval_run = subprocess.run(
-            [
-                str(PYTHON), "-m", "scripts.evaluate_rag",
-                "--multidoc-dataset", str(PROJECT_ROOT / "data" / "evaluation" / "rag_multidoc_eval.jsonl"),
-                "--retrieval-only",
-                "--base-url", f"http://127.0.0.1:{LAB_PORT}",
-                "--baseline", str(PROJECT_ROOT / "data" / "evaluation" / "rag_multidoc_baseline.json"),
-            ],
-            cwd=str(BACKEND), env=env, capture_output=True, text=True, encoding="utf-8", timeout=1800,
-        )
+        try:
+            eval_run = subprocess.run(
+                [
+                    str(PYTHON), "-m", "scripts.evaluate_rag",
+                    "--multidoc-dataset", str(PROJECT_ROOT / "data" / "evaluation" / "rag_multidoc_eval.jsonl"),
+                    "--retrieval-only",
+                    "--base-url", f"http://127.0.0.1:{LAB_PORT}",
+                    "--baseline", str(PROJECT_ROOT / "data" / "evaluation" / "rag_multidoc_baseline.json"),
+                ],
+                cwd=str(BACKEND), env=env, capture_output=True, text=True, encoding="utf-8", timeout=1800,
+            )
+        except subprocess.TimeoutExpired as expired:
+            partial = (expired.stdout or b"").decode("utf-8", "replace") if isinstance(expired.stdout, bytes) else (expired.stdout or "")
+            return finish(started, returncode=95, output="eval exceeded 1800 s and was killed.\n" + partial)
         return finish(started, returncode=eval_run.returncode, output=(eval_run.stdout or "") + (eval_run.stderr or ""))
     finally:
         api.terminate()

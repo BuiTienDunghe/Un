@@ -191,7 +191,12 @@ class DiscordConversationGateway:
         discord_message_id: str,
         reply_to_discord_message_id: str | None = None,
     ) -> PreparedDiscordAnswer | None:
-        if not self.persistent_sessions_enabled:
+        # DMs have no canonical location, so the session pipeline rejects them
+        # — and until 26/08 that rejection was sent to the user as an error
+        # ("Discord direct messages are not supported"), a regression against
+        # the July bot which answered DMs happily. Same resolution the /docs
+        # path already uses: DMs simply take the legacy conversation path.
+        if not self.persistent_sessions_enabled or guild is None:
             key = conversation_key(guild.id if guild else None, channel.id, user_id)
             try:
                 result = await self.api_client.ask_with_conversation(

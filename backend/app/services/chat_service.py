@@ -179,9 +179,11 @@ class ChatService:
         def generate() -> Iterator[str]:
             answer_parts: list[str] = []
             completed = False
+            last_token_at = perf_counter()
             try:
                 for token in tokens:
                     answer_parts.append(token)
+                    last_token_at = perf_counter()
                     yield token
                 completed = True
             finally:
@@ -191,9 +193,19 @@ class ChatService:
                     # user saw on screen.
                     answer = "".join(answer_parts)
                     usage = consume_usage()
-                    latency_ms = int((perf_counter() - started) * 1000)
-                    self.store.add_message(conversation_id, "user", message)
-                    assistant_message_id = self.store.add_message(conversation_id, "assistant", answer, model_used)
+                    # See rag_service: on abort this finally runs at garbage
+                    # collection, seconds later — the last token is the only
+                    # honest end of a stopped turn.
+                    ended_at = perf_counter() if completed else last_token_at
+                    latency_ms = int((ended_at - started) * 1000)
+                    assistant_message_id: int | None = None
+                    try:
+                        self.store.add_message(conversation_id, "user", message)
+                        assistant_message_id = self.store.add_message(conversation_id, "assistant", answer, model_used)
+                    except Exception:
+                        # Conversation deleted during the abort-to-collection
+                        # window: transcript lost, measurement kept.
+                        pass
                     # An interrupted stream used to be logged as "ok" — one of
                     # the reasons 142/142 production rows carried that status.
                     self.logging_service.log_request(
