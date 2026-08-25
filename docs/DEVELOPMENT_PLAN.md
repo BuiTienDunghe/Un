@@ -191,7 +191,7 @@ pip install -e ".[rerank]" && pip install --index-url https://download.pytorch.o
 | 3 | **P4-4a** — ~~(a) invalidate + (b) fingerprint~~ ✅ 25/08 (thiết kế TTL, xem §4c#3); (c)/B **gác chờ chuông 2 500 chunk** | ⚡ Hiệu năng | — | (phần còn lại: sau) |
 | 4 | ~~**P4-5** — chunk visualization~~ | ✅ Đóng 25/08 (cả 2 phase — xem/đánh dấu; `docs/p4_5_design.md` + `p4_progress.md`) | — | (xong) |
 | 4b | ~~**P4-6** — cross-encoder cắt cụt 65% chunk (778 token vs cửa sổ 512)~~ | ✅ Đóng 25/08 — cửa sổ trượt; MRR 0.858→0.936, doc_hit 0.854→0.927 | — | (xong) |
-| 5 | ~~**T16** — ghim `pyvi` đúng version + `tokenizer_version`~~ | ✅ Đóng 25/08 — `pyvi==0.1.1`, phiên bản đọc ngược từ gói cài, gate eval từ chối so số qua hai tokenizer khác nhau | — | (xong) |
+| 5 | ~~**T16** — ghim `pyvi` đúng version + `tokenizer_version`~~ | ✅ Đóng 25/08 — **nhưng cái ghim đo ra là vô hiệu** (pyvi 0.1.1 là bản duy nhất từ 2021); guard thật là **băm 2 file model**. Đọc §4b#5 trước khi tin là đã che chắn | — | (xong) |
 | 6 | **D4** — LLMOps / observability | 📊 Track D | — | 3–4 buổi |
 | 7 | **D3b** — digest nền có luật nhường | ✨ Track D | — | 3 buổi |
 | 8 | ~~**T8** — tách `/ui/common.js`~~ | ✅ Đóng 25/08 — 4 bản chép hợp nhất còn 1; dashboard/ocr/chunks **có refresh token** lần đầu | — | (xong) |
@@ -229,17 +229,30 @@ Test: 4 test dựng docx bằng python-docx ngay trong test (repo PUBLIC, không
 
 **#1 · T15 — ✅ ĐÓNG 24/08.** `replace_chunks` ghi đủ `locations`/`heading_path`/`token_count`; lệch kiểu chốt về **list** (chunker mang tuple heading parts, DB JSONB `list[str]`, Qdrant payload giữ dạng chuỗi join như mọi point cũ). `token_count` hoá ra **chưa từng được chunker tính** — đã thêm (`count_tokens(content)`). Test mới đi qua **đường ghi thật** (chunker → `replace_chunks` → BM25 đọc lại, fixture có heading) thay cho test dựng chunk bằng tay từng che lỗi. **Backfill production `scripts/backfill_chunk_metadata.py`**: dry-run rồi apply, 11 version khớp `content_hash` 100% (0 drift), 209/209 chunk điền `token_count`, 150 `heading_path`, 162 `locations`; 7 version page-mismatch (micro-drift T7: đường thread ghi page=None) chỉ điền heading/token, bỏ locations — đúng guard. **Không đụng** `retrieval_context`/embedding/Qdrant nên thứ hạng D1 không đổi. 75/118 chunk active giờ trả heading_path thật trong citation.
 
-**#5 · T16 — ✅ ĐÓNG 25/08. `pyvi` chỉ ghim dải `>=0.1.1,<1.0`.**
+**#5 · T16 — ✅ ĐÓNG 25/08, nhưng KHÔNG phải vì lý do đã viết ban đầu. Đọc kỹ mục này trước khi tin là đã được che chắn.**
 
-Tách từ là đầu vào của BM25; một bản `pyvi` khác sau khi cài lại sẽ đổi lexeme mà không có tín hiệu nào. Hiện chỉ lệch runtime (chỉ mục dựng lại mỗi lần khởi động), nhưng nếu P4-4b mở lại thì lexeme nằm trong DB và lệch thành dữ liệu bẩn vĩnh viễn.
+> **Bản ghi đính chính.** Bản đầu của mục này nói T16 chặn được chuyện «một bản `pyvi` khác sau khi cài lại sẽ đổi lexeme». **Điều đó sai**, và sai theo cách chỉ lộ ra khi đi đo. Giữ nguyên đoạn này thay vì xoá, vì cái bẫy nhận thức ở đây đáng nhớ hơn bản vá.
 
-Đã làm, theo đúng thứ tự khiến ba điều kiện cùng đúng:
+**Vì sao cái ghim không ghim được gì.** `pyvi 0.1.1` là bản **mới nhất** trên PyPI, phát hành **30/06/2021 — 1.882 ngày trước** — và là bản **duy nhất** thoả dải cũ `>=0.1.1,<1.0`. Dải cũ và ghim cứng vì thế trỏ vào **cùng một artifact, mỗi ngày, suốt 5 năm**. `pip install -U pyvi` là lệnh rỗng. Cái ghim chưa từng đổi một lần cài đặt nào và không thể, cho tới khi upstream sống lại.
 
-1. **Ghim cứng** `pyvi==0.1.1` (không phải dải), kèm ghi chú rằng nâng dòng này **là một thay đổi retrieval**: phải chạy lại gate và ghi lại baseline.
-2. **`TOKENIZER_VERSION` đọc ngược từ gói đã cài** (`importlib.metadata`), không hard-code — một hằng số có thể nói dối còn tệ hơn không có hằng số nào.
-3. **Đặt cạnh dữ liệu dẫn xuất**: log `bm25_rebuilt` (chỉ mục sống-chết theo tiến trình nên ghi log thay vì ghi kèm), trường `tokenizer_version` trong `/models`, và **trường mới trong baseline eval** — `evaluate_rag.py` giờ **từ chối gate** khi baseline được đo bằng tokenizer khác, đúng cơ chế đã có sẵn cho `embedding_model`.
+**Thứ thật sự quyết định cách cắt từ thì chưa bao giờ được ghim.** Không phải số phiên bản, mà là **hai file dữ liệu nạp lúc import** — `pyvi/models/words.txt` (354.580 B; 22.705 bigram + 1.907 trigram) và `pyvi/models/pyvi3.pkl` (789.337 B trọng số CRF) — cộng một bộ giải mã C mà `requirements.txt` **không hề nhắc tới**: `python-crfsuite`, `sklearn-crfsuite`, `scikit-learn`, `numpy`. Không dòng nào, không `--hash`, không lockfile. Đã chứng minh chạy được: một `pyvi` đặt trước trên `sys.path` không kèm dist-info vẫn báo `0.1.1`, `TOKENIZER_VERSION` vẫn đọc `pyvi-0.1.1`, ghim vẫn sạch — trong khi `quản_lý_tài_liệu` đã vỡ làm hai.
 
-Thi hành: test đọc `requirements.txt`, đòi đúng một dòng `pyvi==<bản đang cài>` — bắt cả việc dải lẻn về lẫn việc sửa ghim mà quên cài lại. *Ghi ngược* baseline hiện tại là `pyvi-0.1.1`: đây là bản đã cài trên máy khi đo 25/08, không phải phỏng đoán.
+**Test canary một câu là phép thử điểm, không phải hợp đồng.** Quét toàn bộ bigram của từ điển có mặt trong kho production: **468** cái nếu bị đụng sẽ cắt lại kho; canary bắt **3** trong 468 (**0,6%**), và đúng ba từ nó tự viết trong câu assert của chính nó. Một chỉnh sửa thực tế — thêm 8 từ ghép chuyên ngành mà một đội RAG tiếng Việt hoàn toàn có thể thêm — cắt lại **169/190 chunk** và dịch **3,11%** vị trí token trong khi mọi guard đều xanh.
+
+**Nên guard thật là băm 2 file** (`test_the_segmenter_model_files_are_the_ones_the_baseline_was_measured_with`): phủ **toàn bộ** phần từ điển + trọng số thay vì 0,6%. Đổi hash **chỉ được phép** đi kèm ghi lại baseline eval — số retrieval đã đo trên đúng những byte đó.
+
+**Thiệt hại nếu thật sự trôi, đã đo trên kho thật (190 chunk, 82 câu, hết đường ống):** 3/82 câu mất đoạn dẫn đầu chứa đáp án, **1/82 câu mất hẳn đáp án khỏi cửa sổ ngữ cảnh**, còn "đáp án nằm đâu đó trong 5 đoạn" thì hoà 79–79. Nhỏ, nhưng **im lặng tuyệt đối** — đó mới là lý do đáng canh.
+
+**Giá phải trả của toàn bộ T16:** 4 ms một lần mỗi tiến trình (`importlib.metadata`), 0,03 ms mỗi lần dựng lại BM25 (dòng log), **0 ms mỗi câu hỏi**, ~30 byte trên `/models`. Canary tất định qua 5.012 lần chạy.
+
+Các phần còn giữ và lý do giữ, dù phần lớn hiện chưa có tác dụng đo được:
+
+1. **Ghim cứng `pyvi==0.1.1`** — là tờ bảo hiểm rẻ **đang không dùng đến**, không phải tờ bảo hiểm vô dụng: ngày upstream ra bản mới nó thành có tác dụng mà không cần ai nhớ đi ghim. Nâng dòng này **là một thay đổi retrieval**: chạy lại gate, ghi lại baseline.
+2. **`TOKENIZER_VERSION` đọc ngược từ gói đã cài**, không hard-code. Nó **gọi tên cái hộp**, không xác thực thứ bên trong — đừng nhầm hai việc đó (chính là chỗ bản đầu đã nhầm).
+3. **Đặt cạnh dữ liệu dẫn xuất**: log `bm25_rebuilt`, trường `tokenizer_version` ở `/models`, và trường trong baseline eval — `evaluate_rag.py` từ chối gate khi baseline đo bằng tokenizer khác, **và từ chối GHI** baseline khi máy chủ không báo trường này (nếu không, một baseline `tokenizer_version: null` sẽ qua gate vĩnh viễn mà trông y hệt baseline hợp lệ).
+4. **Canary một câu** — yếu (0,6%) nhưng là guard **duy nhất** phủ đường bộ giải mã đổi, thứ mà băm file không thấy.
+
+**Còn mở, là quyết định chính sách chứ không phải bản vá:** bốn gói bộ giải mã vẫn chưa ghim và vẫn ra bản mới (`python-crfsuite` 0.9.12 tháng 12/2025). Thay đổi gần đây của chúng chỉ là đóng gói, nên đây là đường có thật nhưng chưa gấp. Và nhánh tokenizer của gate ở CI **chưa được vũ trang**: job `retrieval-eval` dùng `rag_multidoc_baseline_bare.json` vốn không có con dấu, nên hiện chỉ in cảnh báo.
 
 **#9 · T5 — Discord turn retry sau mất lease giữa chừng** *(2 buổi)*
 Gọi model 2 lần và ghi trùng cặp message. Hướng: chỉ persist message sau khi `save_response` xác nhận ownership.
@@ -392,6 +405,8 @@ Discord ─┘    │                            └─ BM25 in-process (rank_bm
 | Migration | Additive-only; mỗi migration có `downgrade`; restore drill mỗi quý |
 | **Đơn vị** | Bài học 25/08 (P4-6): `chunk_tokens: 480` đếm bằng thước **đếm-từ regex** của chunker, cross-encoder đếm bằng **subword** — tiếng Việt nở ~1.6× giữa hai thước, và 65% chunk vượt cửa sổ model mà không ai biết. Mọi giới hạn độ dài phải ghi rõ **đơn vị của bộ phận nào**; cảnh báo `N > max` của thư viện phải được đọc, không để chìm trong log. |
 | **Số liệu** | Mọi con số trong tài liệu phải ghi rõ **đo thật** hay **ngoại suy**, và trên corpus nào. Bài học 23/08: hai ước tính dung lượng sai 2–3 lần vì bỏ quên index và suy từ fixture 27 chunk |
+| **Ghim** | Bài học 25/08 (T16): một **số phiên bản gọi tên cái hộp, không xác thực thứ bên trong**. Ghim `pyvi==0.1.1` hoá ra vô hiệu (đó là bản duy nhất tồn tại từ 2021), trong khi hợp đồng thật — hai file dữ liệu 354 KB + 789 KB và bốn gói giải mã — chưa hề được ghim. Khi ghim một phụ thuộc **sinh ra dữ liệu**, hãy hỏi «cái gì thực sự quyết định đầu ra?» rồi ghim **thứ đó** (băm nội dung), không ghim cái nhãn. |
+| **Nghiệm thu** | Bài học 25/08: một guard chỉ đáng tin khi **đã bị phá thử**. Ba lưới viết trong ngày đều xanh và đều thủng — regex bị `var`/thụt lề/`async function` lách, canary phủ 0,6% chứ không phải 100%, gate tự tháo ngòi khi ghi baseline `null`. Không cái nào lộ ra bằng cách đọc code; tất cả lộ ra khi cố tình phá. **Guard mới phải kèm bằng chứng nó bắt được đúng thứ nó nói.** |
 
 ---
 
