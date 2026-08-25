@@ -226,6 +226,15 @@ def run_multidoc_mode(client: httpx.Client, base_url: str, cases: list[dict], ma
     print(f"Saved report: {output_path}")
 
     if write_baseline:
+        # T16 follow-up: a baseline recorded with tokenizer_version=null passes
+        # the tokenizer check forever (`not in {None, ...}`), so writing one
+        # silently disarms the very gate this field exists to arm -- and the
+        # disarmed file then looks exactly like a properly recorded baseline.
+        # Refuse at the source instead. A server that does not report the field
+        # is running code older than T16; restart it and record again.
+        if tokenizer_version is None:
+            print("Refusing to record a baseline: the server did not report tokenizer_version (pre-T16 build?). Restart it and re-run.")
+            return 1
         baseline = {"created_at": summary["created_at"], "embedding_model": embedding_model, "tokenizer_version": tokenizer_version, "cases": count, "recall_at_k": summary["recall_at_k"], "mrr": summary["mrr"], "doc_hit_rate": summary["doc_hit_rate"]}
         write_baseline.write_text(json.dumps(baseline, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(f"Recorded baseline: {write_baseline}")
@@ -248,6 +257,13 @@ def run_multidoc_mode(client: httpx.Client, base_url: str, cases: list[dict], ma
         if baseline.get("tokenizer_version") not in {None, tokenizer_version}:
             print(f"Baseline tokenizer {baseline.get('tokenizer_version')} != current {tokenizer_version}; re-record the baseline on the final configuration.")
             return 1
+        if baseline.get("tokenizer_version") is None:
+            # Backwards compatibility, but not silently: every baseline recorded
+            # before T16 has no stamp, and an absent stamp can never mismatch.
+            # Such a run is gated on the numbers ONLY. Say so where whoever
+            # reads the CI log will see it, or the gate looks armed when it is
+            # not -- which is worse than having no gate at all.
+            print(f"WARNING: {baseline_path.name} predates tokenizer stamping and is NOT tokenizer-guarded (current {tokenizer_version}). Re-record it to arm the check.")
         failed = [
             f"{metric} {summary[metric]:.3f} < baseline {baseline[metric]:.3f} - {tolerance}"
             for metric in ("recall_at_k", "mrr")

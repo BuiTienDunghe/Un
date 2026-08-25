@@ -48,6 +48,25 @@ def test_the_recorded_eval_baseline_states_which_tokenizer_produced_it():
     assert baseline["tokenizer_version"] == TOKENIZER_VERSION
 
 
+def test_the_segmenter_still_segments_the_way_the_pin_promises():
+    """The version string authenticates a package, not a contract — pin BOTH.
+
+    Found by an adversarial pass on T16 itself: a pyvi placed earlier on
+    sys.path that segments differently but ships no dist-info of its own still
+    resolves to "0.1.1" through importlib.metadata, so TOKENIZER_VERSION reads
+    pyvi-0.1.1, requirements.txt is a pristine exact pin, and every other guard
+    here goes green while "quản_lý_tài_liệu" has quietly become two tokens.
+
+    A canary closes that: this is what the pinned segmenter actually DOES, and
+    a compound splitting apart is precisely the change that would resegment the
+    corpus. If this line goes red, do not edit the expectation — find out what
+    is on sys.path.
+    """
+    assert tokenize_vietnamese("Quản lý tài liệu học sinh trong hệ thống") == [
+        "quản_lý_tài_liệu", "học_sinh", "trong", "hệ_thống",
+    ]
+
+
 def test_models_endpoint_publishes_the_tokenizer_for_the_eval_harness(client):
     """The harness reads embedding_model from here; the tokenizer belongs beside it."""
     response = client.get("/models")
