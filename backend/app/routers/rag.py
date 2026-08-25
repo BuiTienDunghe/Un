@@ -54,12 +54,19 @@ def rag_search(payload: RagSearchRequest, request: Request) -> RagSearchResponse
         request.app.state.logging_service.log_request("/rag/search", None, 0, "error", "QDRANT_UNAVAILABLE")
         raise HTTPException(status_code=503, detail={"error_code": "QDRANT_UNAVAILABLE", "message": str(error)}) from error
     except OllamaModelNotLoadedError as error:
+        # D4-lite #5: these four branches raised without logging, so an Ollama
+        # outage produced zero request_logs rows — 142/142 production rows said
+        # "ok" not because nothing failed but because failure had no recorder.
+        request.app.state.logging_service.log_request("/rag/search", None, 0, "error", "MODEL_NOT_LOADED")
         raise HTTPException(status_code=502, detail={"error_code": "MODEL_NOT_LOADED", "message": str(error)}) from error
     except OllamaTimeoutError as error:
+        request.app.state.logging_service.log_request("/rag/search", None, 0, "error", "MODEL_TIMEOUT")
         raise HTTPException(status_code=504, detail={"error_code": "MODEL_TIMEOUT", "message": str(error)}) from error
     except OllamaUnavailableError as error:
+        request.app.state.logging_service.log_request("/rag/search", None, 0, "error", "OLLAMA_UNAVAILABLE")
         raise HTTPException(status_code=502, detail={"error_code": "OLLAMA_UNAVAILABLE", "message": str(error)}) from error
     except RerankerUnavailableError as error:
+        request.app.state.logging_service.log_request("/rag/search", None, 0, "error", "RERANKER_UNAVAILABLE")
         raise HTTPException(status_code=503, detail={"error_code": "RERANKER_UNAVAILABLE", "message": str(error)}) from error
 
 
@@ -101,10 +108,17 @@ def rag_chat(payload: RagChatRequest, request: Request) -> RagChatResponse | Str
         request.app.state.logging_service.log_request("/rag/chat", None, 0, "error", "QDRANT_UNAVAILABLE")
         raise HTTPException(status_code=503, detail={"error_code": "QDRANT_UNAVAILABLE", "message": str(error)}) from error
     except OllamaModelNotLoadedError as error:
+        # D4-lite #5: these four branches raised without logging, so an Ollama
+        # outage produced zero request_logs rows — 142/142 production rows said
+        # "ok" not because nothing failed but because failure had no recorder.
+        request.app.state.logging_service.log_request("/rag/chat", None, 0, "error", "MODEL_NOT_LOADED")
         raise HTTPException(status_code=502, detail={"error_code": "MODEL_NOT_LOADED", "message": str(error)}) from error
     except OllamaTimeoutError as error:
+        request.app.state.logging_service.log_request("/rag/chat", None, 0, "error", "MODEL_TIMEOUT")
         raise HTTPException(status_code=504, detail={"error_code": "MODEL_TIMEOUT", "message": str(error)}) from error
     except OllamaUnavailableError as error:
+        request.app.state.logging_service.log_request("/rag/chat", None, 0, "error", "OLLAMA_UNAVAILABLE")
         raise HTTPException(status_code=502, detail={"error_code": "OLLAMA_UNAVAILABLE", "message": str(error)}) from error
     except RerankerUnavailableError as error:
+        request.app.state.logging_service.log_request("/rag/chat", None, 0, "error", "RERANKER_UNAVAILABLE")
         raise HTTPException(status_code=503, detail={"error_code": "RERANKER_UNAVAILABLE", "message": str(error)}) from error

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from hashlib import sha256
 from time import perf_counter
 from uuid import uuid4
 from collections.abc import Iterator
 
+from app.llm_clients.usage import consume_usage
 from app.services.logging_service import LoggingService
 from app.services.model_router import ModelRouter
 from app.services.memory_service import MemoryService
@@ -96,6 +98,7 @@ class ChatService:
         user_id: str | None = None,
     ) -> tuple[str, str, str, int, list[dict[str, object]] | None]:
         is_new = conversation_id is None
+        request_started = perf_counter()
         if conversation_id is None:
             conversation_id = str(uuid4())
             self.store.create_conversation(conversation_id, derive_conversation_title(message), user_id)
@@ -135,13 +138,23 @@ class ChatService:
             if is_new:
                 self.store.delete_conversation(conversation_id)
             raise
-        latency_ms = int((perf_counter() - started) * 1000)
+        # Full-request latency, not model-call latency: the dashboard feeds
+        # every row into one percentile, and a row that skips history + memory
+        # lookup is a different quantity wearing the same name.
+        latency_ms = int((perf_counter() - request_started) * 1000)
+        usage = consume_usage()
         self.store.add_message(conversation_id, "user", message)
         assistant_message_id = self.store.add_message(conversation_id, "assistant", answer, model_used)
         if agent_steps:
             # Trace rows attach to the persisted answer they explain (P2-2).
             self.store.add_agent_traces(conversation_id, assistant_message_id, agent_steps)
-        self.logging_service.log_request("/chat", model_used, latency_ms, "ok")
+        self.logging_service.log_request(
+            "/chat", model_used, latency_ms, "ok",
+            message_id=assistant_message_id, tokens_in=usage["tokens_in"], tokens_out=usage["tokens_out"],
+            # Hashed per turn: /chat accepts a caller-supplied system prompt
+            # (the Discord bot sends its own), so one constant would lie.
+            prompt_hash=sha256(str(messages[0]["content"]).encode("utf-8")).hexdigest(),
+        )
         return answer, model_used, conversation_id, latency_ms, agent_steps
 
     def stream_response(self, message: str, conversation_id: str | None, use_memory: bool = False, system_prompt: str | None = None, user_id: str | None = None) -> tuple[Iterator[str], str, str]:
@@ -159,10 +172,11 @@ class ChatService:
                 context = "\n".join(f"- {memory['content']}" for memory in memories)
                 messages.append({"role": "system", "content": f"{self.memory_prompt}\n\nRelevant memories:\n{context}"})
         messages.extend([*history, {"role": "user", "content": message}])
+        started = perf_counter()
         tokens, model_used = self.router.stream_chat("general", messages)
+        prompt_hash = sha256(str(messages[0]["content"]).encode("utf-8")).hexdigest()
 
         def generate() -> Iterator[str]:
-            started = perf_counter()
             answer_parts: list[str] = []
             completed = False
             try:
@@ -176,10 +190,16 @@ class ChatService:
                     # persist the partial answer so history matches what the
                     # user saw on screen.
                     answer = "".join(answer_parts)
+                    usage = consume_usage()
                     latency_ms = int((perf_counter() - started) * 1000)
                     self.store.add_message(conversation_id, "user", message)
-                    self.store.add_message(conversation_id, "assistant", answer, model_used)
-                    self.logging_service.log_request("/chat", model_used, latency_ms, "ok")
+                    assistant_message_id = self.store.add_message(conversation_id, "assistant", answer, model_used)
+                    # An interrupted stream used to be logged as "ok" — one of
+                    # the reasons 142/142 production rows carried that status.
+                    self.logging_service.log_request(
+                        "/chat", model_used, latency_ms, "ok" if completed else "stopped",
+                        message_id=assistant_message_id, tokens_in=usage["tokens_in"], tokens_out=usage["tokens_out"], prompt_hash=prompt_hash,
+                    )
                 elif is_new:
                     # No token ever arrived; drop the conversation shell.
                     self.store.delete_conversation(conversation_id)

@@ -251,9 +251,9 @@ class PostgresAuxiliaryStore:
             session.delete(row)
             return True
 
-    def log_request(self, endpoint: str, model_used: str | None, latency_ms: int, status: str, error_code: str | None = None) -> None:
+    def log_request(self, endpoint: str, model_used: str | None, latency_ms: int, status: str, error_code: str | None = None, message_id: int | None = None, tokens_in: int | None = None, tokens_out: int | None = None, prompt_hash: str | None = None) -> None:
         with self._sessions.begin() as session:
-            session.add(RequestLog(endpoint=endpoint, model_used=model_used, latency_ms=latency_ms, status=status, error_code=error_code, created_at=_utc_now()))
+            session.add(RequestLog(endpoint=endpoint, model_used=model_used, latency_ms=latency_ms, status=status, error_code=error_code, message_id=message_id, tokens_in=tokens_in, tokens_out=tokens_out, prompt_hash=prompt_hash, created_at=_utc_now()))
 
     # OCR-console run payload is persisted as its complete JSON object.
     def save_ocr_run(self, run_id: str, filename: str, status: str, model: str, result_json: str) -> None:

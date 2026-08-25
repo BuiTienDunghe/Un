@@ -192,7 +192,7 @@ pip install -e ".[rerank]" && pip install --index-url https://download.pytorch.o
 | 4 | ~~**P4-5** — chunk visualization~~ | ✅ Đóng 25/08 (cả 2 phase — xem/đánh dấu; `docs/p4_5_design.md` + `p4_progress.md`) | — | (xong) |
 | 4b | ~~**P4-6** — cross-encoder cắt cụt 65% chunk (778 token vs cửa sổ 512)~~ | ✅ Đóng 25/08 — cửa sổ trượt; MRR 0.858→0.936, doc_hit 0.854→0.927 | — | (xong) |
 | 5 | ~~**T16** — ghim `pyvi` đúng version + `tokenizer_version`~~ | ✅ Đóng 25/08 — **nhưng cái ghim đo ra là vô hiệu** (pyvi 0.1.1 là bản duy nhất từ 2021); guard thật là **băm 2 file model**. Đọc §4b#5 trước khi tin là đã che chắn | — | (xong) |
-| 6 | **D4** — LLMOps / observability | 📊 Track D — **đã khảo sát 25/08, ước lượng cũ SAI**: phần lớn đã xây rồi. Xem `docs/d4_design.md` | — | ~~3–4 buổi~~ → **1,5 buổi** |
+| 6 | ~~**D4** — LLMOps / observability~~ | ✅ **D4-lite đóng 26/08** — cầu log thư viện; cây `request_logs.message_id`→`messages`→`message_sources` + token + băm prompt; 2 Scheduled Task (eval đêm 03:00 đã chạy thử thật, cảnh báo 09:30); lỗi ghi được. Kèm: bot Discord chạy image cũ 38 ngày, đã build lại. `docs/d4_design.md` | — | (xong, ~1 buổi) |
 | 7 | **D3b** — digest nền có luật nhường | ✨ Track D | — | 3 buổi |
 | 8 | ~~**T8** — tách `/ui/common.js`~~ | ✅ Đóng 25/08 — 4 bản chép hợp nhất còn 1; dashboard/ocr/chunks **có refresh token** lần đầu | — | (xong) |
 | 9 | **T5** — Discord turn retry sau mất lease | 🐞 Nợ | — | 2 buổi |

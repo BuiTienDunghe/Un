@@ -7,6 +7,8 @@ from typing import Any
 
 import httpx
 
+from app.llm_clients.usage import record_usage
+
 
 class OllamaUnavailableError(Exception):
     pass
@@ -54,9 +56,14 @@ class OllamaClient:
                         f"Model {model} is unavailable. Run: ollama pull {model}"
                     )
                 response.raise_for_status()
-                content = response.json().get("message", {}).get("content")
+                body = response.json()
+                content = body.get("message", {}).get("content")
                 if not isinstance(content, str):
                     raise OllamaUnavailableError("Ollama returned an invalid chat response")
+                # D4-lite: the counts were always in this body; they were
+                # parsed and thrown away while "was the 16 s prompt-eval or
+                # generation?" stayed unanswerable.
+                record_usage(body.get("prompt_eval_count"), body.get("eval_count"))
                 return content
             except OllamaModelNotLoadedError:
                 raise
@@ -212,6 +219,11 @@ class OllamaClient:
                     if not line:
                         continue
                     chunk = json.loads(line)
+                    if chunk.get("done"):
+                        # Usage arrives only on the final chunk. Recorded from
+                        # the same thread that iterates, so the ContextVar is
+                        # readable right after the loop by whoever consumes it.
+                        record_usage(chunk.get("prompt_eval_count"), chunk.get("eval_count"))
                     content = chunk.get("message", {}).get("content")
                     if isinstance(content, str) and content:
                         yield content

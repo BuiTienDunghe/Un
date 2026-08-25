@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from pathlib import Path
+from hashlib import sha256
 from time import perf_counter
 from uuid import uuid4
 from collections.abc import Iterator
 
 from app.services.chat_service import ConversationNotFoundError, derive_conversation_title
 from app.services.injection_defense import InjectionDefense
+from app.llm_clients.usage import consume_usage
 from app.services.logging_service import LoggingService
 from app.services.model_router import ModelRouter
 from app.stores.auxiliary_store import AuxiliaryStore
@@ -36,6 +38,11 @@ class RagService:
         # measured prompt byte for byte.
         self.defense = defense or InjectionDefense(enabled=False)
         self.system_prompt = self.defense.system_prompt((Path(__file__).parents[1] / "prompts" / "rag_system.md").read_text(encoding="utf-8"))
+        # D4-lite: identity of the prompt that actually RUNS — hashed after the
+        # defense wrapping, because the .md file is not the prompt that ran.
+        # Stored on every request_logs row; "answers got worse after Tuesday —
+        # did the prompt change?" becomes a WHERE clause instead of archaeology.
+        self.prompt_hash = sha256(self.system_prompt.encode("utf-8")).hexdigest()
         self.condense_prompt = (Path(__file__).parents[1] / "prompts" / "rag_condense.md").read_text(encoding="utf-8")
 
     def _resolve_conversation(self, question: str, conversation_id: str | None, user_id: str | None = None) -> tuple[str | None, bool]:
@@ -55,11 +62,14 @@ class RagService:
             raise ConversationNotFoundError(conversation_id)
         return conversation_id, False
 
-    def _persist_turn(self, conversation_id: str | None, question: str, answer: str, model_used: str, sources: list[dict[str, object]] | None = None) -> None:
+    def _persist_turn(self, conversation_id: str | None, question: str, answer: str, model_used: str, sources: list[dict[str, object]] | None = None) -> int | None:
         if self.store is None or conversation_id is None:
-            return
+            return None
         self.store.add_message(conversation_id, "user", question)
-        self.store.add_message(conversation_id, "assistant", answer, model_used, self._citations(sources or []))
+        # The id was always returned by add_message and discarded one line
+        # before log_request — which is why 19% of question rows in production
+        # were joinable to their answer only by a timestamp 19 ms apart.
+        return self.store.add_message(conversation_id, "assistant", answer, model_used, self._citations(sources or []))
 
     @staticmethod
     def _citations(sources: list[dict[str, object]]) -> list[dict[str, object]]:
@@ -177,13 +187,18 @@ class RagService:
             if created and self.store is not None:
                 self.store.delete_conversation(conversation_id)
             raise
+        usage = consume_usage()
         latency_ms = int((perf_counter() - started) * 1000)
         # The transcript keeps what the user actually typed.
-        self._persist_turn(conversation_id, question, answer, model_used, sources)
-        self.logging_service.log_request("/rag/chat", model_used, latency_ms, "ok")
+        message_id = self._persist_turn(conversation_id, question, answer, model_used, sources)
+        self.logging_service.log_request("/rag/chat", model_used, latency_ms, "ok", message_id=message_id, tokens_in=usage["tokens_in"], tokens_out=usage["tokens_out"], prompt_hash=self.prompt_hash)
         return answer, model_used, latency_ms, sources, conversation_id, retrieval_question
 
     def stream_response(self, question: str, top_k: int | None, document_id: str | list[str] | None, conversation_id: str | None = None, user_id: str | None = None) -> tuple[Iterator[str], str, list[dict[str, object]], str | None, str | None]:
+        # Latency is measured from HERE, not from the first token: the dashboard
+        # feeds every row into one percentile, and a row that skips condense +
+        # retrieval is a different quantity wearing the same name.
+        started = perf_counter()
         conversation_id, created = self._resolve_conversation(question, conversation_id, user_id)
         retrieval_question = self._condense_question(question, conversation_id, created)
         effective_question = retrieval_question or question
@@ -196,7 +211,6 @@ class RagService:
             raise
 
         def generate() -> Iterator[str]:
-            started = perf_counter()
             answer_parts: list[str] = []
             completed = False
             try:
@@ -208,9 +222,16 @@ class RagService:
                 if completed or answer_parts:
                     # A stopped stream keeps its partial answer, and the
                     # citations it was already grounded in go with it.
-                    self._persist_turn(conversation_id, question, "".join(answer_parts), model_used, sources)
-                    if completed:
-                        self.logging_service.log_request("/rag/chat", model_used, int((perf_counter() - started) * 1000), "ok")
+                    usage = consume_usage()
+                    message_id = self._persist_turn(conversation_id, question, "".join(answer_parts), model_used, sources)
+                    # "stopped" was previously not recorded at all — one more
+                    # reason 142/142 rows said ok. A turn the user cut short is
+                    # a real turn with a real duration.
+                    self.logging_service.log_request(
+                        "/rag/chat", model_used, int((perf_counter() - started) * 1000),
+                        "ok" if completed else "stopped",
+                        message_id=message_id, tokens_in=usage["tokens_in"], tokens_out=usage["tokens_out"], prompt_hash=self.prompt_hash,
+                    )
                 elif created and self.store is not None:
                     self.store.delete_conversation(conversation_id)
 

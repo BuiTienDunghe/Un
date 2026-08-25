@@ -854,6 +854,9 @@ class AgentTrace(Base):
 
 class RequestLog(Base):
     __tablename__ = "request_logs"
+    __table_args__ = (
+        Index("ix_request_logs_message_id", "message_id"),
+    )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     endpoint: Mapped[str] = mapped_column(Text, nullable=False)
@@ -861,6 +864,20 @@ class RequestLog(Base):
     latency_ms: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False)
     error_code: Mapped[str | None] = mapped_column(String(64))
+    # D4-lite: the join key that turns three existing records into one tree —
+    # message_sources (what was retrieved) + messages (the answer) + this row
+    # (how long it took). Deliberately NOT a ForeignKey: agent_traces cascades
+    # with the conversation and holds 0 rows with its sequence at 20 — every
+    # trace died with the chat it explained. Telemetry outlives its subject.
+    message_id: Mapped[int | None] = mapped_column(BigInteger)
+    # Ollama's own prompt_eval_count / eval_count, previously parsed and
+    # discarded. NULL when the provider reports nothing (Gemini/DeepSeek).
+    tokens_in: Mapped[int | None] = mapped_column(Integer)
+    tokens_out: Mapped[int | None] = mapped_column(Integer)
+    # sha256 of the ASSEMBLED system prompt (post injection-defense wrapping):
+    # answers "did the prompt change on Tuesday?" without a registry, and is
+    # the only kind of check that catches a version label on the wrong text.
+    prompt_hash: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
 
 
