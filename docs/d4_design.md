@@ -8,6 +8,8 @@
 > - **#4** `LocalAICore Nightly Eval` 03:00 + `LocalAICore Alerts` 09:30 đã đăng ký (StartWhenAvailable), **đã chạy thử thật**: eval dựng API lab cổng 8100 → 82 câu → gate passed (gồm cả kiểm tra tokenizer T16, giờ đã vũ trang trên đường này) → tự hạ. Script cảnh báo được vá để **sống sót khi Docker tắt** — đúng sự cố 23-24/08 nó sinh ra để bắt thì bản cũ lại chết trước khi kiểm tra tuổi dump.
 > - **#5** Bốn nhánh lỗi Ollama/reranker ở cả `/rag/search` lẫn `/rag/chat` giờ ghi `request_logs`; stream bị ngắt ghi `stopped` thay vì `ok` (hoặc thay vì không gì cả).
 >
+> **Đo lại toàn bộ thông số 26/08** sau khi mọi bản vá đã sống: bảng tham chiếu ở `DEVELOPMENT_PLAN.md` §7b. Con số cũ (`/chat` p95 80 giây, `/rag/chat` max 219 giây) là số của **tuần phát triển** — đo lại sạch trên cùng máy cho `/rag/chat` trung vị **1,8 s**, chữ đầu tiên trên UI **289 ms**, lượt Discord thật trung vị **2,6 s**. Sai lệch 10–70 lần. §7c ghi kỷ luật rút ra để không lặp lại.
+>
 > Ngoài kế hoạch nhưng cùng buổi: **bot Discord chạy image cũ 38 ngày** (build 19/07, tính năng phiên bền vững vào repo 19/08) — cờ `true` được truyền vào một container không có code đọc nó; mọi tin nhắn đi đường `/chat` trần. Đã build lại + khởi động lại, container mới xác nhận đọc được cờ. Đây chính là hạng lỗi mù-với-chính-mình mà tài liệu này mô tả.
 **Phương pháp:** 5 agent khảo sát song song trên hệ thống thật (production DB, API sống, git history, log file), cộng một agent phản biện kế hoạch. Mọi con số dưới đây là **đo thật**, không ngoại suy; chỗ nào suy đoán đều ghi rõ.
 

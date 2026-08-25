@@ -432,13 +432,61 @@ Discord ─┘    │                            └─ BM25 in-process (rank_bm
 | MRR cross-doc | 0.590 | **0.861** | ≥ 0.85 ✅ |
 | Grounding rate (D3a) | — | **0.9390** | giữ ≥ 0.90, 0 dương tính giả |
 | Attack success rate (D5) | 0.143 (defense OFF) | **0.000** | giữ 0.000 |
-| `/rag/search` p50 | 587 ms | 622 ms | ≤ 900 ms |
-| `/rag/search` p95 | 617 ms | 643 ms | ≤ 1 200 ms — lưới an toàn chung, bắt mọi thoái lui bất kể nguồn |
-| `/rag/search` max | — | eval báo từ 24/08 | theo dõi; chốt ngưỡng **sau khi** P4-4a xoá rebuild (hiện max chính là câu đầu sau khởi động — p95 mù với nó) |
+| `/rag/search` p50 | 587 ms | **341 ms** (đo lại 26/08, §7b) | ≤ 900 ms ✅ |
+| `/rag/search` p95 | 617 ms | **358 ms** (đo lại 26/08, §7b) | ≤ 1 200 ms ✅ — lưới an toàn chung, bắt mọi thoái lui bất kể nguồn |
+| `/rag/search` max | — | **614 ms** (26/08) | theo dõi. Câu **nguội** giờ đã tách ra và đo riêng: **6,8 s** cho `/rag/chat` đầu tiên sau khởi động (§7b) — p95 vẫn mù với nó, nên đọc hai số cùng nhau |
 | Phần BM25 trong p50 (warm ms ÷ p50) | — | **~0.6%** (3.8/622, đo 24/08) | **≥ 15% → xét mở P4-4b** (§9.5) — cò súng đúng: canh chính chi phí P4-4b chữa |
-| Chunk active | 118 | 118 (`metrics.active_chunks`) | cảnh báo **2 500** (`check_operational_alerts --chunk-warn`) · xét P4-4b ở **5 000** |
+| Chunk active | 118 | **190** (`metrics.active_chunks`, 26/08) | cảnh báo **2 500** (`check_operational_alerts --chunk-warn`) · xét P4-4b ở **5 000** |
 | Memory bị thu hồi | — | — | < 30% |
 | CI | ✅ 3 job + eval gate | | xanh trên main |
+
+### 7b. Bảng độ trễ tham chiếu — đo lại sạch 26/08/2026
+
+> **Vì sao phải đo lại.** Mọi con số độ trễ dự án từng trích đều lấy từ `request_logs` của **tuần phát triển**: đầy khởi động nguội, thí nghiệm đổi cấu hình, một reranker cắt cụt 65% kho (sửa 25/08), và một lỗi ghi độ trễ theo lịch của bộ dọn rác (sửa 26/08). Chúng mô tả một hệ thống không còn tồn tại. Bảng cũ nói `/chat` p95 = **80 giây** và `/rag/chat` max = **219 giây**; đo lại trên chính máy đó, sau một lần khởi động sạch, sai lệch **10–70 lần**.
+
+Điều kiện đo: corpus **production 190 chunk**, API vừa khởi động lại, 5 câu hỏi cố định mỗi mặt, cấu hình đúng như đang chạy (contextual retrieval + reranker BẬT, agent tools BẬT trên đường Discord).
+
+| Mặt người dùng chạm vào | Trung vị | Dải | Ghi chú |
+| --- | --- | --- | --- |
+| Khởi động API → `/health` ok | **3,9 s** | — | đã gồm nạp cross-encoder (`warmup()`) |
+| **Nguội**: câu `/rag/chat` đầu sau khởi động | **6,8 s** | — | dựng chỉ mục BM25 + nhân đầu tiên. Một lần mỗi lần khởi động, **không** phải mỗi câu |
+| `/rag/search` (chỉ truy xuất) | **367 ms** | 334–368 | |
+| `/rag/chat` (truy xuất + sinh) | **1,8 s** | 1,1–2,0 | |
+| **UI web · `/chat` — chữ đầu tiên** | **289 ms** | 285–541 | *đây là thứ người dùng cảm nhận* |
+| UI web · `/chat` — trọn câu trả lời | 6,0 s | 4,9–8,0 | ~375 token sinh ra |
+| **UI web · `/rag/chat` — chữ đầu tiên** | **683 ms** | 646–1008 | |
+| UI web · `/rag/chat` — trọn câu trả lời | 1,4 s | 1,1–1,5 | ~29 token: trả lời ngắn, có căn cứ |
+| **Discord** · lượt đầy đủ 4 chặng | **1,7 s** | 1,4–7,2 | resolve → xếp lượt → thực thi → hoàn tất |
+
+**Discord đo trên lưu lượng THẬT** (13 lượt của người dùng, 25/08 19:55–20:02, đường phiên bền vững, đọc từ log container):
+
+| | Trung vị | Dải |
+| --- | --- | --- |
+| Chờ trả lời | **2,6 s** | 1,7–7,2 s (lượt 7,2 s là câu đầu sau khởi động) |
+| Khoảng cách giữa hai lần trả lời | **27 s** | 11–72 s |
+
+> Khoảng cách giữa các lượt (11–72 s) **luôn lớn hơn nhiều** thời gian trả lời (1,7–7,2 s): hàng đợi FIFO của kênh chưa bao giờ có quá một lượt. So với ngân sách chờ 180 giây thì lượt chậm nhất còn **dư 25 lần** — kịch bản "kẹt vì quá hạn" mà §4 từng nêu là **không có cơ sở thực nghiệm**; xem §7c.
+
+**Token mỗi lượt** — lần đầu tiên đo được (cột `request_logs.tokens_in/out`, có từ 26/08):
+
+| Đường | Token vào | Token ra |
+| --- | --- | --- |
+| `/rag/chat` | 2 099 – 2 711 | 30 – 50 |
+| `/chat` (không prompt hệ thống riêng) | 47 – 51 | 319 – 544 |
+| **Discord (agent tools)** | **1 154 – 2 652** | 53 – 125 |
+
+> Prompt Discord nặng gấp **25–50 lần** chat thường ở phía đầu vào — prompt hệ thống của bot + ngữ cảnh thành viên + định nghĩa công cụ. Đây là thứ chi phối chi phí đường Discord, và trước 26/08 **không nhìn thấy được**.
+
+**Chất lượng RAG, đo lại cùng ngày** trên corpus lab (đúng luật §3d), 82 câu, retrieval-only: recall@5 **0.9878** · MRR **0.9360** · doc_hit **0.9268** · truy xuất p50 **341 ms** / p95 **358 ms** / max **614 ms** · `qwen3-embedding:0.6b` · `pyvi-0.1.1`. Gate đạt.
+
+### 7c. Kỷ luật rút ra
+
+| | |
+| --- | --- |
+| **Số cũ là số của tuần phát triển** | Đừng trích `request_logs` gộp nhiều ngày rồi gọi đó là hiệu năng. Tách **nguội/ấm**, tách **cấu hình**, và từ 26/08 thì lọc luôn theo `status` — dòng lỗi mang `latency_ms=0` và dòng `stopped` mang thời gian bị cắt ngang. |
+| **p95 trên mẫu nhỏ là số vô nghĩa** | 47 lượt trong 7 ngày cho "p95 = 80 giây" chỉ vì cái đuôi là vài lần khởi động nguội. Đo lại có kiểm soát: p95 thật nằm dưới 8 giây. |
+| **Trung vị không mô tả trải nghiệm streaming** | Người dùng cảm nhận **chữ đầu tiên** (289 ms), không phải câu trọn vẹn (6 s). Đo sai đại lượng thì tối ưu sai chỗ. |
+| **Đo lại sau mỗi lần sửa lớn** | Bảng này được sinh lại bằng `scripts/nightly_eval.py` (chất lượng) và một lần chạy có kiểm soát (độ trễ). Lần đo tiếp theo nên là **sau một tuần dữ liệu thật**, giờ mỗi dòng đã có `message_id` + token + băm prompt để truy nguyên. |
 
 > **Đóng 25/08 — cả hai ô đã đạt (P4-6).** Chẩn đoán 24/08 đoán sai thủ phạm: không phải *biên chunk* mà là **cross-encoder cắt cụt passage** — chunk đúng dài 778 token, cụm mang đáp án nằm ở token 583–743, tức sau điểm cắt 512. Chunker, BM25, dense và RRF đều xếp nó hạng 1–2; chỉ tầng chấm lại đánh rơi. Chính màn hình chunk (P4-5) là thứ dẫn tới phép đo này. Sửa bằng **cửa sổ trượt ở tầng rerank**: MRR 0.858→0.936, doc_hit 0.854→0.927, recall 0.976→0.988; 11 câu tốt lên, 2 xấu đi. ⚠ Đánh đổi có ghi chép: điều kiện nghiệm thu tự chốt bị vi phạm ở đúng một câu — xem `p4_progress.md` mục P4-6.
 
