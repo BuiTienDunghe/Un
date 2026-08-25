@@ -1,27 +1,9 @@
 /* Bảng điều khiển quản lý agent — chỉ đọc, tự làm mới mỗi 20 giây. */
 "use strict";
 
-const $ = (id) => document.getElementById(id);
-
-/* Theme đồng bộ với app chat (cùng key lac.prefs) */
-const prefs = (() => {
-  try { return { theme: "system", ...JSON.parse(localStorage.getItem("lac.prefs") || "{}") }; }
-  catch { return { theme: "system" }; }
-})();
-const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
-function applyTheme() {
-  const resolved = prefs.theme === "system" ? (systemDark.matches ? "dark" : "light") : prefs.theme;
-  document.documentElement.dataset.theme = resolved;
-}
-systemDark.addEventListener("change", applyTheme);
-applyTheme();
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
+/* $, el, theme/prefs, authHeaders và requestJson nằm ở /ui/common.js (T8),
+   nạp trước file này. Chính trang này là lý do món nợ tồn tại: bản chép
+   riêng của nó từng quên X-API-Key, rồi quên luôn refresh token. */
 
 function relativeTime(iso) {
   if (!iso) return "chưa có";
@@ -55,27 +37,17 @@ function statCard(value, label) {
   return card;
 }
 
-/* Cùng khóa với trang chat (lac.apikey), cộng Bearer token khi chế độ tài
-   khoản bật (P3-1) — dashboard là mặt admin nên 401 đẩy về trang đăng nhập. */
-function dashHeaders(extra = {}) {
-  const headers = { ...extra };
-  const key = localStorage.getItem("lac.apikey") || "";
-  if (key) headers["X-API-Key"] = key;
-  const access = localStorage.getItem("lac.access") || "";
-  if (access) headers.Authorization = `Bearer ${access}`;
-  return headers;
-}
-
+/* Dashboard là mặt admin: 401 mà refresh cũng không cứu được thì đẩy về
+   trang đăng nhập. requestJson đã thử refresh MỘT lần trước khi ném ra —
+   trước T8 bước đó không tồn tại ở đây, nên access token hết hạn là văng
+   thẳng ra giữa lúc đang xem dù refresh token còn hạn. */
 async function fetchJson(path) {
-  const headers = dashHeaders();
-  const response = await fetch(path, Object.keys(headers).length ? { headers } : undefined);
-  if (response.status === 401) {
-    window.location.href = "/ui/";
-    throw new Error("401");
+  try {
+    return await requestJson(path);
+  } catch (error) {
+    if (error.status === 401) window.location.href = "/ui/";
+    throw error;
   }
-  if (response.status === 403) throw new Error("Trang này dành cho quản trị viên.");
-  if (!response.ok) throw new Error(String(response.status));
-  return response.json();
 }
 
 const TURN_LABELS = {
@@ -228,22 +200,16 @@ function render(stats, health, metrics, models, conversations) {
 
 /* ── Duyệt đề xuất ghi nhớ (P1-4) ────────────────────────────────── */
 async function postJson(path) {
-  const response = await fetch(path, {
-    method: "POST",
-    headers: dashHeaders(),
-  });
-  if (response.status === 401) {
-    window.location.href = "/ui/";
-    throw new Error("401");
+  try {
+    return await requestJson(path, { method: "POST" });
+  } catch (error) {
+    if (error.status === 401) window.location.href = "/ui/";
+    // Hai mã này người dùng tự sửa được, nhưng chỗ sửa nằm ở trang khác.
+    if (error.code === "API_KEY_REQUIRED" || error.code === "API_KEY_INVALID") {
+      error.message += " Mở trang trò chuyện → Cài đặt → Bảo mật để nhập khóa.";
+    }
+    throw error;
   }
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const hint = data.error_code === "API_KEY_REQUIRED" || data.error_code === "API_KEY_INVALID"
-      ? " Mở trang trò chuyện → Cài đặt → Bảo mật để nhập khóa."
-      : "";
-    throw new Error((data.message || `Lỗi ${response.status}`) + hint);
-  }
-  return data;
 }
 
 function renderReview(candidates) {

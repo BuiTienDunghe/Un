@@ -2,43 +2,9 @@
    Trang tĩnh tải một lần; lọc client-side; không gọi model, không đụng /rag/*. */
 "use strict";
 
-const $ = (id) => document.getElementById(id);
-
-/* Theme + api key: cùng key localStorage với app chat. Helper lặp lại có chủ
-   đích tối thiểu — hợp nhất thành /ui/common.js là nợ T8, không phình ở đây. */
-const prefs = (() => {
-  try { return { theme: "system", ...JSON.parse(localStorage.getItem("lac.prefs") || "{}") }; }
-  catch { return { theme: "system" }; }
-})();
-const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
-const applyTheme = () => {
-  document.documentElement.dataset.theme =
-    prefs.theme === "system" ? (systemDark.matches ? "dark" : "light") : prefs.theme;
-};
-systemDark.addEventListener("change", applyTheme);
-applyTheme();
-
-const getApiKey = () => localStorage.getItem("lac.apikey") || "";
-function headers(extra = {}) {
-  const key = getApiKey();
-  const result = key ? { ...extra, "X-API-Key": key } : { ...extra };
-  const access = localStorage.getItem("lac.access");
-  if (access) result.Authorization = `Bearer ${access}`;
-  return result;
-}
-async function api(path, options = {}) {
-  const response = await fetch(path, { ...options, headers: headers(options.headers) });
-  const data = response.status === 204 ? {} : await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.detail || data.message || `HTTP ${response.status}`);
-  return data;
-}
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
+/* $, el, theme/prefs và requestJson nằm ở /ui/common.js (T8), nạp trước file
+   này — ghi chú cũ ở đây nói "hợp nhất là nợ T8"; nợ đó đã trả. */
+const api = requestJson;
 
 const documentId = new URLSearchParams(location.search).get("document_id");
 const state = { chunks: [], meta: null, offset: 0, limit: 50, done: false };

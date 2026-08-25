@@ -2,26 +2,16 @@
    Backend API có sẵn từ lâu (/ocr/jobs...); trang này chỉ là tay cầm. */
 "use strict";
 
-const $ = (id) => document.getElementById(id);
-
-function authHeaders(extra = {}) {
-  const headers = { ...extra };
-  const key = localStorage.getItem("lac.apikey") || "";
-  if (key) headers["X-API-Key"] = key;
-  const access = localStorage.getItem("lac.access") || "";
-  if (access) headers.Authorization = `Bearer ${access}`;
-  return headers;
-}
-
+/* $, authHeaders và requestJson nằm ở /ui/common.js (T8), nạp trước file này.
+   Lưu ý trang này vẫn dùng authHeaders trực tiếp một chỗ: tải file kết quả
+   trả về blob chứ không phải JSON, nên không đi qua requestJson được. */
 async function request(path, options = {}) {
-  const response = await fetch(path, { ...options, headers: authHeaders(options.headers || {}) });
-  if (response.status === 401) {
-    window.location.href = "/ui/";
-    throw new Error("401");
+  try {
+    return await requestJson(path, options);
+  } catch (error) {
+    if (error.status === 401) window.location.href = "/ui/";
+    throw error;
   }
-  const data = response.status === 204 ? {} : await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.message || `Lỗi ${response.status}`);
-  return data;
 }
 
 function notice(text, isError = false) {

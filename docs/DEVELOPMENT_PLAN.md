@@ -59,7 +59,7 @@ Tài liệu này là **nguồn sự thật duy nhất** cho định hướng và
 | Phase | Trạng thái | Kết quả chốt |
 | --- | --- | --- |
 | **P0** — Nền móng tin cậy | ✅ | CI GitHub Actions (P0-1) · API key cho endpoint ghi/xoá (P0-2) · bảng `message_sources` giữ citation (P0-3) · backup tự động + restore drill (P0-4) · `pyproject.toml` + CHANGELOG (P0-5) · `alembic check` xanh trong CI (P0-6) |
-| **P0.5** — Nợ audit 18/08 | Một phần | T1–T4, T6, T11, T14, T15, T17 ✅ đã trả. **Còn T5, T7, T8, T9, T10, T12, T13, T16** → §4 |
+| **P0.5** — Nợ audit 18/08 | Một phần | T1–T4, T6, T8, T11, T14, T15, T16, T17 ✅ đã trả. **Còn T5, T7, T9, T10, T12, T13** → §4 |
 | **P1** — Một agent, hai kênh | ✅ 19/08 | `/docs` kèm nguồn · condense câu hỏi nối tiếp (eval 10/10, MRR 0.950 vs 0.787) · memory hub một kho hai kênh · pipeline người-duyệt end-to-end. Nhật ký: `docs/p1_progress.md` |
 | **P2** — Agent tự hành | ✅ 20/08 | Memory tự áp dụng theo ngưỡng + guard xác định (extractor → `qwen3.5:9b`, poison 49% → 21.6%) · vòng lặp agent + tool use native, trace `agent_traces` · bộ lệnh `/ask` `/docs` `/memory` `/status` `/ping` · timeline hành động agent + thu hồi 1 click. Nhật ký: `docs/p2_progress.md` |
 | **P3** — Đa người dùng & quản trị | ✅ 20/08 | Tài khoản + RBAC admin/member, JWT 15' + refresh thu-hồi-được · điều khiển bot Discord từ dashboard · biểu đồ thời gian · OCR console UI. Nhật ký: `docs/p3_progress.md` |
@@ -191,10 +191,10 @@ pip install -e ".[rerank]" && pip install --index-url https://download.pytorch.o
 | 3 | **P4-4a** — ~~(a) invalidate + (b) fingerprint~~ ✅ 25/08 (thiết kế TTL, xem §4c#3); (c)/B **gác chờ chuông 2 500 chunk** | ⚡ Hiệu năng | — | (phần còn lại: sau) |
 | 4 | ~~**P4-5** — chunk visualization~~ | ✅ Đóng 25/08 (cả 2 phase — xem/đánh dấu; `docs/p4_5_design.md` + `p4_progress.md`) | — | (xong) |
 | 4b | ~~**P4-6** — cross-encoder cắt cụt 65% chunk (778 token vs cửa sổ 512)~~ | ✅ Đóng 25/08 — cửa sổ trượt; MRR 0.858→0.936, doc_hit 0.854→0.927 | — | (xong) |
-| 5 | **T16** — ghim `pyvi` đúng version + `tokenizer_version` | 🔧 Nợ | — | 0.5 buổi |
+| 5 | ~~**T16** — ghim `pyvi` đúng version + `tokenizer_version`~~ | ✅ Đóng 25/08 — `pyvi==0.1.1`, phiên bản đọc ngược từ gói cài, gate eval từ chối so số qua hai tokenizer khác nhau | — | (xong) |
 | 6 | **D4** — LLMOps / observability | 📊 Track D | — | 3–4 buổi |
 | 7 | **D3b** — digest nền có luật nhường | ✨ Track D | — | 3 buổi |
-| 8 | **T8** — tách `/ui/common.js` | 🔧 Nợ | — | 1 buổi |
+| 8 | ~~**T8** — tách `/ui/common.js`~~ | ✅ Đóng 25/08 — 4 bản chép hợp nhất còn 1; dashboard/ocr/chunks **có refresh token** lần đầu | — | (xong) |
 | 9 | **T5** — Discord turn retry sau mất lease | 🐞 Nợ | — | 2 buổi |
 | 10 | **T12 / T13** — đánh bóng agent P2 và auth P3 | 🔧 Nợ | — | 2–3 buổi mỗi mục |
 | 11 | **T7** — hợp nhất 2 pipeline ingestion | 🔧 Nợ lớn | — | 4–5 buổi |
@@ -229,15 +229,37 @@ Test: 4 test dựng docx bằng python-docx ngay trong test (repo PUBLIC, không
 
 **#1 · T15 — ✅ ĐÓNG 24/08.** `replace_chunks` ghi đủ `locations`/`heading_path`/`token_count`; lệch kiểu chốt về **list** (chunker mang tuple heading parts, DB JSONB `list[str]`, Qdrant payload giữ dạng chuỗi join như mọi point cũ). `token_count` hoá ra **chưa từng được chunker tính** — đã thêm (`count_tokens(content)`). Test mới đi qua **đường ghi thật** (chunker → `replace_chunks` → BM25 đọc lại, fixture có heading) thay cho test dựng chunk bằng tay từng che lỗi. **Backfill production `scripts/backfill_chunk_metadata.py`**: dry-run rồi apply, 11 version khớp `content_hash` 100% (0 drift), 209/209 chunk điền `token_count`, 150 `heading_path`, 162 `locations`; 7 version page-mismatch (micro-drift T7: đường thread ghi page=None) chỉ điền heading/token, bỏ locations — đúng guard. **Không đụng** `retrieval_context`/embedding/Qdrant nên thứ hạng D1 không đổi. 75/118 chunk active giờ trả heading_path thật trong citation.
 
-**#5 · T16 — `pyvi` chỉ ghim dải `>=0.1.1,<1.0`** *(0.5 buổi)*
+**#5 · T16 — ✅ ĐÓNG 25/08. `pyvi` chỉ ghim dải `>=0.1.1,<1.0`.**
 
-Tách từ là đầu vào của BM25; một bản `pyvi` khác sau khi cài lại sẽ đổi lexeme mà không có tín hiệu nào. Hiện chỉ lệch runtime (chỉ mục dựng lại mỗi lần khởi động), nhưng nếu P4-4b mở lại thì lexeme nằm trong DB và lệch thành dữ liệu bẩn vĩnh viễn. Nghiệm thu: ghim đúng version + đặt khái niệm `tokenizer_version` cạnh mọi dữ liệu dẫn xuất.
+Tách từ là đầu vào của BM25; một bản `pyvi` khác sau khi cài lại sẽ đổi lexeme mà không có tín hiệu nào. Hiện chỉ lệch runtime (chỉ mục dựng lại mỗi lần khởi động), nhưng nếu P4-4b mở lại thì lexeme nằm trong DB và lệch thành dữ liệu bẩn vĩnh viễn.
+
+Đã làm, theo đúng thứ tự khiến ba điều kiện cùng đúng:
+
+1. **Ghim cứng** `pyvi==0.1.1` (không phải dải), kèm ghi chú rằng nâng dòng này **là một thay đổi retrieval**: phải chạy lại gate và ghi lại baseline.
+2. **`TOKENIZER_VERSION` đọc ngược từ gói đã cài** (`importlib.metadata`), không hard-code — một hằng số có thể nói dối còn tệ hơn không có hằng số nào.
+3. **Đặt cạnh dữ liệu dẫn xuất**: log `bm25_rebuilt` (chỉ mục sống-chết theo tiến trình nên ghi log thay vì ghi kèm), trường `tokenizer_version` trong `/models`, và **trường mới trong baseline eval** — `evaluate_rag.py` giờ **từ chối gate** khi baseline được đo bằng tokenizer khác, đúng cơ chế đã có sẵn cho `embedding_model`.
+
+Thi hành: test đọc `requirements.txt`, đòi đúng một dòng `pyvi==<bản đang cài>` — bắt cả việc dải lẻn về lẫn việc sửa ghim mà quên cài lại. *Ghi ngược* baseline hiện tại là `pyvi-0.1.1`: đây là bản đã cài trên máy khi đo 25/08, không phải phỏng đoán.
 
 **#9 · T5 — Discord turn retry sau mất lease giữa chừng** *(2 buổi)*
 Gọi model 2 lần và ghi trùng cặp message. Hướng: chỉ persist message sau khi `save_response` xác nhận ownership.
 
-**#8 · T8 — Frontend fork đôi helper** *(1 buổi)*
-`app.js` và `dashboard.js` fork cùng bộ helper — nguồn gốc lỗi dashboard thiếu API key. Hướng: tách `/ui/common.js` (`$`, `el`, `withApiKey`, `api`, theme/prefs) — script tag thường, không cần build.
+**#8 · T8 — ✅ ĐÓNG 25/08. Frontend fork đôi helper.**
+
+Không phải hai bản mà **bốn**: `app.js`, `dashboard.js`, `ocr.js`, `chunks.js` mỗi file một bản `$`, `el`, theme và hàm gắn header — và bốn bản **không giống nhau**. Đó không phải chuyện thẩm mỹ: bản của dashboard từng quên hẳn `X-API-Key` (lỗi đã sửa), và đến hôm nay **vẫn** thiếu refresh token, nên access token hết hạn là văng thẳng về trang đăng nhập giữa lúc đang xem dù refresh token còn hạn.
+
+`/ui/common.js` (158 dòng) giờ giữ bản chuẩn duy nhất: `$`, `el`, `esc`, `readStore`/`prefs`/`savePrefs`, theme, `getApiKey`/`setApiKey`, `authHeaders`, `refreshAccessToken`, `ERROR_HINTS`, `sendJson`, `requestJson`. Script thường, không build step, nạp **trước** script của trang (`defer` giữ thứ tự).
+
+Hai quyết định đáng ghi:
+
+- **`sendJson` và `requestJson` tách đôi.** Ba trang phụ dùng `requestJson` — tự thử refresh một lần rồi gửi lại. Trang chat không dùng được vì 401 ở đó phải hiện overlay đăng nhập **tại chỗ** chứ không chuyển trang, nên nó ghép `sendJson` + `refreshAccessToken` theo cách riêng. Phần khó (gom mọi lời gọi refresh vào **một** promise, tránh mười request cùng 401 xoay vòng refresh token mười lần) nằm ở bản dùng chung.
+- **Bearer gắn vô điều kiện.** Bản cũ của `app.js` chỉ gắn khi `authState.enabled`; ba bản kia gắn luôn. Đã kiểm `app/security/auth.py`: máy chủ đọc header này **sau** khi kiểm `auth_enabled`, nên token cũ sót lại lúc chế độ tài khoản tắt bị bỏ qua hoàn toàn. Chọn bản đơn giản hơn, và là bản 3/4 trang vốn đã chạy.
+
+**Thu được ngoài dự kiến**: món "dashboard 401 không refresh token" trong danh sách audit **tự đóng** — nó là hệ quả trực tiếp của việc bốn trang cùng dùng một đường gọi API.
+
+Thi hành: test đọc khai báo top-level của cả 5 file, đòi **giao rỗng** giữa mỗi trang và `common.js`. Đây là lỗi thật chứ không phải luật phong cách — hai script cổ điển chung phạm vi global **không thể** cùng `const $`, trang sẽ chết ngay. Cộng test mỗi trang phải nạp `common.js` **trước** script của mình.
+
+Kiểm chứng trình duyệt thật, cả 4 trang: chat (30 nút hội thoại, gửi tin chạy), dashboard (6 thẻ số liệu, 10 lời gọi API 200), chunks (37 đoạn + POST/GET/DELETE feedback trọn vòng, 204 và 404 đều xử đúng), ocr (lịch sử tải được). Console sạch.
 
 **#11 · T7 — `PostgresDocumentService` chứa 2 bản sao pipeline ingestion** *(4–5 buổi)*
 Bản thread và bản RQ đồng bộ tay, đã có micro-drift. Hướng: tách `IngestionPipeline` một bản duy nhất tham số hoá bằng checkpoint hook; tách upload-conflict thành service riêng.

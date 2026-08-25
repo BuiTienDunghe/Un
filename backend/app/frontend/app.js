@@ -8,63 +8,29 @@
    ══════════════════════════════════════════════════════════════════ */
 "use strict";
 
-/* ── Utils ─────────────────────────────────────────────────────── */
-const $ = (id) => document.getElementById(id);
-
-const ERROR_HINTS = {
-  OLLAMA_UNAVAILABLE: "Không kết nối được Ollama. Hãy kiểm tra Ollama đang chạy rồi thử lại.",
-  MODEL_NOT_LOADED: "Mô hình chưa được nạp. Kiểm tra Ollama và cấu hình models.yaml.",
-  MODEL_TIMEOUT: "Mô hình trả lời quá chậm. Hãy rút ngắn câu hỏi hoặc thử lại.",
-  QDRANT_UNAVAILABLE: "Chỉ mục tìm kiếm (Qdrant) không phản hồi. Hãy kiểm tra Docker.",
-  INSUFFICIENT_CONTEXT: "Chưa tìm được ngữ cảnh phù hợp trong tài liệu đã chọn.",
-  CONVERSATION_NOT_FOUND: "Cuộc trò chuyện không còn tồn tại trên máy chủ.",
-  DOCUMENT_TOO_LARGE: "Tệp vượt quá giới hạn 50 MB.",
-  UNSUPPORTED_FILE_TYPE: "Chỉ hỗ trợ PDF, DOCX, TXT và Markdown.",
-  DOCUMENT_ALREADY_INDEXING: "Tài liệu đang được lập chỉ mục. Vui lòng chờ hoàn tất.",
-  API_KEY_REQUIRED: "Máy chủ này yêu cầu khóa truy cập. Mở Cài đặt → Bảo mật để nhập khóa.",
-  API_KEY_INVALID: "Khóa truy cập không đúng. Kiểm tra lại trong Cài đặt → Bảo mật.",
-};
-
-/* Khóa truy cập tùy chọn: chỉ những máy chủ có cấu hình khóa mới cần. */
-const getApiKey = () => localStorage.getItem("lac.apikey") || "";
-const setApiKey = (value) => {
-  const key = value.trim();
-  if (key) localStorage.setItem("lac.apikey", key);
-  else localStorage.removeItem("lac.apikey");
-};
+/* ── Utils ─────────────────────────────────────────────────────────
+   $, el, esc, prefs/theme, authHeaders, sendJson, ERROR_HINTS… nằm ở
+   /ui/common.js (T8) và được nạp trước file này. Đây là trang duy nhất
+   không dùng requestJson: 401 ở đây phải hiện overlay đăng nhập tại chỗ
+   chứ không chuyển trang, nên nó tự ghép sendJson + refreshAccessToken. */
 
 /* ── Tài khoản (P3-1) ─────────────────────────────────────────────
    Khi LOCAL_AI_AUTH_ENABLED bật, mọi request kèm Bearer token; token hết hạn
    thì tự refresh một lần rồi thử lại; hết đường thì hiện màn đăng nhập. */
 const authState = { enabled: false, user: null };
-let refreshInFlight = null;
 
 function isMemberRole() {
   return authState.enabled && authState.user?.role === "member";
 }
 
 async function tryRefreshToken() {
-  const refresh = localStorage.getItem("lac.refresh");
-  if (!authState.enabled || !refresh) return false;
-  if (!refreshInFlight) {
-    refreshInFlight = (async () => {
-      try {
-        const response = await fetch("/auth/refresh", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refresh_token: refresh }),
-        });
-        if (!response.ok) return false;
-        const data = await response.json();
-        localStorage.setItem("lac.access", data.access_token);
-        if (data.user) authState.user = data.user;
-        return true;
-      } catch {
-        return false;
-      }
-    })().finally(() => { refreshInFlight = null; });
-  }
-  return refreshInFlight;
+  // Cơ chế refresh (gom một promise cho cả trang) ở common.js; phần riêng
+  // của trang chat chỉ là cập nhật authState để UI theo vai trò vẽ lại.
+  if (!authState.enabled) return false;
+  const data = await refreshAccessToken();
+  if (!data) return false;
+  if (data.user) authState.user = data.user;
+  return true;
 }
 
 function showAuthOverlay(isBootstrap) {
@@ -129,72 +95,32 @@ function syncRoleUi() {
 async function initAuth() {
   let config;
   try {
-    config = await rawApi("/auth/config");
+    config = await sendJson("/auth/config");
   } catch {
     return true; // backend chưa chạy: để luồng lỗi thường phía sau báo
   }
   authState.enabled = !!config.enabled;
   if (!authState.enabled) return true;
   if (localStorage.getItem("lac.access")) {
-    try { authState.user = await rawApi("/auth/me"); syncRoleUi(); return true; } catch { /* thử refresh */ }
+    try { authState.user = await sendJson("/auth/me"); syncRoleUi(); return true; } catch { /* thử refresh */ }
   }
   if (await tryRefreshToken()) {
-    try { authState.user = await rawApi("/auth/me"); syncRoleUi(); return true; } catch { /* hết đường */ }
+    try { authState.user = await sendJson("/auth/me"); syncRoleUi(); return true; } catch { /* hết đường */ }
   }
   showAuthOverlay(!config.has_users);
   return false;
 }
 
-/* Gắn khóa vào mọi request; header rỗng thì bỏ hẳn để không đổi hành vi khi
-   máy chủ không bật xác thực. */
-function withApiKey(headers = {}) {
-  const key = getApiKey();
-  const result = key ? { ...headers, "X-API-Key": key } : { ...headers };
-  const access = localStorage.getItem("lac.access");
-  if (authState.enabled && access) result.Authorization = `Bearer ${access}`;
-  return result;
-}
-
-async function rawApi(path, options = {}) {
-  let response;
-  try {
-    response = await fetch(path, { ...options, headers: withApiKey(options.headers) });
-  } catch {
-    throw new Error("Không kết nối được máy chủ. Kiểm tra backend đang chạy.");
-  }
-  const data = response.status === 204 ? {} : await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(ERROR_HINTS[data.error_code] || data.message || "Yêu cầu thất bại.");
-    error.code = data.error_code;
-    error.status = response.status;
-    throw error;
-  }
-  return data;
-}
-
 async function api(path, options = {}) {
   try {
-    return await rawApi(path, options);
+    return await sendJson(path, options);
   } catch (error) {
     if (error.status === 401 && authState.enabled && (await tryRefreshToken())) {
-      return rawApi(path, options);
+      return sendJson(path, options);
     }
     if (error.status === 401 && authState.enabled) showAuthOverlay(false);
     throw error;
   }
-}
-
-function esc(text) {
-  return String(text)
-    .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;").replaceAll("'", "&#39;");
-}
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
 }
 
 function iconBtn(icon, label, extraClass = "") {
@@ -221,13 +147,6 @@ async function copyText(text, doneMessage = "Đã sao chép.") {
 }
 
 /* ── Prefs & state ─────────────────────────────────────────────── */
-function readStore(key, fallback) {
-  try { return { ...fallback, ...JSON.parse(localStorage.getItem(key) || "{}") }; }
-  catch { return { ...fallback }; }
-}
-const prefs = readStore("lac.prefs", { theme: "system", enterToSend: true, memoryDefault: false, mode: "general", toolsOn: false });
-const savePrefs = () => localStorage.setItem("lac.prefs", JSON.stringify(prefs));
-
 const titles = readStore("lac.titles", {});
 const saveTitles = () => localStorage.setItem("lac.titles", JSON.stringify(titles));
 
@@ -248,14 +167,6 @@ const state = {
 };
 const saveDocSelection = () =>
   localStorage.setItem("lac.docsel", JSON.stringify([...state.selectedDocs]));
-
-/* ── Theme ─────────────────────────────────────────────────────── */
-const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
-function applyTheme() {
-  const resolved = prefs.theme === "system" ? (systemDark.matches ? "dark" : "light") : prefs.theme;
-  document.documentElement.dataset.theme = resolved;
-}
-systemDark.addEventListener("change", applyTheme);
 
 /* ── Markdown (escape-first, an toàn XSS) ──────────────────────── */
 function inlineMd(text) {
@@ -626,7 +537,7 @@ function renderHistory(messages) {
 async function streamChat(path, payload, { onMeta, onToken, onSteps, onDone }, signal) {
   const send = () => fetch(path, {
     method: "POST",
-    headers: withApiKey({ "Content-Type": "application/json" }),
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ ...payload, stream: true }),
     signal,
   });
