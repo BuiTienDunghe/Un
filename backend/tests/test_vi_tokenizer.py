@@ -67,6 +67,46 @@ def test_the_segmenter_still_segments_the_way_the_pin_promises():
     ]
 
 
+#: The two files ViTokenizer loads at import. THESE are the segmentation
+#: contract -- the version string only names the box they arrived in.
+SEGMENTER_FILES = {
+    "words.txt": "517743d27e71d43343e4b8e9e89015cdc68d84ebe1d48106449e501d918ece4a",
+    "pyvi3.pkl": "6cdd73aee04b6a4ad7320ca85d27d931a7ef870cfdd41beb148e86bdb8aca134",
+}
+
+
+def test_the_segmenter_model_files_are_the_ones_the_baseline_was_measured_with():
+    """Pin the contract itself, because the canary above only samples it.
+
+    Measured, not assumed. Of the 495 dictionary bigrams that occur in the
+    production corpus, 468 resegment it when removed -- the one-sentence canary
+    notices 3 of those 468 (0.6%), and the three are exactly the words hard-
+    coded in its own assertion. A realistic edit -- adding eight domain
+    compounds a Vietnamese RAG project would plausibly add -- resegments 169 of
+    190 chunks and moves 3.11% of token positions with every other guard here
+    still green.
+
+    Hashing closes that gap completely: words.txt (22,705 bigrams + 1,907
+    trigrams) and pyvi3.pkl (the CRF weights) are the whole dictionary-and-model
+    half of the contract, and a byte of either moving is caught. This is the
+    guard that matters, because the version pin provably cannot move: pyvi
+    0.1.1 is the newest release and `>=0.1.1,<1.0` already resolved to nothing
+    else.
+
+    If this goes red, someone edited the installed package or reinstalled from
+    a different source. Update the hashes ONLY together with a re-recorded eval
+    baseline -- the retrieval numbers were measured on these exact bytes.
+    """
+    import hashlib
+
+    import pyvi
+
+    models = Path(pyvi.__file__).resolve().parent / "models"
+    actual = {name: hashlib.sha256((models / name).read_bytes()).hexdigest() for name in SEGMENTER_FILES}
+
+    assert actual == SEGMENTER_FILES
+
+
 def test_models_endpoint_publishes_the_tokenizer_for_the_eval_harness(client):
     """The harness reads embedding_model from here; the tokenizer belongs beside it."""
     response = client.get("/models")
