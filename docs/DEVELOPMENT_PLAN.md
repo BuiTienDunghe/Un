@@ -192,7 +192,7 @@ pip install -e ".[rerank]" && pip install --index-url https://download.pytorch.o
 | 4 | ~~**P4-5** — chunk visualization~~ | ✅ Đóng 25/08 (cả 2 phase — xem/đánh dấu; `docs/p4_5_design.md` + `p4_progress.md`) | — | (xong) |
 | 4b | ~~**P4-6** — cross-encoder cắt cụt 65% chunk (778 token vs cửa sổ 512)~~ | ✅ Đóng 25/08 — cửa sổ trượt; MRR 0.858→0.936, doc_hit 0.854→0.927 | — | (xong) |
 | 5 | ~~**T16** — ghim `pyvi` đúng version + `tokenizer_version`~~ | ✅ Đóng 25/08 — **nhưng cái ghim đo ra là vô hiệu** (pyvi 0.1.1 là bản duy nhất từ 2021); guard thật là **băm 2 file model**. Đọc §4b#5 trước khi tin là đã che chắn | — | (xong) |
-| 6 | **D4** — LLMOps / observability | 📊 Track D | — | 3–4 buổi |
+| 6 | **D4** — LLMOps / observability | 📊 Track D — **đã khảo sát 25/08, ước lượng cũ SAI**: phần lớn đã xây rồi. Xem `docs/d4_design.md` | — | ~~3–4 buổi~~ → **1,5 buổi** |
 | 7 | **D3b** — digest nền có luật nhường | ✨ Track D | — | 3 buổi |
 | 8 | ~~**T8** — tách `/ui/common.js`~~ | ✅ Đóng 25/08 — 4 bản chép hợp nhất còn 1; dashboard/ocr/chunks **có refresh token** lần đầu | — | (xong) |
 | 9 | **T5** — Discord turn retry sau mất lease | 🐞 Nợ | — | 2 buổi |
@@ -334,9 +334,21 @@ Nghiệm thu P4-5: `GET /documents/{id}/chunks` phân trang trả đủ 9 cột,
 
 ### 4d. Track D — phần còn lại
 
-**#6 · D4 — LLMOps / observability** *(3–4 buổi)*
+**#6 · D4 — LLMOps / observability** — ⚠️ **ĐÃ KHẢO SÁT 25/08. Ước lượng và phạm vi cũ đều sai. Đọc `docs/d4_design.md` trước khi bắt tay.**
 
-Hợp nhất sử liệu rời (`agent_traces`, `request_logs`, dashboard) thành **trace một-câu-hỏi-một-cây**: retrieval → tool call → generation, kèm token vào/ra, thời gian, prompt version. Prompt quản lý như code — mỗi version có số hiệu gắn điểm eval (extractor đã qua 5 đời prompt không sử liệu). Chỉ ghi metadata, không thêm lời gọi model.
+> *Mô tả gốc, giữ lại để đối chiếu:* «Hợp nhất sử liệu rời (`agent_traces`, `request_logs`, dashboard) thành **trace một-câu-hỏi-một-cây**: retrieval → tool call → generation, kèm token vào/ra, thời gian, prompt version. Prompt quản lý như code — mỗi version có số hiệu gắn điểm eval (extractor đã qua 5 đời prompt không sử liệu). Chỉ ghi metadata, không thêm lời gọi model.» *(3–4 buổi)*
+
+Khảo sát trên hệ thống thật lật ba giả định của đoạn trên:
+
+- **«Hợp nhất 3 nguồn»** — `agent_traces` có **0 dòng** và được thiết kế để mãi mãi 0 dòng (cascade xoá theo hội thoại; sequence đã ở 20, bảng ở 0). `dashboard` không phải bản ghi mà là bộ hiển thị. Chỉ còn **một** bảng thật, `request_logs` 142 dòng, **65% là lời gọi của robot eval**.
+- **«5 đời prompt không sử liệu»** — thực ra là **4 đời** (nhãn `_V5` gắn trên đúng văn bản V4, không tồn tại thân V5), và **sử liệu CÓ tồn tại**: 8 file trong `data/benchmarks/discord_memory_extractor/`, gồm cả cú sụt v3 (schema compliance 1.0 → 0.05).
+- **«token + prompt version»** — đã xây **trọn vẹn** ở nhánh Discord extractor, ghi vào bảng 0 dòng mà không code nào đọc lại. Xây bản thứ hai cùng hình dạng là lặp lại một thí nghiệm đã thất bại.
+
+**Và điều đáng kể nhất:** cây trace — sản phẩm chủ lực của D4 — **sẽ không bắt được lỗi lớn nhất lịch sử dự án**. Khi cross-encoder cắt cụt 65% kho suốt 4 ngày, thời gian vẫn bình thường và các chunk đã nằm sẵn trong `message_sources`; cây trace không hiện gì bất thường. Thứ bắt được nó là **một dòng cảnh báo `778 > 512` của tokenizer** — mà hệ thống hiện vứt đi, vì `logging_service.py` chỉ cấu hình loguru, không có `InterceptHandler` cũng không `captureWarnings`. **0 dòng khớp trong cả 8 file log 30 ngày.**
+
+Phạm vi chốt lại — **D4-lite, ~1,5 buổi, không thêm bảng nào**: (1) bắt cảnh báo thư viện vào sink đã có; (2) thêm **một cột** `request_logs.message_id` để nối ba bản ghi đã có sẵn thành cây — hiện **19% dòng câu hỏi đã mồ côi** vì khoá nối duy nhất là dấu thời gian lệch 19 ms; (3) hai cột token (Ollama đã trả sẵn, `ollama_client.py:57` vứt đi) + **băm prompt đã lắp ráp**; (4) đăng ký eval cấu hình-đang-chạy thành Scheduled Task — CI cố ý chỉ đo đường trần nên **không gì đang canh cấu hình production thật sự chạy**; (5) làm cho một lỗi có thể được ghi (142/142 dòng đều `status='ok'` — nhánh lỗi chưa từng chạy).
+
+**Hai va chạm bất biến phải giải trước khi thêm bất kỳ bảng nào** — trace tự xoá lịch sử qua cascade, và span bao quanh lời gọi model vi phạm bất biến #2. Chi tiết ở `docs/d4_design.md` §6.
 
 **#7 · D3b — Digest nền có luật nhường** *(3 buổi)*
 
