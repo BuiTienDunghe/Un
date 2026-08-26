@@ -180,6 +180,7 @@ Hai buổi tiết kiệm được nên dồn vào **D2** (distillation, là đi�
 | | |
 | --- | --- |
 | `check_operational_alerts.py` **không được lịch nào chạy** | Script có thật, chạy được. Scheduled Task duy nhất của dự án trên máy này là backup 02:00. |
+| ~~Job trí nhớ Discord xếp hàng không ai xử~~ — **SAI, đính chính 26/08** | Kết luận này rút ra khi quan sát hệ thống ở trạng thái **do chính tôi tạo ra**: suốt buổi tôi chạy `uvicorn` trần thay vì launcher. Thực tế `run-local-ai-core.bat` **có** khởi động cả `outbox_dispatcher` lẫn `memory_worker`, gác bởi `DISCORD_MEMORY_INGESTION_ENABLED=true` trong `.env` (dòng 149-161). Chạy đúng launcher thì `/health` trả `worker_memory: ok`, `outbox_dispatcher: ok`, `memory_ingestion: ok`. Đường ống trí nhớ **chưa bao giờ hỏng** — và đề xuất "task rút hàng đợi 04:00" là thừa. Bài học: đừng chẩn đoán hệ thống dựa trên một trạng thái mình tự dựng lên. |
 | Biểu đồ 14 ngày **chỉ có thể hiện 7 ngày** | `REQUEST_LOG_RETENTION_DAYS=7` xoá cứng; `dashboard.py:32` mặc định `days=14`. 6/14 cột luôn rỗng. |
 | `/api/ocr/system/metrics` — màn hình GPU/VRAM **không ai xem** | `monitoring_service.py:6-19` chạy tốt (psutil + `nvidia-smi`), là **nơi duy nhất** hệ thống đo GPU. Không màn hình nào hiển thị, trong khi dashboard hiện các số luôn bằng 0. |
 | 11/17 khoá trong `/metrics` được tính mỗi 20 giây và **không hiển thị ở đâu** | |
