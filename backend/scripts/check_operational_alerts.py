@@ -27,9 +27,15 @@ def main() -> None:
  # was built to catch. A DB error is reported (exit 3, not the alert exit 2,
  # so a morning Docker-not-yet-started race is loggable without a false
  # popup), and the dump-age check still runs.
- jobs=[]; active_chunks=None; db_error=None
+ jobs=None; active_chunks=None; db_error=None
  try:
-  sessions=create_session_factory(create_postgres_engine(settings.database_url))
+  # 5 s, not the driver default. With Docker off the default connect timeout
+  # made this check sit for over TWO MINUTES before giving up -- measured
+  # 26/08. The task window is deliberately visible (a task you can see is a
+  # task you know ran), and a black window that hangs for two minutes is
+  # exactly the one a human closes by hand. It already happened once, to the
+  # 03:00 eval. Fail fast so the window comes and goes.
+  sessions=create_session_factory(create_postgres_engine(settings.database_url, connect_timeout_seconds=5))
   with sessions() as session:
    jobs=list(session.scalars(select(Job).where(Job.status=="running",Job.lease_expires_at < datetime.now(UTC))))
    # Same predicate as the BM25 snapshot: only the authoritative active corpus.
@@ -43,7 +49,11 @@ def main() -> None:
  # it in here means ONE morning popup covers the whole night shift.
  eval_attention=(settings.logs_path/"ATTENTION_nightly_eval.txt")
  eval_alert=eval_attention.exists()
- payload={"stale_jobs":len(jobs),"jobs":[{"id":j.id,"type":j.job_type,"worker_id":j.worker_id,"lease_expires_at":j.lease_expires_at.isoformat() if j.lease_expires_at else None} for j in jobs],"active_chunks":active_chunks,"chunk_warn_threshold":args.chunk_warn,"chunk_alert":chunk_alert,"newest_dump_age_hours":round(dump_age,2) if dump_age is not None else None,"dump_max_age_hours":args.dump_max_age_hours,"dump_alert":dump_alert,"nightly_eval_alert":eval_alert,"db_error":db_error}; print(json.dumps(payload))
- if args.fail_on_alert and (jobs or chunk_alert or dump_alert or eval_alert): raise SystemExit(2)
+ # None, not 0: "not checked" must not read as "checked, none found". The 09:30
+ # report on 26/08 said stale_jobs 0 while the database was unreachable --
+ # active_chunks correctly said null on the same line, and the inconsistency
+ # was the sort of quiet lie this whole track exists to remove.
+ payload={"stale_jobs":len(jobs) if jobs is not None else None,"jobs":[{"id":j.id,"type":j.job_type,"worker_id":j.worker_id,"lease_expires_at":j.lease_expires_at.isoformat() if j.lease_expires_at else None} for j in (jobs or [])],"active_chunks":active_chunks,"chunk_warn_threshold":args.chunk_warn,"chunk_alert":chunk_alert,"newest_dump_age_hours":round(dump_age,2) if dump_age is not None else None,"dump_max_age_hours":args.dump_max_age_hours,"dump_alert":dump_alert,"nightly_eval_alert":eval_alert,"db_error":db_error}; print(json.dumps(payload))
+ if args.fail_on_alert and ((jobs or []) or chunk_alert or dump_alert or eval_alert): raise SystemExit(2)
  if db_error: raise SystemExit(3)
 if __name__=="__main__": main()
