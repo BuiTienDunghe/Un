@@ -166,7 +166,6 @@ async def lifespan(app: FastAPI):
     app.state.agent_service = AgentService(
         router,
         retrieval_service,
-        app.state.memory_service,
         app.state.operational_service,
         max_steps=int(agent_config.get("max_steps", 3)),
         tool_result_max_chars=int(agent_config.get("tool_result_max_chars", 1200)),

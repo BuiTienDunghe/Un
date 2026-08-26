@@ -15,7 +15,6 @@ import json
 from time import perf_counter
 from typing import Any, Protocol
 
-from app.services.memory_service import MemoryService
 from app.services.injection_defense import InjectionDefense
 from app.services.model_router import ModelRouter
 
@@ -30,8 +29,8 @@ class StatusBackend(Protocol):
 
 AGENT_GUIDE = (
     "Bạn có thể dùng công cụ khi cần dữ liệu thật: `search_documents` tìm trong "
-    "tài liệu người dùng đã tải lên, `search_memory` tìm trong trí nhớ dài hạn, "
-    "`system_status` xem sức khỏe hệ thống. Chỉ gọi công cụ khi câu hỏi thật sự "
+    "tài liệu người dùng đã tải lên, `system_status` xem sức khỏe hệ thống. "
+    "Chỉ gọi công cụ khi câu hỏi thật sự "
     "cần dữ liệu đó; câu chào hỏi hay kiến thức chung thì trả lời thẳng, không "
     "gọi gì. Khi dùng nội dung tài liệu, nêu tên tệp và số trang. Khi đã đủ "
     "thông tin, trả lời trọn vẹn bằng tiếng Việt."
@@ -48,20 +47,6 @@ AGENT_TOOLS: list[dict[str, Any]] = [
                 "properties": {
                     "query": {"type": "string", "description": "Câu truy vấn, viết thành câu độc lập đủ ngữ cảnh"},
                     "top_k": {"type": "integer", "description": "Số đoạn muốn lấy (1-8), mặc định 4"},
-                },
-                "required": ["query"],
-            },
-        },
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "search_memory",
-            "description": "Tìm trong trí nhớ dài hạn của trợ lý (sở thích, cấu hình, quyết định mà người dùng đã cho ghi nhớ).",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string", "description": "Điều muốn nhớ lại, ví dụ: 'người dùng thích trả lời thế nào'"},
                 },
                 "required": ["query"],
             },
@@ -87,7 +72,6 @@ class AgentService:
         self,
         router: ModelRouter,
         retrieval_service: RetrievalBackend,
-        memory_service: MemoryService,
         operational_service: StatusBackend,
         max_steps: int = 3,
         tool_result_max_chars: int = 2400,
@@ -96,7 +80,6 @@ class AgentService:
         self.defense = defense or InjectionDefense(enabled=False)
         self.router = router
         self.retrieval_service = retrieval_service
-        self.memory_service = memory_service
         self.operational_service = operational_service
         self.max_steps = max(1, max_steps)
         self.tool_result_max_chars = max(200, tool_result_max_chars)
@@ -179,17 +162,6 @@ class AgentService:
                         "score": round(float(chunk.get("score") or 0.0), 3),
                     }
                     for chunk in chunks
-                ])
-            if name == "search_memory":
-                query = str(arguments.get("query") or "").strip()
-                if not query:
-                    return self._dump({"error": "query trống"})
-                memories = self.memory_service.search(query, top_k=5)
-                if not memories:
-                    return self._dump({"result": "trí nhớ chưa có gì liên quan"})
-                return self._dump([
-                    {"content": memory.get("content"), "score": round(float(memory.get("score") or 0.0), 3)}
-                    for memory in memories
                 ])
             if name == "system_status":
                 return self._dump(self.operational_service.health())

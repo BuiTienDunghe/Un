@@ -7,7 +7,7 @@ from hashlib import sha256
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -555,6 +555,46 @@ class DiscordMemoryRepository:
             )
             for memory in rows
         ]
+
+    def list_active_context_memories(
+        self,
+        *,
+        guild_id: str,
+        subject_id: str | None,
+        limit: int = 10,
+    ) -> list[DiscordMemory]:
+        """Active facts for the ANSWER path: this member's facts plus
+        guild-wide facts, ledger-only.
+
+        This is the read the constrained ledger was built for and never had
+        (memory_design.md §3): every filter the Qdrant mirror lacks — guild,
+        subject, status — is applied here in SQL. Zero model calls; the
+        single-active-row indexes guarantee at most one row per fact key.
+        """
+        bounded_limit = max(1, min(int(limit), 20))
+        if not guild_id:
+            return []
+        scope_clauses = [DiscordMemory.scope == "guild"]
+        if subject_id:
+            scope_clauses.append(
+                and_(
+                    DiscordMemory.scope == "member_in_guild",
+                    DiscordMemory.subject_type.in_(("member", "discord_member")),
+                    DiscordMemory.subject_id == subject_id,
+                )
+            )
+        return list(
+            self.session.scalars(
+                select(DiscordMemory)
+                .where(
+                    DiscordMemory.guild_id == guild_id,
+                    DiscordMemory.status == "active",
+                    or_(*scope_clauses),
+                )
+                .order_by(DiscordMemory.updated_at.desc(), DiscordMemory.id)
+                .limit(bounded_limit)
+            )
+        )
 
     def _candidate_for_extractor(
         self,

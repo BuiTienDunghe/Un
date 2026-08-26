@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
+from app.postgres.discord_memory_repositories import DiscordMemoryRepository
 from app.postgres.discord_repositories import DiscordSessionRepository
 from app.postgres.models import DiscordConversationSession, DiscordSessionTurn
 from app.services.chat_service import ChatService, ConversationNotFoundError
@@ -458,6 +459,28 @@ class DiscordTurnService:
             model_history = [*speaker_context.history]
             if speaker_context.reply_target_message is not None:
                 model_history.append(speaker_context.reply_target_message)
+            # Memory reaches the answer as an unconditional ledger SELECT, not
+            # as a tool the model may or may not call (measured: 4/19 turns)
+            # and not via the unfiltered Qdrant mirror (memory_design.md §3).
+            # Same transaction as the history read; the model call stays
+            # outside it (invariant #2). Zero extra model calls (invariant #7).
+            context_system_prompt = speaker_context.system_instruction
+            active_memories = DiscordMemoryRepository(database).list_active_context_memories(
+                guild_id=session.guild_id,
+                subject_id=turn.author_id,
+                limit=10,
+            )
+            if active_memories:
+                memory_lines = "\n".join(
+                    f"- [{memory.fact_key}] {memory.canonical_fact}"
+                    for memory in active_memories
+                )
+                context_system_prompt = (
+                    f"{context_system_prompt}\n\n"
+                    "Trí nhớ dài hạn đã được xác nhận về server và thành viên "
+                    "(chỉ dùng khi câu hỏi thật sự liên quan):\n"
+                    f"{memory_lines}"
+                )
 
         # A delivery retry reuses the stored response and never calls the model
         # a second time.
@@ -485,7 +508,7 @@ class DiscordTurnService:
                 conversation_id,
                 model_history=model_history,
                 current_model_message=speaker_context.current_message,
-                context_system_prompt=speaker_context.system_instruction,
+                context_system_prompt=context_system_prompt,
                 system_prompt=system_prompt,
                 use_tools=self.agent_tools_enabled,
             )

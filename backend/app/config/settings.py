@@ -115,7 +115,11 @@ class Settings(BaseSettings):
     qdrant_documents_collection: str = "documents"
     max_upload_size_bytes: int = 52_428_800
     max_message_length: int = 10_000
-    conversation_history_limit: int = 12
+    # 27/08 (memory_design.md 1.1): 12 -> 40. Discord dung mot nua (20 luot).
+    # Do thuc nghiem: cua so 6 truot cau "ban nho toi thich uong gi khong"
+    # (fact o luot 4, hoi o luot 19); cua so 18 tra loi dung. Gia: +390ms
+    # nap prompt luc nguoi, +6ms luc am, 0 loi goi sinh chu them.
+    conversation_history_limit: int = 40
 
     @field_validator("discord_memory_auto_apply_threshold", mode="before")
     @classmethod

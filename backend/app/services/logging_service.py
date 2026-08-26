@@ -1,12 +1,42 @@
 from __future__ import annotations
 
 import logging
+import os
 import warnings
 from pathlib import Path
 
 from loguru import logger
 
 from app.stores.auxiliary_store import AuxiliaryStore
+
+# Secrets that must never reach a log file. The file sink serializes records
+# and keeps them 30 days; an exception message that embeds a credential (an
+# HTTP client quoting its URL, a config dump) would otherwise persist it in
+# data/logs/ — which the nightly backup then copies (memory_design.md 13.2 E8).
+_SECRET_ENV_NAMES = (
+    "GEMINI_API_KEY",
+    "DEEPSEEK_API_KEY",
+    "LOCAL_AI_API_KEY",
+    "DISCORD_TOKEN",
+    "AUTH_JWT_SECRET",
+)
+
+
+def _redact_secrets(record) -> bool:
+    """Loguru filter: mask known secret values inside the message in place.
+
+    Values are re-read from the environment on every call — cheap (a handful
+    of dict lookups) and immune to key rotation without restart ordering
+    issues. Only values long enough to be real credentials are masked, so a
+    placeholder like "off" can never censor ordinary prose.
+    """
+    message = record["message"]
+    for name in _SECRET_ENV_NAMES:
+        value = os.environ.get(name, "")
+        if len(value) >= 8 and value in message:
+            message = message.replace(value, f"<{name}:REDACTED>")
+    record["message"] = message
+    return True
 
 
 class _InterceptHandler(logging.Handler):
@@ -55,6 +85,7 @@ class LoggingService:
                 retention="30 days",
                 serialize=True,
                 level="INFO",
+                filter=_redact_secrets,
             )
             self._configured_log_files.add(self.log_file)
         self._bridge_stdlib(stdlib_level)

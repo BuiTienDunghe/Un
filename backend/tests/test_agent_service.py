@@ -50,7 +50,7 @@ def test_agent_calls_a_tool_then_answers_and_the_trace_is_replayable(client, moc
     monkeypatch.setattr(
         "app.llm_clients.ollama_client.OllamaClient.chat_tools",
         scripted_chat_tools([
-            tool_call("search_memory", {"query": "sở thích trả lời"}),
+            tool_call("search_documents", {"query": "sở thích trả lời"}),
             final("Bạn thích câu trả lời ngắn gọn."),
         ]),
     )
@@ -62,7 +62,7 @@ def test_agent_calls_a_tool_then_answers_and_the_trace_is_replayable(client, moc
     assert body["answer"] == "Bạn thích câu trả lời ngắn gọn."
     kinds = [step["kind"] for step in body["agent_steps"]]
     assert kinds == ["tool_call", "tool_result", "final"]
-    assert body["agent_steps"][0]["tool_name"] == "search_memory"
+    assert body["agent_steps"][0]["tool_name"] == "search_documents"
     assert body["agent_steps"][0]["arguments"] == {"query": "sở thích trả lời"}
 
     # The same steps persist, attached to the assistant message (P2-2 trace).
@@ -106,9 +106,9 @@ def test_exhausted_tool_budget_forces_a_plain_answer(client, mock_ollama, monkey
     monkeypatch.setattr(
         "app.llm_clients.ollama_client.OllamaClient.chat_tools",
         scripted_chat_tools([
-            tool_call("search_memory", {"query": "một"}),
-            tool_call("search_memory", {"query": "hai"}),
-            tool_call("search_memory", {"query": "ba"}),
+            tool_call("search_documents", {"query": "một"}),
+            tool_call("search_documents", {"query": "hai"}),
+            tool_call("search_documents", {"query": "ba"}),
         ]),
     )
 
@@ -151,7 +151,7 @@ def test_streaming_agent_mode_emits_steps_then_the_whole_answer(client, mock_oll
     monkeypatch.setattr(
         "app.llm_clients.ollama_client.OllamaClient.chat_tools",
         scripted_chat_tools([
-            tool_call("search_memory", {"query": "gu"}),
+            tool_call("search_documents", {"query": "gu"}),
             final("Câu trả lời cuối."),
         ]),
     )

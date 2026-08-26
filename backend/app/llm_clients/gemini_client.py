@@ -40,6 +40,9 @@ class GeminiClient:
         self.chat_timeout = chat_timeout
         self.retry_count = retry_count
 
+    def _headers(self) -> dict[str, str]:
+        return {"x-goog-api-key": self.api_key}
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
@@ -97,12 +100,16 @@ class GeminiClient:
         top_p: float | None = None,
     ) -> str:
         """Send a blocking chat request and return the text response."""
-        url = f"{self.BASE_URL}/models/{model}:generateContent?key={self.api_key}"
+        # The key travels as a header, never in the URL: httpx errors embed the
+        # full URL, and the serialized log sink keeps records for 30 days
+        # (memory_design.md 13.2 E8). x-goog-api-key is Google's documented
+        # standard for this API; ?key= is legacy back-compat.
+        url = f"{self.BASE_URL}/models/{model}:generateContent"
         payload = self._build_payload(messages, temperature, max_tokens, top_p)
 
         for attempt in range(self.retry_count + 1):
             try:
-                response = httpx.post(url, json=payload, timeout=self.chat_timeout)
+                response = httpx.post(url, json=payload, headers=self._headers(), timeout=self.chat_timeout)
                 if response.status_code == 401:
                     raise GeminiAuthError("Invalid Gemini API key")
                 if response.status_code == 429:
@@ -141,11 +148,11 @@ class GeminiClient:
         top_p: float | None = None,
     ) -> Iterator[str]:
         """Stream a chat response token by token (server-sent events)."""
-        url = f"{self.BASE_URL}/models/{model}:streamGenerateContent?alt=sse&key={self.api_key}"
+        url = f"{self.BASE_URL}/models/{model}:streamGenerateContent?alt=sse"
         payload = self._build_payload(messages, temperature, max_tokens, top_p)
 
         try:
-            with httpx.stream("POST", url, json=payload, timeout=self.chat_timeout) as response:
+            with httpx.stream("POST", url, json=payload, headers=self._headers(), timeout=self.chat_timeout) as response:
                 if response.status_code == 401:
                     raise GeminiAuthError("Invalid Gemini API key")
                 response.raise_for_status()
