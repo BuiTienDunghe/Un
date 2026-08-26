@@ -84,4 +84,6 @@ data/sqlite/*.sqlite3
 /*.pdf
 
 # Worktree va phien lam viec cua tro ly AI - khong bao gio push (repo PUBLIC).
-.claude/
+# Ngoai le: .claude/skills/ duoc commit (agent skills dung chung, noi dung public MIT).
+.claude/*
+!.claude/skills/
