@@ -49,6 +49,8 @@ data/qdrant/
 data/evaluation/results/
 data/archives/
 data/backups/
+# Bo dem nghe thu dong (memory_design.md 13.6 job 1) - id nguoi dung that, khong push
+data/discord_listen/
 # Half-written dumps. `*.dump` below does not match them: the name ends in .part.
 *.part
 # data/benchmarks/ → TRACKED intentionally (JSON test cases & results synced between machines)

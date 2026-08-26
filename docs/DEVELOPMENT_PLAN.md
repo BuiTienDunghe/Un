@@ -198,7 +198,7 @@ pip install -e ".[rerank]" && pip install --index-url https://download.pytorch.o
 | 8 | ~~**T8** — tách `/ui/common.js`~~ | ✅ Đóng 25/08 — 4 bản chép hợp nhất còn 1; dashboard/ocr/chunks **có refresh token** lần đầu | — | (xong) |
 | 9 | **T5** — Discord turn retry sau mất lease | 🐞 Nợ | — | 2 buổi |
 | 10 | **T12 / T13** — đánh bóng agent P2 và auth P3 | 🔧 Nợ | — | 2–3 buổi mỗi mục |
-| 10b | **MEM** — trí nhớ Discord theo `docs/memory_design.md` §13.6: **0a-0d** (khoá+protect · cửa sổ 40 · sửa đường đọc+xoá `search_memory` · key Gemini vào header+che secret log) → mở nghe 1 kênh đếm vài ngày → sổ gốc → BM25 theo-guild **rời đường đọc** → bộ eval 20 ca → verifier 3 trạng thái chạy đêm. Mục tiêu cỡ: **3 server × 100 tin/ngày, khởi đầu 1×30**. Tầng 3/Gemini giữ hoãn (3 chốt ở §12 tài liệu đó) | 🧠 **0-block ✅ 27/08** (664 test pass; cần restart API+bot) — tiếp: mở nghe 1 kênh | 0a-0d ✅ | 0-block ~1 buổi; còn lại theo gate |
+| 10b | **MEM** — trí nhớ Discord theo `docs/memory_design.md` §13.6: **0a-0d** (khoá+protect · cửa sổ 40 · sửa đường đọc+xoá `search_memory` · key Gemini vào header+che secret log) → mở nghe 1 kênh đếm vài ngày → sổ gốc → BM25 theo-guild **rời đường đọc** → bộ eval 20 ca → verifier 3 trạng thái chạy đêm. Mục tiêu cỡ: **3 server × 100 tin/ngày, khởi đầu 1×30**. Tầng 3/Gemini giữ hoãn (3 chốt ở §12 tài liệu đó) | 🧠 **0-block ✅ · bộ đếm thụ động vũ trang 27/08** (1 kênh, không lưu nội dung; đọc: `scripts.passive_listen_report`) — tiếp: đếm vài ngày rồi migration sổ gốc | 0a-0d ✅ | 0-block ~1 buổi; còn lại theo gate |
 | 11 | **T7** — hợp nhất 2 pipeline ingestion | 🔧 Nợ lớn | — | 4–5 buổi |
 | 12 | **D2** — distillation 9b → 2b | 🎓 Track D | GPU cloud | 4–6 buổi |
 | 13 | **D3c** — multi-step planning | ⛔ Gác | **D2 đạt** | (sau) |

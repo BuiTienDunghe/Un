@@ -28,6 +28,11 @@ from discord_bot.client import (
     format_rag_sources,
     split_for_discord,
 )
+from discord_bot.passive_listener import (
+    DEFAULT_COUNTS_PATH,
+    PassiveListener,
+    parse_listen_channel_ids,
+)
 from discord_bot.session_location import (
     UnsupportedDiscordLocationError,
     canonical_discord_location,
@@ -47,6 +52,9 @@ class DiscordSettings:
     system_prompt_path: Path
     member_context_limit: int
     persistent_sessions_enabled: bool = False
+    # memory_design.md 13.6 job 1: channels whose traffic is COUNTED (never
+    # stored) to size the raw ledger before its migration exists.
+    listen_channel_ids: frozenset[str] = frozenset()
 
     @classmethod
     def from_env(cls) -> "DiscordSettings":
@@ -82,6 +90,9 @@ class DiscordSettings:
                 "DISCORD_PERSISTENT_SESSIONS_ENABLED",
                 "false",
             ).strip().lower() in {"1", "true", "yes", "on"},
+            listen_channel_ids=parse_listen_channel_ids(
+                os.environ.get("DISCORD_LISTEN_CHANNEL_IDS", "")
+            ),
         )
 
 
@@ -353,8 +364,10 @@ def create_bot(
     system_prompt: str,
     member_context_limit: int,
     persistent_sessions_enabled: bool = False,
+    listener: PassiveListener | None = None,
 ) -> LocalAgentDiscordBot:
     bot = LocalAgentDiscordBot()
+    listener = listener or PassiveListener(DEFAULT_COUNTS_PATH, frozenset())
     gateway = DiscordConversationGateway(
         api_client,
         system_prompt,
@@ -365,6 +378,13 @@ def create_bot(
     @bot.event
     async def on_ready() -> None:
         logger.info("Discord bot connected as %s (id=%s)", bot.user, getattr(bot.user, "id", "unknown"))
+        if listener.enabled:
+            logger.info(
+                "Passive counting armed on %d channel(s): %s -> %s (ids and flags only, no content)",
+                len(listener.listened_channel_ids),
+                ",".join(sorted(listener.listened_channel_ids)),
+                listener.counts_path,
+            )
 
     @bot.tree.command(name="ping", description="Check that the Discord bot is responding.")
     async def ping(interaction):
@@ -524,6 +544,18 @@ def create_bot(
 
     @bot.event
     async def on_message(message: discord.Message) -> None:
+        # Counting happens BEFORE every gate: bot-authored and un-mentioned
+        # messages are exactly the traffic the measurement exists to size.
+        # record() swallows its own failures; answering is never affected.
+        parent_id = getattr(message.channel, "parent_id", None)
+        listener.record(
+            guild_id=str(message.guild.id) if message.guild else None,
+            channel_id=str(message.channel.id),
+            parent_channel_id=str(parent_id) if parent_id else None,
+            author_id=str(message.author.id),
+            author_is_bot=bool(message.author.bot),
+            is_mention=bool(bot.user is not None and bot.user.mentioned_in(message)),
+        )
         if message.author.bot or bot.user is None or not bot.user.mentioned_in(message):
             return
         question = message.content.replace(f"<@{bot.user.id}>", "").replace(f"<@!{bot.user.id}>", "").strip()
@@ -585,6 +617,7 @@ async def run() -> None:
         load_system_prompt(settings.system_prompt_path),
         settings.member_context_limit,
         settings.persistent_sessions_enabled,
+        listener=PassiveListener(DEFAULT_COUNTS_PATH, settings.listen_channel_ids),
     )
     try:
         # Never log settings.token or any password.
