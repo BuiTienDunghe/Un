@@ -570,20 +570,40 @@ class DiscordMemoryRepository:
         guild_id: str,
         subject_id: str | None,
         limit: int = 10,
+        all_members: bool = False,
     ) -> list[DiscordMemory]:
-        """Active facts for the ANSWER path: this member's facts plus
-        guild-wide facts, ledger-only.
+        """Active facts for the ANSWER path: guild-wide facts plus member
+        facts — one member's (subject_id) or, with all_members, everyone's
+        in this guild. Ledger-only.
 
         This is the read the constrained ledger was built for and never had
         (memory_design.md §3): every filter the Qdrant mirror lacks — guild,
         subject, status — is applied here in SQL. Zero model calls; the
         single-active-row indexes guarantee at most one row per fact key.
         """
-        bounded_limit = max(1, min(int(limit), 20))
+        # The ledger is bounded by design (one active row per subject+key,
+        # closed vocabulary), so the cap can be generous — a 10-row recency
+        # window silently evicted needed facts once reads went guild-wide
+        # (review finding 28/08).
+        bounded_limit = max(1, min(int(limit), 100))
         if not guild_id:
             return []
         scope_clauses = [DiscordMemory.scope == "guild"]
-        if subject_id:
+        if all_members:
+            # Step 4 (28/08): the answer path injects every member's approved
+            # facts within the guild. The privacy boundary is the GUILD — the
+            # ledger holds only what members stated publicly in this server
+            # and a human approved; filtering by the asker blocked the two
+            # observed production uses (asking about another member, and
+            # recalling what someone else said about you). Cross-guild
+            # isolation is untouched.
+            scope_clauses.append(
+                and_(
+                    DiscordMemory.scope == "member_in_guild",
+                    DiscordMemory.subject_type.in_(("member", "discord_member")),
+                )
+            )
+        elif subject_id:
             scope_clauses.append(
                 and_(
                     DiscordMemory.scope == "member_in_guild",

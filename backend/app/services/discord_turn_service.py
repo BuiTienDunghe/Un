@@ -16,6 +16,8 @@ from app.services.discord_memory_completion_service import (
     DiscordMemoryCompletionService,
 )
 from app.services.discord_speaker_context import (
+    DISCORD_HISTORY_USAGE_RULES,
+    DISCORD_SPEAKER_ATTRIBUTION_RULES,
     BotReplyTargetContext,
     DiscordReplyTargetContext,
     ReplyTargetContext,
@@ -479,23 +481,39 @@ class DiscordTurnService:
             # and not via the unfiltered Qdrant mirror (memory_design.md §3).
             # Same transaction as the history read; the model call stays
             # outside it (invariant #2). Zero extra model calls (invariant #7).
-            context_system_prompt = speaker_context.system_instruction
+            # Step 4 (28/08): guild-wide, not asker-only — both observed
+            # production uses cross the asker boundary (PA asking about
+            # Dũng's birthday; Dũng asking what PA stated about him). Each
+            # line names its subject by author_id so the model can join it
+            # against the speaker labels in the history. Ordering is a
+            # MEASURED variable (§13.7): the history-usage rules must be the
+            # LAST system content, so the memory block goes in the middle.
             active_memories = DiscordMemoryRepository(database).list_active_context_memories(
                 guild_id=session.guild_id,
-                subject_id=turn.author_id,
-                limit=10,
+                subject_id=None,
+                all_members=True,
+                limit=50,
             )
             if active_memories:
                 memory_lines = "\n".join(
-                    f"- [{memory.fact_key}] {memory.canonical_fact}"
+                    (
+                        f"- [{memory.fact_key} | về author_id="
+                        f"{memory.subject_id}] {memory.canonical_fact}"
+                        if memory.scope == "member_in_guild"
+                        else f"- [{memory.fact_key} | về server] "
+                        f"{memory.canonical_fact}"
+                    )
                     for memory in active_memories
                 )
                 context_system_prompt = (
-                    f"{context_system_prompt}\n\n"
+                    f"{DISCORD_SPEAKER_ATTRIBUTION_RULES}\n"
                     "Trí nhớ dài hạn đã được xác nhận về server và thành viên "
                     "(chỉ dùng khi câu hỏi thật sự liên quan):\n"
-                    f"{memory_lines}"
+                    f"{memory_lines}\n\n"
+                    f"{DISCORD_HISTORY_USAGE_RULES}"
                 )
+            else:
+                context_system_prompt = speaker_context.system_instruction
 
         # A delivery retry reuses the stored response and never calls the model
         # a second time.
