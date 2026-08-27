@@ -212,7 +212,33 @@ async function postJson(path) {
   }
 }
 
-function renderReview(candidates) {
+const REVIEW_PAGE = 50;
+let reviewRows = [];
+
+function reviewMoreButton() {
+  let button = document.getElementById("review-more");
+  if (!button) {
+    const table = $("review-list").closest("table");
+    button = document.createElement("button");
+    button.id = "review-more";
+    button.className = "btn ghost";
+    button.textContent = "Tải thêm";
+    button.onclick = async () => {
+      button.disabled = true;
+      try {
+        const page = await fetchJson(`/api/memory-review/candidates?limit=${REVIEW_PAGE}&offset=${reviewRows.length}`);
+        reviewRows = reviewRows.concat(page || []);
+        renderReview(reviewRows, { append: true, lastPage: (page || []).length });
+      } finally {
+        button.disabled = false;
+      }
+    };
+    table.insertAdjacentElement("afterend", button);
+  }
+  return button;
+}
+
+function renderReview(candidates, paging) {
   const tbody = $("review-list");
   const badge = $("review-count");
   if (candidates === null) {
@@ -220,8 +246,14 @@ function renderReview(candidates) {
     badge.hidden = true;
     return;
   }
+  if (!paging || !paging.append) {
+    reviewRows = candidates || [];
+  }
   badge.textContent = String(candidates.length);
   badge.hidden = candidates.length === 0;
+  const more = reviewMoreButton();
+  const lastPage = paging && paging.append ? paging.lastPage : candidates.length;
+  more.hidden = lastPage < REVIEW_PAGE;
   if (!candidates.length) {
     tableNotice(tbody, "Không có đề xuất nào chờ duyệt.", 4);
     return;
@@ -235,7 +267,12 @@ function renderReview(candidates) {
     const evidence = document.createElement("div");
     evidence.className = "muted";
     evidence.textContent = candidate.evidence_text ? `«${candidate.evidence_text}»` : "";
-    factCell.append(fact, evidence);
+    const source = document.createElement("div");
+    source.className = "muted";
+    source.style.borderLeft = "2px solid var(--border, #ccc)";
+    source.style.paddingLeft = "6px";
+    source.textContent = candidate.source_text ? `tin gốc: ${candidate.source_text}` : "";
+    factCell.append(fact, evidence, source);
 
     const sourceCell = document.createElement("td");
     sourceCell.textContent = `${candidate.author_display_name || candidate.author_id} · ${candidate.memory_type || "?"}`;
@@ -513,7 +550,7 @@ async function refresh() {
     fetchJson("/metrics"),
     fetchJson("/models"),
     fetchJson("/conversations"),
-    fetchJson("/api/memory-review/candidates"),
+    fetchJson(`/api/memory-review/candidates?limit=${REVIEW_PAGE}&offset=0`),
     fetchJson("/api/memory-review/applied"),
     fetchJson("/agent/activity"),
     fetchJson("/api/dashboard/timeseries"),

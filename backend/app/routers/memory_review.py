@@ -25,8 +25,8 @@ def _candidate_uuid(candidate_id: str) -> UUID:
 
 
 @router.get("/candidates")
-def list_candidates(request: Request) -> list[dict[str, object]]:
-    return request.app.state.memory_review_service.list_pending()
+def list_candidates(request: Request, limit: int = 50, offset: int = 0) -> list[dict[str, object]]:
+    return request.app.state.memory_review_service.list_pending(limit=limit, offset=offset)
 
 
 @router.get("/applied")

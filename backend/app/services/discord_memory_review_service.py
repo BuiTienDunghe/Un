@@ -21,7 +21,11 @@ from app.postgres.discord_memory_repositories import (
     DiscordMemoryIdentity,
     DiscordMemoryRepository,
 )
-from app.postgres.models import DiscordMemory, DiscordMemoryCandidate
+from app.postgres.models import (
+    DiscordMemory,
+    DiscordMemoryCandidate,
+    DiscordSessionTurn,
+)
 from app.services.memory_service import MemoryService
 
 
@@ -67,24 +71,44 @@ class DiscordMemoryReviewService:
         self.sessions = sessions
         self.memory_service = memory_service
 
-    def list_pending(self, limit: int = 50) -> list[dict[str, object]]:
+    def list_pending(self, limit: int = 50, offset: int = 0) -> list[dict[str, object]]:
         """Candidates awaiting a human decision, newest first.
 
         Only rows with an actual proposal are reviewable: rows the extractor
         skipped (disabled, filtered) have no canonical_fact and nothing for a
         reviewer to approve.
+
+        Each row carries the SOURCE MESSAGE text. The guard's own docstring
+        names the human "the guard" — a reviewer shown only the model's
+        self-chosen evidence quote is rubber-stamping, not reviewing
+        (memory_design.md §13.2 E9). And `offset` exists because 50 used to
+        be the hard ceiling of the entire API: at the committed 3×100/day
+        traffic the queue outgrows one page in days, and rows past the
+        bottom were unreachable, silently.
         """
+        bounded_limit = max(1, min(int(limit), 100))
+        bounded_offset = max(0, int(offset))
         with self.sessions() as session:
-            rows = session.scalars(
-                select(DiscordMemoryCandidate)
+            rows = session.execute(
+                select(DiscordMemoryCandidate, DiscordSessionTurn.request_text)
+                .join(
+                    DiscordSessionTurn,
+                    DiscordSessionTurn.id == DiscordMemoryCandidate.source_turn_id,
+                )
                 .where(
                     DiscordMemoryCandidate.decision.in_(tuple(REVIEWABLE_DECISIONS)),
                     DiscordMemoryCandidate.canonical_fact.is_not(None),
                 )
                 .order_by(DiscordMemoryCandidate.created_at.desc())
-                .limit(limit)
-            )
-            return [_candidate_payload(row) for row in rows]
+                .offset(bounded_offset)
+                .limit(bounded_limit)
+            ).all()
+            payloads = []
+            for candidate, source_text in rows:
+                payload = _candidate_payload(candidate)
+                payload["source_text"] = source_text
+                payloads.append(payload)
+            return payloads
 
     def list_applied(
         self,
