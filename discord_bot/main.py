@@ -32,6 +32,7 @@ from discord_bot.passive_listener import (
     DEFAULT_COUNTS_PATH,
     PassiveListener,
     parse_listen_channel_ids,
+    resolve_listened_channel,
 )
 from discord_bot.session_location import (
     UnsupportedDiscordLocationError,
@@ -542,6 +543,56 @@ def create_bot(
             return
         await interaction.followup.send(format_health(payload), ephemeral=True)
 
+    # Fire-and-forget tasks need a strong reference until they finish, or
+    # asyncio may garbage-collect them mid-flight (review finding 28/08).
+    _ledger_tasks: set[asyncio.Task] = set()
+
+    def _guild_public(message: discord.Message) -> bool:
+        """Only guild-public content enters the ledger: a channel hidden from
+        @everyone or a private thread must not become searchable guild-wide
+        through `search_history` (review finding 28/08)."""
+        channel = message.channel
+        if isinstance(channel, discord.Thread):
+            if channel.is_private():
+                return False
+            channel = channel.parent or channel
+        try:
+            permissions = channel.permissions_for(message.guild.default_role)
+        except Exception:
+            return False
+        return bool(permissions.view_channel)
+
+    async def _ship_history_message(message: discord.Message, parent_id) -> None:
+        """Job 1: mirror one heard message into the backend raw ledger.
+        Same contract as the counter — every failure is swallowed here so
+        the answering path never depends on the ledger write."""
+        try:
+            channel_id = str(message.channel.id)
+            resolved = resolve_listened_channel(
+                channel_id,
+                str(parent_id) if parent_id else None,
+                listener.listened_channel_ids,
+            )
+            if resolved is None or message.guild is None:
+                return
+            if not _guild_public(message):
+                return
+            await api_client.record_history_message(
+                {
+                    "guild_id": str(message.guild.id),
+                    "channel_id": resolved,
+                    "thread_id": channel_id if resolved != channel_id else None,
+                    "discord_message_id": str(message.id),
+                    "author_id": str(message.author.id),
+                    "author_display_name": str(message.author.display_name),
+                    "is_bot": bool(message.author.bot),
+                    "content": message.content,
+                    "reply_to_message_id": discord_reply_message_id(message),
+                }
+            )
+        except Exception:
+            logger.exception("history-ledger write failed; answering unaffected")
+
     @bot.event
     async def on_message(message: discord.Message) -> None:
         # Counting happens BEFORE every gate: bot-authored and un-mentioned
@@ -556,6 +607,16 @@ def create_bot(
             author_is_bot=bool(message.author.bot),
             is_mention=bool(bot.user is not None and bot.user.mentioned_in(message)),
         )
+        # The ledger ship decides listening for ITSELF (inside
+        # _ship_history_message) — record()'s return also covers local
+        # counts-file failures, and a full counter disk must never silently
+        # starve the Postgres ledger (review finding 28/08).
+        if message.guild is not None and message.content:
+            # Fire-and-forget: the ledger write runs beside the answer, never
+            # in front of it.
+            task = asyncio.create_task(_ship_history_message(message, parent_id))
+            _ledger_tasks.add(task)
+            task.add_done_callback(_ledger_tasks.discard)
         if message.author.bot or bot.user is None or not bot.user.mentioned_in(message):
             return
         question = message.content.replace(f"<@{bot.user.id}>", "").replace(f"<@!{bot.user.id}>", "").strip()
@@ -605,6 +666,57 @@ def create_bot(
             prepared,
             [str(sent_message.id) for sent_message in sent_messages],
         )
+
+    def _raw_event_listened(payload) -> bool:
+        if getattr(payload, "guild_id", None) is None:
+            return False
+        channel = bot.get_channel(payload.channel_id)
+        if channel is None:
+            # Cache miss (e.g. an archived thread — discord.py evicts them):
+            # we cannot prove the channel is unlistened, and §9.5 says deletes
+            # must always land. Fail OPEN — the backend no-ops (recorded=false)
+            # for message ids it never ledgered (review finding 28/08).
+            return True
+        parent_id = getattr(channel, "parent_id", None)
+        return (
+            resolve_listened_channel(
+                str(payload.channel_id),
+                str(parent_id) if parent_id else None,
+                listener.listened_channel_ids,
+            )
+            is not None
+        )
+
+    @bot.event
+    async def on_raw_message_edit(payload) -> None:
+        # §5.3: honor edits — content becomes the latest text, the ledger
+        # keeps the first version in content_original. Failures swallowed.
+        try:
+            if not _raw_event_listened(payload):
+                return
+            content = (payload.data or {}).get("content") or ""
+            if not content:
+                return
+            await api_client.record_history_edit(str(payload.message_id), content)
+        except Exception:
+            logger.exception("history-ledger edit failed; ignoring")
+
+    @bot.event
+    async def on_raw_message_delete(payload) -> None:
+        # §9.5: honor deletions immediately — texts cleared, skeleton kept.
+        # guild/channel ride along so a delete that BEAT the insert leaves a
+        # tombstone and the racing insert dies on the unique message id
+        # (review finding 28/08).
+        try:
+            if not _raw_event_listened(payload):
+                return
+            await api_client.record_history_delete(
+                str(payload.message_id),
+                guild_id=str(payload.guild_id),
+                channel_id=str(payload.channel_id),
+            )
+        except Exception:
+            logger.exception("history-ledger delete failed; ignoring")
 
     return bot
 

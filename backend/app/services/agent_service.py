@@ -15,6 +15,7 @@ import json
 from time import perf_counter
 from typing import Any, Protocol
 
+from app.services.discord_history_service import history_hit_payload
 from app.services.injection_defense import InjectionDefense
 from app.services.model_router import ModelRouter
 
@@ -27,12 +28,26 @@ class StatusBackend(Protocol):
     def health(self) -> dict[str, object]: ...
 
 
+class HistoryBackend(Protocol):
+    def search(
+        self,
+        *,
+        guild_id: str,
+        query: str,
+        author_id: str | None = None,
+        days: int | None = None,
+        limit: int = 5,
+    ) -> list[object]: ...
+
+
 AGENT_GUIDE = (
     "Bạn có thể dùng công cụ khi cần dữ liệu thật: `search_documents` tìm trong "
-    "tài liệu người dùng đã tải lên, `system_status` xem sức khỏe hệ thống. "
-    "Chỉ gọi công cụ khi câu hỏi thật sự "
+    "tài liệu người dùng đã tải lên, `search_history` tìm nguyên văn tin nhắn "
+    "cũ của server (ai nói gì, lúc nào), `system_status` xem sức khỏe hệ "
+    "thống. Chỉ gọi công cụ khi câu hỏi thật sự "
     "cần dữ liệu đó; câu chào hỏi hay kiến thức chung thì trả lời thẳng, không "
-    "gọi gì. Khi dùng nội dung tài liệu, nêu tên tệp và số trang. Khi đã đủ "
+    "gọi gì. Khi dùng nội dung tài liệu, nêu tên tệp và số trang. Khi dùng "
+    "tin nhắn cũ, nêu ai nói và lúc nào. Khi đã đủ "
     "thông tin, trả lời trọn vẹn bằng tiếng Việt."
 )
 
@@ -47,6 +62,23 @@ AGENT_TOOLS: list[dict[str, Any]] = [
                 "properties": {
                     "query": {"type": "string", "description": "Câu truy vấn, viết thành câu độc lập đủ ngữ cảnh"},
                     "top_k": {"type": "integer", "description": "Số đoạn muốn lấy (1-8), mặc định 4"},
+                },
+                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_history",
+            "description": "Tìm nguyên văn tin nhắn cũ trong lịch sử server Discord hiện tại (sổ gốc). Trả về đúng câu chữ, ai nói, lúc nào và link tới tin nhắn. Dùng khi cần tra lại điều ai đó đã nói.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Từ khóa hoặc cụm từ cần tìm trong tin nhắn cũ"},
+                    "author_id": {"type": "string", "description": "Chỉ lấy tin của một người nói (author_id Discord, có trong nhãn ngữ cảnh)"},
+                    "days": {"type": "integer", "description": "Chỉ tìm trong N ngày gần nhất (tùy chọn)"},
+                    "limit": {"type": "integer", "description": "Số tin muốn lấy (1-10), mặc định 5"},
                 },
                 "required": ["query"],
             },
@@ -76,15 +108,21 @@ class AgentService:
         max_steps: int = 3,
         tool_result_max_chars: int = 2400,
         defense: InjectionDefense | None = None,
+        history_service: HistoryBackend | None = None,
     ) -> None:
         self.defense = defense or InjectionDefense(enabled=False)
         self.router = router
         self.retrieval_service = retrieval_service
         self.operational_service = operational_service
+        self.history_service = history_service
         self.max_steps = max(1, max_steps)
         self.tool_result_max_chars = max(200, tool_result_max_chars)
 
-    def run(self, messages: list[dict[str, Any]]) -> tuple[str, str, list[dict[str, object]]]:
+    def run(
+        self,
+        messages: list[dict[str, Any]],
+        tool_context: dict[str, Any] | None = None,
+    ) -> tuple[str, str, list[dict[str, object]]]:
         """Run the loop on caller-built messages; returns (answer, model, steps).
 
         `messages` arrives exactly as the plain-chat path would send it
@@ -119,7 +157,9 @@ class AgentService:
                 tool_started = perf_counter()
                 # D5: tool output is untrusted data (document chunks, memory
                 # text); the defense marks it so before the model reads it.
-                output = self.defense.wrap_tool_result(self._execute_tool(call["name"], call["arguments"]))
+                output = self.defense.wrap_tool_result(
+                    self._execute_tool(call["name"], call["arguments"], tool_context)
+                )
                 steps.append({
                     "kind": "tool_result", "tool_name": call["name"], "arguments": None,
                     "content": output, "latency_ms": int((perf_counter() - tool_started) * 1000),
@@ -139,10 +179,49 @@ class AgentService:
         })
         return answer, model_used, steps
 
-    def _execute_tool(self, name: str, arguments: dict[str, Any]) -> str:
+    def _execute_tool(
+        self,
+        name: str,
+        arguments: dict[str, Any],
+        tool_context: dict[str, Any] | None = None,
+    ) -> str:
         """Dispatch one call; errors become data the model can react to —
         a broken tool must never kill the whole answer."""
         try:
+            if name == "search_history":
+                # The guild comes from the CALLER (the turn service knows the
+                # session's guild), never from the model — the same isolation
+                # lesson as the ledger read (memory_design.md §3.1).
+                guild_id = str((tool_context or {}).get("guild_id") or "")
+                if self.history_service is None or not guild_id:
+                    return self._dump(
+                        {"error": "search_history chỉ dùng được trong kênh Discord của server"}
+                    )
+                query = str(arguments.get("query") or "").strip()
+                if not query:
+                    return self._dump({"error": "query trống"})
+                try:
+                    limit = int(arguments.get("limit", 5))
+                except (TypeError, ValueError):
+                    limit = 5
+                days = arguments.get("days")
+                try:
+                    days = min(int(days), 3650) if days is not None else None
+                except (TypeError, ValueError):
+                    days = None
+                author_id = str(arguments.get("author_id") or "").strip() or None
+                hits = self.history_service.search(
+                    guild_id=guild_id,
+                    query=query,
+                    author_id=author_id,
+                    days=days,
+                    limit=min(max(limit, 1), 10),
+                )
+                if not hits:
+                    return self._dump(
+                        {"result": "không tìm thấy tin nhắn cũ nào khớp"}
+                    )
+                return self._dump([history_hit_payload(hit) for hit in hits])
             if name == "search_documents":
                 query = str(arguments.get("query") or "").strip()
                 if not query:

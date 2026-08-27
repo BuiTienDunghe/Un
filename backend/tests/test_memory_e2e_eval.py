@@ -1,9 +1,13 @@
 """The memory e2e eval's contract, pinned in the suite (memory_design.md §13.4).
 
 Three things this asserts, and why each is load-bearing:
-- attrib-03 / attrib-04 PASS: the acceptance tests of 0c — member- and
-  guild-isolation on the answer path. If these regress, the read-path leak
-  is back.
+- attrib-04 PASS: the privacy boundary — GUILD isolation on the answer path
+  (§3.2). If it regresses, the cross-guild leak is back.
+- attrib-03 PASS: guild-wide injection (28/08, step 4) — A's member fact MUST
+  appear in B's context within the same guild. A regression means the read
+  was re-narrowed to the asker and both observed production uses (asking
+  about another member; recalling what someone said about you) broke again.
+  Member-level isolation inside a guild is intentionally GONE.
 - contra-01 / guard-02 FIXED (27/08, job 4): the negation-clause and
   min-two-content-words rules close the two measured holes — zero-cost on
   the 75-case benchmark (coverage 96.7% / poison 21.6% unchanged). FIXED is
@@ -34,6 +38,13 @@ EXPECTED_STATUS = {
     "contra-01": "FIXED",
     "guard-02": "FIXED",
     "guard-03": "PASS",
+    # Job 2 (28/08): FTS history search over sổ gốc — verbatim recall beats
+    # six distractors in top-5 (the §13.4 ship gate for search_history).
+    "recall-verbatim-01": "PASS",
+    "recall-verbatim-02": "PASS",
+    # The dense tripwire fails deterministically by design — it flips FIXED
+    # only when a dense retriever lands (§13.3 threshold pair).
+    "recall-para-02": "KNOWN-FAIL",
 }
 
 

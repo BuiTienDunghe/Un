@@ -6,7 +6,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import BigInteger, Boolean, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, func, text
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID as PGUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from app.postgres.discord_memory_constants import (
@@ -412,6 +412,96 @@ class DiscordSessionTurn(Base):
     max_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=3, server_default="3")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+class DiscordChannelMessage(Base):
+    """Sổ gốc (tier 1, memory_design.md §5.2): one row per Discord message the
+    bot passively hears in a listened channel — bot rows included, tagged
+    ``is_bot`` (§9.3 decided 28/08: stored for dialogue coherence, but memory
+    EXTRACTION never consumes bot-authored rows).
+
+    Deliberately NOT discord_session_turns (§5.1): that table is a work queue;
+    passive messages are not work items. Append-only in STRUCTURE (invariant
+    #3); the ``content`` cell is mutable — an edit moves the first version
+    into ``content_original`` (set once, §5.3) and a Discord delete clears
+    both texts while keeping the row skeleton for audit (§9.5 minimal form;
+    per-person hard delete is a plain DELETE because the FTS index is per-row).
+
+    ``sent_at`` is derived from the snowflake AT WRITE TIME (§5.2) so a wrong
+    host clock cannot corrupt message chronology. ``content_tokens`` is a
+    'simple'-config tsvector over tokenize_vietnamese output (§13.5 option c:
+    incremental, no rebuild cliff).
+    """
+
+    __tablename__ = "discord_channel_messages"
+    __table_args__ = (
+        UniqueConstraint(
+            "discord_message_id",
+            name="uq_discord_channel_messages_message",
+        ),
+        Index(
+            "ix_discord_channel_messages_guild_channel_sent",
+            "guild_id",
+            "channel_id",
+            "sent_at",
+        ),
+        Index(
+            "ix_discord_channel_messages_guild_author_sent",
+            "guild_id",
+            "author_id",
+            "sent_at",
+        ),
+        Index(
+            "ix_discord_channel_messages_content_tokens",
+            "content_tokens",
+            postgresql_using="gin",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    guild_id: Mapped[str] = mapped_column(Text, nullable=False)
+    channel_id: Mapped[str] = mapped_column(Text, nullable=False)
+    thread_id: Mapped[str | None] = mapped_column(Text)
+    discord_message_id: Mapped[str] = mapped_column(Text, nullable=False)
+    author_id: Mapped[str] = mapped_column(Text, nullable=False)
+    author_display_name: Mapped[str] = mapped_column(Text, nullable=False)
+    is_bot: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    content: Mapped[str | None] = mapped_column(Text)
+    content_original: Mapped[str | None] = mapped_column(Text)
+    content_tokens = mapped_column(TSVECTOR)
+    reply_to_message_id: Mapped[str | None] = mapped_column(Text)
+    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+class DiscordChannelPolicy(Base):
+    """Per-channel listening policy (memory_design.md §5.4): auditable record
+    of which channels feed the raw ledger, per invariant #6. The env var
+    DISCORD_LISTEN_CHANNEL_IDS stays the operational switch today; rows are
+    upserted with enabled_by="env" the first time a channel delivers, so the
+    audit trail exists before the env var is ever replaced by this table.
+    Threads follow their parent channel; DMs are never recorded.
+    """
+
+    __tablename__ = "discord_channel_policies"
+    __table_args__ = (
+        UniqueConstraint(
+            "guild_id",
+            "channel_id",
+            name="uq_discord_channel_policies_channel",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    guild_id: Mapped[str] = mapped_column(Text, nullable=False)
+    channel_id: Mapped[str] = mapped_column(Text, nullable=False)
+    listening_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    enabled_by: Mapped[str] = mapped_column(Text, nullable=False)
+    enabled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    disabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class DiscordTurnDelivery(Base):

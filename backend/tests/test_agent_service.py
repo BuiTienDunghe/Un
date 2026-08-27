@@ -180,3 +180,64 @@ def test_without_an_agent_service_use_tools_degrades_to_plain_chat(client, mock_
     assert body["answer"].startswith("Mock response from")
     assert body["agent_steps"] is None
     client.delete(f"/conversations/{body['conversation_id']}")
+
+
+def _bare_agent(history_backend):
+    # _execute_tool never touches the router/retrieval/status backends here.
+    from app.services.agent_service import AgentService
+
+    return AgentService(
+        router=None,
+        retrieval_service=None,
+        operational_service=None,
+        history_service=history_backend,
+    )
+
+
+class _FakeHistoryBackend:
+    def __init__(self):
+        self.calls = []
+
+    def search(self, *, guild_id, query, author_id=None, days=None, limit=5):
+        from datetime import UTC, datetime
+
+        from app.services.discord_history_service import DiscordHistoryHit
+
+        self.calls.append({"guild_id": guild_id, "query": query, "days": days, "limit": limit})
+        return [
+            DiscordHistoryHit(
+                discord_message_id="123",
+                channel_id="chan",
+                thread_id=None,
+                author_id="u9",
+                author_display_name="User Nine",
+                is_bot=False,
+                content="noi dung cu",
+                sent_at=datetime(2026, 8, 20, tzinfo=UTC),
+                link="https://discord.com/channels/g/chan/123",
+            )
+        ]
+
+
+def test_search_history_uses_server_side_guild_never_model_supplied():
+    backend = _FakeHistoryBackend()
+    agent = _bare_agent(backend)
+    output = agent._execute_tool(
+        "search_history",
+        # A model trying to smuggle its own guild id: ignored.
+        {"query": "ai noi gi", "guild_id": "attacker-guild"},
+        {"guild_id": "real-guild"},
+    )
+    assert backend.calls == [
+        {"guild_id": "real-guild", "query": "ai noi gi", "days": None, "limit": 5}
+    ]
+    assert "noi dung cu" in output
+    assert "User Nine" in output
+
+
+def test_search_history_refuses_without_guild_context():
+    backend = _FakeHistoryBackend()
+    agent = _bare_agent(backend)
+    output = agent._execute_tool("search_history", {"query": "ai noi gi"}, None)
+    assert backend.calls == []
+    assert "Discord" in output

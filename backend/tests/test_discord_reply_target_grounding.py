@@ -41,6 +41,7 @@ class CapturingChatService:
         context_system_prompt,
         system_prompt=None,
         use_tools=False,
+        tool_context=None,
     ):
         self.calls.append(
             {

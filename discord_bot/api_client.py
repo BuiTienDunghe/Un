@@ -391,6 +391,43 @@ class LocalAgentClient:
             raise BackendResponseError("Backend returned an invalid Discord turn.")
         return BackendDiscordTurn(turn_id, returned_session_id, sequence, status, created)
 
+    async def record_history_message(self, payload: dict) -> None:
+        """Job 1 (sổ gốc): one write per heard message in a listened channel.
+        Callers fire-and-forget and swallow failures — the answering path
+        must never depend on this."""
+        await self._authorized_post(
+            "/api/discord/history/messages",
+            payload,
+            "Discord history record",
+        )
+
+    async def record_history_edit(
+        self, discord_message_id: str, content: str
+    ) -> None:
+        await self._authorized_post(
+            f"/api/discord/history/messages/{discord_message_id}/edit",
+            {"content": content},
+            "Discord history edit",
+        )
+
+    async def record_history_delete(
+        self,
+        discord_message_id: str,
+        *,
+        guild_id: str | None = None,
+        channel_id: str | None = None,
+    ) -> None:
+        payload: dict[str, object] = {}
+        if guild_id:
+            payload["guild_id"] = guild_id
+        if channel_id:
+            payload["channel_id"] = channel_id
+        await self._authorized_post(
+            f"/api/discord/history/messages/{discord_message_id}/delete",
+            payload,
+            "Discord history delete",
+        )
+
     async def execute_discord_turn(self, turn_id: str) -> BackendDiscordTurnExecution:
         response = await self._authorized_post(
             f"/api/discord/sessions/turns/{turn_id}/execute",

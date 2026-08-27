@@ -28,10 +28,12 @@ prefix (--keep to inspect).
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
 import sys
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -46,12 +48,15 @@ from app.postgres.database import create_postgres_engine, create_session_factory
 from app.postgres.discord_memory_repositories import DiscordMemoryRepository  # noqa: E402
 from app.postgres.models import (  # noqa: E402
     Conversation,
+    DiscordChannelMessage,
+    DiscordChannelPolicy,
     DiscordConversationSession,
     DiscordMemory,
     DiscordMemoryCandidate,
     DiscordMemorySource,
     DiscordSessionTurn,
 )
+from app.services.discord_history_service import DiscordHistoryService  # noqa: E402
 from app.services.discord_memory_guard import auto_apply_allowed  # noqa: E402
 from app.services.discord_memory_review_service import DiscordMemoryReviewService  # noqa: E402
 from app.services.discord_session_service import DiscordSessionService  # noqa: E402
@@ -110,6 +115,17 @@ class CaseWorld:
         self.prefix = f"{prefix}-{case_id}"
         self.resolver = DiscordSessionService(factory)
         self.turns = DiscordTurnService(factory, self.resolver, None)
+        self.history = DiscordHistoryService(factory)
+        # Snowflakes carry per-world entropy in the low bits: the column is
+        # globally unique, so day+index alone would collide across cases and
+        # across --keep runs (review finding 28/08). Timestamp bits (>>22)
+        # stay purely day-derived, keeping sent_at ordering deterministic.
+        self._snowflake_salt = (
+            int.from_bytes(
+                hashlib.sha256(self.prefix.encode()).digest()[:3], "big"
+            )
+            % (1 << 22)
+        )
         self.sessions: dict[tuple[str, str], object] = {}
         self.turn_ids: list[UUID] = []
         self.turn_meta: list[dict] = []
@@ -138,6 +154,31 @@ class CaseWorld:
             )
             self.turn_ids.append(enqueued.turn_id)
             self.turn_meta.append(message)
+            # Job 1: the same message also lands in the raw ledger, with a
+            # synthetic snowflake carrying the fixture day so sent_at ordering
+            # (the search tie-breaker) is deterministic.
+            sent_at = datetime(2026, 8, 1, 12, 0, tzinfo=UTC) + timedelta(
+                days=int(message.get("day", 1)), seconds=index
+            )
+            snowflake = str(
+                ((int(sent_at.timestamp() * 1000) - 1_420_070_400_000) << 22)
+                | ((self._snowflake_salt + index) & 0x3FFFFF)
+            )
+            recorded = self.history.record_message(
+                guild_id=self.guild(message["guild"]),
+                channel_id=f"{self.prefix}-{message['channel']}",
+                thread_id=None,
+                discord_message_id=snowflake,
+                author_id=self.author(message["author"]),
+                author_display_name=message["author"],
+                is_bot=False,
+                content=message["content"],
+            )
+            if not recorded:
+                raise RuntimeError(
+                    f"eval ledger write refused (snowflake {snowflake}) — "
+                    "leftover rows from --keep? dọn bằng cleanup rồi chạy lại"
+                )
 
     def apply(self, op: dict) -> None:
         """The real write path minus the model: candidate → result → approve."""
@@ -212,12 +253,37 @@ class CaseWorld:
         return problems
 
     def check_retrieval(self, expected: dict) -> list[str]:
-        """The exact read 0c wired into Discord answers, including its filters."""
+        """The exact read the Discord answer path uses, including its filters.
+
+        Step 4 (28/08): the answer path reads guild-wide member facts
+        (all_members=True) — the asker no longer narrows the member scope, so
+        as_subject documents who asks but only the guild filters. attrib-04's
+        cross-guild isolation is the boundary this must keep pinning.
+        """
+        if expected.get("source") == "bm25":
+            # Job 2 landed as Postgres FTS over the raw ledger (§13.5 option
+            # c); "bm25" stays as the fixture's historical name for "lexical
+            # search over sổ gốc".
+            hits = self.history.search(
+                guild_id=self.guild(expected["guild"]),
+                query=expected["query"],
+                limit=5,
+            )
+            text = " | ".join(hit.content for hit in hits)
+            problems = []
+            for needle in expected.get("must_contain", []):
+                if needle not in text:
+                    problems.append(f"lịch sử thiếu {needle!r} trong top-5")
+            for needle in expected.get("must_not_contain", []):
+                if needle in text:
+                    problems.append(f"lịch sử rò {needle!r}")
+            return problems
         problems: list[str] = []
         with self.factory() as database:
             rows = DiscordMemoryRepository(database).list_active_context_memories(
                 guild_id=self.guild(expected["guild"]),
-                subject_id=self.author(expected["as_subject"]),
+                subject_id=None,
+                all_members=True,
                 limit=10,
             )
             text = " | ".join(row.canonical_fact for row in rows)
@@ -239,6 +305,16 @@ class CaseWorld:
     def cleanup(self) -> None:
         with self.factory.begin() as database:
             like = f"{self.prefix}-%"
+            database.execute(
+                delete(DiscordChannelMessage).where(
+                    DiscordChannelMessage.guild_id.like(like)
+                )
+            )
+            database.execute(
+                delete(DiscordChannelPolicy).where(
+                    DiscordChannelPolicy.guild_id.like(like)
+                )
+            )
             memory_ids = list(
                 database.scalars(select(DiscordMemory.id).where(DiscordMemory.guild_id.like(like)))
             )
@@ -291,7 +367,9 @@ def run_case(factory, prefix: str, case: dict, keep: bool) -> tuple[str, list[st
     if case.get("pending"):
         return "PENDING", [f"chờ {case['pending']}"]
     problems: list[str] = []
-    known_fail = False
+    # Top-level known_fail_today: a case whose measured failure IS the point
+    # (the dense-retrieval tripwire) — same contract as the guard flag.
+    known_fail = bool(case.get("known_fail_today"))
     world = CaseWorld(factory, prefix, case["id"])
     try:
         world.ingest(case.get("setup", []))
@@ -303,7 +381,7 @@ def run_case(factory, prefix: str, case: dict, keep: bool) -> tuple[str, list[st
             problems += world.check_retrieval(case["expected_retrieval"])
         if case.get("guard_check"):
             check = case["guard_check"]
-            known_fail = bool(check.get("known_fail_today"))
+            known_fail = known_fail or bool(check.get("known_fail_today"))
             allowed = auto_apply_allowed(
                 canonical_fact=check["canonical_fact"],
                 evidence_text=check["evidence_text"],

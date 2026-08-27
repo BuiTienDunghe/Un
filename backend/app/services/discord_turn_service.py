@@ -544,6 +544,9 @@ class DiscordTurnService:
                 context_system_prompt=context_system_prompt,
                 system_prompt=system_prompt,
                 use_tools=use_tools_for_turn,
+                # search_history scopes to THIS session's guild, server-side —
+                # a model-supplied guild id is never trusted (§3.1 lesson).
+                tool_context={"guild_id": session.guild_id},
             )
         except ConversationNotFoundError:
             return self._orphan_and_requeue(turn, execution_token)

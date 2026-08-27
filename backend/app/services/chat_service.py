@@ -65,6 +65,7 @@ class ChatService:
         context_system_prompt: str,
         system_prompt: str | None = None,
         use_tools: bool = False,
+        tool_context: dict[str, object] | None = None,
     ) -> tuple[str, str, str, int]:
         """Run chat with caller-built trusted context while persisting raw text.
 
@@ -81,6 +82,7 @@ class ChatService:
             current_model_message=current_model_message,
             context_system_prompt=context_system_prompt,
             use_tools=use_tools,
+            tool_context=tool_context,
         )
         return answer, model_used, returned_id, latency_ms
 
@@ -95,6 +97,7 @@ class ChatService:
         current_model_message: dict[str, str] | None = None,
         context_system_prompt: str | None = None,
         use_tools: bool = False,
+        tool_context: dict[str, object] | None = None,
         user_id: str | None = None,
     ) -> tuple[str, str, str, int, list[dict[str, object]] | None]:
         is_new = conversation_id is None
@@ -128,7 +131,9 @@ class ChatService:
             started = perf_counter()
             agent_steps: list[dict[str, object]] | None = None
             if use_tools and self.agent_service is not None:
-                answer, model_used, agent_steps = self.agent_service.run(messages)
+                answer, model_used, agent_steps = self.agent_service.run(
+                    messages, tool_context=tool_context
+                )
             else:
                 answer, model_used = self.router.chat("general", messages)
         except Exception:
