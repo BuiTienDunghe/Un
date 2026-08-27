@@ -107,6 +107,18 @@ async def lifespan(app: FastAPI):
             max_attempts=settings.job_max_attempts,
         ),
         agent_tools_enabled=settings.discord_agent_tools_enabled,
+        # "*" = every guild (the pre-allowlist behavior, opted into
+        # EXPLICITLY); anything else is a comma-separated allowlist and an
+        # empty/garbled value fails closed (no guild gets tools).
+        agent_tools_guild_allowlist=(
+            None
+            if settings.discord_agent_tools_guild_allowlist.strip() == "*"
+            else frozenset(
+                value.strip()
+                for value in settings.discord_agent_tools_guild_allowlist.split(",")
+                if value.strip()
+            )
+        ),
     )
     ocr_service = OCRService(router, auxiliary_store)
     queue = (

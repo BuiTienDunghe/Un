@@ -39,6 +39,7 @@ class FakeChatService:
         context_system_prompt,
         system_prompt=None,
         use_tools=False,
+        tool_context=None,
     ):
         self.calls.append(
             {
@@ -48,6 +49,7 @@ class FakeChatService:
                 "current_model_message": current_model_message,
                 "context_system_prompt": context_system_prompt,
                 "system_prompt": system_prompt,
+                "use_tools": use_tools,
             }
         )
         if self.missing:
@@ -422,3 +424,62 @@ def test_orphan_execution_requeues_on_one_replacement_session(turn_resources):
             )
         )
         assert len(active) == 1
+
+
+def test_agent_tools_gated_by_guild_allowlist(turn_resources):
+    # Buoc 2 (28/08): the document corpus is backend-wide, so tools only run
+    # for allowlisted guilds; everyone else degrades to plain chat.
+    factory, prefix, resolver, chat, _ = turn_resources
+    home_guild = f"{prefix}-home"
+    service = DiscordTurnService(
+        factory,
+        resolver,
+        chat,
+        lease_seconds=30,
+        agent_tools_enabled=True,
+        agent_tools_guild_allowlist=frozenset({home_guild}),
+    )
+    home = resolver.resolve(home_guild, "tools")
+    foreign = resolver.resolve(f"{prefix}-foreign", "tools")
+
+    first = enqueue_turn(service, home.session_id, "m-tools-1", "tim tai lieu")
+    service.execute(first.turn_id)
+    second = enqueue_turn(service, foreign.session_id, "m-tools-2", "tim tai lieu")
+    service.execute(second.turn_id)
+
+    assert chat.calls[-2]["use_tools"] is True
+    assert chat.calls[-1]["use_tools"] is False
+
+
+def test_agent_tools_empty_allowlist_fails_closed_and_none_allows_all(turn_resources):
+    # Review finding 28/08: an EMPTY allowlist must deny every guild — a
+    # misconfiguration cannot reopen the cross-guild document leak. None
+    # (explicit "*" in settings) keeps the historical allow-everywhere shape.
+    factory, prefix, resolver, chat, _ = turn_resources
+    closed = DiscordTurnService(
+        factory,
+        resolver,
+        chat,
+        lease_seconds=30,
+        agent_tools_enabled=True,
+        agent_tools_guild_allowlist=frozenset(),
+    )
+    session = resolver.resolve(f"{prefix}-anyguild", "tools")
+    turn = enqueue_turn(closed, session.session_id, "m-tools-3", "xin chao")
+    closed.execute(turn.turn_id)
+    assert chat.calls[-1]["use_tools"] is False
+
+    open_service = DiscordTurnService(
+        factory,
+        resolver,
+        chat,
+        lease_seconds=30,
+        agent_tools_enabled=True,
+        agent_tools_guild_allowlist=None,
+    )
+    # A fresh session: the still-running turn above would otherwise block
+    # this one behind the per-session FIFO.
+    other_session = resolver.resolve(f"{prefix}-anyguild", "tools-open")
+    turn = enqueue_turn(open_service, other_session.session_id, "m-tools-4", "xin chao")
+    open_service.execute(turn.turn_id)
+    assert chat.calls[-1]["use_tools"] is True

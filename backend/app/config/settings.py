@@ -65,6 +65,15 @@ class Settings(BaseSettings):
     # P2-2: Discord turns run through the agent loop (tool use + trace). Off
     # falls back to plain chat — same answer path as before the agent existed.
     discord_agent_tools_enabled: bool = True
+    # Guild allowlist for the agent tools above. The document corpus behind
+    # `search_documents` is one backend-wide store, so a guild the owner does
+    # not control could pull excerpts of the owner's uploads through the bot
+    # (observed 27/08: guild 2 turn 5 searched for a member's personal info).
+    # "*" = every guild keeps tools (the pre-allowlist behavior, opted into
+    # explicitly); a comma-separated list = only those guild ids run the
+    # agent loop; empty (the default) fails CLOSED — no guild gets tools
+    # until the operator decides. The rest degrade to plain chat.
+    discord_agent_tools_guild_allowlist: str = ""
     # P2-1: proposals at or above this extractor confidence are applied by the
     # agent itself (reviewed_by="agent") and can be reverted in one click from
     # the dashboard; below it they wait in the review queue. Set to "off" to

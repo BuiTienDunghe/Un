@@ -61,6 +61,7 @@ class DiscordTurnService:
         max_attempts: int = 3,
         memory_completion_service: DiscordMemoryCompletionService | None = None,
         agent_tools_enabled: bool = False,
+        agent_tools_guild_allowlist: frozenset[str] | None = None,
     ) -> None:
         self.sessions = sessions
         self.session_service = session_service
@@ -70,10 +71,23 @@ class DiscordTurnService:
         self.memory_completion_service = memory_completion_service
         # P2-2: Discord turns become agent turns (tool use + trace) when on.
         self.agent_tools_enabled = agent_tools_enabled
+        # The document corpus is backend-wide, so tools only run for guilds
+        # the operator listed. None = allow every guild (explicit "*" in
+        # settings); an EMPTY set fails CLOSED — a misconfigured allowlist
+        # must not reopen the observed cross-guild document leak (review
+        # finding 28/08).
+        self.agent_tools_guild_allowlist = agent_tools_guild_allowlist
         self.history_turn_limit = max(
             1,
             int(getattr(chat_service, "history_limit", 12)) // 2,
         )
+
+    def _tools_allowed_for_guild(self, guild_id: str | None) -> bool:
+        if not self.agent_tools_enabled:
+            return False
+        if self.agent_tools_guild_allowlist is None:
+            return True
+        return guild_id in self.agent_tools_guild_allowlist
 
     @staticmethod
     def _result(
@@ -444,6 +458,7 @@ class DiscordTurnService:
             if session is None:
                 raise DiscordTurnNotFoundError(str(turn.session_id))
             conversation_id = str(session.backend_conversation_id)
+            use_tools_for_turn = self._tools_allowed_for_guild(session.guild_id)
             repository = DiscordSessionRepository(database)
             previous_turns = repository.context_turns(
                 turn.session_id,
@@ -510,7 +525,7 @@ class DiscordTurnService:
                 current_model_message=speaker_context.current_message,
                 context_system_prompt=context_system_prompt,
                 system_prompt=system_prompt,
-                use_tools=self.agent_tools_enabled,
+                use_tools=use_tools_for_turn,
             )
         except ConversationNotFoundError:
             return self._orphan_and_requeue(turn, execution_token)
