@@ -13,7 +13,7 @@ from app.postgres.discord_memory_constants import (
     DISCORD_MEMORY_CANDIDATE_VALIDATION_STATUSES_V2,
     DISCORD_MEMORY_CANDIDATE_DECISIONS_V1,
     DISCORD_MEMORY_FILTER_DECISIONS_V3,
-    DISCORD_MEMORY_FILTER_REASON_CODES_V1,
+    DISCORD_MEMORY_FILTER_REASON_CODES_V2,
     DISCORD_MEMORY_INDEX_STATUSES_V1,
     DISCORD_MEMORY_OPERATIONS_V1,
     DISCORD_MEMORY_SCOPES_V1,
@@ -471,7 +471,7 @@ class DiscordMemoryCandidate(Base):
             name="ck_discord_memory_candidates_filter_decision",
         ),
         CheckConstraint(
-            f"filter_reason_code IN ({sql_values(DISCORD_MEMORY_FILTER_REASON_CODES_V1)})",
+            f"filter_reason_code IN ({sql_values(DISCORD_MEMORY_FILTER_REASON_CODES_V2)})",
             name="ck_discord_memory_candidates_filter_reason_code",
         ),
         CheckConstraint(

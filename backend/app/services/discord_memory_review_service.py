@@ -14,7 +14,7 @@ import hashlib
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import sessionmaker
 
 from app.postgres.discord_memory_repositories import (
@@ -98,7 +98,18 @@ class DiscordMemoryReviewService:
                 )
                 .where(
                     DiscordMemoryCandidate.decision.in_(tuple(REVIEWABLE_DECISIONS)),
-                    DiscordMemoryCandidate.canonical_fact.is_not(None),
+                    # Delete proposals are reviewable WITHOUT a canonical_fact
+                    # (the proposal shape requires it only for create/update);
+                    # for everything else, a missing/empty fact marks extractor
+                    # no_ops that predate the terminal-no_op fix — approve
+                    # would reject them anyway (review finding 28/08).
+                    or_(
+                        DiscordMemoryCandidate.operation == "delete",
+                        and_(
+                            DiscordMemoryCandidate.canonical_fact.is_not(None),
+                            DiscordMemoryCandidate.canonical_fact != "",
+                        ),
+                    ),
                 )
                 .order_by(DiscordMemoryCandidate.created_at.desc())
                 .offset(bounded_offset)

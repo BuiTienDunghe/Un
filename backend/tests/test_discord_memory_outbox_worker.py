@@ -74,6 +74,7 @@ class ChatStub:
         context_system_prompt,
         system_prompt=None,
         use_tools=False,
+        tool_context=None,
     ):
         return f"answer:{message}", "test-model", conversation_id, 1
 
@@ -646,7 +647,7 @@ def test_worker_filters_one_candidate_receipt_and_creates_no_memory(
         assert candidate.decision == "deferred"
         assert candidate.normalized_output["rule_filter"] == {
             "stage": "rule_filter",
-            "policy_version": "discord_memory_rule_filter_v1",
+            "policy_version": "discord_memory_rule_filter_v2",
             "decision": "candidate",
             "reason_code": "explicit_remember",
             "candidate_strength": "strong",
@@ -747,7 +748,7 @@ def test_worker_persists_terminal_no_op_without_model_or_memory(
         assert candidate.validation_status == "not_required"
         assert candidate.decision == "no_op"
         assert candidate.normalized_output["policy_version"] == (
-            "discord_memory_rule_filter_v1"
+            "discord_memory_rule_filter_v2"
         )
         assert candidate.operation is None
         assert database.scalar(

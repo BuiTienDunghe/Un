@@ -64,6 +64,15 @@ DISCORD_MEMORY_FILTER_REASON_CODES_V1 = (
     "empty_content",
 )
 
+# Vocabulary v2 (28/08/2026): birthday statements get their own reason so the
+# closed fact-key list can carry user.birthday — three production cases died at
+# the filter gate as no_durable_fact (memory_design.md §13). V1 stays immutable
+# per this file's contract; revision 20260828_29 rebuilds the CHECK from V2.
+DISCORD_MEMORY_FILTER_REASON_CODES_V2 = (
+    *DISCORD_MEMORY_FILTER_REASON_CODES_V1,
+    "personal_fact",
+)
+
 DISCORD_MEMORY_FILTER_STRENGTHS_V1 = (
     "strong",
     "normal",

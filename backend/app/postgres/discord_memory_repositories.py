@@ -15,7 +15,7 @@ from app.postgres.discord_memory_constants import (
     DISCORD_MEMORY_CANDIDATE_VALIDATION_STATUSES_V2,
     DISCORD_MEMORY_CANDIDATE_DECISIONS_V1,
     DISCORD_MEMORY_FILTER_DECISIONS_V3,
-    DISCORD_MEMORY_FILTER_REASON_CODES_V1,
+    DISCORD_MEMORY_FILTER_REASON_CODES_V2,
     DISCORD_MEMORY_FILTER_STRENGTHS_V1,
     DISCORD_MEMORY_OPERATIONS_V1,
     DISCORD_MEMORY_SCOPES_V1,
@@ -418,7 +418,7 @@ class DiscordMemoryRepository:
             "rejected_policy",
         }:
             raise ValueError("invalid terminal filter_decision")
-        if filter_reason_code not in DISCORD_MEMORY_FILTER_REASON_CODES_V1:
+        if filter_reason_code not in DISCORD_MEMORY_FILTER_REASON_CODES_V2:
             raise ValueError("invalid filter_reason_code")
         if candidate_strength not in DISCORD_MEMORY_FILTER_STRENGTHS_V1:
             raise ValueError("invalid candidate_strength")
@@ -728,8 +728,15 @@ class DiscordMemoryRepository:
             Decimal(str(confidence)) if confidence is not None else None
         )
         candidate.target_memory_id = UUID(str(target)) if target else None
-        candidate.validation_status = "pending"
-        candidate.decision = "deferred"
+        if proposal.get("operation") == "no_op":
+            # An extractor no_op is terminal, same shape as a filter no_op.
+            # Leaving it "deferred" parked empty confidence-0.000 rows in the
+            # human review queue (observed 26-27/08 in both guilds).
+            candidate.validation_status = "not_required"
+            candidate.decision = "no_op"
+        else:
+            candidate.validation_status = "pending"
+            candidate.decision = "deferred"
         candidate.error_code = None
         candidate.error_message = None
         candidate.updated_at = datetime.now(UTC)

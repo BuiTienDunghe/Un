@@ -22,11 +22,23 @@ from pydantic import (
 logger = logging.getLogger(__name__)
 
 DISCORD_MEMORY_EXTRACTOR_SCHEMA_VERSION_V1 = "v1"
+# Contract v2 (28/08/2026): the WIRE format of the proposal is unchanged (the
+# JSON still says schema_version "v1"); what changed is the closed fact-key
+# vocabulary (user.birthday, user.favorite_drink, user.favorite_food). The
+# pipeline version is the reprocessing identity — jobs and candidates are
+# unique per (turn, version), so bumping it lets old turns be re-extracted
+# under the wider vocabulary without touching their v1 receipts.
+DISCORD_MEMORY_EXTRACTOR_SCHEMA_VERSION_V2 = "v2"
+DISCORD_MEMORY_EXTRACTOR_SUPPORTED_SCHEMA_VERSIONS = (
+    DISCORD_MEMORY_EXTRACTOR_SCHEMA_VERSION_V1,
+    DISCORD_MEMORY_EXTRACTOR_SCHEMA_VERSION_V2,
+)
 DISCORD_MEMORY_EXTRACTOR_PROMPT_VERSION_V1 = "discord_memory_extractor_prompt_v1"
 DISCORD_MEMORY_EXTRACTOR_PROMPT_VERSION_V2 = "discord_memory_extractor_prompt_v2"
 DISCORD_MEMORY_EXTRACTOR_PROMPT_VERSION_V3 = "discord_memory_extractor_prompt_v3"
 DISCORD_MEMORY_EXTRACTOR_PROMPT_VERSION_V4 = "discord_memory_extractor_prompt_v4"
 DISCORD_MEMORY_EXTRACTOR_PROMPT_VERSION_V5 = "discord_memory_extractor_prompt_v5"
+DISCORD_MEMORY_EXTRACTOR_PROMPT_VERSION_V6 = "discord_memory_extractor_prompt_v6"
 
 Operation = Literal["create", "update", "delete", "no_op"]
 MemoryType = Literal[
@@ -63,6 +75,23 @@ DISCORD_MEMORY_FACT_KEY_TYPES_V1: dict[str, MemoryType] = {
     "project.database": "project_decision",
     "project.architecture": "project_decision",
     "workflow.codex_prompt_after_update": "workflow_rule",
+}
+
+# Vocabulary v2: three production statements died at the closed list — "tôi
+# thích trà sữa" (guild 1, 25/08) and both birthdays of 27/08 (guild 2, turn
+# 12) had no representable key, so the extractor could only defer at 0.000
+# (real-01 tripwire, memory_design.md §13). V1 stays immutable above.
+DISCORD_MEMORY_FACT_KEYS_V2 = (
+    *DISCORD_MEMORY_FACT_KEYS_V1,
+    "user.birthday",
+    "user.favorite_drink",
+    "user.favorite_food",
+)
+DISCORD_MEMORY_FACT_KEY_TYPES_V2: dict[str, MemoryType] = {
+    **DISCORD_MEMORY_FACT_KEY_TYPES_V1,
+    "user.birthday": "fact",
+    "user.favorite_drink": "preference",
+    "user.favorite_food": "preference",
 }
 
 Identifier = Annotated[str, StringConstraints(min_length=1, max_length=128)]
@@ -274,7 +303,7 @@ class DiscordMemoryExtractorEnvelopeBuilder:
             )
         )
         if not fact_keys or any(
-            value not in DISCORD_MEMORY_FACT_KEYS_V1 for value in fact_keys
+            value not in DISCORD_MEMORY_FACT_KEYS_V2 for value in fact_keys
         ):
             raise ValueError("extractor fact-key allowlist is invalid")
         return DiscordMemoryExtractorEnvelope(
@@ -298,7 +327,7 @@ class DiscordMemoryExtractorEnvelopeBuilder:
             allowed_fact_keys=tuple(
                 AllowedFactKey(
                     fact_key=fact_key,
-                    memory_type=DISCORD_MEMORY_FACT_KEY_TYPES_V1[fact_key],
+                    memory_type=DISCORD_MEMORY_FACT_KEY_TYPES_V2[fact_key],
                 )
                 for fact_key in fact_keys
             ),
@@ -311,6 +340,8 @@ class DiscordMemoryExtractorEnvelopeBuilder:
             "durable_preference": (
                 "user.preferred_language",
                 "user.response_style",
+                "user.favorite_drink",
+                "user.favorite_food",
             ),
             "hardware_configuration": (
                 "hardware.gpu",
@@ -324,8 +355,9 @@ class DiscordMemoryExtractorEnvelopeBuilder:
             ),
             "identity_preference": ("user.display_name_preference",),
             "workflow_rule": ("workflow.codex_prompt_after_update",),
+            "personal_fact": ("user.birthday",),
         }
-        return mapping.get(reason_code, DISCORD_MEMORY_FACT_KEYS_V1)
+        return mapping.get(reason_code, DISCORD_MEMORY_FACT_KEYS_V2)
 
 
 DISCORD_MEMORY_EXTRACTOR_SYSTEM_PROMPT_V1 = """\
@@ -392,11 +424,21 @@ reason such as insufficient_evidence or untrusted_subject.
 """
 )
 
+DISCORD_MEMORY_EXTRACTOR_SYSTEM_PROMPT_V5 = (
+    DISCORD_MEMORY_EXTRACTOR_SYSTEM_PROMPT_V4
+    + """\
+Vocabulary v2 keys: user.birthday=fact (a member stating their own birth date;
+keep the date exactly as written), user.favorite_drink and
+user.favorite_food=preference. Statements about ANOTHER member's birthday or
+tastes are third-party hearsay: no_op.
+"""
+)
+
 DISCORD_MEMORY_EXTRACTOR_PROMPT_VERSION = (
-    DISCORD_MEMORY_EXTRACTOR_PROMPT_VERSION_V5
+    DISCORD_MEMORY_EXTRACTOR_PROMPT_VERSION_V6
 )
 DISCORD_MEMORY_EXTRACTOR_SYSTEM_PROMPT = (
-    DISCORD_MEMORY_EXTRACTOR_SYSTEM_PROMPT_V4
+    DISCORD_MEMORY_EXTRACTOR_SYSTEM_PROMPT_V5
 )
 
 
@@ -457,8 +499,11 @@ class DiscordMemoryExtractorAdapter:
         client: httpx.Client | None = None,
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
-        if schema_version != DISCORD_MEMORY_EXTRACTOR_SCHEMA_VERSION_V1:
-            raise ValueError("only Discord memory extractor schema v1 is supported")
+        if schema_version not in DISCORD_MEMORY_EXTRACTOR_SUPPORTED_SCHEMA_VERSIONS:
+            raise ValueError(
+                "unsupported Discord memory extractor schema version: "
+                f"{schema_version!r}"
+            )
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.schema_version = schema_version

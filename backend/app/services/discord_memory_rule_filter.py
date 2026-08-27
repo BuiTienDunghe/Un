@@ -7,7 +7,9 @@ from typing import Literal
 from uuid import UUID
 
 
-DISCORD_MEMORY_RULE_FILTER_POLICY_VERSION = "discord_memory_rule_filter_v1"
+# v2 (28/08/2026): personal_fact rule — first-person birthday statements were
+# falling through to no_durable_fact (guild 2 turn 12, production cases #2/#3).
+DISCORD_MEMORY_RULE_FILTER_POLICY_VERSION = "discord_memory_rule_filter_v2"
 
 FilterDecision = Literal["candidate", "no_op", "rejected_policy"]
 CandidateStrength = Literal["strong", "normal", "none"]
@@ -231,6 +233,47 @@ class DiscordMemoryRuleFilter:
                 "normal",
                 "identity",
                 "identity_assertion",
+            )
+
+        # First-person birthday STATEMENT. A digit is mandatory so questions
+        # ("tôi sinh ngày bao nhiêu?") keep falling through to question_only —
+        # candidate rules run before the question gate at the bottom. The
+        # lookbehinds inspect the ONE word adjacent to the pronoun: single
+        # kinship/friend words plus the tail words of common two-word
+        # compounds ("anh trai", "chị gái", "bạn thân", "người yêu"). This
+        # blocklist is precision hedging, not a guarantee — hearsay that
+        # slips through still faces the extractor's trusted-subject rule and
+        # the human review queue (auto-apply stays off).
+        kinship = (
+            r"(?<!bạn )(?<!ban )(?<!mẹ )(?<!me )(?<!bố )(?<!bo )(?<!cha )"
+            r"(?<!anh )(?<!chị )(?<!chi )(?<!ông )(?<!ong )(?<!bà )(?<!ba )"
+            r"(?<!cô )(?<!co )(?<!chú )(?<!chu )(?<!cậu )(?<!cau )"
+            r"(?<!dì )(?<!di )(?<!em )(?<!con )(?<!vợ )(?<!vo )"
+            r"(?<!chồng )(?<!chong )(?<!trai )(?<!gái )(?<!gai )"
+            r"(?<!thân )(?<!than )(?<!yêu )(?<!yeu )(?<!nội )(?<!noi )"
+            r"(?<!ngoại )(?<!ngoai )"
+        )
+        # "em của tôi sinh ngày..." — a possessive right before the pronoun
+        # also means someone else. Pattern 3 carries its own "của" though.
+        possessive = r"(?<!của )(?<!cua )"
+        if _matches(
+            classification_text,
+            kinship + possessive
+            + r"\b(?:tôi|toi|mình|minh|tớ)\s+sinh\s+"
+            r"(?:ngày|ngay|năm|nam)\s*:?\s*\d",
+            kinship + possessive
+            + r"\b(?:tôi|toi|mình|minh|tớ)\s+sinh\s+\d{1,2}\s*[/-]\s*\d{1,2}",
+            r"\b(?:ngày sinh|ngay sinh|sinh nhật|sinh nhat)\s+(?:của\s+|cua\s+)?"
+            + kinship
+            + r"(?:tôi|toi|mình|minh)\s+(?:là|la)\s*"
+            r"(?:(?:ngày|ngay|mùng|mung)\s+)*\d",
+        ):
+            return _result(
+                "candidate",
+                "personal_fact",
+                "normal",
+                "personal",
+                "personal_birthday_statement",
             )
 
         if _matches(

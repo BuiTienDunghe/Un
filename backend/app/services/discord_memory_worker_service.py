@@ -115,6 +115,7 @@ class DiscordMemoryWorkerService:
             "identity_preference": ("identity",),
             "workflow_rule": ("workflow_rule",),
             "explicit_shared_fact": ("fact",),
+            "personal_fact": ("fact",),
         }
         return mapping.get(
             filter_reason_code,

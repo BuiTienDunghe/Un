@@ -54,7 +54,10 @@ class Settings(BaseSettings):
     discord_memory_verifier_enabled: bool = False
     discord_memory_verifier_model: str = "qwen3.5:9b"
     discord_memory_verifier_timeout_seconds: float = 90.0
-    discord_memory_extractor_schema_version: str = "v1"
+    # v2 = vocabulary v2 (user.birthday, user.favorite_drink/food). The wire
+    # format is unchanged; the bump re-keys job/candidate idempotency so old
+    # turns can be re-extracted under the wider vocabulary.
+    discord_memory_extractor_schema_version: str = "v2"
     discord_memory_extractor_num_ctx: int = 4096
     discord_memory_extractor_temperature: float = 0.0
     discord_memory_extractor_seed: int = 424242

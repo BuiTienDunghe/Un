@@ -402,7 +402,7 @@ def test_rule_filter_result_is_terminal_idempotent_and_versioned(
         first, changed = repository.record_filter_result(
             candidate.id,
             guild_id=prefix,
-            policy_version="discord_memory_rule_filter_v1",
+            policy_version="discord_memory_rule_filter_v2",
             filter_decision="candidate",
             filter_reason_code="explicit_remember",
             candidate_strength="strong",
@@ -412,7 +412,7 @@ def test_rule_filter_result_is_terminal_idempotent_and_versioned(
         same, changed_again = repository.record_filter_result(
             candidate.id,
             guild_id=prefix,
-            policy_version="discord_memory_rule_filter_v1",
+            policy_version="discord_memory_rule_filter_v2",
             filter_decision="candidate",
             filter_reason_code="explicit_remember",
             candidate_strength="strong",
@@ -426,7 +426,9 @@ def test_rule_filter_result_is_terminal_idempotent_and_versioned(
             repository.record_filter_result(
                 candidate.id,
                 guild_id=prefix,
-                policy_version="discord_memory_rule_filter_v2",
+                # A DIFFERENT policy version than the recorded result above —
+                # the terminal receipt must refuse to be rewritten.
+                policy_version="discord_memory_rule_filter_v3",
                 filter_decision="candidate",
                 filter_reason_code="explicit_remember",
                 candidate_strength="strong",

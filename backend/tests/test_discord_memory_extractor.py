@@ -76,7 +76,7 @@ def _envelope(*, targets=(), author_id="author-a", text=None):
         ),
         filter_metadata={
             "stage": "rule_filter",
-            "policy_version": "discord_memory_rule_filter_v1",
+            "policy_version": "discord_memory_rule_filter_v2",
             "decision": "candidate",
             "reason_code": "durable_preference",
             "candidate_strength": "normal",
@@ -358,6 +358,9 @@ def test_target_list_is_bounded_and_typed():
     } == {
         ("user.preferred_language", "preference"),
         ("user.response_style", "preference"),
+        # Vocabulary v2 (28/08): durable_preference carries the taste keys.
+        ("user.favorite_drink", "preference"),
+        ("user.favorite_food", "preference"),
     }
 
 
