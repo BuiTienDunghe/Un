@@ -748,9 +748,45 @@ Ngưỡng gate (bất biến #4): extraction P ≥ 0,80 / R ≥ 0,70 chặn đ�
 | **0b** | Cửa sổ 12 → 40 | 1 số nguyên | ✅ **27/08** — `settings.py`, kèm chú thích thí nghiệm |
 | **0c** | Sửa đường đọc + xoá `search_memory` + bịt endpoint | 4 tệp | ✅ **27/08** — SELECT sổ cái luôn-chạy trong `discord_turn_service` (repo mới `list_active_context_memories`, lọc guild+subject+active, cùng transaction dựng ngữ cảnh — bất biến #2 giữ); công cụ + nhánh dispatch + tham số ctor đã gỡ; endpoint khoá bởi 0a. **2 test mới**: fact vào prompt cho đúng người, không rò sang người khác, superseded không hiện |
 | **0d** | Khoá Gemini → header + che secret ở log sink | ~10 dòng | ✅ **27/08** — `x-goog-api-key` cả 2 endpoint; filter `_redact_secrets` (5 biến env) trên sink file |
-| **1** | Mở nghe 1 kênh, **đếm vài ngày** (bất biến #8) → migration sổ gốc + bảng chính sách kênh | bảng mới · 0 gọi model | 🟡 **Nửa đầu ✅ 27/08**: bộ đếm thụ động vũ trang trên kênh `1442208821333463194` — `discord_bot/passive_listener.py`, đếm **trước mọi cổng** (cả tin bot, gắn `author_is_bot` để §9.3 quyết bằng số), thread theo kênh cha, **không lưu nội dung**, ghi hỏng không gãy trả lời. File: `data/discord_listen/passive_counts.jsonl` (neo `__file__` — CWD container là `/app/backend`, đường tương đối rơi ngoài mount). Đọc: `python -m scripts.passive_listen_report`. Migration chờ số đo + quyết `content_original` (§5.3) + thiết kế xoá (§9.5) |
-| **2** | Service BM25 theo-guild, dựng lại **rời đường đọc** (§13.5) + công cụ `search_history` | service thứ hai | sau việc 1 |
+| **1** | Mở nghe 1 kênh, **đếm vài ngày** (bất biến #8) → migration sổ gốc + bảng chính sách kênh | bảng mới · 0 gọi model | 🟡 **Nửa đầu ✅ 27/08**: bộ đếm thụ động vũ trang trên kênh `1442208821333463194` — `discord_bot/passive_listener.py`, đếm **trước mọi cổng** (cả tin bot, gắn `author_is_bot` để §9.3 quyết bằng số), thread theo kênh cha, **không lưu nội dung**, ghi hỏng không gãy trả lời. File: `data/discord_listen/passive_counts.jsonl` (neo `__file__` — CWD container là `/app/backend`, đường tương đối rơi ngoài mount). Đọc: `python -m scripts.passive_listen_report`. **Nửa sau ✅ 28/08**: ba quyết định §12 chốt (xem §13.7) → migration `20260828_30` — `discord_channel_messages` (sent_at suy từ snowflake lúc ghi, `is_bot`, `content_original` một-lần, xoá mềm + xoá chữ) + `discord_channel_policies` (audit bất biến #6, upsert `env` lần đầu kênh xuất hiện). Bot gửi tin nghe được **fire-and-forget cạnh bộ đếm** — ghi hỏng không bao giờ chạm đường trả lời; sự kiện sửa/xoá raw được tôn trọng |
+| **2** | Service BM25 theo-guild, dựng lại **rời đường đọc** (§13.5) + công cụ `search_history` | service thứ hai | ✅ **28/08 — phương án (c) §13.5 thắng**: Postgres FTS (`tsvector` config `simple` trên `tokenize_vietnamese`, GIN) — tăng dần theo dòng, **không tồn tại vách dựng-lại** để phải "rời đường đọc" nữa. Truy vấn OR-của-lexeme + `ts_rank` (plainto AND không bao giờ khớp câu hỏi dài vào tin ngắn). `search_history` vào `AGENT_TOOLS`, **guild do server bơm qua `tool_context`** (turn→chat→agent), model không tự chọn guild được; đường web không có ngữ cảnh → công cụ từ chối. Cổng §13.4: recall-verbatim 2/2 thắng 6 tin nhiễu trong top-5. `test_discord_history_service.py` 9 ca |
 | **3** | Bộ eval **21 ca** (§13.4) | fixture + runner | ✅ **27/08 — pha trạng thái/truy xuất/gác** (`tests/fixtures/discord_memory_e2e_v1.jsonl` + `scripts/memory_e2e_eval.py`, 0 gọi model, mirror Qdrant stub). Kết quả chạy thật: **16 PASS · 2 KNOWN-FAIL đúng chỗ · 3 PENDING (job 2)**. `attrib-03`/`attrib-04` PASS = **0c nghiệm thu bằng máy**; `contra-01`/`guard-02` KNOWN-FAIL được **ghim trong suite** (`test_memory_e2e_eval.py`) — ngày chúng thành FIXED là ngày việc 4 hạ cánh. Pha `--with-extractor` (chấm P/R trích xuất) thuộc việc 4. **Phát hiện khi chạy**: lặp nguyên văn từ tin MỚI vẫn tạo version churn ở tầng áp dụng — idempotence chỉ phủ cùng-một-ứng-viên; chống-lặp thật nằm ở extractor (ca `contra-03` ghi lại) |
 | **4** | Verifier 3 trạng thái, 1-vs-1 + cột `verification{method,result}` | 2×60s/ứng viên, nền | ✅ **27/08 — máy móc xong, ship TỐI**. (a) **Hai luật tất định vào guard** — vế-phủ-định (đánh trên chữ THÔ, không gấp dấu: đừng/dùng và nữa/nửa gấp dấu là trùng nhau) + tối-thiểu-2-từ-nội-dung — **đo 0-chi-phí trên benchmark 75 ca** (coverage 96,7% / poison 21,6% không đổi một li) và lật `contra-01`+`guard-02` thành **FIXED** (e2e: FIXED=2 · PASS=16 · PENDING=3 · 0 KNOWN-FAIL). (b) `DiscordMemoryVerifierAdapter` (nli-1v1, prompt verify-v1, fail-safe → unknown) + migration `20260827_28` + bước `verify_proposal` trong worker (model NGOÀI transaction — bất biến #2) + cổng autonomy đòi `entailment`. **Cờ `DISCORD_MEMORY_VERIFIER_ENABLED` mặc định TẮT** — bật + mở lại tự-áp-dụng chỉ sau khi pha `--with-extractor` đo qua ngưỡng §13.4. Suite: 680 pass |
 | **5** | Vá UI duyệt: hiện tin nguồn + phân trang | ~20 dòng | ✅ **27/08** — `list_pending` join tin gốc từ `discord_session_turns` (người duyệt thấy NGUỒN, không chỉ câu trích model tự chọn — E9), tham số `limit`/`offset` phá trần-50, dashboard hiện dòng «tin gốc» + nút Tải thêm. Test hợp đồng: `test_memory_review_pagination.py` |
 | **6** | Tầng 3 / Gemini | — | **giữ HOÃN** — 3 chốt cũ (§9.1 → việc 4, §9.7, đường đọc §9.4) + thay sàn 24h bằng ngưỡng ≥ 20 tin |
+
+### 13.7. Ngày 28/08 — hội thoại guild 2 phơi 4 lỗi, 5 bước vá trong một ngày
+
+Bằng chứng: 20 lượt thật (2 người) 26-27/08 — bot xác nhận đúng ngày sinh ở lượt
+12 rồi **trả 5 câu từ chối trùng từng byte** (sha `8672a8e3…`, tokens_in tăng
+1186→3763 chứng minh model được gọi thật mỗi lượt và lịch sử có đủ dữ kiện);
+hai lượt bị mắng thì nhớ lại hoàn hảo. Chẩn đoán: **echo-lock** — model 9b chép
+nguyên văn câu trả lời cũ của chính nó khi câu hỏi cùng hình dạng lặp lại.
+
+1. **Bước 1 — lời dặn chống tự-vọng.** Persona viết lại (bỏ câu riêng tư dễ vặn
+   thành cớ từ chối) + khối "Quy tắc dùng lịch sử" gắn CUỐI
+   `DISCORD_SPEAKER_SYSTEM_INSTRUCTION`. **Vị trí là biến số đo được**: replay 5
+   câu hỏng trên lịch sử đã nhiễm — baseline 1/5, luật giữa file 10/15, luật
+   cuối khối system **13/15**. Ca lì nhất (lượt 17) chờ sổ cái trị tận gốc.
+2. **Bước 2 — công cụ tài liệu chỉ chạy guild nhà.** Lượt 5 guild 2 đã
+   `search_documents("Phương Anh thông tin cá nhân…")` trên kho tài liệu riêng
+   của chủ (một corpus toàn backend). `DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST`
+   trong `.env`; guild lạ rơi về chat thường.
+3. **Bước 3 — từ vựng v2.** Lượt 12 bị filter phán `no_durable_fact` — ca #2/#3
+   của lỗ từ vựng (sau trà sữa). Thêm `user.birthday` (+`favorite_drink/food`),
+   luật `personal_fact` (bắt buộc chữ số → câu hỏi vẫn `question_only`; lookbehind
+   thân tộc chặn hearsay "bạn tôi sinh ngày…"), schema pipeline v1→v2 (wire giữ
+   v1) mở tái-trích lượt cũ. Extractor no_op giờ **chốt sổ** (`not_required`/
+   `no_op`) — hết dòng rác 0.000 trong hàng duyệt; 2 dòng rác cũ đã chuyển.
+4. **Bước 4 — sổ cái nạp THEO GUILD, từng dòng ghi chủ nhân** (`về author_id=…`
+   khớp nhãn lịch sử). Hai ca dùng thật đều hỏi chéo người — lọc theo người-hỏi
+   chặn đúng thứ cần trả lời. **attrib-03 đổi ngữ nghĩa có chủ ý**; ranh giới
+   tuyệt đối còn lại là GUILD (attrib-04 + test xuyên-guild mới ghim).
+5. **Bước 5 — job 1+2 hạ cánh** (xem bảng trên). Ba quyết định §12 chốt bằng số
+   đếm 2 ngày: §9.3 ghi cả tin bot (gắn `is_bot`, trích xuất không bao giờ ăn);
+   §5.3 `content_original` giữ bản đầu một lần; §9.5 xoá mềm + xoá chữ ngay khi
+   Discord xoá, xoá-cứng theo người = DELETE thường vì FTS theo-dòng.
+
+Còn treo sau ngày này: pha `--with-extractor` (chấm P/R trích xuất, chạy đêm) —
+vẫn là cổng duy nhất mở `DISCORD_MEMORY_VERIFIER_ENABLED` + tự-áp-dụng; tripwire
+dense `recall-para-02` KNOWN-FAIL có chủ ý chờ cặp ngưỡng §13.3.
