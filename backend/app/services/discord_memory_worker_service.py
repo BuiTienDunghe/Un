@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from dataclasses import dataclass, replace
 from uuid import UUID
 
@@ -11,6 +13,9 @@ from app.postgres.discord_memory_job_repository import (
 from app.postgres.discord_memory_repositories import DiscordMemoryRepository
 from app.postgres.models import DiscordMemoryCandidate, DiscordSessionTurn
 from app.services.discord_memory_guard import auto_apply_allowed
+from app.services.discord_memory_verifier import (
+    DiscordMemoryVerifierAdapter,
+)
 from app.services.discord_memory_review_service import (
     DiscordMemoryReviewService,
     MemoryMirrorError,
@@ -29,6 +34,8 @@ from app.services.discord_memory_rule_filter import (
     DiscordMemoryFilterInput,
     DiscordMemoryRuleFilter,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,6 +79,7 @@ class DiscordMemoryWorkerService:
         envelope_builder: DiscordMemoryExtractorEnvelopeBuilder | None = None,
         review_service: DiscordMemoryReviewService | None = None,
         auto_apply_threshold: float | None = None,
+        verifier: DiscordMemoryVerifierAdapter | None = None,
     ) -> None:
         self.sessions = sessions
         self.worker_id = worker_id
@@ -87,6 +95,7 @@ class DiscordMemoryWorkerService:
         )
         self.review_service = review_service
         self.auto_apply_threshold = auto_apply_threshold
+        self.verifier = verifier
 
     def heartbeat(self, job_id: str) -> bool:
         with self.sessions.begin() as database:
@@ -301,6 +310,50 @@ class DiscordMemoryWorkerService:
                 created=created,
             )
 
+    def verify_proposal(
+        self, outcome: DiscordMemoryWorkerOutcome
+    ) -> DiscordMemoryWorkerOutcome:
+        """Job 4: one 1-vs-1 entailment check per fresh proposal.
+
+        The model call runs with NO database transaction open (invariant #2);
+        two short transactions bracket it — one to read the fact and its
+        source, one to record the verdict. Every failure path leaves the
+        candidate exactly as it was: unverified, waiting for a human.
+        """
+        if (
+            self.verifier is None
+            or outcome.candidate_id is None
+            or outcome.reason != "extractor_proposal_deferred"
+        ):
+            return outcome
+        try:
+            candidate_id = UUID(outcome.candidate_id)
+            with self.sessions() as database:
+                candidate = database.get(DiscordMemoryCandidate, candidate_id)
+                if candidate is None or not candidate.canonical_fact:
+                    return outcome
+                turn = database.get(DiscordSessionTurn, candidate.source_turn_id)
+                fact = candidate.canonical_fact
+                source_text = turn.request_text if turn is not None else ""
+                guild_id = candidate.guild_id
+                expected_status = candidate.validation_status
+            verdict = self.verifier.verify(
+                canonical_fact=fact, source_text=source_text
+            )
+            with self.sessions.begin() as database:
+                DiscordMemoryRepository(database).update_candidate_result(
+                    candidate_id,
+                    guild_id=guild_id,
+                    expected_validation_status=expected_status,
+                    verification_method=verdict.method,
+                    verification_result=verdict.result,
+                )
+        except Exception:
+            logger.exception(
+                "memory verifier step failed; candidate stays unverified"
+            )
+        return outcome
+
     def _persist_valid_result(
         self,
         job_id: str,
@@ -415,6 +468,12 @@ class DiscordMemoryWorkerService:
                     and candidate.operation in ("create", "update")
                     and candidate.confidence is not None
                     and float(candidate.confidence) >= self.auto_apply_threshold
+                    # Job 4: with a verifier configured, autonomy additionally
+                    # requires the 1-vs-1 verdict to be "entailment".
+                    and (
+                        self.verifier is None
+                        or candidate.verification_result == "entailment"
+                    )
                 )
                 guard_ok = False
                 if eligible:
@@ -489,7 +548,7 @@ class DiscordMemoryWorkerService:
             except DiscordMemoryExtractorOutputError as error:
                 return self._persist_invalid_result(job_id, prepared, error)
             return self.auto_apply(
-                self._persist_valid_result(job_id, prepared, result)
+                self.verify_proposal(self._persist_valid_result(job_id, prepared, result))
             )
         except DiscordMemoryExtractorTransportError as error:
             return self._retry_failure(

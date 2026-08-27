@@ -4,9 +4,11 @@ Three things this asserts, and why each is load-bearing:
 - attrib-03 / attrib-04 PASS: the acceptance tests of 0c — member- and
   guild-isolation on the answer path. If these regress, the read-path leak
   is back.
-- contra-01 / guard-02 KNOWN-FAIL: the guard measurably accepts a fact that
-  contradicts its source. These rows MUST keep failing until job 4 replaces
-  fact_overlap; the day they flip to FIXED is the day auto-apply may return.
+- contra-01 / guard-02 FIXED (27/08, job 4): the negation-clause and
+  min-two-content-words rules close the two measured holes — zero-cost on
+  the 75-case benchmark (coverage 96.7% / poison 21.6% unchanged). FIXED is
+  now load-bearing: a regression here reopens §9.1. Auto-apply itself stays
+  off until the --with-extractor benchmark clears the §13.4 thresholds.
 - guard-03 PASS: the guard's positive duty — a true, well-evidenced fact is
   accepted. Any future verifier must not regress this while fixing the two
   above.
@@ -29,8 +31,8 @@ pytestmark = pytest.mark.skipif(not URL, reason="set POSTGRES_TEST_URL")
 EXPECTED_STATUS = {
     "attrib-03": "PASS",
     "attrib-04": "PASS",
-    "contra-01": "KNOWN-FAIL",
-    "guard-02": "KNOWN-FAIL",
+    "contra-01": "FIXED",
+    "guard-02": "FIXED",
     "guard-03": "PASS",
 }
 

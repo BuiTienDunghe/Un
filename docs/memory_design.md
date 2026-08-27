@@ -521,6 +521,8 @@ vs 'An: ok vậy bỏ MySQL'           →  evidence=False, overlap=False
 > **Kết luận:** câu *"Cloud đề xuất, máy này phán quyết"* là kiến trúc đúng, **nhưng bộ gác hiện tại không phán quyết được gì**. Nó xác nhận *một câu trích có thật*, không xác nhận *mệnh đề có suy ra từ đó không*.
 >
 > **Trước khi tầng 3 tự động ghi vào sổ cái: hoặc bộ gác phải kiểm được suy luận, hoặc tầng 3 phải nằm sau một người duyệt.**
+>
+> **✅ Cập nhật 27/08 (việc 4):** hai lỗ đo được ở trên đã đóng bằng hai luật tất định (vế-phủ-định + tối-thiểu-2-từ) — 0-chi-phí trên benchmark 75 ca, cả hai ca này giờ **FIXED** trong bộ eval và được hợp đồng test giữ không thoái lui. Verifier model 1-vs-1 đã ghép vào worker nhưng **ship tối**; tự-áp-dụng vẫn tắt cho tới khi benchmark `--with-extractor` qua ngưỡng §13.4.
 
 ### 9.2. Luật "một trong N" làm nó tệ hơn ✅
 
@@ -654,7 +656,8 @@ Theo tinh thần `docs/DEVELOPMENT_PLAN.md` §7c.
 - Giữ nguyên 10 khoá của sổ cái sự việc
 
 **Bị chặn:**
-- **Tầng 3 tự áp dụng vào sổ cái** — chờ §9.1 (**việc mới**, không phải chỉnh ngưỡng)
+- ~~**Tầng 3 tự áp dụng vào sổ cái** — chờ §9.1~~ **§9.1 đã đóng 27/08 (việc 4)**; còn chặn bởi §9.7 + đường đọc §9.4 + benchmark verifier
+- **Bật `DISCORD_MEMORY_VERIFIER_ENABLED` + mở lại tự-áp-dụng** — chờ pha `--with-extractor` của bộ eval đo qua ngưỡng §13.4
 - **Tầng 3 ghi vào hàng chờ duyệt** — chờ §9.7 (**bảng thứ tư + giao diện duyệt thứ hai**, chưa tính phạm vi)
 - ~~**Tầng 1 và mọi migration** — chờ phép đo lưu lượng thụ động thật~~ **Mở khoá 27/08 (§13):** chủ dự án cam kết 3×100 tin/ngày; trình tự = mở nghe 1 kênh đếm trước, migration sau
 
@@ -748,6 +751,6 @@ Ngưỡng gate (bất biến #4): extraction P ≥ 0,80 / R ≥ 0,70 chặn đ�
 | **1** | Mở nghe 1 kênh, **đếm vài ngày** (bất biến #8) → migration sổ gốc + bảng chính sách kênh | bảng mới · 0 gọi model | 🟡 **Nửa đầu ✅ 27/08**: bộ đếm thụ động vũ trang trên kênh `1442208821333463194` — `discord_bot/passive_listener.py`, đếm **trước mọi cổng** (cả tin bot, gắn `author_is_bot` để §9.3 quyết bằng số), thread theo kênh cha, **không lưu nội dung**, ghi hỏng không gãy trả lời. File: `data/discord_listen/passive_counts.jsonl` (neo `__file__` — CWD container là `/app/backend`, đường tương đối rơi ngoài mount). Đọc: `python -m scripts.passive_listen_report`. Migration chờ số đo + quyết `content_original` (§5.3) + thiết kế xoá (§9.5) |
 | **2** | Service BM25 theo-guild, dựng lại **rời đường đọc** (§13.5) + công cụ `search_history` | service thứ hai | sau việc 1 |
 | **3** | Bộ eval **21 ca** (§13.4) | fixture + runner | ✅ **27/08 — pha trạng thái/truy xuất/gác** (`tests/fixtures/discord_memory_e2e_v1.jsonl` + `scripts/memory_e2e_eval.py`, 0 gọi model, mirror Qdrant stub). Kết quả chạy thật: **16 PASS · 2 KNOWN-FAIL đúng chỗ · 3 PENDING (job 2)**. `attrib-03`/`attrib-04` PASS = **0c nghiệm thu bằng máy**; `contra-01`/`guard-02` KNOWN-FAIL được **ghim trong suite** (`test_memory_e2e_eval.py`) — ngày chúng thành FIXED là ngày việc 4 hạ cánh. Pha `--with-extractor` (chấm P/R trích xuất) thuộc việc 4. **Phát hiện khi chạy**: lặp nguyên văn từ tin MỚI vẫn tạo version churn ở tầng áp dụng — idempotence chỉ phủ cùng-một-ứng-viên; chống-lặp thật nằm ở extractor (ca `contra-03` ghi lại) |
-| **4** | Verifier 3 trạng thái, 1-vs-1, chạy đêm + cột `verification{method,result}` | 2×60s/ứng viên, nền | gate = ngưỡng §13.4 |
+| **4** | Verifier 3 trạng thái, 1-vs-1 + cột `verification{method,result}` | 2×60s/ứng viên, nền | ✅ **27/08 — máy móc xong, ship TỐI**. (a) **Hai luật tất định vào guard** — vế-phủ-định (đánh trên chữ THÔ, không gấp dấu: đừng/dùng và nữa/nửa gấp dấu là trùng nhau) + tối-thiểu-2-từ-nội-dung — **đo 0-chi-phí trên benchmark 75 ca** (coverage 96,7% / poison 21,6% không đổi một li) và lật `contra-01`+`guard-02` thành **FIXED** (e2e: FIXED=2 · PASS=16 · PENDING=3 · 0 KNOWN-FAIL). (b) `DiscordMemoryVerifierAdapter` (nli-1v1, prompt verify-v1, fail-safe → unknown) + migration `20260827_28` + bước `verify_proposal` trong worker (model NGOÀI transaction — bất biến #2) + cổng autonomy đòi `entailment`. **Cờ `DISCORD_MEMORY_VERIFIER_ENABLED` mặc định TẮT** — bật + mở lại tự-áp-dụng chỉ sau khi pha `--with-extractor` đo qua ngưỡng §13.4. Suite: 680 pass |
 | **5** | Vá UI duyệt: hiện tin nguồn + phân trang | ~20 dòng | ✅ **27/08** — `list_pending` join tin gốc từ `discord_session_turns` (người duyệt thấy NGUỒN, không chỉ câu trích model tự chọn — E9), tham số `limit`/`offset` phá trần-50, dashboard hiện dòng «tin gốc» + nút Tải thêm. Test hợp đồng: `test_memory_review_pagination.py` |
 | **6** | Tầng 3 / Gemini | — | **giữ HOÃN** — 3 chốt cũ (§9.1 → việc 4, §9.7, đường đọc §9.4) + thay sàn 24h bằng ngưỡng ≥ 20 tin |

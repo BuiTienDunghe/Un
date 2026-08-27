@@ -20,6 +20,7 @@ from app.postgres.discord_memory_constants import (
     DISCORD_MEMORY_OPERATIONS_V1,
     DISCORD_MEMORY_SCOPES_V1,
     DISCORD_MEMORY_SOURCE_ROLES_V1,
+    DISCORD_MEMORY_VERIFICATION_RESULTS_V1,
 )
 from app.postgres.models import (
     DiscordConversationSession,
@@ -115,6 +116,8 @@ class DiscordMemoryRepository:
             "error_message",
             "reviewed_at",
             "reviewed_by",
+            "verification_method",
+            "verification_result",
         }
     )
 
@@ -369,6 +372,11 @@ class DiscordMemoryRepository:
             and changes["decision"] not in DISCORD_MEMORY_CANDIDATE_DECISIONS_V1
         ):
             raise ValueError("invalid decision")
+        if "verification_result" in changes and changes["verification_result"] not in (
+            None,
+            *DISCORD_MEMORY_VERIFICATION_RESULTS_V1,
+        ):
+            raise ValueError("invalid verification_result")
 
         candidate = self.session.scalar(
             select(DiscordMemoryCandidate)

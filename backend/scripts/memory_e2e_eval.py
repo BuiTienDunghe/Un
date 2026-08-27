@@ -363,7 +363,14 @@ def main() -> int:
     if unexpected:
         print(f"FAIL ngoài dự kiến: {', '.join(unexpected)}")
         return 1
-    print("Không có FAIL ngoài dự kiến. KNOWN-FAIL là bài nghiệm thu của việc 4; PENDING chờ việc 2.")
+    notes = ["Không có FAIL ngoài dự kiến."]
+    if counts.get("KNOWN-FAIL"):
+        notes.append("KNOWN-FAIL là bài nghiệm thu đang chờ việc tương ứng.")
+    if counts.get("PENDING"):
+        notes.append("PENDING chờ việc 2 (BM25 sổ gốc).")
+    if counts.get("FIXED"):
+        notes.append("FIXED = bài nghiệm thu đã hạ cánh — hợp đồng trong test giữ nó không thoái lui.")
+    print(" ".join(notes))
     return 0
 
 

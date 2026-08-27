@@ -47,6 +47,13 @@ class Settings(BaseSettings):
     # coverage. Extraction runs in a background queue, so the ~60s cost is idle
     # time, not user-facing latency.
     discord_memory_extractor_model: str = "qwen3.5:9b"
+    # Job 4 (memory_design.md 13.2 E1): the 1-vs-1 verifier. Ships DARK on
+    # purpose - enabling it adds one background ~60s model call per candidate,
+    # and auto-apply additionally requires verdict == "entailment". Turn on
+    # after the --with-extractor benchmark clears the 13.4 thresholds.
+    discord_memory_verifier_enabled: bool = False
+    discord_memory_verifier_model: str = "qwen3.5:9b"
+    discord_memory_verifier_timeout_seconds: float = 90.0
     discord_memory_extractor_schema_version: str = "v1"
     discord_memory_extractor_num_ctx: int = 4096
     discord_memory_extractor_temperature: float = 0.0

@@ -93,6 +93,16 @@ DISCORD_MEMORY_CANDIDATE_DECISIONS_V1 = (
     "failed",
 )
 
+# Job 4 (memory_design.md 13.2 E1): 1-vs-1 verifier verdict vocabulary.
+# entailment -> eligible for autonomous apply (when the threshold returns);
+# contradiction -> review with the supersession pre-filled, NEVER auto;
+# unknown -> review. Absence (NULL) means the verifier has not run.
+DISCORD_MEMORY_VERIFICATION_RESULTS_V1 = (
+    "entailment",
+    "contradiction",
+    "unknown",
+)
+
 DISCORD_MEMORY_STATUSES_V1 = (
     "active",
     "superseded",

@@ -20,6 +20,7 @@ from app.postgres.discord_memory_constants import (
     DISCORD_MEMORY_SOURCE_ROLES_V1,
     DISCORD_MEMORY_STATUSES_V1,
     DISCORD_MEMORY_VALIDATION_STATUSES_V1,
+    DISCORD_MEMORY_VERIFICATION_RESULTS_V1,
 )
 
 
@@ -481,6 +482,11 @@ class DiscordMemoryCandidate(Base):
             f"decision IN ({sql_values(DISCORD_MEMORY_CANDIDATE_DECISIONS_V1)})",
             name="ck_discord_memory_candidates_decision",
         ),
+        CheckConstraint(
+            "verification_result IS NULL OR verification_result IN "
+            f"({sql_values(DISCORD_MEMORY_VERIFICATION_RESULTS_V1)})",
+            name="ck_discord_memory_candidates_verification_result",
+        ),
         UniqueConstraint(
             "source_turn_id",
             "extractor_schema_version",
@@ -558,6 +564,10 @@ class DiscordMemoryCandidate(Base):
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     error_code: Mapped[str | None] = mapped_column(Text)
     error_message: Mapped[str | None] = mapped_column(Text)
+    # Job 4: the 1-vs-1 verifier's verdict (fact vs its source), and how it
+    # was reached (e.g. "nli-1v1:qwen3.5:9b"). NULL = not verified yet.
+    verification_method: Mapped[str | None] = mapped_column(Text)
+    verification_result: Mapped[str | None] = mapped_column(Text)
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     reviewed_by: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(

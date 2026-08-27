@@ -68,6 +68,40 @@ def test_auto_apply_allowed_needs_both_checks():
     assert not auto_apply_allowed(canonical_fact="User prefers Vietnamese.", evidence_text=source, source_text=source)
 
 
+def test_negation_clause_blocks_a_fact_its_source_denies():
+    # The exact 9.1 triple: fact contradicts source, old guard ACCEPTED it.
+    assert not auto_apply_allowed(
+        canonical_fact="Dũng dùng Postgres",
+        evidence_text="không dùng Postgres nữa",
+        source_text="Dũng: thôi chốt bỏ Postgres nhé, không dùng Postgres nữa",
+    )
+    # Clause-scoped: negation in a DIFFERENT clause must not block.
+    from app.services.discord_memory_guard import negation_clause_hit
+
+    assert not negation_clause_hit(
+        "GPU là RTX 3060", "tôi không thích trà, card tôi là RTX 3060"
+    )
+
+
+def test_single_content_word_facts_wait_for_a_human():
+    # 9.2: {postgres} is the only content word and it hits an unrelated message.
+    assert not auto_apply_allowed(
+        canonical_fact="User prefers Postgres",
+        evidence_text="postgres 16 ra rồi à",
+        source_text="postgres 16 ra rồi à, ai thử chưa",
+    )
+
+
+def test_a_true_well_evidenced_fact_still_passes():
+    # The guard's positive duty (e2e guard-03): fixing the two holes above
+    # must not regress acceptance of grounded facts.
+    assert auto_apply_allowed(
+        canonical_fact="GPU là RTX 3060",
+        evidence_text="card của tôi là RTX 3060",
+        source_text="card của tôi là RTX 3060, mới lắp tuần trước",
+    )
+
+
 @pytest.mark.skipif(not BENCHMARK_9B.exists(), reason="stored 9b benchmark results missing")
 def test_production_guard_reproduces_the_measured_benchmark_policy():
     """Policy C on qwen3.5:9b measured 19/08: coverage 96.7%, poison 21.6%.

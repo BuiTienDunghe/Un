@@ -11,6 +11,9 @@ from app.services.discord_memory_extractor import (
 from app.services.discord_memory_review_service import (
     DiscordMemoryReviewService,
 )
+from app.services.discord_memory_verifier import (
+    DiscordMemoryVerifierAdapter,
+)
 from app.services.discord_memory_worker_service import (
     DiscordMemoryWorkerService,
 )
@@ -77,6 +80,16 @@ def discord_memory_ingest(job_id: str) -> None:
                 LoggingService(auxiliary_store, settings.logs_path),
             ),
         )
+    verifier = (
+        DiscordMemoryVerifierAdapter(
+            base_url=settings.ollama_base_url,
+            model=settings.discord_memory_verifier_model,
+            timeout_seconds=settings.discord_memory_verifier_timeout_seconds,
+        )
+        if settings.discord_memory_verifier_enabled
+        and settings.discord_memory_extractor_enabled
+        else None
+    )
     outcome = DiscordMemoryWorkerService(
         sessions,
         worker_id=socket.gethostname(),
@@ -94,6 +107,7 @@ def discord_memory_ingest(job_id: str) -> None:
             if review_service is not None
             else None
         ),
+        verifier=verifier,
     ).process(job_id)
     if outcome.status == "retrying":
         # RQ Retry transports the same deterministic job ID; PostgreSQL owns

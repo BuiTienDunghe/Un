@@ -63,6 +63,7 @@ def _candidate_payload(candidate: DiscordMemoryCandidate) -> dict[str, object]:
         "validation_status": candidate.validation_status,
         "reviewed_at": candidate.reviewed_at.isoformat() if candidate.reviewed_at else None,
         "reviewed_by": candidate.reviewed_by,
+        "verification_result": candidate.verification_result,
     }
 
 
