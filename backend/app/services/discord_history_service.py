@@ -270,24 +270,60 @@ class DiscordHistoryService:
                 )
                 .limit(bounded_limit)
             ).scalars()
-            return [
-                DiscordHistoryHit(
-                    discord_message_id=row.discord_message_id,
-                    channel_id=row.channel_id,
-                    thread_id=row.thread_id,
-                    author_id=row.author_id,
-                    author_display_name=row.author_display_name,
-                    is_bot=row.is_bot,
-                    content=row.content or "",
-                    sent_at=row.sent_at,
-                    link=(
-                        "https://discord.com/channels/"
-                        f"{row.guild_id}/{row.thread_id or row.channel_id}/"
-                        f"{row.discord_message_id}"
-                    ),
+            return [_hit(row) for row in rows]
+
+    def recent(
+        self,
+        *,
+        guild_id: str,
+        limit: int = 20,
+        author_id: str | None = None,
+    ) -> list[DiscordHistoryHit]:
+        """The latest heard messages by sent_at, returned in CHRONOLOGICAL
+        order — the 'tóm tắt N tin gần nhất' read. No query, no ranking;
+        pure time order over the guild's raw ledger."""
+        bounded_limit = max(1, min(int(limit), 25))
+        if not guild_id:
+            return []
+        conditions = [
+            DiscordChannelMessage.guild_id == guild_id,
+            DiscordChannelMessage.deleted_at.is_(None),
+            DiscordChannelMessage.content.is_not(None),
+        ]
+        if author_id:
+            conditions.append(DiscordChannelMessage.author_id == author_id)
+        with self.sessions() as database:
+            rows = database.execute(
+                select(DiscordChannelMessage)
+                .where(*conditions)
+                .order_by(
+                    DiscordChannelMessage.sent_at.desc(),
+                    DiscordChannelMessage.id.desc(),
                 )
-                for row in rows
-            ]
+                .limit(bounded_limit)
+            ).scalars()
+            hits = [_hit(row) for row in rows]
+        # Newest-first from SQL; oldest-first for reading a conversation.
+        hits.reverse()
+        return hits
+
+
+def _hit(row: DiscordChannelMessage) -> DiscordHistoryHit:
+    return DiscordHistoryHit(
+        discord_message_id=row.discord_message_id,
+        channel_id=row.channel_id,
+        thread_id=row.thread_id,
+        author_id=row.author_id,
+        author_display_name=row.author_display_name,
+        is_bot=row.is_bot,
+        content=row.content or "",
+        sent_at=row.sent_at,
+        link=(
+            "https://discord.com/channels/"
+            f"{row.guild_id}/{row.thread_id or row.channel_id}/"
+            f"{row.discord_message_id}"
+        ),
+    )
 
 
 def history_hit_payload(hit: DiscordHistoryHit) -> dict[str, Any]:

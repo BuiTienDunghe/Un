@@ -787,6 +787,22 @@ nguyên văn câu trả lời cũ của chính nó khi câu hỏi cùng hình d�
    §5.3 `content_original` giữ bản đầu một lần; §9.5 xoá mềm + xoá chữ ngay khi
    Discord xoá, xoá-cứng theo người = DELETE thường vì FTS theo-dòng.
 
-Còn treo sau ngày này: pha `--with-extractor` (chấm P/R trích xuất, chạy đêm) —
-vẫn là cổng duy nhất mở `DISCORD_MEMORY_VERIFIER_ENABLED` + tự-áp-dụng; tripwire
-dense `recall-para-02` KNOWN-FAIL có chủ ý chờ cặp ngưỡng §13.3.
+**Rạng sáng 28/08 (~04h) — pha `--with-extractor` XÂY XONG và CHẠY, gate §13.4 ĐẠT.**
+Runner nối filter thật + extractor 9b thật + verifier thật trên 22 ca (chuỗi
+target theo-guild để update-vs-create chấm như production). Vòng 1: P=0.89 ·
+**R=0.40** — 11/12 ca trượt đều là `filter=no_durable_fact`: nút thắt nằm ở
+**tầng lọc regex**, không phải model. Vòng 1 cũng tóm được lỗi verifier ship
+tối: thiếu `think:false` → suy nghĩ nuốt trọn `num_predict=8`, content RỖNG,
+mọi verdict thành unknown — tự-áp-dụng sẽ không bao giờ nổ nếu bật mù. Sau khi
+mở 6 nhóm mẫu lọc (card/vga sở hữu, stack cá nhân không cần "dự án", "gọi tôi
+là X" trần, chuyển/rút quyết định stack có cổng tên-công-nghệ, chặn câu-hỏi-về-
+sở-thích cùng-vế) + 12 dòng fixture ghim: **Vòng 2: P=0.94 (16/17) · R=0.80
+(16/20) · forged=0 · verifier entailment 16/16 trên ca đúng, và phán
+`contradiction` cho đúng ca sai duy nhất** (delete-thay-vì-update → về hàng
+duyệt người, đúng tầng). Tripwire real-01 lật sống: "tôi thích trà sữa" →
+`create user.favorite_drink` conf 1.00. Hệ quả: `DISCORD_MEMORY_VERIFIER_ENABLED=true`
+từ lần khởi động sau; tự-áp-dụng mở bằng một dòng
+`DISCORD_MEMORY_AUTO_APPLY_THRESHOLD=0.8` khi chủ dự án quyết (rollout bậc
+thang: xem verdict trên lưu lượng thật vài hôm trước). Công cụ `search_history`
+thêm chế độ không-query = N tin mới nhất theo thời gian (phục vụ "tóm tắt 20
+tin gần đây"). Còn treo: tripwire dense `recall-para-02` chờ cặp ngưỡng §13.3.

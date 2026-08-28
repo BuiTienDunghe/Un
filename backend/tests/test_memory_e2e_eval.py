@@ -56,7 +56,7 @@ def test_e2e_fixture_has_no_unexpected_failures():
         for line in Path(FIXTURE).read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
-    assert len(cases) == 21
+    assert len(cases) == 22
 
     statuses: dict[str, str] = {}
     for case in cases:

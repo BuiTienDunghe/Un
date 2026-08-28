@@ -39,11 +39,20 @@ class HistoryBackend(Protocol):
         limit: int = 5,
     ) -> list[object]: ...
 
+    def recent(
+        self,
+        *,
+        guild_id: str,
+        limit: int = 20,
+        author_id: str | None = None,
+    ) -> list[object]: ...
+
 
 AGENT_GUIDE = (
     "Bạn có thể dùng công cụ khi cần dữ liệu thật: `search_documents` tìm trong "
-    "tài liệu người dùng đã tải lên, `search_history` tìm nguyên văn tin nhắn "
-    "cũ của server (ai nói gì, lúc nào), `system_status` xem sức khỏe hệ "
+    "tài liệu người dùng đã tải lên, `search_history` đọc tin nhắn cũ của "
+    "server (có query = tìm từ khóa; bỏ trống query = N tin mới nhất, dùng "
+    "khi cần tóm tắt gần đây), `system_status` xem sức khỏe hệ "
     "thống. Chỉ gọi công cụ khi câu hỏi thật sự "
     "cần dữ liệu đó; câu chào hỏi hay kiến thức chung thì trả lời thẳng, không "
     "gọi gì. Khi dùng nội dung tài liệu, nêu tên tệp và số trang. Khi dùng "
@@ -71,16 +80,16 @@ AGENT_TOOLS: list[dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "search_history",
-            "description": "Tìm nguyên văn tin nhắn cũ trong lịch sử server Discord hiện tại (sổ gốc). Trả về đúng câu chữ, ai nói, lúc nào và link tới tin nhắn. Dùng khi cần tra lại điều ai đó đã nói.",
+            "description": "Đọc lịch sử tin nhắn của server Discord hiện tại (sổ gốc). Có query: tìm theo từ khóa, xếp theo độ khớp. KHÔNG có query: trả về các tin MỚI NHẤT theo thời gian (dùng khi cần tóm tắt N tin gần đây). Trả về đúng câu chữ, ai nói, lúc nào và link tới tin nhắn.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "query": {"type": "string", "description": "Từ khóa hoặc cụm từ cần tìm trong tin nhắn cũ"},
+                    "query": {"type": "string", "description": "Từ khóa cần tìm. BỎ TRỐNG để lấy các tin mới nhất theo thời gian"},
                     "author_id": {"type": "string", "description": "Chỉ lấy tin của một người nói (author_id Discord, có trong nhãn ngữ cảnh)"},
-                    "days": {"type": "integer", "description": "Chỉ tìm trong N ngày gần nhất (tùy chọn)"},
-                    "limit": {"type": "integer", "description": "Số tin muốn lấy (1-10), mặc định 5"},
+                    "days": {"type": "integer", "description": "Chỉ tìm trong N ngày gần nhất (tùy chọn, chỉ áp dụng khi có query)"},
+                    "limit": {"type": "integer", "description": "Số tin muốn lấy (tìm kiếm: 1-10, mặc định 5; tin mới nhất: 1-25, mặc định 20)"},
                 },
-                "required": ["query"],
+                "required": [],
             },
         },
     },
@@ -198,8 +207,24 @@ class AgentService:
                         {"error": "search_history chỉ dùng được trong kênh Discord của server"}
                     )
                 query = str(arguments.get("query") or "").strip()
+                author_id = str(arguments.get("author_id") or "").strip() or None
                 if not query:
-                    return self._dump({"error": "query trống"})
+                    # No query = the latest messages in time order — the
+                    # "tóm tắt N tin gần nhất" read over the raw ledger.
+                    try:
+                        limit = int(arguments.get("limit", 20))
+                    except (TypeError, ValueError):
+                        limit = 20
+                    hits = self.history_service.recent(
+                        guild_id=guild_id,
+                        limit=min(max(limit, 1), 25),
+                        author_id=author_id,
+                    )
+                    if not hits:
+                        return self._dump(
+                            {"result": "sổ gốc chưa có tin nhắn nào của server này"}
+                        )
+                    return self._dump([history_hit_payload(hit) for hit in hits])
                 try:
                     limit = int(arguments.get("limit", 5))
                 except (TypeError, ValueError):
@@ -209,7 +234,6 @@ class AgentService:
                     days = min(int(days), 3650) if days is not None else None
                 except (TypeError, ValueError):
                     days = None
-                author_id = str(arguments.get("author_id") or "").strip() or None
                 hits = self.history_service.search(
                     guild_id=guild_id,
                     query=query,

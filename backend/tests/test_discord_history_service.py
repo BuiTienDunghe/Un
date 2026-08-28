@@ -275,3 +275,25 @@ def test_policy_kill_switch_stops_recording(history_world):
     # OR-ranking may surface the pre-switch-off message (shared lexemes);
     # what must NOT exist is the post-switch-off content itself.
     assert all(hit.content != "tin sau khi tat" for hit in hits)
+
+
+def test_recent_returns_latest_messages_in_chronological_order(history_world):
+    _, prefix, service = history_world
+    base = datetime(2026, 8, 25, 10, 0, tzinfo=UTC)
+    for offset, content in enumerate(
+        ["tin thu nhat", "tin thu hai", "tin thu ba", "tin thu tu"]
+    ):
+        _record(service, prefix, content, sequence=offset + 30,
+                at=base + timedelta(minutes=offset))
+    deleted_id = _record(service, prefix, "tin bi xoa", sequence=40,
+                         at=base + timedelta(minutes=10))
+    assert service.record_delete(discord_message_id=deleted_id)
+
+    hits = service.recent(guild_id=f"{prefix}-g1", limit=3)
+    # The 3 newest surviving messages, oldest-first for natural reading;
+    # the deleted one never appears.
+    assert [hit.content for hit in hits] == [
+        "tin thu hai", "tin thu ba", "tin thu tu"
+    ]
+
+    assert service.recent(guild_id=f"{prefix}-khac", limit=5) == []

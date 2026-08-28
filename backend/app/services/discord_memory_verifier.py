@@ -85,6 +85,11 @@ class DiscordMemoryVerifierAdapter:
                 json={
                     "model": self.model,
                     "stream": False,
+                    # Caught by the 28/08 night benchmark: without this,
+                    # qwen3.5's thinking consumed the whole num_predict=8
+                    # budget and the content came back EMPTY — every verdict
+                    # parsed as "unknown" and auto-apply could never fire.
+                    "think": False,
                     "messages": [
                         {"role": "system", "content": _SYSTEM_PROMPT},
                         {

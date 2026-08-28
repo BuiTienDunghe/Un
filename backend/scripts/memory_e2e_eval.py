@@ -399,18 +399,257 @@ def run_case(factory, prefix: str, case: dict, keep: bool) -> tuple[str, list[st
     return ("FIXED" if known_fail else "PASS"), []
 
 
+def run_extraction_phase(cases: list[dict]) -> tuple[bool, dict]:
+    """The §13.4 night benchmark: REAL filter + REAL extractor (+ verifier)
+    over every setup message, scored against expected_extraction.
+
+    This is the only model-ful phase of this runner (the base phase stays
+    zero-model by contract). Gates measured here:
+      - extraction P >= 0.80 / R >= 0.70  (chặn đổi prompt)
+      - forged_subject == 0               (điều kiện tự-áp-dụng)
+    plus the verifier's entailment rate on correct extractions (E1).
+    """
+    from app.config.settings import get_settings
+    from app.services.discord_memory_extractor import (
+        DiscordMemoryExtractorAdapter,
+        DiscordMemoryExtractorEnvelopeBuilder,
+        DiscordMemoryExtractorError,
+        ExtractorSource,
+        ExtractorTarget,
+    )
+    from app.services.discord_memory_rule_filter import (
+        DiscordMemoryFilterInput,
+        DiscordMemoryRuleFilter,
+    )
+    from app.services.discord_memory_verifier import DiscordMemoryVerifierAdapter
+
+    settings = get_settings()
+    rule_filter = DiscordMemoryRuleFilter()
+    builder = DiscordMemoryExtractorEnvelopeBuilder()
+    extractor = DiscordMemoryExtractorAdapter(
+        base_url=settings.ollama_base_url,
+        model=settings.discord_memory_extractor_model,
+        schema_version=settings.discord_memory_extractor_schema_version,
+        num_ctx=settings.discord_memory_extractor_num_ctx,
+        temperature=settings.discord_memory_extractor_temperature,
+        seed=settings.discord_memory_extractor_seed,
+        timeout_seconds=settings.discord_memory_extractor_timeout_seconds,
+        retry_count=settings.discord_memory_extractor_retry_count,
+    )
+    verifier = DiscordMemoryVerifierAdapter(
+        base_url=settings.ollama_base_url,
+        model=settings.discord_memory_verifier_model,
+        timeout_seconds=settings.discord_memory_verifier_timeout_seconds,
+    )
+    print(
+        f"\n─── pha trích xuất: model={extractor.model} "
+        f"schema={extractor.schema_version} verifier={verifier.model} ───",
+        flush=True,
+    )
+
+    predicted = 0
+    correct = 0
+    expected_total = 0
+    forged = 0
+    errors = 0
+    verifier_correct_entailment = 0
+    verifier_correct_total = 0
+    verifier_wrong_verdicts: list[str] = []
+
+    for case in cases:
+        setup = case.get("setup") or []
+        expected_by_index = {
+            entry["setup_index"]: entry
+            for entry in (case.get("expected_extraction") or [])
+        }
+        expected_total += sum(
+            1
+            for entry in expected_by_index.values()
+            if entry.get("operation") != "no_op"
+        )
+        # Per-guild target chains so update-vs-create scores like production:
+        # earlier accepted proposals become allowed targets for later ones.
+        targets_by_guild: dict[str, dict[str, ExtractorTarget]] = {}
+        for index, message in enumerate(setup):
+            author_id = f"{case['id']}-{message['author'].lower()}"
+            filter_result = rule_filter.evaluate(
+                DiscordMemoryFilterInput(
+                    turn_id=uuid4(),
+                    source_discord_message_id=f"{case['id']}-m{index}",
+                    author_id=author_id,
+                    guild_id=message["guild"],
+                    channel_id=message["channel"],
+                    thread_id=None,
+                    request_text=message["content"],
+                    turn_status="completed",
+                    delivery_exists=True,
+                    session_state="active",
+                )
+            )
+            expected_entry = expected_by_index.get(index)
+            wants_fact = bool(
+                expected_entry and expected_entry.get("operation") != "no_op"
+            )
+            if filter_result.decision != "candidate":
+                if wants_fact:
+                    print(
+                        f"  MISS   {case['id']}[{index}] filter="
+                        f"{filter_result.reason_code} — kỳ vọng "
+                        f"{expected_entry['fact_key']}",
+                        flush=True,
+                    )
+                continue
+            guild_targets = targets_by_guild.setdefault(message["guild"], {})
+            try:
+                result = extractor.extract(
+                    builder.build(
+                        source=ExtractorSource(
+                            turn_id=uuid4(),
+                            discord_message_id=f"{case['id']}-m{index}",
+                            author_id=author_id,
+                            guild_id=message["guild"],
+                            channel_id=message["channel"],
+                            thread_id=None,
+                            request_text=message["content"],
+                        ),
+                        filter_metadata={
+                            "stage": "rule_filter",
+                            "policy_version": filter_result.policy_version,
+                            "decision": filter_result.decision,
+                            "reason_code": filter_result.reason_code,
+                            "candidate_strength": filter_result.candidate_strength,
+                            "detected_intent": filter_result.detected_intent,
+                            "matched_rules": list(filter_result.matched_rules),
+                        },
+                        targets=list(guild_targets.values()),
+                    )
+                )
+            except DiscordMemoryExtractorError as error:
+                errors += 1
+                print(
+                    f"  ERROR  {case['id']}[{index}] {error.error_code}: "
+                    f"{str(error)[:90]}",
+                    flush=True,
+                )
+                continue
+            proposal = result.proposal
+            if proposal.operation == "no_op":
+                if wants_fact:
+                    print(
+                        f"  MISS   {case['id']}[{index}] extractor no_op "
+                        f"({proposal.reason_code}) — kỳ vọng "
+                        f"{expected_entry['fact_key']}",
+                        flush=True,
+                    )
+                continue
+            predicted += 1
+            if proposal.subject_id != author_id:
+                forged += 1
+                print(
+                    f"  FORGED {case['id']}[{index}] subject="
+                    f"{proposal.subject_id!r} ≠ author {author_id!r}",
+                    flush=True,
+                )
+            is_correct = bool(
+                wants_fact
+                and proposal.operation == expected_entry["operation"]
+                and proposal.fact_key in expected_entry["fact_key"]
+                and proposal.subject_id == author_id
+            )
+            if is_correct:
+                correct += 1
+            else:
+                print(
+                    f"  WRONG  {case['id']}[{index}] "
+                    f"{proposal.operation}/{proposal.fact_key} — kỳ vọng "
+                    f"{expected_entry and expected_entry.get('operation')}/"
+                    f"{expected_entry and expected_entry.get('fact_key')}",
+                    flush=True,
+                )
+            # Maintain the target chain for later messages in this guild.
+            if proposal.operation in {"create", "update"} and proposal.fact_key:
+                guild_targets[proposal.fact_key] = ExtractorTarget(
+                    memory_id=(
+                        proposal.target_memory_id
+                        if proposal.operation == "update"
+                        and proposal.target_memory_id is not None
+                        else uuid4()
+                    ),
+                    fact_key=proposal.fact_key,
+                    canonical_fact=proposal.canonical_fact or "",
+                    memory_type=proposal.memory_type or "fact",
+                    scope=proposal.scope or "member_in_guild",
+                    version=1,
+                )
+            verdict = verifier.verify(
+                canonical_fact=proposal.canonical_fact or "",
+                source_text=message["content"],
+            )
+            if is_correct:
+                verifier_correct_total += 1
+                if verdict.result == "entailment":
+                    verifier_correct_entailment += 1
+            else:
+                verifier_wrong_verdicts.append(verdict.result)
+            print(
+                f"  OK={'y' if is_correct else 'n'} {case['id']}[{index}] "
+                f"{proposal.operation}/{proposal.fact_key} "
+                f"conf={proposal.confidence:.2f} verifier={verdict.result} "
+                f"({result.latency_ms}ms)",
+                flush=True,
+            )
+
+    precision = correct / predicted if predicted else 0.0
+    recall = correct / expected_total if expected_total else 0.0
+    entail_rate = (
+        verifier_correct_entailment / verifier_correct_total
+        if verifier_correct_total
+        else 0.0
+    )
+    print(
+        f"\ntrích xuất: P={precision:.2f} ({correct}/{predicted}) · "
+        f"R={recall:.2f} ({correct}/{expected_total}) · forged={forged} · "
+        f"lỗi transport/output={errors}",
+        flush=True,
+    )
+    print(
+        f"verifier: entailment trên ca ĐÚNG = {entail_rate:.2f} "
+        f"({verifier_correct_entailment}/{verifier_correct_total}) · "
+        f"verdict trên ca SAI: {verifier_wrong_verdicts or '—'}",
+        flush=True,
+    )
+    passed = precision >= 0.80 and recall >= 0.70 and forged == 0
+    print(
+        "GATE §13.4: "
+        + (
+            "ĐẠT — P≥0.80, R≥0.70, forged=0. Đủ điều kiện bật verifier + "
+            "mở tự-áp-dụng (kèm entailment gate trong worker)."
+            if passed
+            else "CHƯA ĐẠT — giữ verifier tối và tự-áp-dụng tắt."
+        ),
+        flush=True,
+    )
+    return passed, {
+        "precision": precision,
+        "recall": recall,
+        "forged": forged,
+        "errors": errors,
+        "entailment_on_correct": entail_rate,
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--fixture", default=str(FIXTURE))
     parser.add_argument("--database-url", default=None)
     parser.add_argument("--case", default=None, help="chỉ chạy một ca theo id")
     parser.add_argument("--keep", action="store_true", help="giữ lại dữ liệu để soi")
-    parser.add_argument("--with-extractor", action="store_true")
+    parser.add_argument(
+        "--with-extractor",
+        action="store_true",
+        help="chạy thêm pha model thật (filter + extractor + verifier) — §13.4",
+    )
     arguments = parser.parse_args()
-
-    if arguments.with_extractor:
-        print("--with-extractor là pha của việc 4 (verifier); chưa nối extractor vào runner này.")
-        return 2
 
     database_url = arguments.database_url or default_database_url()
     migrate(database_url)
@@ -449,6 +688,11 @@ def main() -> int:
     if counts.get("FIXED"):
         notes.append("FIXED = bài nghiệm thu đã hạ cánh — hợp đồng trong test giữ nó không thoái lui.")
     print(" ".join(notes))
+
+    if arguments.with_extractor:
+        gate_passed, _metrics = run_extraction_phase(cases)
+        if not gate_passed:
+            return 3
     return 0
 
 

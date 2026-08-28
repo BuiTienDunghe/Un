@@ -241,3 +241,25 @@ def test_search_history_refuses_without_guild_context():
     output = agent._execute_tool("search_history", {"query": "ai noi gi"}, None)
     assert backend.calls == []
     assert "Discord" in output
+
+
+def test_search_history_without_query_returns_recent_in_time_order():
+    backend = _FakeHistoryBackend()
+
+    def fake_recent(*, guild_id, limit=20, author_id=None):
+        backend.calls.append(
+            {"mode": "recent", "guild_id": guild_id, "limit": limit, "author_id": author_id}
+        )
+        return backend.search(guild_id=guild_id, query="")
+
+    backend.recent = fake_recent
+    agent = _bare_agent(backend)
+    output = agent._execute_tool(
+        "search_history",
+        {"limit": 20},
+        {"guild_id": "real-guild"},
+    )
+    assert backend.calls[0] == {
+        "mode": "recent", "guild_id": "real-guild", "limit": 20, "author_id": None
+    }
+    assert "noi dung cu" in output

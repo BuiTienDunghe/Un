@@ -831,5 +831,89 @@
   "expected_decision": "candidate",
   "expected_reason": "personal_fact",
   "notes": "v2 — 'là mùng <d>' lead-in"
+ },
+ {
+  "id": "hw_v2_01",
+  "text": "card của tôi là RTX 3060",
+  "expected_decision": "candidate",
+  "expected_reason": "hardware_configuration",
+  "notes": "benchmark 28/08 — card as owned device"
+ },
+ {
+  "id": "hw_v2_02",
+  "text": "ở đây tôi dùng card 3060",
+  "expected_decision": "candidate",
+  "expected_reason": "hardware_configuration",
+  "notes": "benchmark 28/08 — first-person device usage"
+ },
+ {
+  "id": "sw_v2_01",
+  "text": "máy tôi đang chạy python 3.10",
+  "expected_decision": "candidate",
+  "expected_reason": "software_configuration",
+  "notes": "benchmark 28/08 — personal stack, no 'dự án'"
+ },
+ {
+  "id": "sw_v2_02",
+  "text": "tôi vừa lên python 3.11 rồi",
+  "expected_decision": "candidate",
+  "expected_reason": "software_configuration",
+  "notes": "benchmark 28/08"
+ },
+ {
+  "id": "sw_v2_03",
+  "text": "giờ tôi dùng python 3.12 nhé",
+  "expected_decision": "candidate",
+  "expected_reason": "software_configuration",
+  "notes": "benchmark 28/08"
+ },
+ {
+  "id": "proj_v2_01",
+  "text": "thôi, bỏ MySQL đi, chuyển sang PostgreSQL",
+  "expected_decision": "candidate",
+  "expected_reason": "project_decision",
+  "notes": "benchmark 28/08 — stack switch"
+ },
+ {
+  "id": "proj_v2_02",
+  "text": "thôi, không dùng Postgres nữa",
+  "expected_decision": "candidate",
+  "expected_reason": "project_decision",
+  "notes": "benchmark 28/08 — stack retraction"
+ },
+ {
+  "id": "proj_v2_03",
+  "text": "chuyển sang kênh khác đi mọi người",
+  "expected_decision": "no_op",
+  "expected_reason": "no_durable_fact",
+  "notes": "benchmark 28/08 — switch without a named tech stays out"
+ },
+ {
+  "id": "id_v2_01",
+  "text": "gọi tôi là Dũng nhé",
+  "expected_decision": "candidate",
+  "expected_reason": "identity_preference",
+  "notes": "benchmark 28/08 — bare form"
+ },
+ {
+  "id": "id_v2_02",
+  "text": "bạn gọi tôi là gì",
+  "expected_decision": "no_op",
+  "expected_reason": "question_only",
+  "notes": "benchmark 28/08 — question guard"
+ },
+ {
+  "id": "pref_q_01",
+  "text": "đố bạn biết tôi thích uống gì",
+  "expected_decision": "no_op",
+  "expected_reason": "question_only",
+  "notes": "benchmark 28/08 — the production junk-row shape"
+ },
+ {
+  "id": "pref_q_02",
+  "text": "tôi thích gì ??",
+  "expected_decision": "no_op",
+  "expected_reason": "question_only",
+  "notes": "benchmark 28/08 — question guard on preference"
  }
 ]

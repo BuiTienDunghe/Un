@@ -224,8 +224,11 @@ class DiscordMemoryRuleFilter:
         if _matches(
             classification_text,
             r"\b(?:tên|ten)\s+(?:tôi|toi)\s+(?:là|la)\b",
-            r"\b(?:từ giờ|tu gio).*(?:gọi|goi)\s+(?:tôi|toi)\s+(?:là|la)\b",
-            r"\b(?:hãy|hay)\s+(?:gọi|goi)\s+(?:tôi|toi)\s+(?:là|la)\b",
+            # 28/08 benchmark: the bare form ("gọi tôi là Dũng nhé") was
+            # falling through; the lookahead keeps questions ("gọi tôi là
+            # gì?") on their way to the question gate.
+            r"\b(?:gọi|goi)\s+(?:tôi|toi)\s+(?:là|la)\s+"
+            r"(?!(?:gì|gi|sao|ai)\b)\w",
         ):
             return _result(
                 "candidate",
@@ -293,15 +296,22 @@ class DiscordMemoryRuleFilter:
 
         owned_hardware = _matches(
             classification_text,
-            r"\b(?:máy|may|pc|laptop)\s+(?:(?:của|cua)\s+)?(?:tôi|toi)\b",
+            r"\b(?:máy|may|pc|laptop|card|vga)\s+(?:(?:của|cua)\s+)?(?:tôi|toi)\b",
             r"\b(?:ram|gpu|cpu|ổ cứng|o cung)\s+(?:máy|may)\s+"
             r"(?:(?:của|cua)\s+)?(?:tôi|toi)\b",
+            # 28/08 benchmark: "ở đây tôi dùng card 3060" — first-person
+            # usage of a named device is ownership too.
+            r"\b(?:tôi|toi)\s+(?:đang\s+|dang\s+)?(?:dùng|dung|xài|xai)\s+"
+            r"(?:card|vga|gpu|ram|cpu|rtx|gtx)\b",
         )
         hardware_spec = _matches(
             classification_text,
             r"\b(?:rtx|gtx|radeon|ryzen|intel|core i[3579]|"
             r"ram|gpu|cpu|ssd|hdd)\b",
             r"\b\d+\s*(?:gb|tb)\b",
+            # 28/08 benchmark: "card 3060" — a named card with its model
+            # number is a spec even without rtx/gb wording.
+            r"\b(?:card|vga)\s*\d{3,4}\b",
         )
         if (
             owned_hardware
@@ -322,6 +332,11 @@ class DiscordMemoryRuleFilter:
             r"chúng ta|chung ta).*\b(?:dùng|dung|sử dụng|su dung|chạy|chay)\b",
             r"\b(?:tôi|toi)\s+(?:đang\s+)?(?:chạy|chay)\b.+\b"
             r"(?:cho|trong)\s+(?:dự án|du an|project)\b",
+            # 28/08 benchmark: first-person stack statements without the
+            # word "dự án" — the tech-name AND below keeps this precise.
+            r"\b(?:máy\s+|may\s+)?(?:tôi|toi)\s+"
+            r"(?:đang\s+|dang\s+|vừa\s+|vua\s+|giờ\s+|gio\s+)?"
+            r"(?:chạy|chay|dùng|dung|lên|len)\b",
         ) and _matches(
             classification_text,
             r"\b(?:postgresql|postgres|sqlite|mysql|redis|python|"
@@ -355,7 +370,40 @@ class DiscordMemoryRuleFilter:
                 "durable_project_decision",
             )
 
-        durable_preference = _matches(
+        # 28/08 benchmark: a switch or retraction of a stack decision is a
+        # decision too — "chuyển sang PostgreSQL", "thôi, không dùng Postgres
+        # nữa". These looser phrasings are gated on a NAMED technology so
+        # "chuyển sang kênh khác" never fires.
+        if _matches(
+            classification_text,
+            r"\b(?:chuyển|chuyen)\s+(?:sang|qua)\b",
+            r"\b(?:không|khong)\s+(?:dùng|dung|xài|xai)\b.*\b(?:nữa|nua)\b",
+        ) and _matches(
+            classification_text,
+            r"\b(?:postgresql|postgres|sqlite|mysql|redis|python|"
+            r"node(?:\.js)?|typescript|docker|fastapi|django)\b",
+        ):
+            return _result(
+                "candidate",
+                "project_decision",
+                "normal",
+                "project_decision",
+                "project_stack_switch",
+            )
+
+        # 28/08: a question ABOUT a preference never states one — "đố bạn
+        # biết tôi thích gì" produced a confidence-0.000 junk candidate in
+        # BOTH production guilds. Deliberately narrow: the question word must
+        # sit in the SAME clause as the preference verb, so a mixed
+        # statement+question ("Tôi ưu tiên tiếng Việt, vậy bạn trả lời được
+        # không?") still counts as a statement.
+        preference_is_question = _matches(
+            classification_text,
+            r"\b(?:đố|do)\s+(?:bạn|ban|mọi người|moi nguoi)\b",
+            r"(?:thích|thich|ưu tiên|uu tien)\b[^,.;!?]*"
+            r"\b(?:gì|gi|nào|nao|sao|bao nhiêu|bao nhieu)\b",
+        )
+        durable_preference = not preference_is_question and _matches(
             classification_text,
             r"\b(?:tôi|toi)\s+(?:thích|thich|không thích|khong thich|"
             r"ưu tiên|uu tien)\b",

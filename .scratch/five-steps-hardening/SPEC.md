@@ -144,5 +144,12 @@ local trước push).
    sổ gốc chạy cạnh bộ đếm (49 tin/2 ngày trong file đếm). Phiên smoke
    `smoke-final-check` giữ lại làm audit, xoá lúc nào cũng được.
 
-Còn treo sau ngày này: pha `--with-extractor` chạy đêm (cổng duy nhất mở
-verifier + auto-apply); tầng 3/Gemini giữ hoãn; 3 điểm soi-lỗi hoãn ở trên.
+Còn treo sau ngày này: ~~pha `--with-extractor`~~ → **XONG rạng sáng 28/08**:
+xây pha model-thật vào runner (chuỗi target theo-guild), 2 vòng đo. Vòng 1
+P=0.89/R=0.40 chỉ đúng nút thắt (tầng lọc regex) + tóm lỗi verifier thiếu
+`think:false` (content rỗng → mọi verdict unknown — sẽ vô hiệu tự-áp-dụng nếu
+bật mù). Mở 6 nhóm mẫu lọc + 12 dòng fixture → Vòng 2 **P=0.94 · R=0.80 ·
+forged=0 · verifier 16/16 entailment (+contradiction đúng ca sai)** — GATE
+§13.4 ĐẠT. Verifier BẬT trong .env; tự-áp-dụng = 1 dòng threshold chờ chủ dự
+án. Kèm: `search_history` chế độ không-query → N tin mới nhất (tóm tắt gần
+đây). Vẫn hoãn: tầng 3/Gemini; 3 điểm soi-lỗi ở trên; tripwire dense.
