@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 
@@ -17,6 +19,9 @@ class DiscordHistoryMessageRequest(BaseModel):
 
 class DiscordHistoryEditRequest(BaseModel):
     content: str = Field(min_length=1, max_length=8000)
+    # Discord's own edited_timestamp: the ordering token for two edits of the
+    # same message. Optional so an older bot build keeps working.
+    source_edited_at: datetime | None = None
 
 
 class DiscordHistoryDeleteRequest(BaseModel):

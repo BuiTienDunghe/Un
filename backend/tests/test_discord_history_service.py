@@ -297,3 +297,44 @@ def test_recent_returns_latest_messages_in_chronological_order(history_world):
     ]
 
     assert service.recent(guild_id=f"{prefix}-khac", limit=5) == []
+
+
+def test_out_of_order_edit_is_refused_by_the_discord_token(history_world):
+    factory, prefix, service = history_world
+    message_id = _record(service, prefix, "ban dau", sequence=61)
+    first = datetime(2026, 8, 27, 10, 0, tzinfo=UTC)
+    second = datetime(2026, 8, 27, 10, 5, tzinfo=UTC)
+
+    assert service.record_edit(
+        discord_message_id=message_id, content="ban moi nhat",
+        source_edited_at=second,
+    ) is True
+    # The OLDER edit arrives late: it must not overwrite the newer text.
+    assert service.record_edit(
+        discord_message_id=message_id, content="ban cu hon",
+        source_edited_at=first,
+    ) is False
+    with factory() as database:
+        row = database.scalar(
+            select(DiscordChannelMessage).where(
+                DiscordChannelMessage.discord_message_id == message_id
+            )
+        )
+        assert row.content == "ban moi nhat"
+        assert row.content_original == "ban dau"
+        assert row.source_edited_at == second
+
+
+def test_edits_without_a_token_keep_the_old_last_write_wins_behaviour(history_world):
+    factory, prefix, service = history_world
+    message_id = _record(service, prefix, "ban dau", sequence=62)
+    assert service.record_edit(discord_message_id=message_id, content="lan mot")
+    assert service.record_edit(discord_message_id=message_id, content="lan hai")
+    with factory() as database:
+        row = database.scalar(
+            select(DiscordChannelMessage).where(
+                DiscordChannelMessage.discord_message_id == message_id
+            )
+        )
+        assert row.content == "lan hai"
+        assert row.source_edited_at is None

@@ -174,6 +174,30 @@ class DiscordMemoryWorkerService:
                     job_id=job_id,
                     reason=eligibility.reason,
                 )
+            if schema_version != self.extractor_schema_version:
+                # A vocabulary bump leaves older jobs in the queue. Their
+                # version will never match, so retrying burns every attempt
+                # and lands under a misleading generic code — and the old
+                # check sat 90 lines lower, AFTER a candidate row had already
+                # been created under the stale version (review finding 28/08).
+                # Fail terminally, with a code an operator can act on.
+                reason = "memory_schema_version_stale"
+                result = jobs.fail_owned(
+                    job_id,
+                    worker_id=self.worker_id,
+                    error_code="MEMORY_SCHEMA_VERSION_STALE",
+                    error_message=(
+                        f"job schema {schema_version} != worker "
+                        f"{self.extractor_schema_version}; re-enqueue the turn "
+                        "under the current version to extract it"
+                    ),
+                    retryable=False,
+                )
+                return DiscordMemoryWorkerOutcome(
+                    status=result,
+                    job_id=job_id,
+                    reason=reason,
+                )
             source = eligibility.source
             memories = DiscordMemoryRepository(database)
             candidate, created = memories.create_or_get_candidate(
@@ -268,10 +292,8 @@ class DiscordMemoryWorkerService:
                 raise RuntimeError(
                     "extractor is enabled but no dedicated adapter is configured"
                 )
-            if schema_version != self.extractor_schema_version:
-                raise RuntimeError(
-                    "job extractor schema does not match worker configuration"
-                )
+            # (The schema-version mismatch is handled terminally at the top of
+            # this method, before any candidate row is written.)
             if filter_metadata is None:
                 raise RuntimeError("candidate filter metadata is unavailable")
             targets = memories.list_active_extractor_targets(

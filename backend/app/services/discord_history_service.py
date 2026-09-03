@@ -154,23 +154,45 @@ class DiscordHistoryService:
             return bool(row.listening_enabled) if row is not None else True
         return True
 
-    def record_edit(self, *, discord_message_id: str, content: str) -> bool:
+    def record_edit(
+        self,
+        *,
+        discord_message_id: str,
+        content: str,
+        source_edited_at: datetime | None = None,
+    ) -> bool:
         """§5.3: keep the latest text in `content`, the FIRST version in
-        `content_original` — set exactly once, never overwritten."""
+        `content_original` — set exactly once, never overwritten.
+
+        Two rapid edits can reach the backend out of order (both handlers are
+        in flight at once), and a receipt stamp orders by HTTP arrival, not by
+        what the user typed last. `source_edited_at` is Discord's own
+        edited_timestamp: under a row lock, an edit that is not strictly newer
+        than the stored token is refused (review finding 28/08)."""
         with self.sessions.begin() as database:
             row = database.scalar(
-                select(DiscordChannelMessage).where(
+                select(DiscordChannelMessage)
+                .where(
                     DiscordChannelMessage.discord_message_id
                     == discord_message_id
                 )
+                .with_for_update()
             )
             if row is None or row.deleted_at is not None:
+                return False
+            if (
+                source_edited_at is not None
+                and row.source_edited_at is not None
+                and source_edited_at <= row.source_edited_at
+            ):
                 return False
             if row.content_original is None:
                 row.content_original = row.content
             row.content = content
             row.content_tokens = func.to_tsvector("simple", _token_text(content))
             row.edited_at = datetime.now(UTC)
+            if source_edited_at is not None:
+                row.source_edited_at = source_edited_at
         return True
 
     def record_delete(

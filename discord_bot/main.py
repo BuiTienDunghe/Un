@@ -694,10 +694,15 @@ def create_bot(
         try:
             if not _raw_event_listened(payload):
                 return
-            content = (payload.data or {}).get("content") or ""
+            data = payload.data or {}
+            content = data.get("content") or ""
             if not content:
                 return
-            await api_client.record_history_edit(str(payload.message_id), content)
+            await api_client.record_history_edit(
+                str(payload.message_id),
+                content,
+                source_edited_at=data.get("edited_timestamp"),
+            )
         except Exception:
             logger.exception("history-ledger edit failed; ignoring")
 

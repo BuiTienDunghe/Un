@@ -619,7 +619,16 @@ class DiscordMemoryRepository:
                     DiscordMemory.status == "active",
                     or_(*scope_clauses),
                 )
-                .order_by(DiscordMemory.updated_at.desc(), DiscordMemory.id)
+                # Deterministic, not recency: updated_at moves on any row
+                # write (an index_status touch reshuffles the prompt), and a
+                # prompt block whose line order drifts between turns is one
+                # more thing the model can latch onto. (subject, fact_key)
+                # also decides WHICH rows survive the limit, so the injected
+                # set stays stable too (review finding 28/08).
+                .order_by(
+                    DiscordMemory.subject_id,
+                    DiscordMemory.fact_key,
+                )
                 .limit(bounded_limit)
             )
         )

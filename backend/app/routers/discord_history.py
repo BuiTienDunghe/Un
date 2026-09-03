@@ -57,7 +57,17 @@ def record_edit(
     recorded = request.app.state.discord_history_service.record_edit(
         discord_message_id=discord_message_id,
         content=payload.content,
+        source_edited_at=payload.source_edited_at,
     )
+    if recorded:
+        # §7.4: a summary that quotes text which no longer exists is stale.
+        # Never let this cost the edit itself.
+        try:
+            request.app.state.condensation_service.mark_stale(
+                discord_message_id=discord_message_id
+            )
+        except Exception:  # pragma: no cover - defensive
+            pass
     return DiscordHistoryWriteResponse(recorded=recorded)
 
 

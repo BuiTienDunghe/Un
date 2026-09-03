@@ -402,11 +402,20 @@ class LocalAgentClient:
         )
 
     async def record_history_edit(
-        self, discord_message_id: str, content: str
+        self,
+        discord_message_id: str,
+        content: str,
+        *,
+        source_edited_at: str | None = None,
     ) -> None:
+        payload: dict[str, object] = {"content": content}
+        if source_edited_at:
+            # Discord's own edit timestamp orders two rapid edits; our
+            # receipt time cannot (it orders by HTTP arrival).
+            payload["source_edited_at"] = source_edited_at
         await self._authorized_post(
             f"/api/discord/history/messages/{discord_message_id}/edit",
-            {"content": content},
+            payload,
             "Discord history edit",
         )
 
