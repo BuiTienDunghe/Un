@@ -1,5 +1,14 @@
 # Kế hoạch sau ngày 28/08 — tự-áp-dụng, tầng tóm tắt, và nợ sổ sách
 
+> **Trạng thái 28/08 tối: B và C ĐÃ LÀM XONG** (xem memory_design §13.8).
+> Tầng 3 hạ cánh đủ bộ — 2 bảng, worker nền, đường đọc, mục dashboard, 12
+> test, và một lỗi thật bắt được khi chạy trên dữ liệu thật (lời bot suýt
+> thành trí nhớ: 10 mệnh đề → 2 sau khi vá). Nợ sổ sách xong cả ba điểm +
+> `scripts.forget_member` + cảnh báo tồn đọng. Còn lại của kế hoạch này:
+> **việc A** (chờ chủ dự án đổi 1 dòng .env rồi quan sát 1 tuần) và **việc D**
+> (cấm khởi công sớm). Tầng 3 ship TỐI: cần `DISCORD_CONDENSATION_ENABLED=true`
+> **và** `GEMINI_API_KEY` — thiếu cái nào worker cũng nói rõ rồi thoát.
+
 Trạng thái nền: jobs 0-5 + benchmark §13.4 ĐẠT (P=0.94 · R=0.80 · forged=0 ·
 verifier 16/16). Verifier BẬT. Sổ gốc đang ghi. Tự-áp-dụng chờ 1 dòng .env.
 

@@ -309,6 +309,107 @@ function renderReview(candidates, paging) {
   }));
 }
 
+/* ── Tóm tắt hội thoại (tầng 3) ──────────────────────────────────── */
+async function deleteJson(path) {
+  try {
+    return await requestJson(path, { method: "DELETE" });
+  } catch (error) {
+    if (error.status === 401) window.location.href = "/ui/";
+    if (error.code === "API_KEY_REQUIRED" || error.code === "API_KEY_INVALID") {
+      error.message += " Mở trang trò chuyện → Cài đặt → Bảo mật để nhập khóa.";
+    }
+    throw error;
+  }
+}
+
+function renderCondensations(batches) {
+  const tbody = $("condensation-list");
+  const badge = $("condensation-count");
+  if (!tbody) return;
+  if (batches === null) {
+    tableNotice(tbody, "Không tải được danh sách tóm tắt.", 4);
+    if (badge) badge.hidden = true;
+    return;
+  }
+  if (badge) {
+    badge.textContent = String(batches.length);
+    badge.hidden = batches.length === 0;
+  }
+  if (!batches.length) {
+    tableNotice(tbody, "Chưa có bản tóm tắt nào. Bộ rút gọn chạy khi kênh dồn đủ tin chưa xử lý.", 4);
+    return;
+  }
+  tbody.replaceChildren(...batches.map((batch) => {
+    const row = document.createElement("tr");
+
+    const spanCell = document.createElement("td");
+    const span = document.createElement("div");
+    const from = new Date(batch.from_sent_at);
+    const to = new Date(batch.to_sent_at);
+    span.textContent = `${from.toLocaleString()} → ${to.toLocaleString()}`;
+    const meta = document.createElement("div");
+    meta.className = "muted";
+    meta.textContent = `${batch.message_count} tin · kênh ${batch.channel_id}`;
+    spanCell.append(span, meta);
+
+    const contentCell = document.createElement("td");
+    if (!batch.propositions.length) {
+      const empty = document.createElement("div");
+      empty.className = "muted";
+      empty.textContent = batch.error_code ? `lỗi: ${batch.error_code}` : "không có mệnh đề nào";
+      contentCell.append(empty);
+    } else {
+      contentCell.append(...batch.propositions.map((item) => {
+        const line = document.createElement("div");
+        line.textContent = `• ${item.content}`;
+        const who = document.createElement("span");
+        who.className = "muted";
+        who.textContent = ` — ${item.speaker}`;
+        line.append(who);
+        return line;
+      }));
+    }
+
+    const statusCell = document.createElement("td");
+    statusCell.textContent = batch.status;
+    if (batch.model_used) {
+      const model = document.createElement("div");
+      model.className = "muted";
+      model.textContent = batch.model_used;
+      statusCell.append(model);
+    }
+
+    const actionCell = document.createElement("td");
+    const regenerate = document.createElement("button");
+    regenerate.className = "btn ghost";
+    regenerate.textContent = "Tạo lại";
+    const remove = document.createElement("button");
+    remove.className = "btn ghost";
+    remove.textContent = "Xóa";
+    const act = (button, run) => async () => {
+      regenerate.disabled = remove.disabled = true;
+      button.textContent = "Đang xử lý…";
+      try {
+        await run();
+        refresh();
+      } catch (error) {
+        regenerate.disabled = remove.disabled = false;
+        regenerate.textContent = "Tạo lại";
+        remove.textContent = "Xóa";
+        tableNotice($("condensation-list"), error.message, 4);
+      }
+    };
+    regenerate.onclick = act(regenerate, () =>
+      postJson(`/api/condensations/${encodeURIComponent(batch.batch_id)}/regenerate`));
+    remove.onclick = act(remove, () =>
+      deleteJson(`/api/condensations/${encodeURIComponent(batch.batch_id)}`));
+    actionCell.append(regenerate, document.createTextNode(" "), remove);
+
+    row.append(spanCell, contentCell, statusCell, actionCell);
+    return row;
+  }));
+}
+
 /* ── Memory đang hiệu lực + thu hồi (P2-1) ───────────────────────── */
 function renderApplied(items) {
   const tbody = $("applied-list");
@@ -544,7 +645,7 @@ function renderActivity(items) {
 }
 
 async function refresh() {
-  const [stats, health, metrics, models, conversations, reviewCandidates, appliedMemories, agentActivity, timeseries] = await Promise.allSettled([
+  const [stats, health, metrics, models, conversations, reviewCandidates, appliedMemories, agentActivity, timeseries, condensationBatches] = await Promise.allSettled([
     fetchJson("/api/dashboard/stats"),
     fetchJson("/health"),
     fetchJson("/metrics"),
@@ -554,8 +655,10 @@ async function refresh() {
     fetchJson("/api/memory-review/applied"),
     fetchJson("/agent/activity"),
     fetchJson("/api/dashboard/timeseries"),
+    fetchJson("/api/condensations?limit=20&offset=0"),
   ]).then((results) => results.map((result) => (result.status === "fulfilled" ? result.value : null)));
   renderReview(reviewCandidates);
+  renderCondensations(condensationBatches);
   renderApplied(appliedMemories);
   renderActivity(agentActivity);
   renderTimeseries(timeseries);

@@ -6,7 +6,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import BigInteger, Boolean, CheckConstraint, DateTime, Float, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, func, text
-from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID as PGUUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, TSVECTOR, UUID as PGUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from app.postgres.discord_memory_constants import (
@@ -452,6 +452,15 @@ class DiscordChannelMessage(Base):
             "sent_at",
         ),
         Index(
+            "ix_discord_channel_messages_uncondensed",
+            "guild_id",
+            "channel_id",
+            "sent_at",
+            postgresql_where=text(
+                "condensation_batch_id IS NULL AND deleted_at IS NULL"
+            ),
+        ),
+        Index(
             "ix_discord_channel_messages_content_tokens",
             "content_tokens",
             postgresql_using="gin",
@@ -471,10 +480,136 @@ class DiscordChannelMessage(Base):
     content_tokens = mapped_column(TSVECTOR)
     reply_to_message_id: Mapped[str | None] = mapped_column(Text)
     sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # `edited_at` is OUR receipt stamp (when the backend processed the edit).
+    # `source_edited_at` is DISCORD's own edited_timestamp — the only
+    # monotonic token that can order two edits of the same message, since a
+    # receipt stamp orders by HTTP arrival instead (review finding 28/08).
     edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    source_edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Tier 3 coverage marker (§7.4): NULL = not condensed yet. A per-row mark
+    # instead of a per-channel watermark, because §7.4 lists exactly the four
+    # cases a single cursor loses — edits, late arrivals, threads, and
+    # concurrent runs. A message that lands after its neighbours were
+    # condensed simply carries NULL and joins the next batch.
+    condensation_batch_id: Mapped[int | None] = mapped_column(BigInteger)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+class DiscordCondensationBatch(Base):
+    """Tier 3 batch (memory_design.md §7.4-7.5): one condensation run over one
+    span of raw-ledger messages.
+
+    A table with status AND a lease, not an integer cursor — §7.4 names the
+    four cases a single ``last_condensed_message_id`` loses (edits, late
+    arrivals, threads, concurrent runs). Coverage is marked per message via
+    ``discord_channel_messages.condensation_batch_id``; this row records the
+    span, the model that produced it, and its lifecycle. The same shape as
+    ``discord_session_turns``: one running batch per channel, lease-based
+    recovery, bounded attempts.
+    """
+
+    __tablename__ = "discord_condensation_batches"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending','running','completed','failed','stale','deleted')",
+            name="ck_discord_condensation_batches_status",
+        ),
+        CheckConstraint(
+            "message_count > 0",
+            name="ck_discord_condensation_batches_message_count",
+        ),
+        UniqueConstraint(
+            "channel_id",
+            "from_message_id",
+            name="uq_discord_condensation_batch_span",
+        ),
+        Index(
+            "uq_discord_condensation_batch_one_running",
+            "channel_id",
+            unique=True,
+            postgresql_where=text("status = 'running'"),
+        ),
+        Index(
+            "ix_discord_condensation_batches_dispatch",
+            "status",
+            "created_at",
+        ),
+        Index(
+            "ix_discord_condensation_batches_guild_channel",
+            "guild_id",
+            "channel_id",
+            "to_sent_at",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    guild_id: Mapped[str] = mapped_column(Text, nullable=False)
+    channel_id: Mapped[str] = mapped_column(Text, nullable=False)
+    from_message_id: Mapped[str] = mapped_column(Text, nullable=False)
+    to_message_id: Mapped[str] = mapped_column(Text, nullable=False)
+    from_sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    to_sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    message_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    model_used: Mapped[str | None] = mapped_column(String(255))
+    prompt_version: Mapped[str | None] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="pending", server_default="pending")
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    max_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=3, server_default="3")
+    worker_id: Mapped[str | None] = mapped_column(Text)
+    lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    error_code: Mapped[str | None] = mapped_column(String(64))
+    error_message: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+class DiscordCondensationProposition(Base):
+    """One discrete statement produced by a condensation batch (§7.5).
+
+    The four fields §7.5 calls mandatory are columns, not prose: ``content``,
+    ``source_message_ids`` (what the guard would compare against),
+    ``speaker_id`` (traceability AND per-person deletion — §9.5's hardest
+    case becomes a plain DELETE at this granularity), and ``said_at``.
+
+    These NEVER enter the fact ledger: §9.1 blocks tier-3 auto-apply and §9.7
+    shows the candidate queue cannot even hold them (source_turn_id is NOT
+    NULL and unique per turn). They are read context, revocable from the
+    dashboard, and nothing more.
+    """
+
+    __tablename__ = "discord_condensation_propositions"
+    __table_args__ = (
+        Index(
+            "ix_discord_condensation_propositions_read",
+            "guild_id",
+            "channel_id",
+            "said_at",
+        ),
+        Index(
+            "ix_discord_condensation_propositions_speaker",
+            "guild_id",
+            "speaker_id",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    batch_id: Mapped[int] = mapped_column(
+        ForeignKey("discord_condensation_batches.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    guild_id: Mapped[str] = mapped_column(Text, nullable=False)
+    channel_id: Mapped[str] = mapped_column(Text, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    source_message_ids: Mapped[list[str]] = mapped_column(
+        ARRAY(Text), nullable=False
+    )
+    speaker_id: Mapped[str] = mapped_column(Text, nullable=False)
+    speaker_display_name: Mapped[str | None] = mapped_column(Text)
+    said_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
 class DiscordChannelPolicy(Base):

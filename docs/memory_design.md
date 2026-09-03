@@ -753,7 +753,7 @@ Ngưỡng gate (bất biến #4): extraction P ≥ 0,80 / R ≥ 0,70 chặn đ�
 | **3** | Bộ eval **21 ca** (§13.4) | fixture + runner | ✅ **27/08 — pha trạng thái/truy xuất/gác** (`tests/fixtures/discord_memory_e2e_v1.jsonl` + `scripts/memory_e2e_eval.py`, 0 gọi model, mirror Qdrant stub). Kết quả chạy thật: **16 PASS · 2 KNOWN-FAIL đúng chỗ · 3 PENDING (job 2)**. `attrib-03`/`attrib-04` PASS = **0c nghiệm thu bằng máy**; `contra-01`/`guard-02` KNOWN-FAIL được **ghim trong suite** (`test_memory_e2e_eval.py`) — ngày chúng thành FIXED là ngày việc 4 hạ cánh. Pha `--with-extractor` (chấm P/R trích xuất) thuộc việc 4. **Phát hiện khi chạy**: lặp nguyên văn từ tin MỚI vẫn tạo version churn ở tầng áp dụng — idempotence chỉ phủ cùng-một-ứng-viên; chống-lặp thật nằm ở extractor (ca `contra-03` ghi lại) |
 | **4** | Verifier 3 trạng thái, 1-vs-1 + cột `verification{method,result}` | 2×60s/ứng viên, nền | ✅ **27/08 — máy móc xong, ship TỐI**. (a) **Hai luật tất định vào guard** — vế-phủ-định (đánh trên chữ THÔ, không gấp dấu: đừng/dùng và nữa/nửa gấp dấu là trùng nhau) + tối-thiểu-2-từ-nội-dung — **đo 0-chi-phí trên benchmark 75 ca** (coverage 96,7% / poison 21,6% không đổi một li) và lật `contra-01`+`guard-02` thành **FIXED** (e2e: FIXED=2 · PASS=16 · PENDING=3 · 0 KNOWN-FAIL). (b) `DiscordMemoryVerifierAdapter` (nli-1v1, prompt verify-v1, fail-safe → unknown) + migration `20260827_28` + bước `verify_proposal` trong worker (model NGOÀI transaction — bất biến #2) + cổng autonomy đòi `entailment`. **Cờ `DISCORD_MEMORY_VERIFIER_ENABLED` mặc định TẮT** — bật + mở lại tự-áp-dụng chỉ sau khi pha `--with-extractor` đo qua ngưỡng §13.4. Suite: 680 pass |
 | **5** | Vá UI duyệt: hiện tin nguồn + phân trang | ~20 dòng | ✅ **27/08** — `list_pending` join tin gốc từ `discord_session_turns` (người duyệt thấy NGUỒN, không chỉ câu trích model tự chọn — E9), tham số `limit`/`offset` phá trần-50, dashboard hiện dòng «tin gốc» + nút Tải thêm. Test hợp đồng: `test_memory_review_pagination.py` |
-| **6** | Tầng 3 / Gemini | — | **giữ HOÃN** — 3 chốt cũ (§9.1 → việc 4, §9.7, đường đọc §9.4) + thay sàn 24h bằng ngưỡng ≥ 20 tin |
+| **6** | Tầng 3 / Gemini | — | ✅ **28/08 — HẠ CÁNH, ship TỐI (cần 2 công tắc)**. Ba chốt đã mở: §9.1 (việc 4 xong), §9.7 (mệnh đề KHÔNG vào hàng chờ duyệt — bảng riêng + mục dashboard xem/xóa/tạo-lại), §9.4 (đường đọc: nạp mệnh đề mới nhất của kênh, gắn nhãn "do bộ rút gọn tạo", nằm GIỮA sổ cái và quy tắc — thứ tự đã đo §13.7). Hai bảng theo §7.5: `discord_condensation_batches` (status + lease, khuôn `discord_session_turns`) và `discord_condensation_propositions` (content · source_message_ids · speaker_id · said_at). Phủ sóng đánh dấu **theo từng tin** (`condensation_batch_id`) thay vì con trỏ — đúng 4 ca §7.4 mà con trỏ đơn làm mất. Kích hoạt: ≥20 tin chưa xử lý (§13.5), cắt ưu tiên ở khoảng lặng ≥10 phút, trần 100. Model chỉ trả SỐ DÒNG; id và người nói do server tra ngược. Lỗi mạng → nhả tin về hàng đợi (§7.7) + cảnh báo tồn đọng trong `check_operational_alerts`. **Cần `DISCORD_CONDENSATION_ENABLED=true` VÀ `GEMINI_API_KEY`** — thiếu cái nào worker cũng nói rõ rồi thoát. 12 test + đo sống (xem §13.8) |
 
 ### 13.7. Ngày 28/08 — hội thoại guild 2 phơi 4 lỗi, 5 bước vá trong một ngày
 
@@ -806,3 +806,32 @@ từ lần khởi động sau; tự-áp-dụng mở bằng một dòng
 thang: xem verdict trên lưu lượng thật vài hôm trước). Công cụ `search_history`
 thêm chế độ không-query = N tin mới nhất theo thời gian (phục vụ "tóm tắt 20
 tin gần đây"). Còn treo: tripwire dense `recall-para-02` chờ cặp ngưỡng §13.3.
+
+### 13.8. Tầng 3 chạy thật lần đầu — lời bot suýt thành trí nhớ
+
+Đo sống 28/08 trên 29 tin thật của guild 2, dùng model cục bộ làm bộ rút gọn
+(cùng giao diện `CondenserBackend` với Gemini, dữ liệu không rời máy):
+
+**Vòng 1 — 10 mệnh đề, và 9 trong số đó ghi nguồn là LỜI CỦA BOT.** Hai cái
+đáng ngại nhất: *"Ún là AI nên không có ngày sinh cụ thể"* (chính là câu
+echo-lock hỏng của §13.7) và *"Dũnggg chưa có một server riêng biệt nào được
+công khai"* (bot bịa). Đây đúng là rủi ro §9.3 gọi tên — *"ảo giác hôm qua
+thành bằng chứng hợp lệ hôm nay"* — nhưng nó đến từ tầng TÓM TẮT, chỗ §9.3
+chưa từng xét tới.
+
+**Luật vá: dòng bot VẪN vào bản ghi (đúng lý do §9.3 lưu chúng — mạch hội
+thoại), nhưng KHÔNG được đứng đầu `source`, tức không được làm chủ thể của
+mệnh đề.** Prompt nói rõ và server chặn cứng — không tin lời dặn suông, cùng
+bài học ràng-buộc-chủ-thể của extractor.
+
+**Vòng 2 — 2 mệnh đề, cả hai từ lời thành viên thật**: "Dũnggg thích xem phim
+kinh dị", "Phương Anh muốn đổi tên thành hehe". Tỉ lệ đúng đi từ 2/10 lên
+2/2. Bài học lặp lần thứ ba trong tuần: **chạy trên dữ liệu thật rồi hẵng
+tin.**
+
+Kèm trong ngày: ba điểm soi-lỗi hoãn đã đóng — token `edited_timestamp` của
+Discord (khoá dòng + từ chối bản sửa cũ đến muộn), job schema cũ giờ fail
+TERMINAL với mã riêng ngay trước khi tạo candidate, và khối sổ cái sắp xếp
+tất định `(subject_id, fact_key)` thay vì theo `updated_at`. Cùng
+`scripts.forget_member` (xoá-cứng theo người, chạy khô mặc định, xoá vector
+Qdrant trước vì id uuid5 không suy được từ hàng Postgres).

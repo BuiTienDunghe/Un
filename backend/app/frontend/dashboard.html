@@ -82,6 +82,16 @@
       </table>
     </section>
 
+    <section class="panel" aria-labelledby="panel-condensation">
+      <h2 id="panel-condensation"><svg width="15" height="15"><use href="#i-spark"/></svg> Tóm tắt hội thoại
+        <span class="badge" id="condensation-count" hidden>0</span></h2>
+      <p class="muted">Bản rút gọn do bộ tóm tắt tạo từ tin nhắn thật trong kênh, dùng ngay để bot nhớ mạch chuyện — KHÔNG bao giờ trở thành fact. «Xóa» gỡ hẳn; «Tạo lại» trả tin về hàng đợi để bộ rút gọn làm lại.</p>
+      <table class="dash-table" aria-label="Tóm tắt hội thoại">
+        <thead><tr><th>Khoảng</th><th>Mệnh đề</th><th>Trạng thái</th><th></th></tr></thead>
+        <tbody id="condensation-list"><tr><td colspan="4" class="muted">Đang tải…</td></tr></tbody>
+      </table>
+    </section>
+
     <section class="panel" aria-labelledby="panel-charts">
       <h2 id="panel-charts">Hoạt động 14 ngày</h2>
       <div class="dash-cols">
@@ -119,6 +129,6 @@
 </div>
 
 <script src="/ui/common.js?v=1" defer></script>
-<script src="/ui/dashboard.js?v=19" defer></script>
+<script src="/ui/dashboard.js?v=20" defer></script>
 </body>
 </html>

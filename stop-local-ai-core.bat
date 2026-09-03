@@ -18,6 +18,7 @@ taskkill /fi "windowtitle eq LocalAICoreBackup*" /t /f >nul 2>&1
 taskkill /fi "windowtitle eq LocalAICoreCleanup*" /t /f >nul 2>&1
 taskkill /fi "windowtitle eq LocalAICoreOutbox*" /t /f >nul 2>&1
 taskkill /fi "windowtitle eq LocalAICoreMemoryWorker*" /t /f >nul 2>&1
+taskkill /fi "windowtitle eq LocalAICoreCondenser*" /t /f >nul 2>&1
 
 echo [STOP] Dung cac container PostgreSQL, Qdrant, Redis (giu nguyen du lieu)...
 docker compose --profile postgres --profile workers --profile discord stop

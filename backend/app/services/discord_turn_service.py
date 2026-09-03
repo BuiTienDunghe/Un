@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import threading
 from dataclasses import dataclass
 from uuid import UUID, uuid4
@@ -23,6 +24,9 @@ from app.services.discord_speaker_context import (
     ReplyTargetContext,
     build_discord_speaker_context,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class DiscordTurnNotFoundError(KeyError):
@@ -64,6 +68,8 @@ class DiscordTurnService:
         memory_completion_service: DiscordMemoryCompletionService | None = None,
         agent_tools_enabled: bool = False,
         agent_tools_guild_allowlist: frozenset[str] | None = None,
+        condensation_service: object | None = None,
+        recap_limit: int = 6,
     ) -> None:
         self.sessions = sessions
         self.session_service = session_service
@@ -79,9 +85,37 @@ class DiscordTurnService:
         # must not reopen the observed cross-guild document leak (review
         # finding 28/08).
         self.agent_tools_guild_allowlist = agent_tools_guild_allowlist
+        # Tier 3 (§9.4): None keeps the answer path exactly as it was before
+        # condensation existed.
+        self.condensation_service = condensation_service
+        self.recap_limit = max(0, recap_limit)
         self.history_turn_limit = max(
             1,
             int(getattr(chat_service, "history_limit", 12)) // 2,
+        )
+
+    def _recap_lines(self, guild_id: str, channel_id: str) -> str:
+        """Render this channel's newest condensation propositions.
+
+        A summary is model-written text, so it is labelled as such in the
+        prompt and never becomes a fact (§9.1/§9.7). A read failure must not
+        cost an answer: the block simply does not appear.
+        """
+        if self.condensation_service is None or not self.recap_limit:
+            return ""
+        try:
+            rows = self.condensation_service.recent_propositions(
+                guild_id=guild_id,
+                channel_id=channel_id,
+                limit=self.recap_limit,
+            )
+        except Exception:
+            logger.exception("condensation read failed; answering without recap")
+            return ""
+        return "\n".join(
+            f"- [{row.said_at:%d/%m} | {row.speaker_display_name or row.speaker_id}] "
+            f"{row.content}"
+            for row in rows
         )
 
     def _tools_allowed_for_guild(self, guild_id: str | None) -> bool:
@@ -494,26 +528,47 @@ class DiscordTurnService:
                 all_members=True,
                 limit=50,
             )
-            if active_memories:
-                memory_lines = "\n".join(
-                    (
-                        f"- [{memory.fact_key} | về author_id="
-                        f"{memory.subject_id}] {memory.canonical_fact}"
-                        if memory.scope == "member_in_guild"
-                        else f"- [{memory.fact_key} | về server] "
-                        f"{memory.canonical_fact}"
-                    )
-                    for memory in active_memories
+            # Rendered INSIDE the transaction: these rows detach when the
+            # session closes.
+            memory_lines = "\n".join(
+                (
+                    f"- [{memory.fact_key} | về author_id="
+                    f"{memory.subject_id}] {memory.canonical_fact}"
+                    if memory.scope == "member_in_guild"
+                    else f"- [{memory.fact_key} | về server] "
+                    f"{memory.canonical_fact}"
                 )
-                context_system_prompt = (
-                    f"{DISCORD_SPEAKER_ATTRIBUTION_RULES}\n"
-                    "Trí nhớ dài hạn đã được xác nhận về server và thành viên "
-                    "(chỉ dùng khi câu hỏi thật sự liên quan):\n"
-                    f"{memory_lines}\n\n"
-                    f"{DISCORD_HISTORY_USAGE_RULES}"
-                )
-            else:
-                context_system_prompt = speaker_context.system_instruction
+                for memory in active_memories
+            )
+            guild_id = session.guild_id
+            channel_id = session.channel_id
+            base_instruction = speaker_context.system_instruction
+
+        # Tier 3 read path (§9.4 — the section that refused to let tier 3 ship
+        # write-only). Its own short transaction, outside the one above, and
+        # still zero model calls on the answer path.
+        recap_lines = self._recap_lines(guild_id, channel_id)
+
+        blocks: list[str] = [DISCORD_SPEAKER_ATTRIBUTION_RULES]
+        if memory_lines:
+            blocks.append(
+                "Trí nhớ dài hạn đã được xác nhận về server và thành viên "
+                "(chỉ dùng khi câu hỏi thật sự liên quan):\n"
+                f"{memory_lines}"
+            )
+        if recap_lines:
+            blocks.append(
+                "Tóm tắt các cuộc trò chuyện trước trong kênh này (do bộ rút "
+                "gọn tạo, KHÔNG phải lời nói trực tiếp — nếu mâu thuẫn với "
+                "trí nhớ đã xác nhận thì tin trí nhớ đã xác nhận):\n"
+                f"{recap_lines}"
+            )
+        if len(blocks) == 1:
+            context_system_prompt = base_instruction
+        else:
+            # The history-usage rules stay LAST — measured §13.7.
+            blocks.append(DISCORD_HISTORY_USAGE_RULES)
+            context_system_prompt = "\n".join(blocks)
 
         # A delivery retry reuses the stored response and never calls the model
         # a second time.

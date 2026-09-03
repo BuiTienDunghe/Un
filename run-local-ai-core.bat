@@ -160,6 +160,19 @@ if not errorlevel 1 (
     )
 )
 
+REM ── Tier 3 condensation (memory_design.md 7) ────────────────────────────
+REM The only component that sends member text to a third party, so it takes
+REM its own flag AND a real GEMINI_API_KEY; the worker itself refuses to run
+REM without both and says which one is missing.
+findstr /R /C:"^DISCORD_CONDENSATION_ENABLED=true" .env >nul 2>&1
+if not errorlevel 1 (
+    tasklist /v /fi "windowtitle eq LocalAICoreCondenser*" 2>nul | find /i "python.exe" >nul
+    if errorlevel 1 (
+        echo [START] Starting the condensation worker...
+        start "LocalAICoreCondenser" /min /d "%~dp0backend" "%~dp0.venv\Scripts\python.exe" -m scripts.condensation_worker --loop
+    )
+)
+
 powershell -NoProfile -Command "if (Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }" >nul 2>&1
 if not errorlevel 1 (
     echo [INFO] Local AI Core is already running. Opening the UI...

@@ -77,6 +77,18 @@ class Settings(BaseSettings):
     # agent loop; empty (the default) fails CLOSED — no guild gets tools
     # until the operator decides. The rest degrade to plain chat.
     discord_agent_tools_guild_allowlist: str = ""
+    # Tier 3 condensation (memory_design.md §7). OFF by default: it is the one
+    # tier that sends member text to a third party, so it starts only when the
+    # operator sets both this flag and GEMINI_API_KEY. The floor replaces the
+    # per-channel 24h rule that produced ~9 near-empty batches/day at 3 guilds
+    # (§13.5); the cap and the silence-gap preference come from §7.4.
+    discord_condensation_enabled: bool = False
+    discord_condensation_min_batch: int = 20
+    discord_condensation_max_batch: int = 100
+    discord_condensation_silence_gap_minutes: int = 10
+    discord_condensation_interval_minutes: int = 30
+    # How many condensation propositions the answer path may inject.
+    discord_condensation_recap_limit: int = 6
     # P2-1: proposals at or above this extractor confidence are applied by the
     # agent itself (reviewed_by="agent") and can be reverted in one click from
     # the dashboard; below it they wait in the review queue. Set to "off" to

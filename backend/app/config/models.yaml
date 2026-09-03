@@ -49,6 +49,16 @@ models:
     top_p: 0.9
     think: false
     keep_alive: 5m
+  # Tier 3 condensation (memory_design.md §7.3). MUST stay indented inside
+  # `models:` — a block at the outer level never reaches load_models() and
+  # fails silently. Only the background condensation worker reads this slot;
+  # the answer path stays on `general` (invariant #7). Needs GEMINI_API_KEY;
+  # without it the worker stays inert and says so.
+  condenser:
+    provider: gemini
+    name: gemini-2.5-flash
+    temperature: 0.2
+    max_tokens: 4096
   embedding:
     # Embedding only works with provider: ollama
     provider: ollama

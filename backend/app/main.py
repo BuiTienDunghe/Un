@@ -11,7 +11,7 @@ from app.config.settings import PROJECT_ROOT, get_settings
 from app.llm_clients.ollama_client import OllamaClient
 from app.llm_clients.gemini_client import GeminiClient
 from app.llm_clients.deepseek_client import DeepSeekClient
-from app.routers import agent, auth, bot, chat, conversations, dashboard, discord_history, discord_sessions, documents, health, memory, memory_review, models, ocr, rag, vision
+from app.routers import agent, auth, bot, chat, condensations, conversations, dashboard, discord_history, discord_sessions, documents, health, memory, memory_review, models, ocr, rag, vision
 from app.security.api_key import require_api_key_for_read
 from app.security.auth import require_admin
 from app.services.auth_service import AuthService
@@ -33,6 +33,7 @@ from app.services.job_queue_service import JobQueueService
 from app.services.operational_service import OperationalService
 from app.services.reranker_service import RerankerService
 from app.services.bot_control_service import BotControlService
+from app.services.discord_condensation_service import DiscordCondensationService
 from app.services.discord_history_service import DiscordHistoryService
 from app.services.discord_session_service import DiscordSessionService
 from app.services.discord_memory_review_service import DiscordMemoryReviewService
@@ -96,6 +97,16 @@ async def lifespan(app: FastAPI):
     app.state.chat_service = ChatService(auxiliary_store, router, logging_service, settings.conversation_history_limit, app.state.memory_service)
     app.state.discord_session_service = DiscordSessionService(postgres_sessions)
     app.state.memory_review_service = DiscordMemoryReviewService(postgres_sessions, app.state.memory_service)
+    # Tier 3 (§7): the API only READS condensations and manages them from the
+    # dashboard — the writing (and the only Gemini call) belongs to the
+    # background worker, so no condenser client is constructed here.
+    app.state.condensation_service = DiscordCondensationService(
+        postgres_sessions,
+        None,
+        min_batch=settings.discord_condensation_min_batch,
+        max_batch=settings.discord_condensation_max_batch,
+        silence_gap_minutes=settings.discord_condensation_silence_gap_minutes,
+    )
     app.state.discord_turn_service = DiscordTurnService(
         postgres_sessions,
         app.state.discord_session_service,
@@ -120,6 +131,12 @@ async def lifespan(app: FastAPI):
                 if value.strip()
             )
         ),
+        condensation_service=(
+            app.state.condensation_service
+            if settings.discord_condensation_enabled
+            else None
+        ),
+        recap_limit=settings.discord_condensation_recap_limit,
     )
     ocr_service = OCRService(router, auxiliary_store)
     queue = (
@@ -229,6 +246,7 @@ app.include_router(ocr.router, dependencies=read_guard)
 app.include_router(rag.router, dependencies=read_guard)
 app.include_router(memory.router, dependencies=read_guard)
 app.include_router(memory_review.router, dependencies=admin_guard)
+app.include_router(condensations.router, dependencies=admin_guard)
 app.include_router(conversations.router, dependencies=read_guard)
 app.include_router(dashboard.router, dependencies=admin_guard)
 app.include_router(discord_sessions.router, dependencies=admin_guard)
