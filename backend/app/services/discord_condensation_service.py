@@ -53,10 +53,11 @@ Trả về DUY NHẤT một mảng JSON, mỗi phần tử:
 Luật bắt buộc:
 - Viết mệnh đề bằng CHÍNH NGÔN NGỮ của hội thoại (tiếng Việt thì viết tiếng Việt).
 - Mỗi mệnh đề phải suy ra trực tiếp từ các dòng liệt kê trong "source"; không suy diễn, không thêm điều không có.
-- Số dòng ĐẦU TIÊN trong "source" phải là dòng của THÀNH VIÊN (không có `[BOT]`) — đó là người nói chính của mệnh đề. Nếu một thông tin chỉ xuất hiện trong lời trợ lý thì BỎ QUA nó: lời trợ lý có thể sai, và không được ghi nhớ như sự thật.
-- Có thể thêm dòng `[BOT]` vào "source" để làm ngữ cảnh, nhưng không bao giờ đặt ở vị trí đầu tiên.
+- "source" CHỈ được chứa dòng của THÀNH VIÊN. Dòng `[BOT]` giúp bạn hiểu mạch chuyện nhưng KHÔNG BAO GIỜ được đưa vào "source" — kể cả để làm ngữ cảnh hay để xác định "bạn/nó" là ai. Nếu một thông tin chỉ có trong lời trợ lý, hoặc chỉ hiểu được nhờ lời trợ lý, thì BỎ QUA: lời trợ lý có thể sai.
+- Số dòng đầu tiên là người nói chính của mệnh đề.
 - Nêu rõ AI nói/làm điều đó theo tên hiển thị trong dòng nguồn.
 - Bỏ qua chào hỏi, đùa vui, tin không mang thông tin lâu dài. Không có gì đáng nhớ thì trả về [].
+- KHÔNG ghi mệnh đề về tình cảm, lời khen hay ý kiến dành cho chính trợ lý ("X thích bot", "X khen bot"): đó là lời tán gẫu nhất thời, và ghi lại rồi nhắc lại trong kênh chung có thể làm thành viên khó xử. Chỉ ghi điều lâu bền VỀ THÀNH VIÊN hoặc VỀ SERVER.
 - Tối đa 12 mệnh đề. Không giải thích, không markdown, chỉ JSON.
 """
 
@@ -337,16 +338,21 @@ class DiscordCondensationService:
             for entry in parsed:
                 sources = [rows[number - 1] for number in entry["source"]]
                 head = sources[0]
-                if head.is_bot:
-                    # MEASURED 28/08 on real data: with only the prompt rule,
-                    # 9/10 propositions were attributed to the assistant — and
-                    # two of them crystallised its own hallucinations ("Ún là
-                    # AI nên không có ngày sinh" came straight out of the
-                    # echo-lock failure). §9.3 stores bot lines for coherence;
-                    # this is where "extraction never eats them" is enforced.
+                if any(row.is_bot for row in sources):
+                    # MEASURED 28/08 on real data, twice. First pass: with
+                    # only a prompt rule, 9/10 propositions were ATTRIBUTED to
+                    # the assistant and two crystallised its own
+                    # hallucinations. Second pass (bot barred from the head
+                    # only): clean attribution, but an independent review
+                    # found bot lines still doing load-bearing work as
+                    # supporting sources — one proposition resolved "bạn" to
+                    # the bot using nothing but the bot's own reply. So the
+                    # rule is now the strict one: NO bot line may be cited at
+                    # all. They stay in the transcript for coherence (§9.3)
+                    # and nowhere else.
                     logger.info(
-                        "condensation batch=%s dropped a bot-attributed "
-                        "proposition",
+                        "condensation batch=%s dropped a proposition citing a "
+                        "bot line",
                         batch_id,
                     )
                     continue

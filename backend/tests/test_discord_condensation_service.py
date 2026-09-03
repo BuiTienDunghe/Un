@@ -369,3 +369,30 @@ def test_transcript_marks_bot_lines(world):
     transcript = condenser.calls[0]["messages"][1]["content"]
     assert "[BOT] Ún: loi cua bot" in transcript
     assert "[BOT] User u1" not in transcript
+
+
+def test_a_bot_line_anywhere_in_the_sources_drops_the_proposition(world):
+    """An independent review of the first live batch found bot lines doing
+    load-bearing work as SUPPORTING sources (one proposition resolved "bạn"
+    to the assistant using only the assistant's own reply). Barring them from
+    the head is not enough — they may not be cited at all."""
+    factory, prefix, history = world
+    _seed(history, prefix, 19, author="nguoi-that")
+    at = BASE + timedelta(minutes=100)
+    history.record_message(
+        guild_id=f"{prefix}-g1", channel_id="chan-1", thread_id=None,
+        discord_message_id=_snowflake(at, 500),
+        author_id="bot-un", author_display_name="Ún",
+        is_bot=True, content="loi bot lam ngu canh",
+    )
+    condenser = FakeCondenser(
+        answer='[{"content": "chi tu loi nguoi", "source": [1, 2]},'
+        '{"content": "dua vao loi bot o vi tri hai", "source": [1, 20]}]'
+    )
+    service = _service(factory, condenser)
+    planned = service.plan_batch(f"{prefix}-g1", "chan-1")
+    outcome = service.run_batch(planned.batch_id)
+
+    assert outcome.proposition_count == 1
+    rows = service.recent_propositions(guild_id=f"{prefix}-g1")
+    assert [row.content for row in rows] == ["chi tu loi nguoi"]

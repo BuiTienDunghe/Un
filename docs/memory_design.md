@@ -829,6 +829,28 @@ kinh dị", "Phương Anh muốn đổi tên thành hehe". Tỉ lệ đúng đi 
 2/2. Bài học lặp lần thứ ba trong tuần: **chạy trên dữ liệu thật rồi hẵng
 tin.**
 
+**Vòng 3 — chủ dự án đưa `GEMINI_API_KEY`, chạy bằng Gemini 2.5 Flash thật
+trên đúng 29 tin đó: 3 mệnh đề, 3/3 đúng nguồn và đúng người.** Bốn agent
+thẩm định độc lập (3 lăng kính + 1 mũi quét độ phủ) đọc lại nguyên văn bản
+ghi và xác nhận: không một câu bịa nào của bot lọt vào — kể cả **hai ngày
+sinh mà chính bot tự nghĩ ra và còn bịa luôn nguồn gốc** ("Phương Anh đã tự
+nói rõ sinh ngày 11/11 ngay từ đầu" — cô ấy chưa từng nói); độ phủ không sót
+sự kiện lâu bền nào của người thật; và Gemini còn ghép ba tin rời (lời kể hộ
++ "đúng" + lời tự khai) thành MỘT mệnh đề đặt đúng người tự khai lên đầu.
+
+Hội đồng nêu hai điểm đồng thuận, đã vá ngay:
+1. **Dòng bot không được xuất hiện trong `source` ở BẤT KỲ vị trí nào** (trước
+   đó chỉ cấm đứng đầu). Lý do: một mệnh đề đã phải mượn chính lời bot để
+   biết "bạn" là ai — cửa hậu để nội dung bot len vào.
+2. **Không ghi tình cảm/lời khen dành cho chính trợ lý**: "X thích bot" là tán
+   gẫu nhất thời, mà nhắc lại trong kênh chung thì làm thành viên khó xử.
+
+**Vòng 4 (sau vá): 2 mệnh đề** — đúng hai ca hội đồng gọi là mẫu mực (một chỉ
+thị xưng hô đứng lâu, một sở thích tự khai), nguồn thuần lời người.
+Chi phí đo được: ~2.200 token vào + ~120 token ra mỗi lô ≈ **$0,001/lô**; ở
+lưu lượng hiện tại (~1 lô/ngày) là **dưới 1.000 đ/tháng**, ở mức mục tiêu
+3 server × 100 tin/ngày cũng chỉ ~8.000 đ/tháng — khớp ước tính §7.6.
+
 Kèm trong ngày: ba điểm soi-lỗi hoãn đã đóng — token `edited_timestamp` của
 Discord (khoá dòng + từ chối bản sửa cũ đến muộn), job schema cũ giờ fail
 TERMINAL với mã riêng ngay trước khi tạo candidate, và khối sổ cái sắp xếp
