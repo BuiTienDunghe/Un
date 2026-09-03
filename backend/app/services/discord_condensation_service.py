@@ -550,14 +550,32 @@ class DiscordCondensationService:
             database.delete(batch)
         return True
 
-    def forget_member(self, *, guild_id: str, speaker_id: str) -> int:
+    def forget_member(self, *, guild_id: str, speaker_id: str) -> tuple[int, int]:
         """§9.5 at proposition granularity — the reason speaker_id is a
-        column: one person leaves a summary without destroying the span."""
+        column: one person leaves a summary without destroying the span.
+
+        Batches that lose a speaker are marked stale so the worker rebuilds a
+        summary WITHOUT that person. Returns (propositions, batches).
+        """
         with self.sessions.begin() as database:
-            result = database.execute(
+            batch_ids = set(
+                database.scalars(
+                    select(DiscordCondensationProposition.batch_id).where(
+                        DiscordCondensationProposition.guild_id == guild_id,
+                        DiscordCondensationProposition.speaker_id == speaker_id,
+                    )
+                )
+            )
+            removed = database.execute(
                 DiscordCondensationProposition.__table__.delete().where(
                     DiscordCondensationProposition.guild_id == guild_id,
                     DiscordCondensationProposition.speaker_id == speaker_id,
                 )
-            )
-            return int(result.rowcount or 0)
+            ).rowcount
+            if batch_ids:
+                database.execute(
+                    update(DiscordCondensationBatch)
+                    .where(DiscordCondensationBatch.id.in_(batch_ids))
+                    .values(status="stale")
+                )
+            return int(removed or 0), len(batch_ids)

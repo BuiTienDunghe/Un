@@ -278,10 +278,17 @@ def test_forget_member_removes_only_that_speaker(world):
     planned = service.plan_batch(f"{prefix}-g1", "chan-1")
     service.run_batch(planned.batch_id)
 
-    removed = service.forget_member(guild_id=f"{prefix}-g1", speaker_id="alice")
-    assert removed == 1
+    removed, stale = service.forget_member(
+        guild_id=f"{prefix}-g1", speaker_id="alice"
+    )
+    assert (removed, stale) == (1, 1)
     rows = service.recent_propositions(guild_id=f"{prefix}-g1")
     assert [row.speaker_id for row in rows] == ["bob"]
+    with factory() as database:
+        # The span that lost a speaker is rebuilt without them (§9.5).
+        assert database.get(
+            DiscordCondensationBatch, planned.batch_id
+        ).status == "stale"
 
 
 def test_edit_marks_the_covering_batch_stale(world):

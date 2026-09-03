@@ -40,12 +40,14 @@ from app.postgres.database import (  # noqa: E402
 )
 from app.postgres.models import (  # noqa: E402
     DiscordChannelMessage,
-    DiscordCondensationBatch,
     DiscordCondensationProposition,
     DiscordMemory,
     DiscordMemoryCandidate,
     DiscordMemorySource,
     DiscordSessionTurn,
+)
+from app.services.discord_condensation_service import (  # noqa: E402
+    DiscordCondensationService,
 )
 from app.stores.qdrant_store import QdrantStore  # noqa: E402
 
@@ -133,6 +135,12 @@ def forget(guild_id: str, author_id: str, *, apply: bool) -> dict[str, object]:
             except Exception as error:  # keep going; report at the end
                 payload.setdefault("vector_errors", []).append(str(error))
 
+    # 3. condensation propositions — the service owns this rule (it also
+    #    marks the affected batches stale), so it is called, not re-written.
+    _removed_propositions, stale_batches = DiscordCondensationService(
+        factory
+    ).forget_member(guild_id=guild_id, speaker_id=author_id)
+
     with factory.begin() as database:
         # 2. sources (RESTRICT-references memories, candidates and turns)
         database.execute(
@@ -145,29 +153,6 @@ def forget(guild_id: str, author_id: str, *, apply: bool) -> dict[str, object]:
                 delete(DiscordMemorySource).where(
                     DiscordMemorySource.memory_id.in_(memory_ids)
                 )
-            )
-
-        # 3. condensation propositions; their batches become stale so the
-        #    worker rebuilds a summary without this person.
-        batch_ids = list(
-            database.scalars(
-                select(DiscordCondensationProposition.batch_id).where(
-                    DiscordCondensationProposition.guild_id == guild_id,
-                    DiscordCondensationProposition.speaker_id == author_id,
-                )
-            )
-        )
-        database.execute(
-            delete(DiscordCondensationProposition).where(
-                DiscordCondensationProposition.guild_id == guild_id,
-                DiscordCondensationProposition.speaker_id == author_id,
-            )
-        )
-        if batch_ids:
-            database.execute(
-                update(DiscordCondensationBatch)
-                .where(DiscordCondensationBatch.id.in_(set(batch_ids)))
-                .values(status="stale")
             )
 
         # 4. memories — clear the pointers that RESTRICT-block them first.
@@ -213,7 +198,7 @@ def forget(guild_id: str, author_id: str, *, apply: bool) -> dict[str, object]:
     with factory() as database:
         payload["remaining"] = _counts(database, guild_id, author_id)
     payload["vectors_removed"] = removed_vectors
-    payload["stale_batches"] = len(set(batch_ids))
+    payload["stale_batches"] = stale_batches
     payload["side_effects"] = True
     return payload
 
