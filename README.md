@@ -2,6 +2,10 @@
 
 [![CI](https://github.com/BuiTienDunghe/Un/actions/workflows/ci.yml/badge.svg)](https://github.com/BuiTienDunghe/Un/actions/workflows/ci.yml)
 
+*English overview: [README.en.md](README.en.md) — one page, with the measured results.
+Kết quả đo tổng hợp: [docs/RESULTS.md](docs/RESULTS.md). Các sự cố đã gặp và cách bắt được
+chúng: [docs/FAILURE_MODES.md](docs/FAILURE_MODES.md).*
+
 **Local AI Core** là nền tảng trợ lý AI tự lưu trữ dành cho trò chuyện, hỏi đáp tài liệu và hỗ trợ công việc với mô hình chạy cục bộ. Hệ thống kết hợp quản lý tài liệu có version, OCR, tìm kiếm ngữ nghĩa và RAG để tạo câu trả lời có dẫn nguồn. Bot Discord **Ún** là kênh sử dụng tùy chọn, kết nối trực tiếp với cùng backend này.
 
 ## Trạng thái sản phẩm
@@ -94,7 +98,7 @@ Runtime chỉ truy vấn Qdrant point có đầy đủ `version_id` và `chunk_i
 - Thay thế tài liệu không ghi đè version đang hoạt động trước khi version mới hoàn tất.
 - SQLite archive lịch sử chỉ dành cho migration/audit read-only, không được đưa lại vào runtime path.
 
-Alembic head hiện tại là `20260818_21`.
+Alembic head hiện tại là `20260828_32` (`20260828_32_edit_ordering_token.py`).
 
 ## Model mặc định
 
