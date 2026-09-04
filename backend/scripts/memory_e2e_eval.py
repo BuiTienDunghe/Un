@@ -411,6 +411,7 @@ def run_extraction_phase(cases: list[dict]) -> tuple[bool, dict]:
     """
     from app.config.settings import get_settings
     from app.services.discord_memory_extractor import (
+        DISCORD_MEMORY_EXTRACTOR_PROMPT_VERSION,
         DiscordMemoryExtractorAdapter,
         DiscordMemoryExtractorEnvelopeBuilder,
         DiscordMemoryExtractorError,
@@ -635,12 +636,49 @@ def run_extraction_phase(cases: list[dict]) -> tuple[bool, dict]:
         "forged": forged,
         "errors": errors,
         "entailment_on_correct": entail_rate,
+        # Which run produced these numbers. Without them the metrics are not
+        # comparable across days: P=0.94 under one extractor model and prompt
+        # version says nothing about P=0.94 under another.
+        "extractor_model": extractor.model,
+        "extractor_schema_version": extractor.schema_version,
+        "verifier_model": verifier.model,
+        "prompt_version": DISCORD_MEMORY_EXTRACTOR_PROMPT_VERSION,
+        "cases": len(cases),
+        "predicted": predicted,
+        "correct": correct,
+        "expected_total": expected_total,
+        "gate_passed": passed,
     }
+
+
+EXTRACTION_REPORT_DIR = PROJECT_ROOT / "data" / "benchmarks" / "memory_e2e"
+
+
+def write_extraction_report(metrics: dict, output: str | None) -> Path:
+    """Persist the extraction-phase metrics next to the extractor benchmarks.
+
+    The gate used to print P/R/forged and drop the dict on the floor, so the
+    only record of "P=0.94 · R=0.80 · forged=0" was a sentence in
+    docs/memory_design.md — a number nobody could re-open, diff or plot. It is
+    also the number a distilled student has to match, which makes an
+    un-inspectable version of it useless as a baseline.
+    """
+    path = Path(output) if output else EXTRACTION_REPORT_DIR / f"memory-e2e-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {"created_at": datetime.now(UTC).isoformat(), **metrics}
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"Đã ghi báo cáo pha trích xuất: {path}", flush=True)
+    return path
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--fixture", default=str(FIXTURE))
+    parser.add_argument(
+        "--output",
+        default=None,
+        help="Nơi ghi metrics pha trích xuất (mặc định data/benchmarks/memory_e2e/memory-e2e-<timestamp>.json)",
+    )
     parser.add_argument("--database-url", default=None)
     parser.add_argument("--case", default=None, help="chỉ chạy một ca theo id")
     parser.add_argument("--keep", action="store_true", help="giữ lại dữ liệu để soi")
@@ -690,7 +728,8 @@ def main() -> int:
     print(" ".join(notes))
 
     if arguments.with_extractor:
-        gate_passed, _metrics = run_extraction_phase(cases)
+        gate_passed, metrics = run_extraction_phase(cases)
+        write_extraction_report(metrics, arguments.output)
         if not gate_passed:
             return 3
     return 0

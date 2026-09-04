@@ -46,7 +46,13 @@ data/uploads/
 data/documents/
 data/ocr_runs/
 data/qdrant/
-data/evaluation/results/
+# Eval reports are per-run scratch EXCEPT the ones promoted to results/kept/:
+# a number quoted in RESULTS.md, a model card or a CV line must resolve to a
+# file a reader can open. Re-including needs both lines — git will not look
+# inside an excluded directory to find an un-excluded file.
+data/evaluation/results/*
+!data/evaluation/results/kept/
+!data/evaluation/results/kept/**
 data/archives/
 data/backups/
 # Bo dem nghe thu dong (memory_design.md 13.6 job 1) - id nguoi dung that, khong push

@@ -1,0 +1,853 @@
+{
+  "created_at": "2026-08-21T09:26:26.424599+00:00",
+  "mode": "multidoc-retrieval",
+  "embedding_model": "qwen3-embedding:0.6b",
+  "corpus": [
+    "backup_restore.md",
+    "current_architecture.md",
+    "p3_progress.md",
+    "versioned_ingestion.md",
+    "xuong_in_anh_duong.txt"
+  ],
+  "cases": 82,
+  "recall_at_k": 0.9146341463414634,
+  "mrr": 0.7967479674796749,
+  "doc_hit_rate": 0.8414634146341463,
+  "answer_pass_rate": null,
+  "by_group": {
+    "cross": {
+      "cases": 12,
+      "recall_at_k": 1.0,
+      "mrr": 0.798611111111111,
+      "doc_hit_rate": 0.75
+    },
+    "single": {
+      "cases": 70,
+      "recall_at_k": 0.9,
+      "mrr": 0.7964285714285714,
+      "doc_hit_rate": 0.8571428571428571
+    }
+  },
+  "results": [
+    {
+      "id": "br_backup_thu_cong",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 756
+    },
+    {
+      "id": "br_chu_ky_backup",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 545
+    },
+    {
+      "id": "br_db_dien_tap",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 598
+    },
+    {
+      "id": "br_doi_ten_db_hong",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 600
+    },
+    {
+      "id": "br_ghi_ket_qua_dien_tap",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 585
+    },
+    {
+      "id": "br_health_truong_backup",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 0.5,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 571
+    },
+    {
+      "id": "br_loi_git_bash",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 579
+    },
+    {
+      "id": "br_ly_do_keep_minimum",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 600
+    },
+    {
+      "id": "br_nghiem_thu_dien_tap",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 586
+    },
+    {
+      "id": "br_rebuild_qdrant",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 600
+    },
+    {
+      "id": "br_tan_suat_dien_tap",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 0.3333333333333333,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 600
+    },
+    {
+      "id": "br_tep_goc",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 587
+    },
+    {
+      "id": "br_thoi_gian_giu_lai",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 562
+    },
+    {
+      "id": "br_worker_tren_host",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 578
+    },
+    {
+      "id": "ca_ai_duoc_dung_sqlite3",
+      "group": "single",
+      "status": 200,
+      "source_recall": false,
+      "reciprocal_rank": 0.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 587
+    },
+    {
+      "id": "ca_alembic_head_o_dau",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 0.5,
+      "doc_hit": false,
+      "answer_pass": null,
+      "latency_ms": 596
+    },
+    {
+      "id": "ca_audit_legacy_point",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 590
+    },
+    {
+      "id": "ca_cleanup_phien_ban_cu",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 0.3333333333333333,
+      "doc_hit": false,
+      "answer_pass": null,
+      "latency_ms": 622
+    },
+    {
+      "id": "ca_dialect_database_url",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 550
+    },
+    {
+      "id": "ca_dieu_kien_candidate",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 552
+    },
+    {
+      "id": "ca_duong_dan_archive_sqlite",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 604
+    },
+    {
+      "id": "ca_guard_route_mutating",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 0.5,
+      "doc_hit": false,
+      "answer_pass": null,
+      "latency_ms": 587
+    },
+    {
+      "id": "ca_health_do_tuoi_backup",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 0.3333333333333333,
+      "doc_hit": false,
+      "answer_pass": null,
+      "latency_ms": 585
+    },
+    {
+      "id": "ca_khoi_phuc_qdrant_snapshot",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 597
+    },
+    {
+      "id": "ca_lam_moi_sau_phase",
+      "group": "single",
+      "status": 200,
+      "source_recall": false,
+      "reciprocal_rank": 0.0,
+      "doc_hit": false,
+      "answer_pass": null,
+      "latency_ms": 588
+    },
+    {
+      "id": "ca_test_guard_import",
+      "group": "single",
+      "status": 200,
+      "source_recall": false,
+      "reciprocal_rank": 0.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 581
+    },
+    {
+      "id": "ca_vai_tro_ollama",
+      "group": "single",
+      "status": 200,
+      "source_recall": false,
+      "reciprocal_rank": 0.0,
+      "doc_hit": false,
+      "answer_pass": null,
+      "latency_ms": 584
+    },
+    {
+      "id": "ca_worker_launcher",
+      "group": "single",
+      "status": 200,
+      "source_recall": false,
+      "reciprocal_rank": 0.0,
+      "doc_hit": false,
+      "answer_pass": null,
+      "latency_ms": 586
+    },
+    {
+      "id": "p3_bootstrap_advisory",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 598
+    },
+    {
+      "id": "p3_bot_status_compose",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 572
+    },
+    {
+      "id": "p3_chay_song_tai_khoan",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 586
+    },
+    {
+      "id": "p3_co_bat_auth",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 604
+    },
+    {
+      "id": "p3_hoi_dong_phan_bien",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 600
+    },
+    {
+      "id": "p3_khoa_brute_force",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 583
+    },
+    {
+      "id": "p3_migration_chot_phase",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 557
+    },
+    {
+      "id": "p3_ocr_bug_mount",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 583
+    },
+    {
+      "id": "p3_ownership_404",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 572
+    },
+    {
+      "id": "p3_refresh_khong_xoay",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 0.5,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 579
+    },
+    {
+      "id": "p3_require_admin_db",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 0.5,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 600
+    },
+    {
+      "id": "p3_reset_mat_khau",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 597
+    },
+    {
+      "id": "p3_test_moi_auth",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 629
+    },
+    {
+      "id": "p3_timeseries_utc",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 560
+    },
+    {
+      "id": "vi_activation_superseded",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 0.5,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 568
+    },
+    {
+      "id": "vi_alembic_revision",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 587
+    },
+    {
+      "id": "vi_bat_backend_postgres",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 598
+    },
+    {
+      "id": "vi_chuyen_sang_rq",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 587
+    },
+    {
+      "id": "vi_hash_trung_lap",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 0.25,
+      "doc_hit": false,
+      "answer_pass": null,
+      "latency_ms": 603
+    },
+    {
+      "id": "vi_khoa_hang_hai_version",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 604
+    },
+    {
+      "id": "vi_nguon_active_version",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 0.5,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 584
+    },
+    {
+      "id": "vi_qdrant_point_id",
+      "group": "single",
+      "status": 200,
+      "source_recall": false,
+      "reciprocal_rank": 0.0,
+      "doc_hit": false,
+      "answer_pass": null,
+      "latency_ms": 583
+    },
+    {
+      "id": "vi_reindex_that_bai_trang_thai",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 605
+    },
+    {
+      "id": "vi_retry_idempotent",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 600
+    },
+    {
+      "id": "vi_thu_muc_nguon_khi_loi",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 600
+    },
+    {
+      "id": "vi_transaction_khi_goi_ngoai",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 600
+    },
+    {
+      "id": "vi_vector_superseded_giu_lai",
+      "group": "single",
+      "status": 200,
+      "source_recall": false,
+      "reciprocal_rank": 0.0,
+      "doc_hit": false,
+      "answer_pass": null,
+      "latency_ms": 597
+    },
+    {
+      "id": "vi_version_failed_retry",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 615
+    },
+    {
+      "id": "xa_chunk_rag",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 582
+    },
+    {
+      "id": "xa_cong_ollama",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 588
+    },
+    {
+      "id": "xa_dinh_dang_tep",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 567
+    },
+    {
+      "id": "xa_doi_mo_hinh_embedding",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 595
+    },
+    {
+      "id": "xa_dpi_ban_quet",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 585
+    },
+    {
+      "id": "xa_gpu_may_chu",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 0.5,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 616
+    },
+    {
+      "id": "xa_icc_profile",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 620
+    },
+    {
+      "id": "xa_intent_bot_un",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 552
+    },
+    {
+      "id": "xa_kho_danh_thiep",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 582
+    },
+    {
+      "id": "xa_khoi_dong_docker",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 0.5,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 616
+    },
+    {
+      "id": "xa_ma_bao_gia",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 596
+    },
+    {
+      "id": "xa_noi_day_sao_luu",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 602
+    },
+    {
+      "id": "xa_quan_tri_chinh",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 599
+    },
+    {
+      "id": "xa_so_nhan_vien",
+      "group": "single",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 579
+    },
+    {
+      "id": "xd_an_han_xoa_vector_version_cu",
+      "group": "cross",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 593
+    },
+    {
+      "id": "xd_bot_doc_tin_nhan_intent",
+      "group": "cross",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 608
+    },
+    {
+      "id": "xd_chinh_chu_ky_backup_models_yaml",
+      "group": "cross",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 584
+    },
+    {
+      "id": "xd_dump_postgres_nas_synology",
+      "group": "cross",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 594
+    },
+    {
+      "id": "xd_dung_lai_chi_muc_vector_sau_restore",
+      "group": "cross",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 592
+    },
+    {
+      "id": "xd_kiem_tra_quyen_admin_doc_db",
+      "group": "cross",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 594
+    },
+    {
+      "id": "xd_point_id_qdrant_uuid5",
+      "group": "cross",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 0.3333333333333333,
+      "doc_hit": false,
+      "answer_pass": null,
+      "latency_ms": 589
+    },
+    {
+      "id": "xd_point_index_version_cu_bi_bo_qua",
+      "group": "cross",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 592
+    },
+    {
+      "id": "xd_reindex_that_bai_version_cu",
+      "group": "cross",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 0.25,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 597
+    },
+    {
+      "id": "xd_ten_database_dien_tap_restore",
+      "group": "cross",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 0.5,
+      "doc_hit": false,
+      "answer_pass": null,
+      "latency_ms": 575
+    },
+    {
+      "id": "xd_trang_thai_bot_tren_dashboard",
+      "group": "cross",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 1.0,
+      "doc_hit": true,
+      "answer_pass": null,
+      "latency_ms": 632
+    },
+    {
+      "id": "xd_vai_tro_sqlite_cu",
+      "group": "cross",
+      "status": 200,
+      "source_recall": true,
+      "reciprocal_rank": 0.5,
+      "doc_hit": false,
+      "answer_pass": null,
+      "latency_ms": 603
+    }
+  ]
+}
