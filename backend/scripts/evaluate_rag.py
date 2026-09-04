@@ -16,6 +16,32 @@ import httpx
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
+def api_key_headers() -> dict[str, str]:
+    """The X-API-Key header the server will actually enforce, if any.
+
+    Reading only os.environ was a silent outage. On 27/08 the operator put
+    LOCAL_AI_API_KEY in .env; the server (pydantic-settings, which loads .env)
+    began enforcing it, while this harness kept looking at a variable that no
+    Scheduled Task exports. Every nightly run from 27/08 to 04/09 died 401 on
+    the first upload — a red gate that said nothing at all about retrieval.
+
+    Falling back to Settings reads the same file the server reads, so the two
+    cannot drift apart again. An explicit env var still wins, which is what CI
+    and one-off runs against another host rely on.
+    """
+    key = os.environ.get("LOCAL_AI_API_KEY", "").strip()
+    if not key:
+        try:
+            from app.config.settings import get_settings
+
+            key = (get_settings().local_ai_api_key or "").strip()
+        except Exception:
+            # A run pointed at a remote base URL need not have a local .env or
+            # a reachable database. Send no header rather than refuse to start.
+            key = ""
+    return {"X-API-Key": key} if key else {}
+
+
 def bootstrap_document(client: httpx.Client, base_url: str, file_path: Path) -> str:
     with file_path.open("rb") as handle:
         upload = client.post(f"{base_url}/documents/upload", files={"file": (file_path.name, handle, "text/plain")})
@@ -140,7 +166,7 @@ def score_multidoc_sources(sources: list[dict[str, object]], expected_ids: set[s
     return 0.0, doc_hit
 
 
-def run_multidoc_mode(client: httpx.Client, base_url: str, cases: list[dict], mapping: dict[str, str], retrieval_only: bool, output_dir: Path, baseline_path: Path | None, tolerance: float, write_baseline: Path | None) -> int:
+def run_multidoc_mode(client: httpx.Client, base_url: str, cases: list[dict], mapping: dict[str, str], retrieval_only: bool, output_dir: Path, baseline_path: Path | None, tolerance: float, write_baseline: Path | None, allow_per_case_regressions: bool = False) -> int:
     models = client.get(f"{base_url}/models")
     embedding_model = models.json().get("models", {}).get("embedding", {}).get("name") if models.is_success else None
     # T16: read from the SERVER, not from this process's own imports — the
@@ -235,7 +261,10 @@ def run_multidoc_mode(client: httpx.Client, base_url: str, cases: list[dict], ma
         if tokenizer_version is None:
             print("Refusing to record a baseline: the server did not report tokenizer_version (pre-T16 build?). Restart it and re-run.")
             return 1
-        baseline = {"created_at": summary["created_at"], "embedding_model": embedding_model, "tokenizer_version": tokenizer_version, "cases": count, "recall_at_k": summary["recall_at_k"], "mrr": summary["mrr"], "doc_hit_rate": summary["doc_hit_rate"]}
+        # per_case is what makes "no question regressed" checkable. Recorded
+        # unconditionally, for the same reason tokenizer_version is: a field
+        # you have to remember to ask for is a gate that looks armed and is not.
+        baseline = {"created_at": summary["created_at"], "embedding_model": embedding_model, "tokenizer_version": tokenizer_version, "cases": count, "recall_at_k": summary["recall_at_k"], "mrr": summary["mrr"], "doc_hit_rate": summary["doc_hit_rate"], "per_case": {str(item["id"]): float(item["reciprocal_rank"]) for item in results}}
         write_baseline.write_text(json.dumps(baseline, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(f"Recorded baseline: {write_baseline}")
 
@@ -272,6 +301,29 @@ def run_multidoc_mode(client: httpx.Client, base_url: str, cases: list[dict], ma
         if failed:
             print("Retrieval regression gate FAILED: " + "; ".join(failed))
             return 1
+        # Per-case gate. The two averages above cannot see a swap: three
+        # questions breaking while three others improve leaves recall and MRR
+        # exactly where they were. P4-6 is the worked example — 11 questions up,
+        # 2 down, and one that used to be found stopped being found. That last
+        # fact reached a progress doc only because a human noticed it by hand.
+        baseline_per_case = baseline.get("per_case") or {}
+        if not baseline_per_case:
+            print(f"WARNING: {baseline_path.name} has no per-case ranks and is NOT guarded question by question. Re-record it to arm the check.")
+        else:
+            current = {str(item["id"]): float(item["reciprocal_rank"]) for item in results}
+            absent = sorted(case_id for case_id in baseline_per_case if case_id not in current)
+            if absent:
+                print(f"WARNING: {len(absent)} baseline question(s) were not run and cannot be judged: {', '.join(absent[:5])}{' …' if len(absent) > 5 else ''}")
+            lost = sorted(case_id for case_id, rank in baseline_per_case.items() if float(rank) > 0 and current.get(case_id, 0.0) == 0.0 and case_id in current)
+            if lost:
+                detail = f"{len(lost)} question(s) went from found to missed: {', '.join(lost)}"
+                if allow_per_case_regressions:
+                    # P4-6 shipped exactly one of these on purpose. Accepting a
+                    # trade-off is fine; accepting it silently is not.
+                    print(f"Per-case regression ACCEPTED via --allow-per-case-regressions: {detail}")
+                else:
+                    print("Retrieval regression gate FAILED: " + detail)
+                    return 1
         print("Retrieval regression gate passed.")
     return 0
 
@@ -357,6 +409,7 @@ def main() -> int:
     parser.add_argument("--baseline", help="Multidoc mode: baseline JSON to gate against (missing file = report-only).")
     parser.add_argument("--tolerance", type=float, default=0.02, help="Allowed drop below the baseline before the gate fails.")
     parser.add_argument("--write-baseline", help="Multidoc mode: record this run's metrics as the new baseline JSON.")
+    parser.add_argument("--allow-per-case-regressions", action="store_true", help="Multidoc mode: let the gate pass even though a question went from found to missed. For a deliberate, documented trade-off only (see P4-6) — it prints which questions were given up.")
     parser.add_argument("--fixture", default=str(PROJECT_ROOT / "data" / "evaluation" / "fixtures" / "local_ai_core_baseline.txt"))
     parser.add_argument("--base-url", default="http://127.0.0.1:8000")
     parser.add_argument("--output-dir", default=str(PROJECT_ROOT / "data" / "evaluation" / "results"))
@@ -365,26 +418,20 @@ def main() -> int:
 
     if args.multidoc_dataset:
         cases = [json.loads(line) for line in Path(args.multidoc_dataset).read_text(encoding="utf-8").splitlines() if line.strip()]
-        api_key = os.environ.get("LOCAL_AI_API_KEY", "").strip()
-        headers = {"X-API-Key": api_key} if api_key else {}
-        with httpx.Client(timeout=600, headers=headers) as client:
+        with httpx.Client(timeout=600, headers=api_key_headers()) as client:
             mapping = bootstrap_corpus(client, args.base_url, Path(args.corpus_dir))
-            return run_multidoc_mode(client, args.base_url, cases, mapping, args.retrieval_only, Path(args.output_dir), Path(args.baseline) if args.baseline else None, args.tolerance, Path(args.write_baseline) if args.write_baseline else None)
+            return run_multidoc_mode(client, args.base_url, cases, mapping, args.retrieval_only, Path(args.output_dir), Path(args.baseline) if args.baseline else None, args.tolerance, Path(args.write_baseline) if args.write_baseline else None, args.allow_per_case_regressions)
 
     if args.conversation_dataset:
         pairs = [json.loads(line) for line in Path(args.conversation_dataset).read_text(encoding="utf-8").splitlines() if line.strip()]
-        api_key = os.environ.get("LOCAL_AI_API_KEY", "").strip()
-        headers = {"X-API-Key": api_key} if api_key else {}
-        with httpx.Client(timeout=600, headers=headers) as client:
+        with httpx.Client(timeout=600, headers=api_key_headers()) as client:
             document_id = args.document_id or bootstrap_document(client, args.base_url, Path(args.fixture))
             return run_conversation_mode(client, args.base_url, pairs, document_id, Path(args.output_dir))
 
     cases = [json.loads(line) for line in Path(args.dataset).read_text(encoding="utf-8").splitlines() if line.strip()]
     # The harness drives write endpoints, so it needs the key whenever the
     # backend has one configured.
-    api_key = os.environ.get("LOCAL_AI_API_KEY", "").strip()
-    headers = {"X-API-Key": api_key} if api_key else {}
-    with httpx.Client(timeout=180, headers=headers) as client:
+    with httpx.Client(timeout=180, headers=api_key_headers()) as client:
         document_id = args.document_id or bootstrap_document(client, args.base_url, Path(args.fixture))
         results: list[dict[str, object]] = []
         for case in cases:

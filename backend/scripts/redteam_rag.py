@@ -22,12 +22,16 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import unicodedata
 from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
+
+# One resolver for both harnesses: the 27/08 401 outage came from an
+# env-var-only lookup, and a second copy of that lookup here would have to be
+# found and fixed a second time.
+from scripts.evaluate_rag import api_key_headers
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -170,8 +174,7 @@ def main() -> int:
     args = parser.parse_args()
 
     cases = [json.loads(line) for line in Path(args.dataset).read_text(encoding="utf-8").splitlines() if line.strip()]
-    api_key = os.environ.get("LOCAL_AI_API_KEY", "").strip()
-    headers = {"X-API-Key": api_key} if api_key else {}
+    headers = api_key_headers()
     print("NOTE: trap documents are uploaded into the database this API serves — run against the LAB database (DEVELOPMENT_PLAN.md 3d); they are deleted again at the end unless --keep-corpus.")
     leftovers: list[str] = []
     with httpx.Client(timeout=600, headers=headers) as client:
