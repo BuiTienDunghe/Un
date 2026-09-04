@@ -356,9 +356,17 @@ Phạm vi chốt lại — **D4-lite, ~1,5 buổi, không thêm bảng nào**: (
 
 Agent tự tổng hợp định kỳ (tài liệu mới, memory đáng chú ý, việc nền lỗi) gửi Discord. **Luật nhường bắt buộc** theo bất biến #7: chỉ chạy khi hệ rảnh ≥ N phút · tự dừng ngay khi có request tương tác · kích hoạt tay được (`/digest`) · máy tắt thì bỏ lượt, không dồn. Audit + thu hồi theo bất biến #6.
 
-**#12 · D2 — Distillation extractor 9b → 2b (QLoRA)** *(4–6 buổi, GPU cloud free)*
+**#12 · D2 — Distillation extractor 9b → 2b** — ⚠️ **SPEC ĐÃ VIẾT 04/09: `.scratch/d2-distillation/spec.md`. Đọc trước khi bắt tay; ba chi tiết của mô tả cũ đã sai.**
 
-9b làm teacher sinh vài nghìn cặp (tin nhắn → fact), lọc bằng guard sẵn có; fine-tune 2b trên Colab/Kaggle (đủ cho 2b, không đụng máy nhà). Nghiệm thu bằng chính benchmark 19/08: **2b-tuned phải đạt poison/coverage tương đương 9b+guard mới thay**. Thất bại cũng chốt được bằng số liệu.
+> *Mô tả gốc, giữ lại để đối chiếu:* «(QLoRA, 4–6 buổi, GPU cloud free) 9b làm teacher sinh vài nghìn cặp (tin nhắn → fact), lọc bằng guard sẵn có; fine-tune 2b trên Colab/Kaggle (đủ cho 2b, không đụng máy nhà). Nghiệm thu bằng chính benchmark 19/08.»
+
+Ba chỗ sai và số đo lật chúng:
+
+- **Không QLoRA.** Hướng dẫn Qwen3.5 của Unsloth khuyến cáo không dùng 4-bit cho họ model này → **bf16 LoRA r=16–32**. Kéo theo: **không Colab T4** (T4 không có bf16); train tại nhà trong cửa sổ ban ngày, vì 9b nạp rồi vẫn còn ~9,3 GB VRAM (đo 04/09).
+- **Nghiệm thu không thể lấy mốc 19/08.** Lần đó 9b chỉ chạy 75/150 ca và dùng prompt v5, còn 2b chạy đủ 150 ca — hai mẫu số, hai prompt, không so được. Đã đo lại cả hai ngày 04/09 trên đúng 150 ca, đúng prompt v6: `data/benchmarks/discord_memory_extractor_20260904_*.json`. Ngưỡng nghiệm thu chốt theo bộ số mới, nằm trong spec.
+- **Động cơ không phải độ trễ.** Số cũ (61 s/lời gọi) là số CPU; trên GPU 9b p50 3,8 s và 2b 1,9 s, tức chỉ ~2×. Lý do thật nằm ở khoảng cách hành vi: 2b **ngang hoặc hơn** 9b về schema compliance, evidence grounding và acceptance, nhưng kém 0,34 ở no_op accuracy và 0,25 ở fact content — tức nó biết viết đúng định dạng, chỉ không biết khi nào nên im lặng. Giả thuyết H-DATA trong spec kiểm chính điều đó, và có ô đối chứng dung lượng để nó có thể sai.
+
+Thất bại cũng chốt được bằng số liệu, và spec bắt buộc phải công bố kết quả âm.
 
 Vai trò chiến lược: **lối thoát phần cứng** — bước phụ của agent giao được cho model nhỏ. Là **điều kiện mở lại D3c**.
 

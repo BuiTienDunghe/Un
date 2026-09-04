@@ -12,6 +12,64 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 ## [Unreleased]
 
 ### Fixed
+- **Cổng eval đêm đỏ 8 ngày vì một lý do nó không canh** (27/08–04/09). Lần chạy xanh cuối là
+  26/08. Sau đó **hai** đêm chết 401 ở lệnh upload đầu tiên, **ba** đêm chết exit 97 vì máy tắt,
+  và **bốn** đêm không để lại dòng log nào. Ba nguyên nhân khác nhau cho ra một màu đỏ giống hệt.
+  Nguyên nhân 401: khoá `LOCAL_AI_API_KEY` được đặt vào `.env`; server đọc `.env` qua
+  pydantic-settings nên bắt đầu bắt buộc header, còn harness chỉ đọc `os.environ` — thứ mà
+  Scheduled Task không truyền. Sửa bằng `api_key_headers()` lấy Settings làm dự phòng, tức **cùng
+  nguồn server đọc**, nên hai bên không thể lệch nhau lần nữa; `redteam_rag.py` dùng chung hàm đó
+  thay vì có bản sao thứ hai. Nguyên nhân thứ hai: output uvicorn của lab API bị đẩy vào `DEVNULL`
+  nên exit 97 chỉ in được một câu hỏi đoán mò `(Ollama or Docker down?)`. Sửa bằng `diagnose()`
+  ghi `ollama ps`, `docker compose ps` và 15 dòng cuối log uvicorn; đuôi log nâng 12 → 40 dòng vì
+  12 dòng vừa đủ một traceback và cắt mất đúng hai lệnh nói Docker có chạy hay không.
+  **Nghiệm thu: chạy tay 04/09 exit 0**, tái lập baseline chính xác (recall@5 0.9878 · MRR 0.9360 ·
+  doc_hit 0.9268), `br_backup_thu_cong` vẫn là câu trượt duy nhất đã biết. Chi tiết:
+  `docs/FAILURE_MODES.md` mục 4.
+- **Nhãn prompt extractor lệch thân prompt.** `PROMPT_VERSION` ship nhãn `_v6` trong khi thân
+  prompt tên `_V5`; trước đó nhãn `v5` từng gắn trên thân V4. Mọi file benchmark và mọi dòng
+  `discord_memory_candidates` đều đóng dấu nhãn, nên một nhãn không định danh được văn bản sinh ra
+  nó sẽ âm thầm phá khả năng so hai lượt chạy. Đổi tên thân thành `_V6` cho khớp nhãn đang ship,
+  ghi lại lệch lịch sử trong comment, và thêm `test_prompt_version_matches_prompt_body` để nó
+  không trôi lần nữa.
+- **README ghi sai Alembic head 11 migration** (`20260818_21`, thật là `20260828_32`).
+- **Ba chỗ trong code ghi "~60 s mỗi lời gọi nền" là số CPU đã chết.** Đo lại trên GPU 04/09:
+  extractor p50 **3,8 s** (65,5 tok/s, trước ghi 4,07 tok/s). Verifier vẫn **chưa** đo trên GPU;
+  chỗ đó nay nói rõ là chưa đo thay vì trích số cũ.
+
+### Added
+- **`docs/RESULTS.md`** — một bảng kết quả duy nhất, mỗi con số trỏ về file sinh ra nó. Quy tắc:
+  số nào không lần được về file trong repo thì không được lên CV.
+- **`docs/FAILURE_MODES.md`** — bốn sự cố theo khung error analysis của Hamel Husain. Cả bốn đều
+  sống sót qua một hệ đã có test, có CI, có eval, nên tài liệu này nói về **giới hạn của phép đo**
+  chứ không phải về việc thiếu đo.
+- **Cổng eval chặn theo TỪNG CÂU, không chỉ theo trung bình.** Hai số trung bình không nhìn thấy
+  hoán vị: ba câu hỏng trong khi ba câu khác tốt lên thì recall và MRR đứng yên. Baseline nay lưu
+  thứ hạng từng câu và cổng đỏ nếu một câu đang tìm thấy chuyển sang không tìm thấy.
+  `--allow-per-case-regressions` chấp nhận đánh đổi có chủ đích và in ra câu bị bỏ. Kiểm chứng
+  bằng dữ liệu thật: logic tái lập đúng con số P4-6 đã ghi (11 câu tốt lên, 2 xấu đi, 1 câu
+  hit→miss là `br_backup_thu_cong`). Baseline hiện hành được nạp bổ sung thứ hạng từ đúng lượt
+  chạy đã ghi nó (`created_at` khớp tới micro giây).
+- **Bốn file eval mốc vào git** tại `data/evaluation/results/kept/`, kèm 82 dòng chi tiết mỗi file.
+  Trước đây cả thư mục bị gitignore nên 30 file chỉ sống trên một máy. Các lượt chạy vặt vẫn bị bỏ.
+- **Benchmark extractor 150 ca cho CẢ 9b và 2b trong cùng một ngày, cùng prompt v6** — lần đầu hai
+  model có chung mẫu số. Khoảng cách nằm ở no_op accuracy (0,86 vs 0,52) và fact content
+  (0,95 vs 0,70), nhưng 2b **ngang hoặc hơn** ở schema compliance, evidence grounding và acceptance.
+  Trần dung lượng sẽ kéo các chỉ số cấu trúc tụt theo; ở đây chúng không tụt. Số 19/08 **không so
+  được** (9b chỉ 75/150 ca và prompt v5).
+- **`data/vram_budget.md`** — đo từ GPU trống: đường trả lời chiếm 9 920/16 311 MiB (9b ở ctx 4096
+  6 407, embedding 2 870, reranker 643), còn **6,2 GB**. Ước lượng cũ 9,3 GB chỉ đếm model sinh và
+  ở sai độ dài ngữ cảnh; bảng quyết định probe D2 đã sửa theo.
+- **`training/`** — tách khỏi runtime để launcher máy sạch không phải tải PyTorch (bất biến #5).
+  `split_manifest.py` ghi vai trò và sha256 của từng bộ eval; `leak_check.py` bắt cả trùng văn bản
+  lẫn trùng cách tạo (cùng generator + cùng template thì "held-out" chỉ đo generator). Chạy thử
+  bắt được ngay một ca thật: `local_ai_core_baseline.txt` trùng **100%** 8-gram với corpus multidoc.
+- **`README.en.md`** một trang và **LICENSE** (MIT).
+- **`.scratch/d2-distillation/spec.md`** — ngưỡng nghiệm thu chốt trước khi đo, giả thuyết H-DATA
+  có ô đối chứng dung lượng để nó có thể sai, và probe 100 mẫu bắt buộc chạy trước khi sinh dữ
+  liệu lớn.
+
+### Fixed
 - **P4-6: cross-encoder cắt cụt 65% chunk — hai KPI đỏ nhiều tuần giờ vượt mục tiêu** (25/08).
   Hai câu eval trượt từ 21/08 được ghi là "headroom cho khớp nguyên văn". Đo lại từng tầng bằng
   chính màn hình chunk (P4-5) cho thấy **chẩn đoán cũ sai thủ phạm**: chunker đúng (cả 4 cụm nằm
