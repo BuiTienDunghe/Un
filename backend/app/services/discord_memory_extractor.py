@@ -424,7 +424,14 @@ reason such as insufficient_evidence or untrusted_subject.
 """
 )
 
-DISCORD_MEMORY_EXTRACTOR_SYSTEM_PROMPT_V5 = (
+# Named V6 to match the label it ships under. Bodies and labels used to run one
+# apart: this text was added as _V5 while the label moved to v6, and before that
+# label v5 rode on body V4. So a benchmark file stamped `..._prompt_v5` was
+# produced by body V4, and `..._prompt_v4` by body V3 — worth knowing before
+# comparing any run recorded on or before 19/08/2026 with a later one.
+# From here on the number is the same on both sides, and
+# `test_prompt_version_matches_prompt_body` fails if that drifts again.
+DISCORD_MEMORY_EXTRACTOR_SYSTEM_PROMPT_V6 = (
     DISCORD_MEMORY_EXTRACTOR_SYSTEM_PROMPT_V4
     + """\
 Vocabulary v2 keys: user.birthday=fact (a member stating their own birth date;
@@ -438,7 +445,7 @@ DISCORD_MEMORY_EXTRACTOR_PROMPT_VERSION = (
     DISCORD_MEMORY_EXTRACTOR_PROMPT_VERSION_V6
 )
 DISCORD_MEMORY_EXTRACTOR_SYSTEM_PROMPT = (
-    DISCORD_MEMORY_EXTRACTOR_SYSTEM_PROMPT_V5
+    DISCORD_MEMORY_EXTRACTOR_SYSTEM_PROMPT_V6
 )
 
 

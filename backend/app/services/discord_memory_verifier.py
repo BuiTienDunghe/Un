@@ -16,10 +16,16 @@ answer is "unknown" — the candidate simply waits for a human, which is
 today's behaviour. The verifier can make the pipeline more autonomous,
 never less safe.
 
-Budget (measured, §13.1): ~16 candidates/day × one extra ~60s call = well
-inside the night window; 1-vs-1 saturates at ~3,400 msg/day, 11× the
-committed target. Runs in the background worker only — invariant #7's
-default answer path is untouched.
+Budget: ~16 candidates/day × one extra background call, well inside the night
+window; 1-vs-1 saturates far above the committed target. Runs in the background
+worker only — invariant #7's default answer path is untouched.
+
+The "~60s per call" this paragraph used to quote came from a CPU-era
+measurement of the extractor and was never re-measured here. The extractor was
+re-measured on the GPU on 04/09/2026 at p50 3.8 s per call; this verifier asks
+for `num_predict` 8, so its cost is prompt evaluation rather than generation and
+is bounded well below that. Treat the saturation figure as unverified until
+someone records it — see docs/RESULTS.md.
 """
 from __future__ import annotations
 

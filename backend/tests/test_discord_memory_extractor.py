@@ -450,6 +450,27 @@ def test_exact_source_ids_are_required():
         adapter.extract(envelope)
 
 
+def test_prompt_version_matches_prompt_body():
+    """The shipped label and the shipped prompt body must carry the same number.
+
+    They drifted apart twice: label v5 shipped on body V4, then label v6 on a
+    body named V5. Every benchmark file and every `discord_memory_candidates`
+    row is stamped with the label, so a label that does not identify the text
+    that produced it quietly destroys the ability to compare two runs.
+    """
+    from app.services import discord_memory_extractor as module
+
+    label = DISCORD_MEMORY_EXTRACTOR_PROMPT_VERSION
+    generation = label.rsplit("_v", 1)[-1]
+    body_constant = f"DISCORD_MEMORY_EXTRACTOR_SYSTEM_PROMPT_V{generation}"
+    assert hasattr(module, body_constant), (
+        f"{label} names generation {generation}, but there is no {body_constant}"
+    )
+    assert getattr(module, body_constant) is DISCORD_MEMORY_EXTRACTOR_SYSTEM_PROMPT, (
+        f"{label} is shipped, but the shipped body is not {body_constant}"
+    )
+
+
 def test_prompt_contains_fail_closed_semantic_rules():
     prompt = DISCORD_MEMORY_EXTRACTOR_SYSTEM_PROMPT
     assert "exactly one JSON object" in prompt

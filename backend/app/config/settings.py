@@ -44,13 +44,18 @@ class Settings(BaseSettings):
     discord_memory_extractor_enabled: bool = False
     # P2-1b: benchmark 19/08 (150 case) — 2b poisons ~49% of auto-applies and
     # no harness fixes it; 9b + the deterministic guard measures 21.6% at 96.7%
-    # coverage. Extraction runs in a background queue, so the ~60s cost is idle
-    # time, not user-facing latency.
+    # coverage. Extraction runs in a background queue, so its cost is idle time,
+    # not user-facing latency.
+    # The "~60s per call" this comment used to quote was a CPU measurement and
+    # is dead. Re-measured 04/09/2026 on the GPU over all 150 cases: p50 3.8 s,
+    # p95 4.6 s, 65 tok/s (was 4.1 tok/s) —
+    # data/benchmarks/discord_memory_extractor_20260904_qwen9b_full150.json.
+    # Anything that reasons about the background budget should start there.
     discord_memory_extractor_model: str = "qwen3.5:9b"
     # Job 4 (memory_design.md 13.2 E1): the 1-vs-1 verifier. Ships DARK on
-    # purpose - enabling it adds one background ~60s model call per candidate,
-    # and auto-apply additionally requires verdict == "entailment". Turn on
-    # after the --with-extractor benchmark clears the 13.4 thresholds.
+    # purpose - enabling it adds one background model call per candidate, and
+    # auto-apply additionally requires verdict == "entailment". Turn on after
+    # the --with-extractor benchmark clears the 13.4 thresholds.
     discord_memory_verifier_enabled: bool = False
     discord_memory_verifier_model: str = "qwen3.5:9b"
     discord_memory_verifier_timeout_seconds: float = 90.0
