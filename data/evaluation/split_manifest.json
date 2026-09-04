@@ -1,0 +1,105 @@
+{
+  "note": "Provenance of every set a number is measured on. See training/common/split_manifest.py.",
+  "artifacts": [
+    {
+      "path": "data/evaluation/fixtures/multidoc",
+      "role": "gate",
+      "generator": "human",
+      "template": null,
+      "note": "D1 corpus: 5 snapshotted project documents. The 82-question gate is scored against these.",
+      "sha256": "aba9610e42a7ec2850339ce355401100eedbb73d2c9f1301feba4bd515ae2bae",
+      "bytes": 37766,
+      "files": 5
+    },
+    {
+      "path": "data/evaluation/rag_multidoc_eval.jsonl",
+      "role": "gate",
+      "generator": "human",
+      "template": null,
+      "note": "82 questions with verbatim expected terms, written by hand against chunk text.",
+      "sha256": "252ddc1434a5df0a9bca1d5431690214bb7ef37150133bfc8317beac0fdfa4f3",
+      "bytes": 31563,
+      "files": 1
+    },
+    {
+      "path": "data/evaluation/fixtures/local_ai_core_baseline.txt",
+      "role": "gate",
+      "generator": "human",
+      "template": null,
+      "note": "Twin of the multidoc corpus (same source documentation). Contaminating one contaminates both.",
+      "sha256": "69777efe30536a7817bcd81a2cd58d933fc777032b5515ac27de30f3d2b7278e",
+      "bytes": 15050,
+      "files": 1
+    },
+    {
+      "path": "data/evaluation/rag_eval.jsonl",
+      "role": "gate",
+      "generator": "human",
+      "template": null,
+      "note": "47 single-document questions, the older eval; still runnable.",
+      "sha256": "435e41af1a0eebd701b1f704a083a196d60b87fa037fb9ab0762be84ec7b1eed",
+      "bytes": 10442,
+      "files": 1
+    },
+    {
+      "path": "data/evaluation/rag_conversation_eval.jsonl",
+      "role": "gate",
+      "generator": "human",
+      "template": null,
+      "note": "10 follow-up pairs measuring the condense step.",
+      "sha256": "afff676e0b311248fcccd3e0fcf95f21473cd8d88975355733ef2deea9cdfa13",
+      "bytes": 2915,
+      "files": 1
+    },
+    {
+      "path": "data/evaluation/redteam_injection.jsonl",
+      "role": "gate",
+      "generator": "human",
+      "template": null,
+      "note": "12 prompt-injection cases. Marker-scored, so leaked markers would silently inflate the defense.",
+      "sha256": "a30f91307956e8bcb222d67de398092c5c99d5607e9ab669e59305573a454e74",
+      "bytes": 5266,
+      "files": 1
+    },
+    {
+      "path": "data/evaluation/fixtures/redteam",
+      "role": "gate",
+      "generator": "human",
+      "template": null,
+      "note": "Trap documents carrying live injection text. Never a training source.",
+      "sha256": "615a3b017cf9a38b58c86a6b3ef9f545961bb730724c0387bdde452816d65736",
+      "bytes": 4657,
+      "files": 6
+    },
+    {
+      "path": "backend/tests/fixtures/discord_memory_extractor_benchmark_v1.json",
+      "role": "gate",
+      "generator": "human",
+      "template": null,
+      "note": "150-case extractor benchmark. This is the D2 gate: a distilled student must never train on it.",
+      "sha256": "f6c3f0af5e4e74f82df925d245d1c2d897975850cc20e84837c7b0c4e5f88bd4",
+      "bytes": 195615,
+      "files": 1
+    },
+    {
+      "path": "backend/tests/fixtures/discord_memory_e2e_v1.jsonl",
+      "role": "gate",
+      "generator": "human",
+      "template": null,
+      "note": "End-to-end memory pipeline eval: the P/R/forged gate a distilled student must clear.",
+      "sha256": "c0bac89c0b7463b65b97c95fb8bd9f12be2bb5651e71ff3dd86e635724fe6e14",
+      "bytes": 25700,
+      "files": 1
+    },
+    {
+      "path": "backend/tests/fixtures/discord_memory_rule_filter_v1.json",
+      "role": "gate",
+      "generator": "human",
+      "template": null,
+      "note": "Rule-filter cases. The filter decides what the extractor ever sees, so its fixtures gate the pipeline's input.",
+      "sha256": "e2a300aa415496052c5cd3f816f3cea82ea352789f9577e74fe28187de828543",
+      "bytes": 22928,
+      "files": 1
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+# Training dependencies. DELIBERATELY NOT in pyproject.toml or requirements.txt.
+#
+# Invariant #5: the one-click launcher must run on a clean machine. Putting
+# PyTorch in the runtime requirements would make a ~2.5 GB download the price of
+# starting a chat window. Training happens in its own environment; the API never
+# imports anything from this file.
+#
+# Install (from the repo root, in a SEPARATE environment):
+#     py -3.11 -m venv .venv-train
+#     .venv-train\Scripts\pip install -r training/requirements-train.txt
+#
+# The torch line is the one that has to match the hardware. RTX 5060 Ti is
+# Blackwell (sm_120) and needs a CUDA 12.8 build; the default PyPI wheel may not
+# carry that architecture. Verify before believing anything else works:
+#     python -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_capability())"
+# Expect (12, 0). A wheel without sm_120 fails at the first kernel launch, not
+# at import, which is a slow and confusing way to find out.
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch>=2.9,<3.0
+
+# LoRA / SFT stack.
+transformers>=4.57,<5.0
+peft>=0.14,<1.0
+trl>=0.23,<1.0
+accelerate>=1.0,<2.0
+datasets>=3.0,<5.0
+
+# Unsloth: faster LoRA and the GGUF export path. Windows install has extra steps
+# (triton-windows); see training/README.md before assuming pip is enough.
+unsloth>=2026.1
+
+# Encoder training for the reranker (H1) and the NLI verifier (H3). Note the
+# floor: the production venv pins sentence-transformers<4.0, so a checkpoint
+# trained here must be verified to LOAD there before anything is measured.
+sentence-transformers>=5.0,<6.0
+
+# Public-benchmark scoring, so a number can be compared with a published one.
+mteb>=1.36
+
+# Paired bootstrap intervals and hand-analysis of failure cases.
+numpy>=1.26
+pandas>=2.2
+scipy>=1.14
