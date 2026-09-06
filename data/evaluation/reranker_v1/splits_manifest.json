@@ -1,0 +1,53 @@
+{
+  "built_by": "training/reranker/build_splits.py",
+  "seed": 20260905,
+  "source": "GreenNode/zalo-ai-legal-text-retrieval-vn (MIT)",
+  "queries_deduplicated": 102,
+  "contaminated_queries_dropped_from_train": 24,
+  "contaminated_query_ids": [
+    "12aa2415daa67ab4c04be1c30828a5b1",
+    "1b9aefd60ed95e9a9ddf12ef0f9d5a13",
+    "21f0d8fd1504da8348d2e79f7cac207e",
+    "2622f843e9dd0275abd18c2b1d011ecf",
+    "2d11a5d8d49ee73b02d751230f18ee8f",
+    "319bd4ad7cef3c1b8256de04d5a66f60",
+    "44bbef50d5bed5148bae1b6a11d0f80a",
+    "5cf2eb257073be4a8e172b977441e4de",
+    "5d6438f0316a1f790d2eabaae5f150bb",
+    "5ed912c928f7db87750e187548384f53",
+    "607143aae400d0f697a45b8ab7de9c9c",
+    "613f67fcbba0f17381b95cc3ed7485de",
+    "808d9b40858bba05be7a191b182be2ef",
+    "914c93622bc33053f1f3a5baa51bda75",
+    "93a095b3bb5671b1c718b1c7b9d21a16",
+    "9a6236defce2934e46a85e5d4c0e663b",
+    "a0bc8ef92770b546ed517bd5e1d181eb",
+    "b0e6fc3409181748c81fa69b8ba62dd1",
+    "bb3548780bc9920ebcfad7db819017b8",
+    "d67f16bc029a9bc3910b3ba155e2c6e8",
+    "d6e0c0d173c29804a3f36f20186f5690",
+    "e078a9feaf0bd810306fe5a620bb4d68",
+    "f781aba8f899d9e55def28224dd1bc9b",
+    "fc54dafdc0dfbc12b9bd69d5ad27c710"
+  ],
+  "splits": {
+    "train": {
+      "queries": 2168,
+      "sha256": "7138da57e287f33533d88d3e84409567690e78ebec16414bd624ab41fc1618fd"
+    },
+    "dev": {
+      "queries": 240,
+      "sha256": "0616953d7de8ef40f9519842bdab60d8e5e2e5ef41c2e1e57011bcd0f3f419d8"
+    },
+    "test": {
+      "queries": 788,
+      "sha256": "e595e33b3bd3151a0290581ae49b1ad6e13522090e31ff650f3be79d729cf43e"
+    }
+  },
+  "label_completeness_warning": "Test labels are sparse: the 24 dropped queries each carry a different relevant document in train than in test, proving the real relevance set is larger than either file records. Every score on this set understates true performance.",
+  "roles": {
+    "train": "gradient updates only",
+    "dev": "early stopping and hyperparameter choice; never reported as a result",
+    "test": "reported numbers only; a baseline was measured on it on 04/09/2026"
+  }
+}

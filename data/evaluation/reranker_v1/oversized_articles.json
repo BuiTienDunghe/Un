@@ -1,0 +1,44 @@
+[
+ {
+  "query_id": "0869dceb6887ee36cf36375f011654ac",
+  "query": "Có giấy chứng nhận tốt nghiệp tạm thời có được tham dự khóa đào tạo nghề luật sư không?",
+  "doc_id": "20/2012/qh13+1",
+  "chunk_count": 69
+ },
+ {
+  "query_id": "08c2bd0bda4da6797f605cd0a1d3b42b",
+  "query": "Thời gian tổ chức khám sức khỏe cho thí sinh đăng ký vào các trường quân đội trong năm 2021 là khi nào?",
+  "doc_id": "42/2017/tt-bqp+1",
+  "chunk_count": 49
+ },
+ {
+  "query_id": "7acee3457b2bd77c0d9587c8051e2211",
+  "query": "Thẻ luật sư có thời hạn không?",
+  "doc_id": "20/2012/qh13+1",
+  "chunk_count": 69
+ },
+ {
+  "query_id": "8e8a90f4313c9db9ecc68a615c3e4ad9",
+  "query": "Mua 31,5 kg pháo thì bị phạt bao nhiêu năm tù?",
+  "doc_id": "12/2017/qh14+1",
+  "chunk_count": 371
+ },
+ {
+  "query_id": "909f52729443d2fc0a3a9c1144aea869",
+  "query": "Kiểm tra viên chính ngành Kiểm sát có được miễn tập sự hành nghề luật sư không?",
+  "doc_id": "20/2012/qh13+1",
+  "chunk_count": 69
+ },
+ {
+  "query_id": "bdfa673d5959cd14f0294ffa3b5bff49",
+  "query": "Tạt axit gây thương tích 5% sẽ bị phạt mức án nào?",
+  "doc_id": "12/2017/qh14+1",
+  "chunk_count": 371
+ },
+ {
+  "query_id": "eca713241568aabca96b777663238843",
+  "query": "Công ty Quản lý tài sản được góp vốn của khách hàng vay là doanh nghiệp dưới các hình thức nào?",
+  "doc_id": "32/2019/tt-nhnn+1",
+  "chunk_count": 37
+ }
+]
