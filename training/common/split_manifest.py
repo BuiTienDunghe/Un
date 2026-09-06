@@ -115,6 +115,24 @@ ARTIFACTS: list[dict] = [
         "template": None,
         "note": "Rule-filter cases. The filter decides what the extractor ever sees, so its fixtures gate the pipeline's input.",
     },
+    {
+        "path": "data/evaluation/heldout_retrieval_v1/zalo-legal_subset.jsonl",
+        "role": "heldout",
+        "generator": "human",
+        "template": None,
+        "note": "788 questions from Zalo AI Challenge 2021 legal text retrieval (MIT), with the "
+                "organisers' own relevance judgements. Written by people who had never seen this "
+                "system — the first evaluation here that this project did not author. Its corpus "
+                "is a seeded subset; see the provenance file beside it.",
+    },
+    {
+        "path": "data/evaluation/heldout_retrieval_v1/zalo-legal_subset_provenance.json",
+        "role": "heldout",
+        "generator": "human",
+        "template": None,
+        "note": "Seed, counts and corpus hash for the subset above. Rebuilding must reproduce this "
+                "hash or the numbers describe a different corpus.",
+    },
 ]
 
 

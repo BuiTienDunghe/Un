@@ -1,16 +1,19 @@
 # Failure modes
 
-Four incidents from this repository, written up in the shape Hamel Husain uses for
+Five incidents from this repository, written up in the shape Hamel Husain uses for
 error analysis: what broke, how it stayed hidden, what actually found it, what the
 fix was, and what would catch it now.
 
 The reason to write them down is narrow. Every one of these survived a system that
 already had tests, a CI gate, and a recorded retrieval eval. None of them was a case
-of nobody measuring. Three of the four were invisible *because* the measurements
-that existed were the wrong shape — an average that cannot see a permutation, a
-version pin that pins nothing, a confidence score that is decoration. The fourth was
-a gate that went red for eight days for a reason it does not watch, and the error
-message could not tell a powered-down machine from a real regression.
+of nobody measuring. Three were invisible *because* the measurements that existed
+were the wrong shape — an average that cannot see a permutation, a version pin that
+pins nothing, a confidence score that is decoration. The fourth was a gate that went
+red for eight days for a reason it does not watch, and the error message could not
+tell a powered-down machine from a real regression. The fifth was invisible because
+of what the measurements were *made of*: an evaluation corpus written by the author,
+out of the author's own documents, which could not represent the document type that
+broke the system.
 
 So this document is about the limits of measurement, not the absence of it. Where a
 fix cost something, the cost is stated. One of these incidents shipped with a
@@ -453,6 +456,96 @@ when a run happened and failed.
 
 ---
 
+## 5. A third of a public legal corpus was unindexable, and the eval could not see it
+
+**Found 4 September 2026, on the first external corpus this project ever measured on**
+
+### What broke
+
+`_HEADING_PATTERN` in `backend/app/utils/chunking.py` has a branch matching any line
+shaped `<number>. <text>`. It is there for real numbered headings — "1. Introduction",
+"2.1 Setup".
+
+Vietnamese legal documents are written entirely as numbered clauses. Every line
+matched, every line was classified as a heading, no body text survived, `chunk_pages`
+returned an empty list, and `postgres_document_service.py:437` rejected the document
+with `Document contains no readable text` — a message that is wrong twice over. The
+text was readable; the chunker discarded it.
+
+On a 2 947-document subset of Zalo Legal 2021: 960 documents (32.6%) produced no
+chunks, taking 166 of the 447 judged-relevant documents with them and making 184 of
+788 questions unanswerable.
+
+### How it hid
+
+The 82-question eval could not have found this, and no amount of running it more often
+would have helped. Its corpus is this repository's own documentation — five markdown
+files that use `#` headings. The evaluation set and the failing input have no overlap
+in structure, so the gate was green and honest and completely blind.
+
+That is the general shape: a self-made evaluation corpus tests the system against the
+kind of document its author already had. Legal text, minutes, numbered regulations —
+the document types most likely to appear in a real deployment of a Vietnamese document
+assistant — were never represented.
+
+The error message finished the job. "Document contains no readable text" reads like a
+scanning problem: a bad PDF, a failed OCR pass, an empty file. Nothing in it points at
+chunking, so an operator seeing it on a legal document would reasonably conclude the
+file was the problem.
+
+### What found it
+
+Loading a public dataset. Nine of the first thirty documents failed on ingest, and the
+files plainly had text in them.
+
+### The fix
+
+A numbered line is a heading only when it does **not** end in sentence punctuation
+(`.` `;` `:` `!` `?`). A heading is a label; a clause is a sentence.
+
+Isolating which signal does the work mattered more than the fix. Punctuation alone
+leaves 0.6% of the corpus unchunkable; a length cap alone leaves 1.0%; both together
+leave 0.6%. Adding the cap changes nothing, so it is not in the change. A rule that
+survives having half of itself removed is a signal; one tuned until the number looks
+right is not.
+
+Because chunking changes every chunk in the system, this ran as a pre-registered
+experiment (`.scratch/chunker-numbered-clause/spec.md`) with a control arm. The control
+existed because contextual retrieval makes one non-deterministic generation call per
+chunk at index time, so re-indexing moves the numbers on its own:
+
+| Arm | recall@5 | MRR | doc_hit |
+| --- | ---: | ---: | ---: |
+| baseline, recorded 25/08 | 0.9878 | 0.9360 | 0.9268 |
+| control — re-index, unchanged code | 0.9878 | 0.9350 | 0.9268 |
+| treatment — new chunker | 0.9878 | 0.9339 | 0.9268 |
+
+Re-indexing alone cost 0.0010 MRR; the change cost a further 0.0011. Against the
+recorded baseline the change would have appeared twice as expensive as it is. Per
+question, zero went from found to missed and one slipped from rank 3 to rank 4.
+
+On the legal corpus: 32.6% unindexable to 0.6%, all 447 relevant documents recovered,
+all 788 questions answerable.
+
+### What now catches it
+
+Two regression tests: an article of numbered clauses must produce chunks, and a real
+numbered heading must still be a heading. Neither would have existed without an
+external corpus to fail against, which is the durable lesson — the held-out set is now
+part of the project for that reason, not only for the score it produces.
+
+Still open, and found while verifying this: a numbered heading's title reaches neither
+the chunk body nor `heading_path`, so its words are absent from retrieval entirely,
+while a markdown `#` heading in the same position is recorded. Verified identical
+before and after this change. It has its own ticket.
+
+Also still open: the nightly eval measures a database whose documents lost their
+original files in the 22/08 path migration, so no chunking change can ever reach it,
+and the `source_available` flag in that database still reports `True`. The gate keeps
+passing on chunks frozen under the old rule.
+
+---
+
 ## Patterns
 
 **Instrumentation nobody reads is not instrumentation.** The tokenizer printed
@@ -479,3 +572,19 @@ not to keep them in sync by discipline.
 not a finding — and three different causes (an unexported secret, a powered-down
 machine, a real regression) all rendered as the same red. A gate that cannot say
 *why* it is red trains you to stop looking at it, at which point it protects nothing.
+
+**An evaluation set made of your own documents tests the documents you already had.**
+The 82-question corpus is this repository's own markdown, and no amount of running it
+could reveal that a third of a Vietnamese legal corpus was unindexable, because
+markdown with `#` headings and legal text made of numbered clauses fail in different
+places. The first external corpus this project measured on found the defect in the
+first thirty documents. Held-out data written by someone else is not only a fairer
+score — it is a different set of failure modes.
+
+**An error message that names the wrong layer costs more than no message.**
+`Document contains no readable text` reads like a scanning problem, so an operator
+seeing it on a legal document concludes the file is bad and moves on. The text was
+readable; the chunker discarded it. The same pattern appears in `source_available`,
+a database flag that still reports `True` for documents whose files were deleted in a
+path migration a fortnight earlier — a stored answer to a question that has to be
+asked of the filesystem.

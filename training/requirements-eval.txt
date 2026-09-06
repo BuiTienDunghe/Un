@@ -1,0 +1,14 @@
+# Public-benchmark tooling. Separate from requirements-train.txt on purpose:
+# this file installs in about a minute and pulls no PyTorch, because mteb talks
+# to the embedding model over Ollama's OpenAI-compatible endpoint rather than
+# loading weights in-process. Training needs torch; measuring does not, and
+# paying 2.5 GB to run a benchmark would discourage running it.
+#
+# Also separate from the production requirements (invariant #5): the API and the
+# launcher must never need any of this.
+#
+#     py -3.11 -m venv .venv-eval
+#     .venv-eval\Scripts\pip install -r training/requirements-eval.txt
+#
+# Measured 04/09/2026: 13 packages, ~100 MB of wheels, no torch/transformers.
+mteb>=2.20,<3.0

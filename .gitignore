@@ -9,6 +9,9 @@ build/
 
 # ── Virtual environment ──
 .venv/
+# Training and eval environments (torch, ~2-3 GB each). Install per training/requirements-*.txt.
+.venv-train/
+.venv-eval/
 venv/
 env/
 ENV/
@@ -98,3 +101,18 @@ data/sqlite/*.sqlite3
 
 # .scratch/ la issue tracker cua repo (spec + ticket) - CO commit, co chu dich.
 # Xem .scratch/README.md. Dung them .scratch/ vao day.
+
+# Bo du lieu held-out tai ve tu ben ngoai: khong commit (115MB+, va la du lieu cua nguoi khac).
+# Tai lai bang: python -m training.common.fetch_heldout --all
+data/heldout_raw/
+
+# Bao cao do held-out: giu lai (nho, la bang chung cho so tren CV).
+!data/evaluation/heldout_retrieval_v1/
+!data/evaluation/heldout_retrieval_v1/**
+
+# File PID cua eval stack - trang thai runtime, khong commit.
+data/eval_stack_*.pids
+
+# Moi truong do benchmark (mteb keo theo torch CPU). Dung lai bang:
+#   py -3.11 -m venv .venv-eval && .venv-eval\Scripts\pip install -r training/requirements-eval.txt
+.venv-eval/

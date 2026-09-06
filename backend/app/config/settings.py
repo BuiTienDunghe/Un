@@ -116,6 +116,12 @@ class Settings(BaseSettings):
     # GENERATION call — it adds milliseconds per question, measured in
     # docs/p4_progress.md.
     rag_reranker_enabled: bool | None = None
+    # Per-machine override of models.yaml rag.retrieval_mode: dense | bm25 |
+    # hybrid. Same idiom as the three flags above, added for the same reason
+    # they were: measuring one layer at a time must not mean editing a file
+    # production reads. Nothing in the answer path changes unless it is set —
+    # unset follows models.yaml, which stays hybrid.
+    rag_retrieval_mode: str | None = None
     superseded_version_grace_days: int = 7
     backup_dir: str = "data/backups"
     # Second copy of every dump/source archive, e.g. another volume or a

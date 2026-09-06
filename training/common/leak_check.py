@@ -109,10 +109,17 @@ def check_text(candidate: Path, artifacts: list[dict], n: int, threshold: float)
         raise SystemExit(f"{candidate} yielded no {n}-grams — wrong file, or shorter than {n} words per row?")
     problems = []
     print(f"candidate: {candidate}  ({len(candidate_ngrams):,} distinct {n}-grams)")
+    candidate_resolved = candidate.resolve()
     for artifact in artifacts:
         if artifact["role"] not in {"gate", "heldout"}:
             continue
         path = PROJECT_ROOT / artifact["path"]
+        if path.exists() and path.resolve() == candidate_resolved:
+            # Comparing a file with itself is a 100% match and means nothing. It
+            # happens on purpose: checking a newly built held-out set against the
+            # manifest it was just registered in.
+            print(f"  --   (bo qua)                          {artifact['path']} — chinh la ung vien")
+            continue
         if not path.exists():
             problems.append(f"{artifact['path']}: listed in the manifest, missing on disk")
             continue

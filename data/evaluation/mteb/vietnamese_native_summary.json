@@ -1,0 +1,61 @@
+{
+  "model": "qwen3-embedding:0.6b",
+  "served_by": "Ollama, quantization Q8_0, 595.78M params, dim 1024",
+  "measured": "2026-09-04/05",
+  "note": "mteb 2.20.5, four native Vietnamese retrieval tasks. Measures the embedding model alone: no chunking, no BM25, no rank fusion, no reranker.",
+  "instruction": false,
+  "tasks": [
+    {
+      "task": "GreenNodeTableMarkdownRetrieval",
+      "split": "test",
+      "ndcg_at_10": 0.37684,
+      "recall_at_10": 0.4766,
+      "mrr_at_10": 0.345693,
+      "main_score": 0.37684
+    },
+    {
+      "task": "TVPLRetrieval",
+      "split": "test",
+      "ndcg_at_10": 0.79359,
+      "recall_at_10": 0.90598,
+      "mrr_at_10": 0.769261,
+      "main_score": 0.79359
+    },
+    {
+      "task": "VieQuADRetrieval",
+      "split": "validation",
+      "ndcg_at_10": 0.48481,
+      "recall_at_10": 0.55835,
+      "mrr_at_10": 0.606985,
+      "main_score": 0.48481
+    },
+    {
+      "task": "ZacLegalTextRetrieval",
+      "split": "test",
+      "ndcg_at_10": 0.71883,
+      "recall_at_10": 0.88452,
+      "mrr_at_10": 0.665496,
+      "main_score": 0.71883
+    }
+  ],
+  "mean_ndcg_at_10": 0.5935,
+  "instruction_ablation": {
+    "what": "Query-side instruction only, in the shape Qwen3-Embedding was trained with (Instruct: {task}\nQuery: {text}). Documents stay bare, so no re-indexing.",
+    "measured": "2026-09-05",
+    "results": [
+      {
+        "task": "VieQuADRetrieval",
+        "without": 0.4848,
+        "with": 0.5315,
+        "delta": 0.0467
+      },
+      {
+        "task": "TVPLRetrieval",
+        "without": 0.7936,
+        "with": 0.8015,
+        "delta": 0.008
+      }
+    ],
+    "caution": "A first attempt showed a delta of 0.0002 and nearly concluded instructions do nothing. That run was a no-op: the wrapper only applies an instruction when prompt_dict is not None, so both arms measured the same configuration."
+  }
+}

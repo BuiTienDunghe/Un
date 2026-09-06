@@ -1,0 +1,2 @@
+{"task": "VieQuADRetrieval", "splits": ["validation"], "version": {"mteb": "2.20.5", "torch": "2.14.0", "sentence-transformers": "6.0.1", "flash-attn": null, "transformers": "5.16.1"}, "encode_kwargs": {"batch_size": 128}, "subsets": ["default"]}
+{"task": "TVPLRetrieval", "splits": ["test"], "version": {"mteb": "2.20.5", "torch": "2.14.0", "sentence-transformers": "6.0.1", "flash-attn": null, "transformers": "5.16.1"}, "encode_kwargs": {"batch_size": 128}, "subsets": ["default"]}

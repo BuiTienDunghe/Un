@@ -179,7 +179,15 @@ async def lifespan(app: FastAPI):
     # Fail here, on a machine that turned the reranker on without the [rerank]
     # extra, rather than on that machine's first question (P4-3).
     reranker_service.warmup()
-    retrieval_service = PostgresRetrievalService(qdrant_store, router, postgres_sessions, bm25_service, reranker_service, str(rag_config.get("retrieval_mode", "hybrid")), int(rag_config.get("rrf_k", 60)))
+    retrieval_mode = (settings.rag_retrieval_mode or "").strip() or str(rag_config.get("retrieval_mode", "hybrid"))
+    if settings.rag_retrieval_mode:
+        # Say so where the operator will see it. A machine measuring one
+        # retrieval layer must never look like a machine serving all of them.
+        from loguru import logger
+
+        logger.bind(event="retrieval_mode_override", mode=retrieval_mode, source="env").info(
+            "Retrieval mode {} (per-machine env override)", retrieval_mode)
+    retrieval_service = PostgresRetrievalService(qdrant_store, router, postgres_sessions, bm25_service, reranker_service, retrieval_mode, int(rag_config.get("rrf_k", 60)))
     injection_defense = InjectionDefense.from_config(rag_config, enabled_override=settings.rag_injection_defense_enabled)
     app.state.rag_service = RagService(
         router,

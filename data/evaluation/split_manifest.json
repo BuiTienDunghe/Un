@@ -100,6 +100,26 @@
       "sha256": "e2a300aa415496052c5cd3f816f3cea82ea352789f9577e74fe28187de828543",
       "bytes": 22928,
       "files": 1
+    },
+    {
+      "path": "data/evaluation/heldout_retrieval_v1/zalo-legal_subset.jsonl",
+      "role": "heldout",
+      "generator": "human",
+      "template": null,
+      "note": "788 questions from Zalo AI Challenge 2021 legal text retrieval (MIT), with the organisers' own relevance judgements. Written by people who had never seen this system — the first evaluation here that this project did not author. Its corpus is a seeded subset; see the provenance file beside it.",
+      "sha256": "bff6bdb835b68c2cc8b76110cf34ceda7883409fa9dbd23f05214d470546a435",
+      "bytes": 194233,
+      "files": 1
+    },
+    {
+      "path": "data/evaluation/heldout_retrieval_v1/zalo-legal_subset_provenance.json",
+      "role": "heldout",
+      "generator": "human",
+      "template": null,
+      "note": "Seed, counts and corpus hash for the subset above. Rebuilding must reproduce this hash or the numbers describe a different corpus.",
+      "sha256": "555d1b5bb45193234ff5d4d0e5d03b76d7715cb37c6d74bfed927fcf0577adb6",
+      "bytes": 773,
+      "files": 1
     }
   ]
 }

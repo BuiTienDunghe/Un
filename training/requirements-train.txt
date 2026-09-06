@@ -15,6 +15,18 @@
 #     python -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_capability())"
 # Expect (12, 0). A wheel without sm_120 fails at the first kernel launch, not
 # at import, which is a slow and confusing way to find out.
+# WARNING, measured 05/09/2026: `--extra-index-url` is NOT enough. pip resolved
+# torch from PyPI anyway and installed 2.14.0+cpu, which trains 139x slower — one
+# epoch went from 74 seconds to nearly three hours, and nothing warns you: it
+# imports fine and `cuda.is_available()` simply returns False. Install torch on
+# its own line first, from the CUDA index only:
+#
+#   .venv-train\Scripts\pip install --index-url https://download.pytorch.org/whl/cu128 "torch>=2.9,<3.0"
+#   .venv-train\Scripts\pip install -r training/requirements-train.txt
+#
+# Then verify before anything else — a wheel without sm_120 fails at the first
+# kernel launch, not at import:
+#   python -c "import torch; print(torch.cuda.get_device_capability())"   # expect (12, 0)
 --extra-index-url https://download.pytorch.org/whl/cu128
 torch>=2.9,<3.0
 

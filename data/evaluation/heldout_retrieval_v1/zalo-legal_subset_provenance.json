@@ -1,0 +1,16 @@
+{
+  "dataset": "zalo-legal",
+  "built_by": "training/common/build_heldout_corpus.py",
+  "seed": 20260904,
+  "source_corpus_documents": 61425,
+  "relevant_documents": 447,
+  "distractors": 2500,
+  "corpus_documents": 2947,
+  "queries": 788,
+  "documents_truncated_at": 20000,
+  "documents_truncated": 3,
+  "corpus_sha256": "651a2767a50f442edf5fbeef678f243023dd218d94506c9380f1c73a6eb89702",
+  "dataset_sha256": "5a80c381f2c2d4e30526b3eff5248fbc7106ee2724c7364ca8b66fd21d6e36f9",
+  "corpus_dir": "data\\heldout_raw\\zalo-legal\\subset\\corpus_files",
+  "comparability": "Subset of the published corpus. Absolute recall/nDCG here are NOT comparable to numbers measured on the full 61k corpus; comparisons between configurations measured on THIS corpus are."
+}
