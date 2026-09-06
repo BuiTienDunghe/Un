@@ -1,12 +1,32 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Iterable
 
 
 _TOKEN_PATTERN = re.compile(r"\w+|[^\w\s]", re.UNICODE)
 _HEADING_PATTERN = re.compile(r"^(?P<hashes>#{1,6})\s+(?P<title>.+?)\s*$|^(?P<number>\d+(?:\.\d+){0,5})[.)]?\s+(?P<number_title>.+?)\s*$")
+# A heading is a label; a clause is a sentence. The numbered branch above exists
+# for "1. Introduction" and "2.1 Setup", but it also matches "1. Thông tư này có
+# hiệu lực..." — and Vietnamese legal texts are written entirely as numbered
+# clauses, so every line became a heading, no body survived, and the document was
+# rejected with "Document contains no readable text" while being perfectly
+# readable. Measured on 2 947 documents of Zalo Legal 2021: 32.6% of the corpus
+# produced no chunks at all, taking 37% of the judged-relevant documents with it.
+# Ending punctuation is what separates the two, and it carries the whole effect:
+# adding a length cap changed nothing (0.6% either way), so there is no fitted
+# threshold here. See .scratch/chunker-numbered-clause/spec.md.
+_SENTENCE_ENDINGS = (".", ";", ":", "!", "?")
+
+
+def _heading_match(line: str) -> re.Match[str] | None:
+    match = _HEADING_PATTERN.match(line)
+    if match and match.group("number") and not match.group("hashes"):
+        title = (match.group("number_title") or "").strip()
+        if title.endswith(_SENTENCE_ENDINGS):
+            return None
+    return match
 _SENTENCE_PATTERN = re.compile(r"(?<=[.!?…])\s+")
 
 
@@ -92,18 +112,25 @@ def chunk_pages(
             current = _overlap_blocks(current, overlap_tokens)
 
     for block in blocks:
-        fragments = _fit_block(block, chunk_tokens)
-        for fragment in fragments:
-            # Tables are retrieval units of their own: never merge a preceding paragraph
-            # into a table chunk, and never use table rows as textual overlap.
+        for fragment in _fit_block(block, chunk_tokens):
+            # Tables are retrieval units of their own: never merge a neighbouring
+            # paragraph into a table chunk, and never use table rows as overlap.
             if fragment.block_type == "table" and current:
+                # Flush the prose before a table and drop the carried overlap: a
+                # prose tail glued to a table is a chunk of two unrelated things,
+                # and carried past a large table it was emitted alone as an
+                # 80-token sliver. The table itself stays in the accumulator so
+                # the prose that follows it — usually the sentence explaining it —
+                # can join, which is what lets a question find a value in a table.
                 emit()
-            candidate = current + [fragment]
-            if current and count_tokens(_join_blocks(candidate)) > chunk_tokens:
+                current = []
+            if current and count_tokens(_join_blocks(current + [fragment])) > chunk_tokens:
                 emit()
+                # Carried overlap never justifies an over-budget chunk: give it up
+                # oldest-first until the incoming fragment fits beside it.
+                while current and count_tokens(_join_blocks(current + [fragment])) > chunk_tokens:
+                    current.pop(0)
             current.append(fragment)
-            if count_tokens(_join_blocks(current)) >= chunk_tokens:
-                emit()
     if current:
         result.append(_make_chunk(current))
     return result
@@ -155,7 +182,7 @@ def _blocks_from_pages(pages: Iterable[tuple[int | None, str, str]], table_token
             if not line:
                 flush_paragraph(); flush_table()
                 continue
-            heading = _HEADING_PATTERN.match(line)
+            heading = _heading_match(line)
             if heading:
                 flush_paragraph(); flush_table()
                 level = len(heading.group("hashes") or "") or len((heading.group("number") or "").split("."))
@@ -197,12 +224,17 @@ def _table_blocks(text: str, page: int | None, start: int, end: int, headings: t
 def _fit_block(block: _Block, limit: int) -> list[_Block]:
     if count_tokens(block.text) <= limit or block.block_type == "table":
         return [block]
-    sentences = [part.strip() for part in _SENTENCE_PATTERN.split(block.text) if part.strip()]
-    if len(sentences) == 1:
-        sentences = _token_slices(block.text, limit)
+    pieces: list[str] = []
+    for sentence in (part.strip() for part in _SENTENCE_PATTERN.split(block.text)):
+        if not sentence:
+            continue
+        # A sentence past the whole budget has no boundary left to split on, so it
+        # falls back to token slices. Without this it was emitted whole, which is
+        # where chunks several times over the limit came from.
+        pieces.extend(_token_slices(sentence, limit) if count_tokens(sentence) > limit else [sentence])
     fragments: list[_Block] = []
     current = ""
-    for sentence in sentences:
+    for sentence in pieces:
         candidate = f"{current} {sentence}".strip()
         if current and count_tokens(candidate) > limit:
             fragments.append(_Block(current, block.page, block.start, block.end, block.heading_path, block.block_type, block.extraction_method))
@@ -227,6 +259,13 @@ def _token_slices(text: str, limit: int) -> list[str]:
 
 
 def _overlap_blocks(blocks: list[_Block], overlap_tokens: int) -> list[_Block]:
+    """The trailing ``overlap_tokens`` of a flushed chunk, prefixing the next one.
+
+    Overlap is measured in tokens, not whole blocks: a block longer than the
+    remaining budget is carried as its trailing tokens only. Carrying such a
+    block whole is what used to make the next chunk a superset of the one just
+    emitted, and pushed it past ``chunk_tokens``.
+    """
     if not overlap_tokens:
         return []
     result: list[_Block] = []
@@ -234,11 +273,39 @@ def _overlap_blocks(blocks: list[_Block], overlap_tokens: int) -> list[_Block]:
     for block in reversed(blocks):
         if block.block_type == "table":
             break
+        size = count_tokens(block.text)
+        if total + size > overlap_tokens:
+            tail = _tail_tokens(block.text, overlap_tokens - total)
+            if tail:
+                result.insert(0, _trim_to_tail(block, tail))
+            break
         result.insert(0, block)
-        total += count_tokens(block.text)
+        total += size
         if total >= overlap_tokens:
             break
     return result
+
+
+def _tail_tokens(text: str, limit: int) -> str:
+    """The trailing ``limit`` tokens of ``text``, cut on a token boundary."""
+    if limit <= 0:
+        return ""
+    tokens = list(_TOKEN_PATTERN.finditer(text))
+    if len(tokens) <= limit:
+        return text
+    return text[tokens[-limit].start():].strip()
+
+
+def _trim_to_tail(block: _Block, tail: str) -> _Block:
+    """``block`` reduced to its trailing ``tail``, keeping the block's own span.
+
+    The span is deliberately left too wide. ``start``/``end`` index the raw page
+    text, while ``text`` is the whitespace-joined paragraph, so the two are in
+    different coordinate systems and no proportion between them is meaningful.
+    A span that is too wide still contains the text it labels; a proportioned one
+    pointed 14.5% of chunks at a different passage entirely.
+    """
+    return replace(block, text=tail)
 
 
 def _make_chunk(blocks: list[_Block]) -> DocumentChunk:

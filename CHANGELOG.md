@@ -12,6 +12,69 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 ## [Unreleased]
 
 ### Fixed
+- **Bộ chia chunk phát mảnh sau chứa trọn mảnh trước — 20,5% chunk trong kho sản phẩm là bản sao, 31% vượt ngân sách** (06–07/09).
+  `_overlap_blocks` đo phần chồng lấn bằng **khối**, không bằng token: nó gom nguyên khối cho tới khi
+  đủ 80 token rồi trả cả khối, nên một khối 390 token thành "chồng lấn 80 token" và mảnh kế phát lại
+  toàn bộ. Vòng `chunk_pages` lại xả hai lần mỗi mảnh và không kiểm phần mang sang có còn chỗ, nên mảnh
+  thứ hai vượt hạn ngay từ cách dựng; `_fit_block` chỉ cắt câu quá dài khi khối có đúng một câu, nên
+  câu 1 977 token đi nguyên. Phát hiện khi chấm nhãn reranker: 483/508 cặp "cần hai mảnh" là vì hai
+  mảnh **cùng một đoạn chữ**. Đo trên 1 630 bài luật: 1 164 chunk vượt 480 token (31%), 1 906 cặp kề
+  nhau chứa trọn nhau, ký tự phát ra gấp **1,96** lần gốc; sau sửa: 0 · 0 · 1,02, và 0 chunk vượt hạn
+  trên toàn bộ 61 425 tài liệu ở 11 bộ tham số.
+  **Sửa** (phiên nền, thẻ việc): chồng lấn tính bằng token, mang đúng phần đuôi; bỏ lần xả thứ hai;
+  bỏ phần chồng lấn cũ nhất cho tới khi mảnh mới vừa ngân sách; cắt mọi câu quá dài bằng lát token.
+  Kiểm chéo bởi 90 tổ độc lập trước khi re-index: 0 token mất trên 2 030 tài liệu theo bốn cách đo;
+  tìm ra **một lỗi trong chính bản sửa** — `_trim_to_tail` ước lượng lại toạ độ bằng phép chia tỉ lệ
+  giữa hai thước khác nhau (thân bài thô và đoạn đã nối dòng), trỏ **14,5% chunk** vào sai đoạn trích
+  dẫn; sửa bằng cách giữ khoảng rộng-nhưng-đúng, có test hồi quy đã kiểm là hỏng trước/qua sau.
+  **Thí nghiệm có luật ghi trước** (`.scratch/chunker-overlap-containment/spec.md`), đối chứng = cây
+  hiện tại (không phải `54bdbf7`, mốc đó bỏ 32,7% corpus luật nên sẽ đo hai bản sửa cùng lúc).
+  Held-out 788 câu luật: recall@5 **0,9619 → 0,9810** (reranker bật), Acc@1 0,7766 → 0,7843, được 16 câu
+  mất 1 (đọc từng câu: một là hai điều liền nhau cùng nghị định hoà nhau ở BM25, một là reranker chưa
+  train hạ hạng-2 khỏi top-5 — không câu nào do mất chữ). Bộ 82 câu markdown: bản như giao **trượt**
+  (MRR 0,9350 → 0,8907/0,8967, mất 1 câu) và nguyên nhân **không phải bản sửa** mà là thay đổi kèm
+  thêm ngoài phạm vi: tách mọi bảng thành chunk riêng, làm bảng 101 token mất đoạn văn giải thích nó và
+  thua chunk hàng xóm. Đổi quy tắc bảng (xả đoạn văn trước bảng không mang chồng lấn; đoạn văn sau bảng
+  được ghép vào — T3): 0 câu mất, recall@5 0,9878 → 1,0000, MRR 0,9136 ×2 lần tái lập — hụt vạch −0,02
+  đúng 0,0014, phần hụt là bảy câu chunk đích y hệt bị reranker xáo khi bể ứng viên đổi. Chủ dự án
+  chọn T3 ngày 07/09. Nhãn reranker: 797/797 bản án có đáp án khớp lại tự động theo câu-đáp-án và
+  trích dẫn của tổ chấm (`training/reranker/remap_judgements.py`), 0 phải đọc tay; kho `drill_heldout`
+  re-index 4 785 → 3 896 chunk. Bộ test đầy đủ 754 qua.
+
+### Added
+- `training/common/eval_stack.py --contextual/--no-contextual` để tắt lớp sinh lời dẫn LLM khi cần
+  một cặp A/B tất định về biên chunk; `training/common/reindex_all.py` đổi vòng chờ 1 s cố định sang
+  backoff (2 945 tài liệu: 745 s thay vì ~50 phút chỉ để chờ đồng hồ);
+  `training/reranker/remap_judgements.py` mang nhãn chunk sang chunker mới theo nội dung, không theo chỉ số.
+
+### Fixed
+- **Bộ chia chunk coi mọi dòng đánh số là tiêu đề — 32,6% corpus luật Việt Nam không nạp được** (04/09).
+  `_HEADING_PATTERN` có nhánh khớp mọi dòng dạng `<số>. <chữ>`, vốn để bắt tiêu đề thật kiểu
+  "1. Giới thiệu". Văn bản luật Việt Nam viết toàn khoản đánh số, nên **mọi dòng** thành tiêu đề,
+  không còn thân, `chunk_pages` trả rỗng, và tài liệu bị từ chối với
+  `Document contains no readable text` — thông báo sai ở cả hai vế: văn bản đọc được, chỉ là
+  chunker vứt nó đi. Đo trên tập con 2.947 tài liệu Zalo Legal 2021: **960 tài liệu (32,6%)**
+  không chia được chunk, kéo theo **166/447** tài liệu chứa đáp án và **184/788** câu hỏi.
+  **Sửa:** một dòng đánh số chỉ là tiêu đề khi KHÔNG kết thúc bằng dấu câu (`. ; : ! ?`).
+  Tách tín hiệu trước khi chốt: chỉ dấu câu → 0,6%; chỉ độ dài > 80 ký tự → 1,0%; cả hai → 0,6%.
+  Thêm giới hạn độ dài không đổi gì nên **không đưa vào** — luật sống sót khi bỏ bớt một nửa là
+  tín hiệu, không phải ngưỡng chỉnh cho vừa số.
+  **Thí nghiệm có luật ghi trước** (`.scratch/chunker-numbered-clause/spec.md`), ba nhánh trên
+  cùng một database dựng từ cùng bộ fixture: baseline 25/08 (MRR 0,9360) · đối chứng index lại
+  không đổi code (0,9350) · can thiệp (0,9339). **Nhánh đối chứng là điểm mấu chốt**: chỉ riêng
+  việc index lại đã dịch MRR 0,0010 vì contextual retrieval gọi model sinh một lần mỗi chunk và
+  lời gọi đó không tất định; thay đổi dịch thêm 0,0011, cùng bậc độ lớn. So thẳng với baseline sẽ
+  đổ cả hai lên đầu thay đổi. Theo từng câu: **0 câu tìm-thấy → không-tìm-thấy**, đúng 1 câu tụt
+  hạng 3 → 4 (`ca_lam_moi_sau_phase`). Bốn trong năm tài liệu eval chia chunk y hệt; tài liệu thứ
+  năm đổi vì một dòng đánh số **bên trong khối mã bash** không còn bị coi là tiêu đề.
+  Cả 4 điều kiện nghiệm thu đạt. Suite 746 xanh, thêm 2 test hồi quy.
+  **Baseline CỐ Ý chưa ghi lại:** nó canh cổng eval đêm, mà eval đêm đo `local_ai_core_lab_20260821`
+  — database có tài liệu mất file gốc từ lần chuyển đường dẫn 22/08 nên không index lại được, chunk
+  ở đó đóng băng theo luật cũ. Ghi baseline từ database khác sẽ khiến baseline và cổng đo hai corpus
+  khác nhau. Eval đêm vẫn xanh và vẫn tái lập baseline chính xác. Dựng lại corpus lab là điều kiện
+  tiên quyết và là quyết định của người vận hành.
+
+### Fixed
 - **Cổng eval đêm đỏ 8 ngày vì một lý do nó không canh** (27/08–04/09). Lần chạy xanh cuối là
   26/08. Sau đó **hai** đêm chết 401 ở lệnh upload đầu tiên, **ba** đêm chết exit 97 vì máy tắt,
   và **bốn** đêm không để lại dòng log nào. Ba nguyên nhân khác nhau cho ra một màu đỏ giống hệt.
