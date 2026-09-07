@@ -184,7 +184,10 @@ def events_named(records: list[dict], event: str) -> list[dict]:
 # ── the suite default: probes off ─────────────────────────────────────────────
 
 
-def test_suite_default_boot_serves_every_pointer_unverified_and_reports_ok(client):
+def test_suite_default_boot_serves_every_pointer_unverified_and_reports_ok(mock_ollama, client):
+    # mock_ollama comes first: /health.status folds in the Ollama healthcheck, and CI has no
+    # Ollama. What this test asserts about the top-level status is that the registry leaves
+    # it alone, so the environment must not be what decides it (CI run #78 went red on this).
     models = client.get("/models").json()
     health = client.get("/health").json()
 
@@ -212,7 +215,7 @@ def test_suite_default_boot_serves_every_pointer_unverified_and_reports_ok(clien
 # ── acceptance D: a broken active reranker ────────────────────────────────────
 
 
-def test_broken_active_reranker_falls_back_and_every_signal_says_so(registry_app, registry_events):
+def test_broken_active_reranker_falls_back_and_every_signal_says_so(mock_ollama, registry_app, registry_events):
     client = registry_app
     models = client.get("/models").json()
     health = client.get("/health").json()
@@ -277,7 +280,7 @@ def test_write_baseline_refuses_against_the_fallback_server(registry_app, tmp_pa
 # ── acceptance C: the shipped file with every probe answering ─────────────────
 
 
-def test_shipped_registry_with_every_probe_answering_is_all_active_off_or_unconfigured(shipped_app, registry_events):
+def test_shipped_registry_with_every_probe_answering_is_all_active_off_or_unconfigured(mock_ollama, shipped_app, registry_events):
     models = shipped_app.get("/models").json()
     health = shipped_app.get("/health").json()
     rows = models["registry"]
