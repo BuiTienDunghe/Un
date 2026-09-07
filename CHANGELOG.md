@@ -11,6 +11,10 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+_Chưa có gì kể từ 1.1.0._
+
+## [1.1.0] - 2026-09-07
+
 ### Added
 - **Registry phiên bản model — mọi vai trò một con trỏ, tự lùi chỉ khi bản active không nạp được
   lúc khởi động** (07/09; ADR `docs/adr/0001-model-version-registry.md`, runbook
@@ -818,5 +822,6 @@ dẫn nguồn đã đo được chất lượng, hai kênh web và Discord dùng
 - Bộ eval mới phủ một tài liệu và đã bão hòa ở 100%, chưa đo được tiến bộ tiếp theo (G7).
 - BM25 chạy trong tiến trình, giới hạn quy mô corpus (G8).
 
-[Unreleased]: https://github.com/BuiTienDunghe/Un/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/BuiTienDunghe/Un/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/BuiTienDunghe/Un/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/BuiTienDunghe/Un/releases/tag/v1.0.0
