@@ -3,11 +3,12 @@ from __future__ import annotations
 import time
 from hashlib import sha256
 from uuid import NAMESPACE_URL, uuid5
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from typing import TypeVar
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, Filter, FieldCondition, MatchValue, PointIdsList, PointStruct, VectorParams
+from app.config.model_registry import QDRANT_UNREACHABLE, QdrantUnreachable
 from app.utils.chunking import DocumentChunk, normalize_chunk
 
 
@@ -21,12 +22,20 @@ class QdrantUnavailableError(Exception):
 
 T = TypeVar("T")
 
+# existing_point_ids: one retrieve per batch. 256 ids keeps the request small enough
+# for the HTTP client's default limits while a full rebuild (tens of thousands of
+# chunks) still needs only a few hundred round-trips.
+RETRIEVE_BATCH = 256
+
 
 class QdrantStore:
     collection_name = "documents"
     memories_collection_name = "memories"
 
-    def __init__(self, url: str, timeout: float, memories_collection: str | None = None, documents_collection: str | None = None) -> None:
+    def __init__(
+        self, url: str, timeout: float, memories_collection: str | None = None, documents_collection: str | None = None, *,
+        documents_sweep: Sequence[str] | None = None, memories_sweep: Sequence[str] | None = None,
+    ) -> None:
         self.client = QdrantClient(url=url, timeout=timeout)
         if memories_collection:
             self.memories_collection_name = memories_collection
@@ -35,7 +44,25 @@ class QdrantStore:
         # vectors with the operating corpus.
         if documents_collection:
             self.collection_name = documents_collection
+        # Model registry: one embedding version == one collection pair, and an
+        # inactive pair is FROZEN, not mirrored — writes go to the active collection
+        # only. Deletes therefore have to reach every registered collection, or a
+        # revoked memory / superseded version resurrects the day the pointer moves
+        # back. The sweep is `QdrantCollections.all_documents / all_memories`, active
+        # first; without one it is the active collection alone (today's behaviour).
+        self._documents_sweep = tuple(documents_sweep or ())
+        self._memories_sweep = tuple(memories_sweep or ())
         self.retry_count = 2
+
+    @property
+    def documents_sweep(self) -> tuple[str, ...]:
+        # Resolved at use time so a caller that reassigns collection_name after
+        # construction (test_sqlite_document_migration.py) still sweeps that name.
+        return self._documents_sweep or (self.collection_name,)
+
+    @property
+    def memories_sweep(self) -> tuple[str, ...]:
+        return self._memories_sweep or (self.memories_collection_name,)
 
     def healthcheck(self) -> bool:
         try:
@@ -44,17 +71,36 @@ class QdrantStore:
         except Exception:
             return False
 
-    def upsert_chunks(self, document_id: str, version_id: str | int, filename: str, chunks: list[DocumentChunk | tuple[str, int | None, str]], vectors: list[list[float]], chunk_ids: list[str] | None = None) -> None:
+    @staticmethod
+    def chunk_point_id(document_id: str, version_id: str | int, index: int) -> str:
+        """The point id of chunk `index` of one document version — the same uuid5 the
+        live index path mints below, exposed so rebuild_qdrant --missing-only can ask
+        existing_point_ids() about chunks it has not embedded yet."""
+        return str(uuid5(NAMESPACE_URL, f"local-ai-core:{document_id}:{version_id}:{index}"))
+
+    def upsert_chunks(self, document_id: str, version_id: str | int, filename: str, chunks: list[DocumentChunk | tuple[str, int | None, str]], vectors: list[list[float]], chunk_ids: list[str] | None = None, replace: bool = True, *, chunk_indices: Sequence[int] | None = None) -> None:
         if not vectors:
             return
         self._ensure_collection(len(vectors[0]))
         version_key = "version_id" if isinstance(version_id, str) else "index_version"
-        self._retry(lambda: self.client.delete(collection_name=self.collection_name, points_selector=Filter(must=[FieldCondition(key="document_id", match=MatchValue(value=document_id)), FieldCondition(key=version_key, match=MatchValue(value=version_id))])))
+        if replace:
+            self._retry(lambda: self.client.delete(collection_name=self.collection_name, points_selector=Filter(must=[FieldCondition(key="document_id", match=MatchValue(value=document_id)), FieldCondition(key=version_key, match=MatchValue(value=version_id))])))
+        # replace=False is rebuild_qdrant --missing-only: the caller already filtered
+        # to points absent from the collection (existing_point_ids), and the
+        # delete-by-filter would wipe the points it deliberately skipped.
+        # chunk_indices is the other half of that mode: the point id and the
+        # chunk_index payload are the chunk's POSITION in its version, so a partial
+        # list must name the positions it carries or every point would be minted as
+        # chunk 0, 1, 2 ... and collide with the ones already there. Absent = the
+        # list is complete and positional (the live index path).
+        if chunk_indices is not None and len(chunk_indices) != len(chunks):
+            raise ValueError(f"chunk_indices names {len(chunk_indices)} positions for {len(chunks)} chunks")
         points = []
-        for index, (raw_chunk, vector) in enumerate(zip(chunks, vectors, strict=True)):
+        for position, (raw_chunk, vector) in enumerate(zip(chunks, vectors, strict=True)):
+            index = int(chunk_indices[position]) if chunk_indices is not None else position
             chunk = normalize_chunk(raw_chunk)
             points.append(PointStruct(
-                id=str(uuid5(NAMESPACE_URL, f"local-ai-core:{document_id}:{version_id}:{index}")), vector=vector,
+                id=self.chunk_point_id(document_id, version_id, index), vector=vector,
                 payload={"document_id": document_id, "filename": filename,
                          "chunk_index": index, "page": chunk.page_start, "page_start": chunk.page_start,
                          # The payload keeps the joined display form every existing
@@ -62,7 +108,7 @@ class QdrantStore:
                          "page_end": chunk.page_end, "heading_path": " > ".join(chunk.heading_path) if chunk.heading_path else None,
                          "section_title": chunk.section_title, "block_type": chunk.block_type,
                          "extraction_method": chunk.extraction_method,
-                         **({"version_id": version_id, "chunk_id": chunk_ids[index], "content_hash": sha256(chunk.content.encode("utf-8")).hexdigest()} if isinstance(version_id, str) and chunk_ids else {"index_version": version_id})},
+                         **({"version_id": version_id, "chunk_id": chunk_ids[position], "content_hash": sha256(chunk.content.encode("utf-8")).hexdigest()} if isinstance(version_id, str) and chunk_ids else {"index_version": version_id})},
             ))
         self._retry(lambda: self.client.upsert(collection_name=self.collection_name, points=points, wait=True))
 
@@ -118,15 +164,13 @@ class QdrantStore:
         return migrated
 
     def delete_document_version(self, document_id: str, index_version: str | int) -> None:
-        if not self._retry(lambda: self.client.collection_exists(self.collection_name)):
-            return
         key = "version_id" if isinstance(index_version, str) else "index_version"
-        self._retry(lambda: self.client.delete(collection_name=self.collection_name, points_selector=Filter(must=[FieldCondition(key="document_id", match=MatchValue(value=document_id)), FieldCondition(key=key, match=MatchValue(value=index_version))]), wait=True))
+        selector = Filter(must=[FieldCondition(key="document_id", match=MatchValue(value=document_id)), FieldCondition(key=key, match=MatchValue(value=index_version))])
+        self._sweep(self.documents_sweep, lambda name: self.client.delete(collection_name=name, points_selector=selector, wait=True))
 
     def delete_document(self, document_id: str) -> None:
-        if not self._retry(lambda: self.client.collection_exists(self.collection_name)):
-            return
-        self._retry(lambda: self.client.delete(collection_name=self.collection_name, points_selector=Filter(must=[FieldCondition(key="document_id", match=MatchValue(value=document_id))]), wait=True))
+        selector = Filter(must=[FieldCondition(key="document_id", match=MatchValue(value=document_id))])
+        self._sweep(self.documents_sweep, lambda name: self.client.delete(collection_name=name, points_selector=selector, wait=True))
 
     def upsert_memory(self, memory_id: str, content: str, memory_type: str, importance: float, vector: list[float]) -> None:
         self._ensure_named_collection(self.memories_collection_name, len(vector))
@@ -134,7 +178,7 @@ class QdrantStore:
             # Qdrant accepts UUID/integer point IDs, while the public memory
             # contract deliberately uses opaque `mem_...` IDs. Keep that ID in
             # payload and derive a stable UUID for the vector-store key.
-            id=str(uuid5(NAMESPACE_URL, f"local-ai-core:memory:{memory_id}")),
+            id=self.memory_point_id(memory_id),
             vector=vector,
             payload={"memory_id": memory_id, "content": content, "memory_type": memory_type, "importance": importance},
         )
@@ -147,8 +191,78 @@ class QdrantStore:
         return [{"score": point.score, **dict(point.payload or {})} for point in results]
 
     def delete_memory(self, memory_id: str) -> None:
-        point_id = str(uuid5(NAMESPACE_URL, f"local-ai-core:memory:{memory_id}"))
-        self._retry(lambda: self.client.delete(collection_name=self.memories_collection_name, points_selector=PointIdsList(points=[point_id]), wait=True))
+        point_id = self.memory_point_id(memory_id)
+        self._sweep(self.memories_sweep, lambda name: self.client.delete(collection_name=name, points_selector=PointIdsList(points=[point_id]), wait=True))
+
+    def collection_dimension(self, name: str) -> int | None | QdrantUnreachable:
+        """Startup probe: the vector width of `name`; None when the collection is absent.
+
+        Single attempt, no _retry: on a dead Qdrant the retry sleeps (0.5 s + 1.5 s)
+        would land on every boot, and the answer has to keep "could not decide"
+        (QDRANT_UNREACHABLE) apart from "no such collection" (None) — the resolver
+        marks the embedding role unverified on the first and, with a non-empty
+        corpus, degraded on the second.
+        """
+        try:
+            if not self.client.collection_exists(name):
+                return None
+            vectors = self.client.get_collection(name).config.params.vectors
+        except Exception:
+            return QDRANT_UNREACHABLE
+        size = getattr(vectors, "size", None)
+        if size is None and isinstance(vectors, Mapping) and len(vectors) == 1:
+            # Named-vector layout with one vector; the store itself only ever creates
+            # the unnamed layout, so this is a courtesy for hand-built collections.
+            size = getattr(next(iter(vectors.values())), "size", None)
+        return int(size) if size is not None else QDRANT_UNREACHABLE
+
+    def point_count(self, name: str) -> int | QdrantUnreachable:
+        """Exact point count of `name`; 0 when absent; QDRANT_UNREACHABLE when Qdrant did
+        not answer. Single attempt, same reasoning as collection_dimension. The resolver
+        compares it with the Postgres corpus (active chunks / memories rows): fewer
+        points than rows is the `incomplete` state, the frozen-collection signal."""
+        try:
+            if not self.client.collection_exists(name):
+                return 0
+            return int(self.client.count(collection_name=name, exact=True).count)
+        except Exception:
+            return QDRANT_UNREACHABLE
+
+    @staticmethod
+    def memory_point_id(memory_id: str) -> str:
+        """The point id of one memory — the uuid5 upsert_memory/delete_memory derive from
+        the public `mem_...` id, exposed for rebuild_memories --missing-only."""
+        return str(uuid5(NAMESPACE_URL, f"local-ai-core:memory:{memory_id}"))
+
+    def existing_point_ids(self, point_ids: Sequence[str], *, collection: str | None = None) -> set[str]:
+        """Which of `point_ids` a collection already holds (rebuild_qdrant / rebuild_memories
+        --missing-only); the documents collection unless `collection` names another one
+        (the memories collection). client.retrieve in batches of RETRIEVE_BATCH with
+        neither payload nor vectors; an absent collection holds nothing."""
+        name = collection or self.collection_name
+        if not point_ids or not self._retry(lambda: self.client.collection_exists(name)):
+            return set()
+        found: set[str] = set()
+        for start in range(0, len(point_ids), RETRIEVE_BATCH):
+            batch = list(point_ids[start:start + RETRIEVE_BATCH])
+            records = self._retry(lambda: self.client.retrieve(collection_name=name, ids=batch, with_payload=False, with_vectors=False))
+            found.update(str(record.id) for record in records)
+        return found
+
+    def _sweep(self, names: Sequence[str], delete: Callable[[str], object]) -> None:
+        """Run one delete against every collection of a sweep, active collection first.
+
+        An absent collection is skipped (a version's pair may never have been built on
+        this stack); the first failure of an EXISTING collection raises
+        QdrantUnavailableError out of the loop. Callers see one call and one exception
+        before any Postgres write: PostgresCleanupService flips the row only after this
+        returns, so a half-swept version stays cleanup_pending and the retry, which
+        deletes the already-empty collections again, is idempotent.
+        """
+        for name in names:
+            if not self._retry(lambda: self.client.collection_exists(name)):
+                continue
+            self._retry(lambda: delete(name))
 
     def _ensure_collection(self, dimension: int) -> None:
         self._ensure_named_collection(self.collection_name, dimension)

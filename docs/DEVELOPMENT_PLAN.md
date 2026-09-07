@@ -22,6 +22,7 @@ Tài liệu này là **nguồn sự thật duy nhất** cho định hướng và
 | Kiến trúc hiện tại (mô tả code) | `docs/current_architecture.md` |
 | P4-4b — thiết kế v1 và lý do hoãn | `docs/p4_4_design.md` + §9 của tài liệu này |
 | Trí nhớ bot Discord — khảo sát Meta AI, thiết kế bốn tầng | `docs/memory_design.md` |
+| Registry phiên bản model — promote/demote/revert/rebuild, fallback lúc khởi động, và lý do chọn | `docs/model_registry.md` · ADR `docs/adr/0001-model-version-registry.md` |
 
 ---
 
@@ -160,11 +161,14 @@ Phân lane hai máy đã bỏ, nhưng **CI vẫn là một môi trường thứ 
 | `RAG_CONTEXTUAL_RETRIEVAL_ENABLED` | *(không đặt → models.yaml = true)* | `false` | P4-2: 1 lời gọi model/chunk lúc index |
 | `RAG_RERANKER_ENABLED` | *(không đặt → true)* | `false` | P4-3: cross-encoder 15 ứng viên/câu hỏi. +35ms trên GPU, **~990ms trên CPU** |
 | `RAG_INJECTION_DEFENSE_ENABLED` | *(không đặt → true)* | *(theo mặc định)* | D5: bọc passage/tool-result, 0 lời gọi thêm |
-| `QDRANT_DOCUMENTS_COLLECTION` | `documents` | `documents_test` | T11: cô lập vector index theo môi trường |
+| `QDRANT_DOCUMENTS_COLLECTION` | `documents` | `documents_test` | T11: cô lập vector index theo môi trường. Từ 07/09 là tên **gốc**: tên phục vụ = gốc + `_<collection_suffix>` của phiên bản embedding active (v0 suffix rỗng → không đổi) |
+| `MODEL_VERSION_<ROLE>` (`GENERAL`, `CONDENSER`, `EMBEDDING`, `OCR`, `RERANKER`, `EXTRACTOR`, `VERIFIER`) | *(không đặt → `active` trong `model_versions.yaml`)* | *(không đặt)* | Ghim một id phiên bản cho riêng máy này — **chỉ trong shell của phiên đo, không bao giờ trong `.env`**; id lạ → từ chối khởi động, nêu tên biến. `docs/model_registry.md` |
+| `MODEL_REGISTRY_PATH` | *(không đặt → `backend/app/config/model_versions.yaml`)* | *(không đặt)* | Trỏ một test vào file fixture; đường tương đối tính từ gốc repo |
+| `MODEL_STARTUP_PROBES` | *(không đặt → true)* | `retrieval-eval`: *(true)* · suite pytest: `false` (conftest ghim) | `false` bỏ mọi thăm dò lúc khởi động (`/api/tags`, embed thử, chiều rộng/số điểm collection, đếm Postgres): mọi vai trò theo con trỏ với `verified: false`. Suite ghim vì embed giả 3 chiều và collection `*_test` sẽ mâu thuẫn với thăm dò 1024 chiều thật |
 
-Ba cờ bật/tắt (contextual, reranker, injection defense) dùng chung một idiom `from_config(..., enabled_override=...)`; log khởi động ghi rõ nguồn quyết định (`source=env|models.yaml`). `QDRANT_DOCUMENTS_COLLECTION` là tên collection chứ không phải cờ — nó đọc thẳng từ `settings`, không qua resolver và không log nguồn (biến này từng gây trộn vector lab/prod — T11; thêm log khởi động cho nó gom vào T9). Launcher tự ghim `RAG_RERANKER_ENABLED=false` khi máy thiếu extra `[rerank]` — đúng bất biến #5.
+Ba cờ bật/tắt (contextual, reranker, injection defense) dùng chung một idiom `from_config(..., enabled_override=...)`; log khởi động ghi rõ nguồn quyết định (`source=env|models.yaml`). `QDRANT_DOCUMENTS_COLLECTION` là tên collection chứ không phải cờ (biến này từng gây trộn vector lab/prod — T11); từ 07/09 tên phục vụ được tính thuần từ con trỏ registry (`derive_collections`) và ghi log khởi động `qdrant_collections` (documents, memories, suffix, base) — mục T9 "thêm log cho biến này" xong theo cách đó; gốc trùng đuôi `_<suffix>` của bất kỳ phiên bản nào đã đăng ký thì từ chối khởi động. `MODEL_VERSION_*` cũng không phải cờ mà là ghim id cho một phiên đo: eval đêm gỡ hết chúng khỏi môi trường và thoát 94 nếu `/models.registry` báo `source != registry`. `DISCORD_MEMORY_EXTRACTOR_MODEL` đổi nghĩa cùng ngày: không đặt = theo registry, đặt = ghim tag Ollama tạm cho máy này (`source=env_tag`, không fallback, không provenance); đặt cùng `MODEL_VERSION_EXTRACTOR` thì từ chối khởi động — xoá dòng `DISCORD_MEMORY_EXTRACTOR_MODEL=qwen3.5:9b` cũ khỏi `.env` máy vận hành. Launcher tự ghim `RAG_RERANKER_ENABLED=false` khi máy thiếu extra `[rerank]` — đúng bất biến #5.
 
-Bật reranker mà **không** cài extra thì API **từ chối khởi động** với `RerankerUnavailableError` kèm đúng lệnh cần chạy. Bản `sentence-transformers` mặc định trên PyPI là **CPU-only**; máy có GPU NVIDIA cần:
+Bật reranker mà **không** cài extra thì từ 07/09 API **vẫn khởi động**: mọi phiên bản trong chuỗi reranker bị từ chối (`reranker_version_rejected reason=import`), vai trò về `disabled` với `source=fallback`, `/health.model_fallback` báo `fallback`, file `data/logs/ATTENTION_model_fallback.txt` xuất hiện và eval đêm từ chối chấm — thay cho `RerankerUnavailableError` chặn khởi động trước đây (bất biến #5 thắng; cổng eval giữ bất biến #4). Bản `sentence-transformers` mặc định trên PyPI là **CPU-only**; máy có GPU NVIDIA cần:
 
 ```bash
 pip install -e ".[rerank]" && pip install --index-url https://download.pytorch.org/whl/cu128 "torch==2.9.1+cu128"

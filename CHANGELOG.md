@@ -11,6 +11,82 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+### Added
+- **Registry phiên bản model — mọi vai trò một con trỏ, tự lùi chỉ khi bản active không nạp được
+  lúc khởi động** (07/09; ADR `docs/adr/0001-model-version-registry.md`, runbook
+  `docs/model_registry.md`, luật nghiệm thu `.scratch/model-registry/spec.md`). Trước đó tên model
+  là một chuỗi trong `models.yaml` do sáu tiến trình đọc riêng: không ghi bản nào đang phục vụ,
+  không gọi tên được bản trước, và reranker là vai trò duy nhất từ chối khởi động khi nạp hỏng —
+  ngược bất biến #5. `backend/app/config/model_versions.yaml` giữ mỗi vai trò (general, condenser,
+  embedding, vision, ocr, reranker, extractor, verifier) một danh sách phiên bản cũ→mới và một con
+  trỏ `active`; thứ tự trong danh sách **là** luật fallback (bản đứng trước = dự phòng, bản đứng sau
+  = ứng viên, không bao giờ tự được phục vụ). `Settings.load_models()` trả đúng khối `config:` của
+  bản active nên **ngày hạ cánh không đổi gì**: năm khối cấu hình bằng nhau từng byte, fingerprint
+  cache embedding không dịch, tên collection giữ nguyên (điều kiện A, khoá bằng unit
+  test); điều kiện B — cùng chỉ mục cho cùng 82 kết quả từng câu, không re-index — đo bằng cách so
+  `per_case` của hai lần chạy `evaluate_rag` trên stack chunkexp trước khi merge, không đạt thì không
+  hạ cánh. Khởi động thăm dò một lần, chặn thời gian, không bao giờ tải về: một
+  `GET /api/tags`, một embed thử cho con trỏ embedding, chiều rộng + số điểm mỗi collection, một cặp
+  đếm Postgres. Bản active hỏng thăm dò → lùi về bản gần nhất nạp được (`status: fallback`); chuỗi
+  reranker cạn thì **tắt với `source=fallback` thay vì từ chối khởi động**; embedding **không bao
+  giờ tự lùi** (model khác không được ghi vào collection đang dùng) — mỗi phiên bản embedding có cặp
+  collection riêng `<gốc>_<suffix>` chọn bởi chính con trỏ chọn model truy vấn, nên hoán đổi cùng
+  chiều rộng 1024 (qwen3-embedding ↔ e5-large) không còn lặng im; mâu thuẫn đã kiểm (chiều rộng
+  lệch, collection thiếu khi kho có dữ liệu) → `degraded`, `router.embed` từ chối trước Ollama kèm
+  đúng lệnh rebuild. Mọi lệch pha đi qua một vị từ `deviates` duy nhất: `/health.model_fallback`
+  (khoá phẳng, `status` tổng vẫn `ok`), `/models.registry` (8 vai trò:
+  active/requested/loaded/source/status/reason), `data/logs/ATTENTION_model_fallback.txt` kèm cách
+  lùi một bước, log `model_version_fallback`, hàng mới ở dashboard/web/Discord `/status`;
+  `evaluate_rag --write-baseline` thoát 1 và eval đêm thoát 94 khi có fallback hoặc máy đang ghim
+  (bất biến #4, #6). `--check` chạy trong CI mỗi commit: bản active của
+  general/embedding/reranker/extractor phải trỏ tới ≥ 1 báo cáo eval có thật đóng dấu đúng id (bốn
+  bản v0 được miễn dấu: cảnh báo, không lỗi); `vram_mib` không được null và tổng phải ≤
+  `budget.vram_mib` 16 311 MiB (bất biến #7, `data/vram_budget.md`); reranker dạng thư mục phải khớp
+  `export.json` (activation, điểm probe, sha256 file trọng số **như đã ghi** — 3.4.1 nạp bản xuất
+  5.x sẽ mặc định Sigmoid và bão hoà, nên loader ép activation theo bản ghi và đối chiếu 3 cặp probe
+  với dung sai 0,05; bản dự phòng nạp `local_files_only`, không bao giờ tải); cache key Ollama của CI
+  phải bằng revision embedding active. Ghim theo máy `MODEL_VERSION_<ROLE>=<id>` **chỉ trong shell**,
+  không bao giờ `.env`; id lạ từ chối khởi động nêu tên biến. Kèm: `rebuild_qdrant
+  --missing-only`/`--confirm` và `rebuild_memories.py` mới (in `points_after` để so với số chunk
+  active / hàng memories — promote **và** demote embedding đều rebuild trước rồi mới dời con trỏ);
+  xoá quét mọi collection đã đăng ký và ném lỗi trước khi lật hàng Postgres;
+  `document_versions.embedding_model` (cột có sẵn, chưa từng ghi) nay ghi lúc activate; launcher
+  pull theo `--ollama-pull-list` (tag active **và** tag dự phòng) và `ollama create` theo
+  `--ollama-create-list` mà không bao giờ chặn khởi động; `eval_stack --model-version ROLE=ID` đo
+  ứng viên trên stack lab không đụng file chung; `.gitignore` chặn trọng số dưới `data/models/**`
+  nhưng giữ `export.json` và `Modelfile`.
+
+### Changed
+- **`models.yaml` không còn tên model; CI đổi cách ghim cờ; `DISCORD_MEMORY_EXTRACTOR_MODEL` đổi
+  nghĩa** (07/09, cùng registry ở trên). Khối `models:` và `rag.reranker.model` xoá khỏi
+  `models.yaml` (header viết lại trỏ sang `model_versions.yaml`); còn lại thuần chính sách —
+  `rag.*`, `agent.*`, `storage.*` — đọc y như cũ. `ci.yml`: job tĩnh parse thêm
+  `model_versions.yaml` và chạy `python -m app.config.model_registry --check`; bước regex ghim
+  `rag.*.enabled` theo thụt lề trong job `retrieval-eval` bỏ đi, thay bằng biến môi trường
+  `RAG_CONTEXTUAL_RETRIEVAL_ENABLED=false` + `RAG_RERANKER_ENABLED=false` (cùng idiom conftest) —
+  bớt một phụ thuộc vào hình dạng YAML; cache key Ollama giữ hard-code nhưng có test tĩnh ép bằng
+  revision embedding active. `DISCORD_MEMORY_EXTRACTOR_MODEL` (và `_VERIFIER_MODEL`) mất mặc định
+  `qwen3.5:9b`: không đặt = theo `roles.extractor.active` trong registry; đặt = ghim tag Ollama tạm
+  cho máy này (`source=env_tag`, không fallback, không provenance — đường ship D2); đặt cùng
+  `MODEL_VERSION_EXTRACTOR` = từ chối khởi động ("set one, not both"); `docker-compose.yml` bỏ mặc
+  định của biến này và truyền thêm `MODEL_VERSION_EXTRACTOR/VERIFIER/EMBEDDING` (rỗng = không đặt).
+  **Việc tay trên máy vận hành: xoá dòng `DISCORD_MEMORY_EXTRACTOR_MODEL=qwen3.5:9b` khỏi `.env`** —
+  để lại là extractor thành ghim tag (`env_tag`, không provenance) trên mọi tiến trình sản phẩm; eval
+  đêm tự gỡ hai ghim tag này (cùng mọi `MODEL_VERSION_*`) khỏi env của lab API nên vẫn chấm được.
+  Sau vòng soát cùng ngày: lab API của eval đêm và các stack `eval_stack` ghi log + file ATTENTION
+  vào thư mục riêng (`LOG_DIR=data/logs/lab`, `data/logs/eval_<profile>`) — trước đó một lần khởi
+  động lab sạch lúc 03:00 xoá file ATTENTION mà sản phẩm để lại tối hôm trước, hoặc để lại một file
+  sản phẩm không hề gây ra; từ chối embedding `degraded` đặt **trước** bước tra cache trong đường
+  index (`ModelRouter.require_embedding`) — trước đó tài liệu đã cache toàn bộ vẫn upsert được và
+  tự tạo ra collection mà probe báo thiếu, lần khởi động sau chỉ còn `incomplete`; dòng revert trong
+  file ATTENTION viết theo nguồn con trỏ (file / ghim `MODEL_VERSION_*` / ghim tag) và in lệnh
+  rebuild kèm `MODEL_VERSION_EMBEDDING=<id>` cho embedding, thay vì một câu cố định với
+  `<a previous id>`; `benchmark_discord_memory_extractor --version-id` đóng dấu `versions.extractor`
+  để `--check` nhận được báo cáo của một extractor mới. Reranker bật mà thiếu extra
+  `[rerank]` không còn chặn API khởi động: chuỗi bị từ chối → `disabled`, báo ở mọi mặt fallback;
+  launcher vẫn ghim cờ tắt trên máy sạch (đó là `off`, không phải lệch pha). Hàng Vision biến mất
+  khỏi `/models.models` vì `vision.active: null` (không gì dùng nó).
+
 ### Fixed
 - **Bộ chia chunk phát mảnh sau chứa trọn mảnh trước — 20,5% chunk trong kho sản phẩm là bản sao, 31% vượt ngân sách** (06–07/09).
   `_overlap_blocks` đo phần chồng lấn bằng **khối**, không bằng token: nó gom nguyên khối cho tới khi

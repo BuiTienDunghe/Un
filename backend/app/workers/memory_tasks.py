@@ -33,10 +33,34 @@ def discord_memory_ingest(job_id: str) -> None:
     sessions = create_session_factory(
         create_postgres_engine(str(settings.database_url))
     )
+    # Model registry: the extractor and verifier tags come from the resolved
+    # pointer (roles.extractor.active, or the DISCORD_MEMORY_*_MODEL ad-hoc pin
+    # as source env_tag), never from a Settings default. A role whose tag is
+    # absent from Ollama resolves `disabled`, so the worker runs the rule filter
+    # only instead of failing every job on a 404. The record is kept on `off`
+    # and `disabled`, so the candidate row still names the model. The first job
+    # of the process pays the probes; later jobs reuse settings._resolved.
+    resolved = settings.resolve_models()
+    extractor_role = resolved.roles["extractor"]
+    extractor_model = (
+        str(extractor_role.record.config["name"]) if extractor_role.record else ""
+    )
+    extractor_enabled = (
+        settings.discord_memory_extractor_enabled and extractor_role.serving
+    )
+    verifier_role = resolved.roles["verifier"]
+    verifier_model = (
+        str(verifier_role.record.config["name"]) if verifier_role.record else ""
+    )
+    verifier_enabled = (
+        settings.discord_memory_verifier_enabled
+        and settings.discord_memory_extractor_enabled
+        and verifier_role.serving
+    )
     extractor = (
         DiscordMemoryExtractorAdapter(
             base_url=settings.ollama_base_url,
-            model=settings.discord_memory_extractor_model,
+            model=extractor_model,
             schema_version=settings.discord_memory_extractor_schema_version,
             num_ctx=settings.discord_memory_extractor_num_ctx,
             temperature=settings.discord_memory_extractor_temperature,
@@ -45,7 +69,7 @@ def discord_memory_ingest(job_id: str) -> None:
             retry_count=settings.discord_memory_extractor_retry_count,
             json_fallback=settings.discord_memory_extractor_json_fallback,
         )
-        if settings.discord_memory_extractor_enabled
+        if extractor_enabled
         else None
     )
     # P2-1: with a threshold configured, the worker applies its own
@@ -57,6 +81,11 @@ def discord_memory_ingest(job_id: str) -> None:
         and settings.discord_memory_auto_apply_threshold is not None
     ):
         auxiliary_store = PostgresAuxiliaryStore(sessions)
+        # The durable log sink before the router, as in the API (invariant #6).
+        logging_service = LoggingService(auxiliary_store, settings.logs_path)
+        # One embedding version == one memories collection; the sweep lets a
+        # revoked memory be deleted from every registered collection.
+        collections = settings.qdrant_collections()
         review_service = DiscordMemoryReviewService(
             sessions,
             MemoryService(
@@ -64,7 +93,8 @@ def discord_memory_ingest(job_id: str) -> None:
                 QdrantStore(
                     settings.qdrant_url,
                     settings.qdrant_timeout_seconds,
-                    settings.qdrant_memories_collection,
+                    collections.memories,
+                    memories_sweep=collections.all_memories,
                 ),
                 ModelRouter(
                     {
@@ -76,18 +106,18 @@ def discord_memory_ingest(job_id: str) -> None:
                         )
                     },
                     settings.load_models(),
+                    embedding_refusal=resolved.embedding_refusal(),
                 ),
-                LoggingService(auxiliary_store, settings.logs_path),
+                logging_service,
             ),
         )
     verifier = (
         DiscordMemoryVerifierAdapter(
             base_url=settings.ollama_base_url,
-            model=settings.discord_memory_verifier_model,
+            model=verifier_model,
             timeout_seconds=settings.discord_memory_verifier_timeout_seconds,
         )
-        if settings.discord_memory_verifier_enabled
-        and settings.discord_memory_extractor_enabled
+        if verifier_enabled
         else None
     )
     outcome = DiscordMemoryWorkerService(
@@ -95,8 +125,8 @@ def discord_memory_ingest(job_id: str) -> None:
         worker_id=socket.gethostname(),
         lease_seconds=settings.job_stale_timeout_seconds,
         memory_policy_enabled=settings.discord_memory_ingestion_enabled,
-        extractor_enabled=settings.discord_memory_extractor_enabled,
-        extractor_model=settings.discord_memory_extractor_model,
+        extractor_enabled=extractor_enabled,
+        extractor_model=extractor_model,
         extractor_schema_version=(
             settings.discord_memory_extractor_schema_version
         ),

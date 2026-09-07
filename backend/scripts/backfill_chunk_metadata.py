@@ -131,7 +131,10 @@ def main() -> None:
     settings = get_settings()
     if not settings.database_url:
         raise RuntimeError("DATABASE_URL is required")
-    rag_config = settings.load_models().get("rag", {})
+    # `rag` lives in models.yaml (load_config); load_models() only ever held the
+    # per-role model blocks, so this read was always {} and the defaults below
+    # silently applied. Fixed in passing with the model registry.
+    rag_config = settings.load_config().get("rag", {})
     chunk_tokens = int(rag_config.get("chunk_tokens", rag_config.get("chunk_size", 480)))
     overlap_tokens = int(rag_config.get("chunk_overlap_tokens", rag_config.get("chunk_overlap", 80)))
     sessions = create_session_factory(create_postgres_engine(settings.database_url))

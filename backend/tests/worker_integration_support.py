@@ -40,9 +40,11 @@ class FakeEmbeddingRouter:
     def __init__(self) -> None:
         self.models = {"embedding": {"name": "fake-embedding"}}
         self.calls: list[str] = []
+        self.sides: list[str | None] = []
 
-    def embed(self, text: str):
+    def embed(self, text: str, *, side=None):
         self.calls.append(text)
+        self.sides.append(side)
         return [0.1, 0.2, 0.3], "fake-embedding"
 
 

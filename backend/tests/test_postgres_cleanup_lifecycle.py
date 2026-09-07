@@ -26,7 +26,7 @@ pytestmark = pytest.mark.skipif(not URL, reason="set POSTGRES_TEST_URL")
 
 class Router:
     models = {"ocr": {}}
-    def embed(self, text: str):
+    def embed(self, text: str, *, side=None):
         return [0.1], "test-embedding"
 
 

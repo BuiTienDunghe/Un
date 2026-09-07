@@ -20,7 +20,7 @@ def main() -> None:
   try:
    pages=parser_service.parse(source); chunks=chunk_pages(pages,int(settings.load_config().get("rag",{}).get("chunk_tokens",480)),int(settings.load_config().get("rag",{}).get("chunk_overlap_tokens",80))); embedding_seconds=None
    if args.with_embedding:
-    embed_started=time.perf_counter(); [router.embed(chunk.content) for chunk in chunks]; embedding_seconds=round(time.perf_counter()-embed_started,3)
+    embed_started=time.perf_counter(); [router.embed(chunk.content, side="passage") for chunk in chunks]; embedding_seconds=round(time.perf_counter()-embed_started,3)
    results.append({"case":name,"status":"ok","total_seconds":round(time.perf_counter()-started,3),"pages":len(pages),"ocr_pages":sum(1 for _,_,method in pages if method=="ocr"),"chunks":len(chunks),"embedding_seconds":embedding_seconds,"retrieval_quality":"requires labelled queries/citations; not inferred automatically"})
   except Exception as error: results.append({"case":name,"status":"error","total_seconds":round(time.perf_counter()-started,3),"error":str(error)[:500]})
  args.output.parent.mkdir(parents=True,exist_ok=True); args.output.write_text(json.dumps(results,ensure_ascii=False,indent=2),encoding="utf-8"); print(args.output)

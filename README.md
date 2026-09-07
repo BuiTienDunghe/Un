@@ -102,12 +102,25 @@ Alembic head hiện tại là `20260828_32` (`20260828_32_edit_ordering_token.py
 
 ## Model mặc định
 
-| Vai trò | Model mặc định |
-| --- | --- |
-| Chat tổng quát và RAG | qwen3.5:9b |
-| Embedding | qwen3-embedding:0.6b |
-| Vision | qwen3.5:9b |
-| OCR | glm-ocr:latest |
+Tên model không còn nằm trong `models.yaml`. Mỗi vai trò là một bản ghi có phiên bản trong
+`backend/app/config/model_versions.yaml` với một con trỏ `active`; đổi model = sửa con trỏ đó
+(hoặc `MODEL_VERSION_<ROLE>=<id>` trong shell cho riêng một máy) rồi khởi động lại. Bản active
+hỏng lúc khởi động thì hệ tự lùi về bản trước và báo ở `/health` (`model_fallback`), `/models`
+(`registry`) và `data/logs/ATTENTION_model_fallback.txt`; riêng embedding không bao giờ tự lùi.
+Cách promote, demote, revert và rebuild collection: `docs/model_registry.md`.
+
+| Vai trò | Phiên bản active | Model |
+| --- | --- | --- |
+| Chat tổng quát và RAG (`general`) | `general-v0` | qwen3.5:9b |
+| Embedding (`embedding`) | `embedding-v0` | qwen3-embedding:0.6b — collection `documents` / `memories` |
+| OCR (`ocr`) | `ocr-v0` | glm-ocr:latest |
+| Reranker (`reranker`) | `reranker-v0` | cross-encoder/mmarco-mMiniLMv2-L12-H384-v1 |
+| Extractor / verifier trí nhớ Discord | `extractor-v0` / `verifier-v0` | qwen3.5:9b (cả hai tắt mặc định: `DISCORD_MEMORY_EXTRACTOR_ENABLED` / `_VERIFIER_ENABLED`) |
+| Condenser (Gemini, tắt mặc định) | `condenser-v0` | gemini-2.5-flash |
+| Vision | `active: null` — chưa có gì dùng (`/vision/chat` trả 501) | — |
+
+`cd backend && python -m app.config.model_registry --check` kiểm tra file (CI chạy mỗi commit);
+`--show` in ra máy này sẽ phục vụ phiên bản nào.
 
 RAG mặc định sử dụng chunk khoảng 480 tokens, overlap 80 tokens và tối đa 5 chunk ngữ cảnh. Các thông số có thể được điều chỉnh cho phù hợp với phần cứng, model và loại tài liệu.
 
@@ -179,6 +192,7 @@ Ba test migration cố ý hạ cấp database để kiểm tra một revision th
 ## Tài liệu bổ sung
 
 - `docs/current_architecture.md`: kiến trúc và cấu hình vận hành.
+- `docs/model_registry.md`: registry phiên bản model — promote, demote, revert, rebuild collection, fallback lúc khởi động.
 - `docs/versioned_ingestion.md`: vòng đời ingest và version tài liệu.
 - `docs/postgres_migration.md`: migration và vận hành PostgreSQL.
 - `docs/phase6_operations.md`: vận hành, kiểm tra và khắc phục sự cố.

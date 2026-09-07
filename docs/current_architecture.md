@@ -1,6 +1,6 @@
 # Current architecture — PostgreSQL-only baseline
 
-Date: 2026-08-19 (original 2026-07-19; refreshed after P0 and P1-1..P1-3)
+Date: 2026-08-19 (original 2026-07-19; refreshed after P0 and P1-1..P1-3; model version registry 2026-09-07)
 
 ## Source-of-truth boundary
 
@@ -37,13 +37,45 @@ FastAPI APIs (layer-1 X-API-Key guard on every mutating route)
 services. Redis carries job IDs; PostgreSQL owns lifecycle state, idempotency,
 outbox records, active-version state, citations, and canonical chunk content.
 Ollama provides embeddings and model inference; it is not a persistence source.
+Which model serves each role is decided once per process by the model version
+registry (next section).
 
 The current Alembic head is pinned in README ("Alembic head hiện tại"); do not duplicate it here.
 
+## Model versions
+
+`backend/app/config/model_versions.yaml` lists every model role (general, condenser,
+embedding, vision, ocr, reranker, extractor, verifier) as an ordered list of version
+records with one `active` pointer per role; `models.yaml` keeps only policy (`rag.*`,
+`agent.*`, `storage.*`). Each process resolves the pointer once at start
+(`Settings.resolve_models()`): one `GET /api/tags`, one probe embed for the embedding
+pointer, one width + count check per embedding collection, one PostgreSQL count pair —
+bounded, single-attempt, never a download. `Settings.load_models()` returns the active
+version's `config:` block verbatim, so `ModelRouter`, `/models.models`, the OCR cache and
+the embedding-cache fingerprint see the same flat dicts as before the registry existed.
+
+If the active version fails its probe, the resolver serves the nearest earlier version
+that passes (`status: fallback`); the reranker chain is walked by
+`RerankerService.warmup()` and ends in `disabled` rather than a refused boot. The
+embedding role never falls back: a verified contradiction between the version and its
+collections is `degraded`, and `ModelRouter.embed` refuses before Ollama. Every deviation
+is one predicate, surfaced as `/health.model_fallback`, `/models.registry`,
+`data/logs/ATTENTION_model_fallback.txt` and the `model_version_fallback` log event; the
+eval writers and the nightly refuse to treat a deviating process as the shipped
+configuration. `MODEL_VERSION_<ROLE>` pins a version per machine (shell only, never
+`.env`). Runbook: `docs/model_registry.md`; decision:
+`docs/adr/0001-model-version-registry.md`.
+
 ## Qdrant contract
 
-The production `documents` collection is a vector index, never the canonical
-content source. A runtime retrieval candidate is accepted only when it has both
+Each embedding version owns one pair of collections — `documents` / `memories` for
+`embedding-v0`, `<base>_<collection_suffix>` for any later version — chosen by the same
+registry pointer that chooses the query model, so a same-width model swap can never write
+into the wrong collection. They are vector indexes, never the canonical content source.
+Deletes sweep every registered collection and raise before the PostgreSQL row flips when
+an existing collection cannot be reached; an inactive collection is frozen at its last
+rebuild, not mirrored, so re-promotion starts with `rebuild_qdrant --missing-only`.
+A runtime retrieval candidate is accepted only when it has both
 `version_id` and `chunk_id`; PostgreSQL then confirms that the chunk belongs to
 the requested document's active version before returning its content/citation.
 
@@ -71,8 +103,9 @@ SQLite archives or use one as a runtime replacement.
 
 `GET /health` reports PostgreSQL, Redis, Qdrant, Ollama, worker discovery,
 outbox state, cleanup heartbeat, PostgreSQL backup freshness (`backup`,
-`backup_age_hours`, `backup_worker`) and, when enabled, the memory pipeline
-(`memory_ingestion`, `worker_memory`). It has no SQLite component. The runtime
+`backup_age_hours`, `backup_worker`), the model registry (`model_fallback`: `ok` or
+`fallback`; the per-role rows are `GET /models` → `registry`) and, when enabled, the
+memory pipeline (`memory_ingestion`, `worker_memory`). It has no SQLite component. The runtime
 guard tests prove FastAPI and worker modules do not import `SQLiteStore` or
 `sqlite3`.
 

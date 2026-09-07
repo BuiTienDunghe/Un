@@ -126,7 +126,7 @@ def test_ocr_service_postgres_cache_misses_without_revision_and_hits_with_revisi
 def test_memory_service_crud_uses_postgres_adapter(store, tmp_path):
     adapter, _factory, _prefix = store
     class Router:
-        def embed(self, value): return [float(len(value))], "embed"
+        def embed(self, value, *, side=None): return [float(len(value))], "embed"
     class Qdrant:
         def __init__(self): self.items = {}
         def upsert_memory(self, memory_id, content, memory_type, importance, vector): self.items[memory_id] = {"id": memory_id, "content": content, "memory_type": memory_type, "importance": importance}

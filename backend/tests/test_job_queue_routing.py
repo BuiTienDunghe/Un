@@ -10,6 +10,7 @@ from app.services.job_routing import (
     UnknownJobTypeError,
     resolve_job_route,
 )
+from app.config.model_registry import overrides_from_settings, resolve
 from app.config.settings import Settings
 
 
@@ -60,9 +61,12 @@ def test_discord_memory_configuration_defaults_are_safe():
     )
     assert settings.discord_memory_ingestion_enabled is False
     assert settings.discord_memory_extractor_enabled is False
-    # P2-1b: the shipped default moved to 9b after the 19/08 benchmark showed
-    # 2b poisons ~49% of auto-applies and no harness fixes it.
-    assert settings.discord_memory_extractor_model == "qwen3.5:9b"
+    # The tag left Settings for model_versions.yaml: None = follow the registry
+    # pointer, which still names the 9b the 19/08 benchmark chose (2b poisons
+    # ~49% of auto-applies and no harness fixes it).
+    assert settings.discord_memory_extractor_model is None
+    extractor = resolve(settings.registry(), overrides_from_settings(settings)).roles["extractor"]
+    assert extractor.requested_id == "extractor-v0" and extractor.record.config["name"] == "qwen3.5:9b"
     # 28/08: v2 = vocabulary v2 (user.birthday, user.favorite_drink/food);
     # the wire format is unchanged, the bump re-keys idempotency.
     assert settings.discord_memory_extractor_schema_version == "v2"

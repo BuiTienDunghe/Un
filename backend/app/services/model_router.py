@@ -1,15 +1,35 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 from collections.abc import Iterator
 
-from app.llm_clients.ollama_client import OllamaClient
+from app.llm_clients.ollama_client import OllamaClient, OllamaModelNotLoadedError
 from app.llm_clients.gemini_client import GeminiClient
 from app.llm_clients.deepseek_client import DeepSeekClient
 
 
 # Union type for all supported clients
 LLMClient = OllamaClient | GeminiClient | DeepSeekClient
+
+# Which end of a retrieval pair a text is: the embedding version may prefix the
+# two sides differently (multilingual-e5: "query: " / "passage: ").
+EmbedSide = Literal["query", "passage"]
+
+
+class EmbeddingRefusedError(OllamaModelNotLoadedError):
+    """The embedding role is `degraded`: the model registry verified a contradiction
+    between the version and its collections (probe width != record, collection width !=
+    record, or a collection missing while the corpus is non-empty).
+
+    A subclass on purpose: every existing except-branch (rag/chat/memory/documents
+    routers, the SSE error event, job_errors -> non-retryable) already maps
+    OllamaModelNotLoadedError to 502 MODEL_NOT_LOADED, so the refusal reaches the caller
+    with a message naming the reason and /models.registry without a new router branch.
+    Raised BEFORE any Ollama or Qdrant call: nothing ever writes foreign vectors into a
+    collection, and no query pays the 2 s Qdrant retry sleep for a known-bad state.
+    `ModelRouter.require_embedding()` is the check itself, for the one path that can hand
+    out a vector without calling embed() — the index path's embedding cache.
+    """
 
 
 class ModelRouter:
@@ -30,9 +50,16 @@ class ModelRouter:
         self,
         clients: dict[str, LLMClient],
         models: dict[str, dict[str, Any]],
+        *,
+        embedding_refusal: str | None = None,
     ) -> None:
         self.clients = clients
         self.models = models
+        # The resolver's reason when the embedding role is degraded (None = serving).
+        # A constructor argument, never a key of models["embedding"]: every key of
+        # that dict is part of the embedding cache fingerprint (constraint 11), so a
+        # bookkeeping key would invalidate every cached vector.
+        self.embedding_refusal = embedding_refusal
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -128,15 +155,41 @@ class ModelRouter:
         )
         return result, model_name
 
-    def embed(self, text: str) -> tuple[list[float], str]:
-        """Embedding always uses Ollama (cloud embedding not yet supported)."""
+    def require_embedding(self) -> None:
+        """Raise EmbeddingRefusedError while the embedding role is `degraded`; a no-op otherwise.
+
+        embed() calls it first, and so does PostgresDocumentService._embed_with_cache BEFORE
+        its cache lookup: a cache hit answers without embed(), and a re-index of a document
+        whose chunks are all cached would otherwise carry 1024-d vectors to upsert_chunks,
+        whose _ensure_collection CREATES the collection the probe found missing — the next
+        boot then probes `incomplete` for a one-document index instead of `degraded`, and
+        the "run rebuild_qdrant" refusal the registry promises is silently gone.
+        """
+        if self.embedding_refusal is not None:
+            raise EmbeddingRefusedError(f"Embedding refused: {self.embedding_refusal} (see /models.registry)")
+
+    def embed(self, text: str, *, side: EmbedSide) -> tuple[list[float], str]:
+        """Embedding always uses Ollama (cloud embedding not yet supported).
+
+        ``side`` is keyword-REQUIRED: a caller that forgets it fails in the test suite,
+        not by embedding with the wrong prefix in production. The prefix is
+        ``config["query_prefix"]`` / ``config["passage_prefix"]`` — absent on
+        embedding-v0, so its vectors are byte-identical to before the registry landed —
+        and it lives INSIDE the config block on purpose: a prefix change re-keys the
+        embedding cache because the vectors differ. The returned model name is the
+        bare config name; the cache identity compares it.
+        """
+        self.require_embedding()
+        if side not in ("query", "passage"):
+            raise ValueError(f"embed side must be 'query' or 'passage', got {side!r}")
         config = self.models["embedding"]
         model_name = str(config["name"])
         # Embedding is only supported via Ollama regardless of provider field
         ollama = self.clients.get("ollama")
         if not isinstance(ollama, OllamaClient):
             raise RuntimeError("Embedding requires the 'ollama' provider to be configured")
-        return ollama.embed(model_name, text), model_name
+        prefix = str(config.get(f"{side}_prefix") or "")
+        return ollama.embed(model_name, prefix + text), model_name
 
     def stream_chat(self, mode: str, messages: list[dict[str, str]]) -> tuple[Iterator[str], str]:
         if mode != "general":

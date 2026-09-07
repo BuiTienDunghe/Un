@@ -449,6 +449,16 @@ def main() -> None:
     parser.add_argument("--skip-repeatability", action="store_true")
     parser.add_argument("--repeat-only", action="store_true")
     parser.add_argument("--timeout-seconds", type=float, default=120.0)
+    parser.add_argument(
+        "--version-id",
+        default=None,
+        help=(
+            "model_versions.yaml roles.extractor id whose tag --model serves; stamped "
+            "into the report as versions.extractor. The registry's --check accepts a "
+            "report for a promoted extractor only with this stamp (invariant #4), so "
+            "pass it on any run meant to become eval.reports.extractor_benchmark."
+        ),
+    )
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
@@ -489,6 +499,9 @@ def main() -> None:
     output = {
         "dataset_version": fixture["dataset_version"],
         "model": args.model,
+        # Which registered version these numbers belong to; --check refuses an
+        # unstamped report for any id but the grandfathered extractor-v0.
+        "versions": {"extractor": args.version_id},
         "prompt_version": DISCORD_MEMORY_EXTRACTOR_PROMPT_VERSION,
         "schema_mode": "ollama_json_schema_object",
         "summary": summary,

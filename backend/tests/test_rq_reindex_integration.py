@@ -38,7 +38,7 @@ def _run(resources, monkeypatch, tmp_path, router, qdrant, extract_id):
 def test_failed_rq_reindex_preserves_previous_active_version(worker_integration_resources,monkeypatch,tmp_path):
     r=worker_integration_resources; doc,old,old_chunks,old_ids,new,run,extract=_prepare_reindex(r,tmp_path)
     class FailingRouter(FakeEmbeddingRouter):
-        def embed(self,text): raise ValueError("invalid fixed embedding configuration")
+        def embed(self,text,*,side=None): raise ValueError("invalid fixed embedding configuration")
     q=FakeQdrantStore(); q.upsert_chunks(doc,old,"old.txt",old_chunks,[[.1,.2,.3]],chunk_ids=old_ids)
     router=FailingRouter(); _run(r,monkeypatch,tmp_path,router,q,extract)
     with r["factory"]() as s:

@@ -145,7 +145,7 @@ class PostgresDocumentRepository:
         run.total_pages = run.processed_pages = run.ocr_pages = run.total_chunks = run.embedded_chunks = run.progress_percent = 0
         return run
 
-    def activate(self, run_id: str, job_id: str | None = None, worker_id: str | None = None, system_context: bool = False) -> Document:
+    def activate(self, run_id: str, job_id: str | None = None, worker_id: str | None = None, system_context: bool = False, *, embedding_version: str | None = None) -> Document:
         run = self.session.scalar(select(IngestionRun).where(IngestionRun.id == run_id).with_for_update())
         if run is None:
             raise KeyError(run_id)
@@ -165,6 +165,13 @@ class PostgresDocumentRepository:
             if old and old.status == "active":
                 old.status, old.superseded_at = "superseded", datetime.now(UTC)
         version.status, version.activated_at = "active", datetime.now(UTC)
+        if embedding_version is not None:
+            # Model registry: the embedding version whose vectors were written for
+            # this document version, stamped by the process that embedded them
+            # (invariant #1: provenance lives in Postgres). Nothing else writes the
+            # column — a rebuild into a candidate collection must not re-stamp
+            # rows production does not serve.
+            version.embedding_model = embedding_version
         document.active_version_id, document.status, document.indexed_at, document.error_message = version.id, "indexed", datetime.now(UTC), None
         self.set_stage(run_id, "completed", completed_at=datetime.now(UTC), progress_percent=100)
         return document

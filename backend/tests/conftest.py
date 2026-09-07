@@ -35,6 +35,11 @@ os.environ["QDRANT_DOCUMENTS_COLLECTION"] = "documents_test"
 # cross-encoder would download ~500MB of weights on first use. Reranker tests
 # inject a fake model_loader instead (test_reranker_service.py).
 os.environ["RAG_RERANKER_ENABLED"] = "false"
+# Model registry: every role resolves to its pointer without probing. The suite
+# embeds with mocked 3-d vectors into *_test collections, so a real startup
+# probe (one /api/embed, collection width, Postgres counts) would contradict the
+# 1024-d record and mark the embedding role degraded on every boot.
+os.environ["MODEL_STARTUP_PROBES"] = "false"
 # P3-1 accounts stay off in tests: an operator's .env with auth enabled must
 # not flip every open-access assertion. Auth tests enable it explicitly on
 # their own app settings instance.

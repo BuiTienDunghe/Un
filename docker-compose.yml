@@ -32,6 +32,11 @@ services:
       interval: 5s
       timeout: 3s
       retries: 12
+  # Model registry (backend/app/config/model_versions.yaml) is baked into the
+  # image with backend/, so a registry edit reaches these workers only after
+  # `docker compose build`. MODEL_VERSION_* are shell-only measuring pins; an
+  # empty default arrives as "" and Settings maps that to "unset" — a non-empty
+  # default here would pin every container to one version forever.
   worker-ocr:
     build: .
     profiles: ["workers"]
@@ -42,6 +47,9 @@ services:
       REDIS_URL: redis://redis:6379/0
       RQ_QUEUE_PREFIX: ${RQ_QUEUE_PREFIX:-local-ai:dev}
       OLLAMA_BASE_URL: http://host.docker.internal:11434
+      MODEL_VERSION_EXTRACTOR: ${MODEL_VERSION_EXTRACTOR:-}
+      MODEL_VERSION_VERIFIER: ${MODEL_VERSION_VERIFIER:-}
+      MODEL_VERSION_EMBEDDING: ${MODEL_VERSION_EMBEDDING:-}
     volumes: ["./data:/app/data"]
     depends_on: [redis]
   worker-index:
@@ -54,6 +62,9 @@ services:
       REDIS_URL: redis://redis:6379/0
       RQ_QUEUE_PREFIX: ${RQ_QUEUE_PREFIX:-local-ai:dev}
       OLLAMA_BASE_URL: http://host.docker.internal:11434
+      MODEL_VERSION_EXTRACTOR: ${MODEL_VERSION_EXTRACTOR:-}
+      MODEL_VERSION_VERIFIER: ${MODEL_VERSION_VERIFIER:-}
+      MODEL_VERSION_EMBEDDING: ${MODEL_VERSION_EMBEDDING:-}
     volumes: ["./data:/app/data"]
     depends_on: [redis]
   worker-memory:
@@ -68,7 +79,11 @@ services:
       OLLAMA_BASE_URL: http://host.docker.internal:11434
       DISCORD_MEMORY_INGESTION_ENABLED: ${DISCORD_MEMORY_INGESTION_ENABLED:-false}
       DISCORD_MEMORY_EXTRACTOR_ENABLED: ${DISCORD_MEMORY_EXTRACTOR_ENABLED:-false}
-      DISCORD_MEMORY_EXTRACTOR_MODEL: ${DISCORD_MEMORY_EXTRACTOR_MODEL:-qwen3.5:9b}
+      # Empty = follow roles.extractor.active in the registry; a tag = ad-hoc pin.
+      DISCORD_MEMORY_EXTRACTOR_MODEL: ${DISCORD_MEMORY_EXTRACTOR_MODEL:-}
+      MODEL_VERSION_EXTRACTOR: ${MODEL_VERSION_EXTRACTOR:-}
+      MODEL_VERSION_VERIFIER: ${MODEL_VERSION_VERIFIER:-}
+      MODEL_VERSION_EMBEDDING: ${MODEL_VERSION_EMBEDDING:-}
       DISCORD_MEMORY_EXTRACTOR_SCHEMA_VERSION: ${DISCORD_MEMORY_EXTRACTOR_SCHEMA_VERSION:-v1}
       DISCORD_MEMORY_EXTRACTOR_NUM_CTX: ${DISCORD_MEMORY_EXTRACTOR_NUM_CTX:-4096}
       DISCORD_MEMORY_EXTRACTOR_TIMEOUT_SECONDS: ${DISCORD_MEMORY_EXTRACTOR_TIMEOUT_SECONDS:-60}

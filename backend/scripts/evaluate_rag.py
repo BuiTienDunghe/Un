@@ -166,13 +166,54 @@ def score_multidoc_sources(sources: list[dict[str, object]], expected_ids: set[s
     return 0.0, doc_hit
 
 
+RAG_QUALITY_ROLES = ("general", "embedding", "reranker")
+
+
+def served_versions(registry: dict[str, dict[str, object]]) -> dict[str, object]:
+    """{role: loaded version id} for the three roles a retrieval number depends on."""
+    return {role: (registry.get(role) or {}).get("loaded") for role in RAG_QUALITY_ROLES}
+
+
+def version_gate(baseline: dict[str, object], registry: dict[str, dict[str, object]], baseline_name: str) -> str | None:
+    """The version half of the regression gate: the failure text, or None to proceed.
+
+    Compares the baseline's recorded ids with what the server's POINTER names now
+    (`requested`, not `loaded`): a server in fallback is the nightly's business
+    (exit 94), and a CI runner whose general model is `missing` still points at the
+    id the baseline was measured with. Embedding always changes the index; the
+    reranker and the general model only when the baseline says they were part of
+    the measurement (`flags`), so a bare baseline never fails on a role it never
+    used. A baseline without a stamp is gated on the numbers only — and says so.
+    """
+    recorded = baseline.get("versions")
+    if not isinstance(recorded, dict):
+        print(f"WARNING: {baseline_name} predates version stamping and is NOT version-guarded. Re-record it to arm the check.")
+        return None
+    flags = baseline.get("flags") if isinstance(baseline.get("flags"), dict) else {}
+    compared = ["embedding"] + (["reranker"] if flags.get("reranker") else []) + (["general"] if flags.get("contextual_retrieval") else [])
+    for role in compared:
+        expected = recorded.get(role)
+        current = (registry.get(role) or {}).get("requested")
+        if expected not in {None, current}:
+            return f"Baseline {role} version {expected} != current {current}; re-record the baseline on the final configuration."
+    return None
+
+
 def run_multidoc_mode(client: httpx.Client, base_url: str, cases: list[dict], mapping: dict[str, str], retrieval_only: bool, output_dir: Path, baseline_path: Path | None, tolerance: float, write_baseline: Path | None, allow_per_case_regressions: bool = False) -> int:
     models = client.get(f"{base_url}/models")
-    embedding_model = models.json().get("models", {}).get("embedding", {}).get("name") if models.is_success else None
+    served = models.json() if models.is_success else {}
+    embedding_model = served.get("models", {}).get("embedding", {}).get("name")
     # T16: read from the SERVER, not from this process's own imports — the
     # harness may run from a different checkout, and it is the server's
     # tokenizer that produced the lexemes these numbers were measured over.
-    tokenizer_version = models.json().get("tokenizer_version") if models.is_success else None
+    tokenizer_version = served.get("tokenizer_version")
+    # Model registry, same reasoning: the version ids that actually serve and the
+    # retrieval flags this server runs with come from the one /models read above,
+    # so a report can name what produced it without guessing (invariant #4).
+    registry = served.get("registry") if isinstance(served.get("registry"), dict) else {}
+    rag_flags = served.get("rag") if isinstance(served.get("rag"), dict) else {}
+    versions = served_versions(registry)
+    flags = {"contextual_retrieval": rag_flags.get("contextual_retrieval"), "reranker": rag_flags.get("reranker")}
 
     results: list[dict[str, object]] = []
     for case in cases:
@@ -228,6 +269,8 @@ def run_multidoc_mode(client: httpx.Client, base_url: str, cases: list[dict], ma
         "mode": "multidoc-retrieval" if retrieval_only else "multidoc-full",
         "embedding_model": embedding_model,
         "tokenizer_version": tokenizer_version,
+        "versions": versions,
+        "flags": flags,
         "corpus": sorted(mapping),
         "cases": count,
         "recall_at_k": rate(results, "source_recall"),
@@ -261,10 +304,21 @@ def run_multidoc_mode(client: httpx.Client, base_url: str, cases: list[dict], ma
         if tokenizer_version is None:
             print("Refusing to record a baseline: the server did not report tokenizer_version (pre-T16 build?). Restart it and re-run.")
             return 1
+        # Model registry: a baseline is the number the SHIPPED pointer earned. A
+        # server serving a fallback would record a version nobody chose under the
+        # id of one that never ran — and a server without a registry would stamp
+        # nulls that look like a stamp. Refuse both at the source.
+        if not registry:
+            print("Refusing to record a baseline: the server did not report the model registry (pre-registry build?). Restart it and re-run.")
+            return 1
+        deviating = sorted(role for role, row in registry.items() if row.get("fallback"))
+        if deviating:
+            print(f"Refusing to record a baseline: {', '.join(deviating)} not serving the registry pointer (see {base_url}/models registry). Fix the deviation, restart, re-run.")
+            return 1
         # per_case is what makes "no question regressed" checkable. Recorded
         # unconditionally, for the same reason tokenizer_version is: a field
         # you have to remember to ask for is a gate that looks armed and is not.
-        baseline = {"created_at": summary["created_at"], "embedding_model": embedding_model, "tokenizer_version": tokenizer_version, "cases": count, "recall_at_k": summary["recall_at_k"], "mrr": summary["mrr"], "doc_hit_rate": summary["doc_hit_rate"], "per_case": {str(item["id"]): float(item["reciprocal_rank"]) for item in results}}
+        baseline = {"created_at": summary["created_at"], "embedding_model": embedding_model, "tokenizer_version": tokenizer_version, "versions": versions, "flags": flags, "cases": count, "recall_at_k": summary["recall_at_k"], "mrr": summary["mrr"], "doc_hit_rate": summary["doc_hit_rate"], "per_case": {str(item["id"]): float(item["reciprocal_rank"]) for item in results}}
         write_baseline.write_text(json.dumps(baseline, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(f"Recorded baseline: {write_baseline}")
 
@@ -293,6 +347,12 @@ def run_multidoc_mode(client: httpx.Client, base_url: str, cases: list[dict], ma
             # reads the CI log will see it, or the gate looks armed when it is
             # not -- which is worse than having no gate at all.
             print(f"WARNING: {baseline_path.name} predates tokenizer stamping and is NOT tokenizer-guarded (current {tokenizer_version}). Re-record it to arm the check.")
+        # Model registry: same rule a third time — a different version of a role
+        # the baseline measured is a different retrieval stack.
+        mismatch = version_gate(baseline, registry, baseline_path.name)
+        if mismatch:
+            print(mismatch)
+            return 1
         failed = [
             f"{metric} {summary[metric]:.3f} < baseline {baseline[metric]:.3f} - {tolerance}"
             for metric in ("recall_at_k", "mrr")

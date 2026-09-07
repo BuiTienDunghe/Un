@@ -1,0 +1,241 @@
+# backend/app/config/model_versions.yaml
+#
+# One version record per model, one `active` pointer per role. Read ONCE per
+# process at start (Settings.registry()/resolve_models()); restart to switch.
+#
+# PER-MACHINE PIN (shell only, never .env): MODEL_VERSION_<ROLE>=<id listed here>.
+# MODEL_REGISTRY_PATH points a test at a fixture. MODEL_STARTUP_PROBES=false skips
+# every probe (the test suite pins it).
+#
+# FALLBACK — automatic, startup only. If the active version fails its probe the
+# resolver walks the versions listed BEFORE it (nearest first, skipping
+# `fallback: false`) and serves the first that probes. Versions listed AFTER
+# the active one are candidates and are never served automatically.
+# `embedding` never falls back (a different model must never write into the
+# active collection). Any role serving something other than what its pointer
+# names => /health model_fallback: "fallback", data/logs/ATTENTION_model_fallback.txt,
+# and the nightly eval refuses to grade. "Ineffective" is a human decision
+# from eval numbers, never this file's.
+#
+# CHECKED BY  cd backend && python -m app.config.model_registry --check
+# (CI static job, stdlib + PyYAML only, no network) — rules in docs/model_registry.md.
+schema_version: 1
+budget:
+  vram_mib: 16311                      # data/vram_budget.md, measured 04/09/2026
+
+roles:
+  # ── general: the answer path. A cloud fallback would send user text to a
+  # third party automatically, and a second local 9b tag is a download plus
+  # ~6.4 GB residency (vram_budget.md), so v0 is deliberately alone.
+  general:
+    active: general-v0
+    versions:
+      - id: general-v0
+        provider: ollama
+        vram_mib: 6407                 # at num_ctx 4096
+        eval:
+          reports:
+            d1_multidoc: data/evaluation/rag_multidoc_baseline.json
+        config:                        # == models.yaml models.general as shipped, verbatim
+          provider: ollama
+          name: qwen3.5:9b
+          context: 16384
+          temperature: 0.4
+          top_p: 0.9
+          think: false
+          keep_alive: 5m
+
+  # ── condenser: read only by scripts/condensation_worker.py; needs
+  # DISCORD_CONDENSATION_ENABLED + GEMINI_API_KEY. Probe = "provider registered".
+  condenser:
+    active: condenser-v0
+    versions:
+      - id: condenser-v0
+        provider: gemini
+        config:
+          provider: gemini
+          name: gemini-2.5-flash
+          temperature: 0.2
+          max_tokens: 4096
+
+  # ── embedding: one version == one pair of Qdrant collections
+  # (<base>_<suffix>). The version that embeds the query is the version whose
+  # collections are searched — same pointer. Promotion AND demotion:
+  #   1. python -m scripts.rebuild_qdrant  and  python -m scripts.rebuild_memories
+  #      with MODEL_VERSION_EMBEDDING=<target> in the SHELL (--missing-only for a
+  #      collection that already exists);
+  #   2. point counts == active chunks / memories rows (printed by both scripts);
+  #   3. move `active`; restart every launcher process.
+  # Nothing ever deletes a collection. An inactive collection is FROZEN at the
+  # moment it was last built — it is not a mirror (writes go to one collection).
+  embedding:
+    active: embedding-v0
+    versions:
+      - id: embedding-v0
+        provider: ollama
+        collection_suffix: ""          # documents / memories (documents_lab, documents_test via env base)
+        vram_mib: 2870
+        eval:
+          reports:
+            d1_multidoc: data/evaluation/rag_multidoc_baseline.json
+        config:                        # BYTE-IDENTICAL to models.yaml models.embedding — the cache
+          provider: ollama             # fingerprint must not move when this file lands
+          name: qwen3-embedding:0.6b
+          context: 32768
+          revision: qwen3-embedding-0.6b-r1
+          normalization: raw
+          dimensions: 1024
+      - id: embedding-e5l-v1           # CANDIDATE (after active): never served automatically
+        provider: ollama
+        ollama:
+          source: modelfile            # built with `ollama create`, no hub tag exists
+          modelfile: data/models/embedding/embedding-e5l-v1/Modelfile   # tracked; FROM names the gguf beside it (gitignored)
+          gguf_sha256: null            # filled when the GGUF is exported; --check requires it once active or in a chain
+        collection_suffix: e5l         # -> documents_e5l / memories_e5l (documents_lab_e5l on the lab stack)
+        vram_mib: null                 # measure before promotion (vram_budget.md rule; --check refuses a null on the ACTIVE version)
+        eval:
+          reports:
+            d1_multidoc: null
+            heldout: null
+            mteb: null
+        config:
+          provider: ollama
+          name: local-ai/multilingual-e5-large:q8
+          context: 512
+          revision: multilingual-e5-large-q8-r1
+          normalization: raw
+          dimensions: 1024             # same width as v0 — exactly the silent-swap case the suffix guards
+          query_prefix: "query: "      # inside config ON PURPOSE: a prefix change re-keys the cache
+          passage_prefix: "passage: "
+
+  # ── vision: no consumer (/vision/chat is 501). active: null = not served,
+  # absent from /models.models (the app.js Vision row disappears; decision 5).
+  vision:
+    active: null
+    versions:
+      - id: vision-v0
+        provider: ollama
+        config:
+          provider: ollama
+          name: qwen3.5:9b
+          context: 16384
+          temperature: 0.3
+          keep_alive: 5m
+
+  # ── ocr: a missing tag turns the role OFF (config.enabled false on the served
+  # copy) instead of today's per-page silent warnings. `glm-ocr:latest` is a
+  # mutable tag: fill `digest` from GET /api/tags to pin it (the probe verifies it).
+  ocr:
+    active: ocr-v0
+    versions:
+      - id: ocr-v0
+        provider: ollama
+        digest: null
+        config:                        # == models.yaml models.ocr as shipped
+          provider: ollama
+          name: glm-ocr:latest
+          enabled: true
+          context: 16384
+          temperature: 0.1
+          keep_alive: 5m
+          prompt: "Text Recognition:"
+          dpi: 200
+          min_text_characters: 80
+          min_alphanumeric_ratio: 0.45
+
+  # ── reranker: in-process cross-encoder. `enabled` and `candidate_limit` stay
+  # in models.yaml rag.reranker (policy); RAG_RERANKER_ENABLED=false still
+  # short-circuits everything here. Chain: active -> previous ... -> disabled
+  # (source=fallback). Never refuses boot (decision 2). Fallback entries load
+  # with local_files_only=True: a rejection may never start a download.
+  reranker:
+    active: reranker-v0
+    versions:
+      - id: reranker-v0
+        provider: sentence-transformers
+        hub: cross-encoder/mmarco-mMiniLMv2-L12-H384-v1
+        revision: 1427fd652930e4ba29e8149678df786c240d8825
+        activation: null               # hub config carries Identity; null = let it decide (P4-3 baseline scale)
+        num_labels: 1
+        max_length: 512
+        vram_mib: 643
+        probe:
+          pairs:                       # scored ONCE on the production runtime (ST 3.4.1):
+            - ["thủ tục cấp lại căn cước công dân",          #   python -m app.config.model_registry --record-probe reranker-v0
+               "Điều 24. Trình tự, thủ tục cấp lại thẻ căn cước công dân khi bị mất, hư hỏng"]
+            - ["thủ tục cấp lại căn cước công dân",
+               "Bảng giá dịch vụ in ảnh khổ 10x15 và 13x18 tại xưởng"]
+            - ["lịch nghỉ tết âm lịch 2026 của công ty",
+               "Thông báo: công ty nghỉ Tết Nguyên đán từ 14/02 đến 22/02/2026"]
+          scores: [2.9980, -8.9783, 7.5150]   # --record-probe reranker-v0 on ST 3.4.1 + torch 2.9.1+cu128, 07/09/2026;
+                                       #   null = parity disarmed; --check WARNS while the ACTIVE version has none
+          tolerance: 0.05
+          max_ms: 500                  # timed predict on 15 pairs; measured and reported, over-cap is a WARNING
+        eval:
+          reports:
+            d1_multidoc: data/evaluation/rag_multidoc_baseline.json
+      - id: reranker-d2-v1             # CANDIDATE — export from training/reranker
+        provider: sentence-transformers
+        path: data/models/reranker/reranker-d2-v1    # repo-relative; weights gitignored, export.json + Modelfile-class files tracked
+        activation: identity           # ST 5.x export lacks sbert_ce_default_activation_function; 3.4.1 would
+        num_labels: 1                  #   default to Sigmoid and saturate at logit >= 17 — the loader forces this value
+        max_length: 512
+        vram_mib: null
+        digest:
+          file: model.safetensors      # hash of the file AS WRITTEN (re-saving changes bytes with identical tensors)
+          sha256: null                 # copied from export.json by hand; --check requires equality and non-null when ACTIVE
+        probe:
+          pairs: []                    # exporter copies reranker-v0's pairs into export.json with the 5.7.0 scores;
+          scores: null                 #   record copies them; 3.4.1 must reproduce within tolerance or the version is rejected
+          tolerance: 0.05
+          max_ms: 500
+        eval:
+          reports:
+            d1_multidoc: null
+            heldout: null
+        provenance:
+          base: cross-encoder/mmarco-mMiniLMv2-L12-H384-v1
+          base_revision: 1427fd652930e4ba29e8149678df786c240d8825
+          git_sha: null
+          train_data_sha256: null      # training.common.split_manifest.digest() of the split
+          exported_with: sentence-transformers==5.7.0
+
+  # ── extractor / verifier: env-only today. DISCORD_MEMORY_EXTRACTOR_MODEL=<tag>
+  # stays as the ad-hoc per-machine pin (D2 ship path; source=env_tag, no fallback,
+  # no provenance); MODEL_VERSION_EXTRACTOR=<id> is the provenance-carrying pin;
+  # both set = Settings error. A missing tag disables the role (worker runs the
+  # rule filter only). Generation knobs (num_ctx, temperature, seed) stay in Settings.
+  extractor:
+    active: extractor-v0
+    versions:
+      - id: extractor-v0
+        provider: ollama
+        vram_mib: 0                    # same tag as general-v0: no extra residency
+        eval:
+          reports:
+            extractor_benchmark: data/benchmarks/discord_memory_extractor_20260904_qwen9b_full150.json
+        config:
+          provider: ollama
+          name: qwen3.5:9b
+      - id: extractor-d2-student-v1    # CANDIDATE — D2 distillation (.scratch/d2-distillation/spec.md)
+        provider: ollama
+        ollama:
+          source: modelfile
+          modelfile: data/models/extractor/extractor-d2-student-v1/Modelfile
+          gguf_sha256: null
+        vram_mib: null
+        eval:
+          reports:
+            extractor_benchmark: null
+        config:
+          provider: ollama
+          name: local-ai/extractor-student:d2
+  verifier:
+    active: verifier-v0
+    versions:
+      - id: verifier-v0
+        provider: ollama
+        vram_mib: 0
+        config:
+          provider: ollama
+          name: qwen3.5:9b

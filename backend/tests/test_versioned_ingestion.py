@@ -24,7 +24,7 @@ pytestmark = pytest.mark.skipif(not POSTGRES_URL, reason="set POSTGRES_TEST_URL 
 
 class Router:
     models = {"embedding": {"name": "test-embedding"}}
-    def embed(self, text: str): return [float(len(text) or 1)], "test-embedding"
+    def embed(self, text: str, *, side=None): return [float(len(text) or 1)], "test-embedding"
 
 
 class Ocr:
@@ -109,6 +109,23 @@ def test_invalid_activation_transition_is_rejected(pg_service):
             repository.set_stage(str(upload["run_id"]), "embedding")
         with pytest.raises(InvalidStateTransition):
             repository.activate(str(upload["run_id"]))
+
+
+def test_activation_stamps_the_embedding_version_the_process_resolved(tmp_path: Path):
+    """Model registry: document_versions.embedding_model is written by activate() alone,
+    with the version id the index process resolved (Resolved.embedding_version_id())."""
+    factory = create_session_factory(create_postgres_engine(str(POSTGRES_URL)))
+    service = PostgresDocumentService(factory, PostgresEmbeddingCacheStore(factory), Qdrant(), Router(), Logger(), tmp_path / "documents", 64, 8, Ocr(), embedding_version="embedding-v0")
+    try:
+        upload = asyncio.run(service.upload(UploadFile(filename="phase2-d.txt", file=__import__("io").BytesIO(b"stamped knowledge"), headers={"content-type": "text/plain"}), 10000))
+        run = service.enqueue_index(str(upload["document_id"]))
+        assert _wait(service, str(run["id"]))["stage"] == "completed"
+        with factory() as session:
+            version = session.get(DocumentVersion, run["version_id"])
+            assert (version.status, version.embedding_model) == ("active", "embedding-v0")
+    finally:
+        with factory.begin() as session:
+            session.execute(delete(Document).where(Document.original_filename.like("phase2-d%")))
 
 
 def test_versioned_qdrant_points_are_deterministic_and_lightweight():

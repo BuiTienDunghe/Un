@@ -162,6 +162,10 @@ function render(stats, health, metrics, models, conversations) {
       worker_ocr: "Worker OCR", worker_index: "Worker Index", worker_memory: "Worker Memory",
       outbox_dispatcher: "Outbox", cleanup_worker: "Cleanup",
       backup: "Sao lưu", backup_worker: "Worker sao lưu", memory_ingestion: "Nạp ghi nhớ",
+      // "ok" | "fallback": mot vai tro dang phuc vu phien ban khac con tro trong
+      // model_versions.yaml (tu dong lui ve ban truoc luc khoi dong). Dong nao,
+      // vi sao: bang "Phien ban" ben duoi va data/logs/ATTENTION_model_fallback.txt.
+      model_fallback: "Phiên bản mô hình",
     };
     const healthGrid = $("health-grid");
     healthGrid.replaceChildren();
@@ -187,6 +191,15 @@ function render(stats, health, metrics, models, conversations) {
     for (const [key, label] of Object.entries(labels)) {
       const config = models.models?.[key];
       if (config) opsKv.append(kvRow(label, String(config.name)));
+    }
+    // Model registry: mot dong moi vai tro — phien ban DANG phuc vu va trang thai
+    // (active/off/unconfigured la quyet dinh; fallback/missing/degraded/
+    // incomplete/disabled la lech con tro, to do). Ly do nam trong tooltip.
+    for (const [role, row] of Object.entries(models.registry || {})) {
+      const item = kvRow(`Phiên bản ${role}`, `${row.loaded ?? "—"} (${row.status})`);
+      if (row.reason) item.title = row.reason;
+      if (row.fallback) item.lastChild.style.color = "var(--danger)";
+      opsKv.append(item);
     }
   }
   if (metrics) {

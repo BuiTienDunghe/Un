@@ -1,7 +1,7 @@
 """Nightly eval of the SHIPPED retrieval configuration, on the lab corpus.
 
 D4-lite #4. CI deliberately measures only the bare path (reranker and
-contextual retrieval pinned off, ci.yml:264-289), so nothing unattended
+contextual retrieval pinned off in the retrieval-eval job env of ci.yml), so nothing unattended
 watches the configuration production actually runs. The reranker truncation
 bug lived four days precisely in that blind spot: quality dropped on the
 shipped config while every green light stayed green.
@@ -49,6 +49,14 @@ ATTENTION = PROJECT_ROOT / "data" / "logs" / "ATTENTION_nightly_eval.txt"
 # a cause. Overwritten each run: the interesting copy is the one from the run
 # that just failed.
 LAB_API_LOG = PROJECT_ROOT / "data" / "logs" / "nightly_eval_lab_api.log"
+# Settings.logs_path for the lab API (LOG_DIR, relative to the repo root): its app log and
+# its data/logs/<here>/ATTENTION_model_fallback.txt live apart from production's. The API
+# deletes that marker on a boot in which nothing deviates and writes it when something
+# does; shared with production, the 03:00 lab boot would erase the marker the evening boot
+# left — or leave one production never earned — before check_operational_alerts reads
+# production's data/logs at 09:30 (invariant #6). The nightly's OWN marker (ATTENTION
+# above) stays in data/logs: that one the morning check is meant to find.
+LAB_LOG_DIR = "data/logs/lab"
 
 
 def diagnose() -> str:
@@ -112,6 +120,72 @@ def wait_for_health(port: int, timeout_seconds: float) -> bool:
     return False
 
 
+def lab_environment(environ: dict[str, str]) -> dict[str, str]:
+    """The lab API's env: this process's, minus every per-machine model pin, plus its own log dir.
+
+    A MODEL_VERSION_* pin is a shell-only measuring aid (model_versions.yaml header). One
+    left in the shell that starts the Scheduled Task would make the nightly grade a
+    candidate as the shipped configuration — and `source == "registry"` below would not
+    notice, because the pin IS the pointer from the API's point of view. Strip them here,
+    so what the lab API resolves is the file's `active`.
+
+    The ad-hoc tag pins (DISCORD_MEMORY_EXTRACTOR_MODEL / _VERIFIER_MODEL) come from .env,
+    which the lab API reads too, and they are the D2 ship path — legitimately set for as
+    long as a student extractor ships that way, on two roles no retrieval number depends
+    on. Left alone they would keep registry_verdict at exit 94 for that whole time. An
+    empty value outranks .env in pydantic-settings and the before-validator reads it as
+    unset, so the lab API resolves both roles from the registry like every other one.
+    """
+    env = {key: value for key, value in environ.items() if not key.startswith("MODEL_VERSION_")}
+    env["DISCORD_MEMORY_EXTRACTOR_MODEL"] = ""
+    env["DISCORD_MEMORY_VERIFIER_MODEL"] = ""
+    env["LOG_DIR"] = LAB_LOG_DIR
+    return env
+
+
+def registry_verdict(models: dict) -> str | None:
+    """None when the lab API serves the shipped configuration; else the exit-94 text.
+
+    "/health 200" used to mean "the shipped config loaded"; with automatic fallback
+    it only means "something loaded". So after healthy, /models.registry has to say
+    that every role that is on came from the registry pointer (no pin, no ad-hoc
+    tag) and serves that pointer (no fallback), and /models.rag that the two
+    shipped retrieval flags are on — a reranker chain rejected at warmup reports
+    reranker: false there. Off and unconfigured roles are decisions, not deviations.
+    """
+    registry = models.get("registry") if isinstance(models.get("registry"), dict) else {}
+    rag = models.get("rag") if isinstance(models.get("rag"), dict) else {}
+    problems: list[str] = []
+    if not registry:
+        problems.append("the lab API reported no model registry (pre-registry build?)")
+    for role, row in registry.items():
+        if row.get("status") in {"off", "unconfigured"}:
+            continue
+        if row.get("source") != "registry":
+            problems.append(f"{role}: source={row.get('source')} — a pin or ad-hoc tag reached the lab API")
+        if row.get("fallback"):
+            problems.append(f"{role}: {row.get('status')} — {row.get('reason')}")
+    for flag in ("reranker", "contextual_retrieval"):
+        if not rag.get(flag):
+            problems.append(f"rag.{flag} is {rag.get(flag)!r}; the shipped configuration runs it on")
+    if not problems:
+        return None
+    lines = ["Refusing to grade: the lab API is not serving the shipped configuration.", *(f"  - {problem}" for problem in problems), "", "registry:"]
+    for role, row in registry.items():
+        line = f"  {role}: requested={row.get('requested')} loaded={row.get('loaded')} source={row.get('source')} status={row.get('status')} fallback={row.get('fallback')}"
+        if row.get("reason"):
+            line += f" reason={row.get('reason')}"
+        lines.append(line)
+    lines.append(f"rag: {json.dumps(rag, ensure_ascii=False)}")
+    return "\n".join(lines)
+
+
+def read_models(port: int) -> dict:
+    # /models never requires the API key (test_api_key_auth.py), so no header.
+    with urlopen(f"http://127.0.0.1:{port}/models", timeout=10) as response:
+        return json.load(response)
+
+
 def main() -> int:
     started = datetime.now(UTC).isoformat()
     # EVERY exit goes through finish(): the review found two paths (an
@@ -128,7 +202,7 @@ def main() -> int:
 
 def _run(started: str) -> int:
     env = {
-        **os.environ,
+        **lab_environment(dict(os.environ)),
         "PYTHONUTF8": "1",
         "DATABASE_URL": lab_database_url(),
         "QDRANT_DOCUMENTS_COLLECTION": LAB_COLLECTION,
@@ -159,6 +233,18 @@ def _run(started: str) -> int:
             # whether this was a powered-down machine or a real regression.
             stop_api(api)
             return finish(started, returncode=97, output=f"lab API did not answer /health on port {LAB_PORT} within 180 s.\n" + diagnose())
+        # Healthy proves a boot, not the shipped configuration: a fallback boots
+        # too (that is the point of it). Exit 94 = the registry view says the lab
+        # API serves something other than the file's pointer, or a shipped flag
+        # is off; the ATTENTION file carries the view so the morning reader sees
+        # which role and why without starting anything.
+        try:
+            verdict = registry_verdict(read_models(LAB_PORT))
+        except Exception as error:
+            verdict = f"Refusing to grade: could not read /models on port {LAB_PORT}: {type(error).__name__}: {error}"
+        if verdict is not None:
+            stop_api(api)
+            return finish(started, returncode=94, output=verdict)
         try:
             eval_run = subprocess.run(
                 [

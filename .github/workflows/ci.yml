@@ -48,7 +48,16 @@ jobs:
         run: pip install "PyYAML>=6.0,<7.0"
 
       - name: Check the YAML configuration files parse
-        run: python -c "import yaml;[yaml.safe_load(open(p,encoding='utf-8')) for p in ('backend/app/config/models.yaml','docker-compose.yml','.github/workflows/ci.yml')]"
+        run: python -c "import yaml;[yaml.safe_load(open(p,encoding='utf-8')) for p in ('backend/app/config/models.yaml','backend/app/config/model_versions.yaml','docker-compose.yml','.github/workflows/ci.yml')]"
+
+      # The model version registry's static rules (an existing eval report for
+      # every active RAG-quality version, the VRAM budget, the reranker export
+      # contract, the Ollama cache key below): stdlib + the PyYAML installed
+      # above, no network. From backend/ because the module is only importable
+      # from there without an editable install.
+      - name: Check the model version registry
+        working-directory: backend
+        run: python -m app.config.model_registry --check
 
       # tomllib is stdlib on 3.11, so this costs no dependency.
       - name: Check pyproject.toml parses
@@ -209,6 +218,15 @@ jobs:
       REDIS_URL: redis://127.0.0.1:6379/14
       RQ_QUEUE_PREFIX: local-ai:ci-eval
       QDRANT_URL: http://127.0.0.1:6333
+      # Measured on purpose, not by accident. Without these the shipped defaults
+      # would apply: contextual retrieval would call a generation model this
+      # runner does not have (27 failed calls degrading to the same bare index),
+      # and the reranker would need the [rerank] extra this job does not
+      # install. The per-machine override idiom (Settings, same as conftest.py)
+      # replaces the regex that used to rewrite models.yaml in place, so the
+      # gate no longer depends on that file's shape.
+      RAG_CONTEXTUAL_RETRIEVAL_ENABLED: "false"
+      RAG_RERANKER_ENABLED: "false"
 
     steps:
       - uses: actions/checkout@v7
@@ -261,35 +279,11 @@ jobs:
           done
           ollama pull qwen3-embedding:0.6b
 
-      # Measured on purpose, not by accident. Without this the shipped defaults
-      # would apply: contextual retrieval would call a generation model this
-      # runner does not have (27 failed calls degrading to the same bare index),
-      # and the reranker would need the [rerank] extra this job does not
-      # install. Pinning both states the intent in the diff.
-      #
-      # It fails loudly when a key cannot be found, so renaming or moving a flag
-      # cannot silently turn this into a no-op that measures the wrong config.
-      - name: Pin index-time and query-time RAG flags off for the bare gate
-        run: |
-          python - <<'PY'
-          import re
-          from pathlib import Path
-
-          path = Path("backend/app/config/models.yaml")
-          text = path.read_text(encoding="utf-8")
-          for key in ("contextual_retrieval", "reranker"):
-              # Match this key's own `enabled:` line whatever its current value —
-              # the point is to force false, not to assert today's default.
-              pattern = re.compile(rf"(?m)^(  {key}:\n(?:    \w[^\n]*\n)*?    enabled: )(true|false)$")
-              found = pattern.findall(text)
-              if len(found) != 1:
-                  raise SystemExit(f"expected exactly one rag.{key}.enabled in {path}, found {len(found)}")
-              was = found[0][1]
-              text = pattern.sub(lambda match: match.group(1) + "false", text, count=1)
-              print(f"rag.{key}.enabled pinned false (was {was})")
-          path.write_text(text, encoding="utf-8")
-          PY
-
+      # The two RAG flags are pinned off in the job `env` above. The API's
+      # startup probes run for real here: general resolves `missing` (no
+      # generation model), ocr `disabled`, embedding `active` against an
+      # absent collection on an empty database — /health.model_fallback reads
+      # "fallback" in this job and nothing here reads it.
       - name: Start the API
         working-directory: backend
         run: |

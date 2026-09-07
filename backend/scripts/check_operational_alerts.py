@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse, json
 from datetime import UTC, datetime
 from sqlalchemy import func, select
+from app.config.model_registry import ATTENTION_FILENAME
 from app.config.settings import get_settings
 from app.postgres.database import create_postgres_engine, create_session_factory
 from app.postgres.models import DiscordChannelMessage, DiscordCondensationBatch, Document, DocumentChunk, DocumentVersion, Job
@@ -55,12 +56,18 @@ def main() -> None:
  # it in here means ONE morning popup covers the whole night shift.
  eval_attention=(settings.logs_path/"ATTENTION_nightly_eval.txt")
  eval_alert=eval_attention.exists()
+ # Model registry: the API leaves this marker when a role serves something other
+ # than its pointer in model_versions.yaml (automatic fallback at startup, or an
+ # embedding collection that contradicts its version) and removes it on a clean
+ # boot. /health keeps status "ok" through a fallback, so this popup is what makes
+ # the autonomous switch auditable (invariant #6) on a machine nobody tails.
+ model_fallback_alert=(settings.logs_path/ATTENTION_FILENAME).exists()
  condensation_alert=(bool(args.uncondensed_warn) and uncondensed is not None and uncondensed>=args.uncondensed_warn) or bool(failed_batches)
  # None, not 0: "not checked" must not read as "checked, none found". The 09:30
  # report on 26/08 said stale_jobs 0 while the database was unreachable --
  # active_chunks correctly said null on the same line, and the inconsistency
  # was the sort of quiet lie this whole track exists to remove.
- payload={"stale_jobs":len(jobs) if jobs is not None else None,"jobs":[{"id":j.id,"type":j.job_type,"worker_id":j.worker_id,"lease_expires_at":j.lease_expires_at.isoformat() if j.lease_expires_at else None} for j in (jobs or [])],"active_chunks":active_chunks,"chunk_warn_threshold":args.chunk_warn,"chunk_alert":chunk_alert,"newest_dump_age_hours":round(dump_age,2) if dump_age is not None else None,"dump_max_age_hours":args.dump_max_age_hours,"dump_alert":dump_alert,"nightly_eval_alert":eval_alert,"uncondensed_messages":uncondensed,"uncondensed_warn_threshold":args.uncondensed_warn,"failed_condensation_batches":failed_batches,"condensation_alert":condensation_alert,"db_error":db_error}; print(json.dumps(payload))
- if args.fail_on_alert and ((jobs or []) or chunk_alert or dump_alert or eval_alert or condensation_alert): raise SystemExit(2)
+ payload={"stale_jobs":len(jobs) if jobs is not None else None,"jobs":[{"id":j.id,"type":j.job_type,"worker_id":j.worker_id,"lease_expires_at":j.lease_expires_at.isoformat() if j.lease_expires_at else None} for j in (jobs or [])],"active_chunks":active_chunks,"chunk_warn_threshold":args.chunk_warn,"chunk_alert":chunk_alert,"newest_dump_age_hours":round(dump_age,2) if dump_age is not None else None,"dump_max_age_hours":args.dump_max_age_hours,"dump_alert":dump_alert,"nightly_eval_alert":eval_alert,"model_fallback_alert":model_fallback_alert,"uncondensed_messages":uncondensed,"uncondensed_warn_threshold":args.uncondensed_warn,"failed_condensation_batches":failed_batches,"condensation_alert":condensation_alert,"db_error":db_error}; print(json.dumps(payload))
+ if args.fail_on_alert and ((jobs or []) or chunk_alert or dump_alert or eval_alert or model_fallback_alert or condensation_alert): raise SystemExit(2)
  if db_error: raise SystemExit(3)
 if __name__=="__main__": main()

@@ -108,6 +108,24 @@ if errorlevel 1 (
     timeout /t 3 /nobreak >nul
 )
 
+REM ── Ollama models, from the registry ────────────────────────────────────
+REM backend/app/config/model_versions.yaml names every tag: the active version of
+REM each role that is on, plus the versions it may fall back to (a fallback can
+REM only work on a clean machine if its tag is already here). Pulled BEFORE the
+REM workers start so none of them meets an absent tag. The extractor's tag is in
+REM the list exactly when DISCORD_MEMORY_EXTRACTOR_ENABLED=true (off roles are
+REM omitted), which replaces the flag-conditional pull that used to live below.
+REM pushd backend: the launcher never runs `pip install -e .`, so the module is
+REM only importable from there. The second list is "tag<TAB>Modelfile" and the
+REM delimiter below is a literal tab.
+pushd backend
+for /f "usebackq delims=" %%T in (`..\.venv\Scripts\python.exe -m app.config.model_registry --ollama-pull-list`) do (
+    call :ensure_model "%%T"
+    if errorlevel 1 ( popd & goto :error )
+)
+for /f "usebackq tokens=1,2 delims=	" %%T in (`..\.venv\Scripts\python.exe -m app.config.model_registry --ollama-create-list`) do call :ensure_created "%%T" "%%U"
+popd
+
 REM Periodic PostgreSQL backup. It runs on the host because the dump is taken by
 REM the PostgreSQL container's own pg_dump, so no image needs a database client.
 REM The window is titled so stop-local-ai-core.bat can close exactly this one.
@@ -128,24 +146,12 @@ if errorlevel 1 (
     start "LocalAICoreCleanup" /min /d "%~dp0backend" "%~dp0.venv\Scripts\python.exe" -m scripts.cleanup_worker --loop
 )
 
-call :ensure_model "qwen3.5:9b"
-if errorlevel 1 goto :error
-call :ensure_model "qwen3-embedding:0.6b"
-if errorlevel 1 goto :error
-call :ensure_model "glm-ocr:latest"
-if errorlevel 1 goto :error
-
 REM ── Discord memory proposal mode (P1-3) ─────────────────────────────────
-REM Only when the .env flag is on: the extractor model, the outbox dispatcher
-REM (publishes memory jobs to Redis) and the memory worker (consumes them).
+REM Only when the .env flag is on: the outbox dispatcher (publishes memory jobs
+REM to Redis) and the memory worker (consumes them). The extractor's model is
+REM pulled by the registry block above whenever its flag is on.
 REM Note: document OCR/index jobs use the in-process thread backend by default;
 REM a future INGESTION_EXECUTION_BACKEND=rq setup would need these two as well.
-findstr /R /C:"^DISCORD_MEMORY_EXTRACTOR_ENABLED=true" .env >nul 2>&1
-if not errorlevel 1 (
-    REM P2-1b: extractor moved to 9b (benchmark 19/08) - same model chat uses.
-    call :ensure_model "qwen3.5:9b"
-    if errorlevel 1 goto :error
-)
 findstr /R /C:"^DISCORD_MEMORY_INGESTION_ENABLED=true" .env >nul 2>&1
 if not errorlevel 1 (
     tasklist /v /fi "windowtitle eq LocalAICoreOutbox*" 2>nul | find /i "python.exe" >nul
@@ -200,6 +206,22 @@ if not errorlevel 1 exit /b 0
 echo [SETUP] Downloading Ollama model %~1 ...
 ollama pull %~1
 exit /b %errorlevel%
+
+REM :ensure_created tag modelfile — a tag built with `ollama create` (no hub
+REM tag exists to pull). Never halts the boot: a missing Modelfile or a failed
+REM build only means the resolver marks that role missing/disabled and BM25 keeps
+REM serving, which is exactly what a one-click launcher on a clean machine needs.
+:ensure_created
+ollama list | findstr /C:"%~1" >nul
+if not errorlevel 1 exit /b 0
+if not exist "%~2" (
+    echo [SETUP] %~1 must be built by hand ^(%~2 not found^); the role resolves missing until then
+    exit /b 0
+)
+echo [SETUP] Building Ollama model %~1 from %~2 ...
+ollama create %~1 -f "%~2"
+if errorlevel 1 echo [SETUP] WARNING: ollama create %~1 failed; the role resolves missing until it is built by hand
+exit /b 0
 
 :error
 echo.

@@ -81,12 +81,42 @@ def test_warmup_loads_the_model_so_the_first_question_does_not_pay_for_it():
     assert loads == ["fake"], "warmup did not prime the cache; the question reloaded the model"
 
 
-def test_warmup_raises_when_the_optional_extra_is_missing():
+def test_warmup_with_every_version_failing_disables_instead_of_refusing_boot():
+    """Deliberate rewrite of the P4-3 contract (model registry, decision 2): a chain
+    whose every entry fails to load ends in `disabled, source=fallback` and the server
+    boots (invariant #5) — the resolver, /health.model_fallback and the nightly carry
+    the deviation instead of an outage. Request time is untouched: test_rerank_paths.py
+    still expects 503 when a loaded model breaks later."""
+    from app.config.model_registry import VersionRecord
+
+    def loader(name, **kwargs):
+        raise RerankerUnavailableError("Reranker cần gói tùy chọn: pip install -e .[rerank]")
+
+    versions = tuple(
+        VersionRecord(role="reranker", id=version_id, provider="sentence-transformers", config={}, hub=f"hub/{version_id}", revision="r")
+        for version_id in ("reranker-v1", "reranker-v0")
+    )
+    service = RerankerService(True, "fake", 15, model_loader=loader, versions=versions)
+
+    outcome = service.warmup()  # must not raise
+
+    assert (outcome.status, outcome.source, outcome.loaded_id) == ("rejected_all", "fallback", None)
+    assert "[rerank]" in outcome.reason and service.enabled is False and service.loaded is None
+    assert service.rerank("question", [{"content": "a"}, {"content": "b"}], 1) == [{"content": "a"}], "disabled must pass through"
+
+
+def test_legacy_warmup_no_longer_raises_either():
+    """versions=None keeps today's single-name load, but an exception disables the
+    service (source "legacy") instead of taking uvicorn down with it."""
     def loader(_):
         raise RerankerUnavailableError("Reranker cần gói tùy chọn: pip install -e .[rerank]")
 
-    with pytest.raises(RerankerUnavailableError, match=r"\[rerank\]"):
-        RerankerService(True, "fake", 15, model_loader=loader).warmup()
+    service = RerankerService(True, "fake", 15, model_loader=loader)
+
+    outcome = service.warmup()
+
+    assert (outcome.status, outcome.source) == ("rejected_all", "legacy") and "[rerank]" in outcome.reason
+    assert service.enabled is False
 
 
 def test_warmup_is_a_noop_when_disabled():

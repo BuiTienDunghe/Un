@@ -425,11 +425,16 @@ def run_extraction_phase(cases: list[dict]) -> tuple[bool, dict]:
     from app.services.discord_memory_verifier import DiscordMemoryVerifierAdapter
 
     settings = get_settings()
+    # Model registry: the tags come from the resolved extractor/verifier versions
+    # (roles.*.active, or a MODEL_VERSION_*/DISCORD_MEMORY_*_MODEL pin) — the same
+    # resolution the memory worker runs, so the night benchmark measures what the
+    # worker would actually call.
+    resolved = settings.resolve_models()
     rule_filter = DiscordMemoryRuleFilter()
     builder = DiscordMemoryExtractorEnvelopeBuilder()
     extractor = DiscordMemoryExtractorAdapter(
         base_url=settings.ollama_base_url,
-        model=settings.discord_memory_extractor_model,
+        model=resolved.model_name("extractor"),
         schema_version=settings.discord_memory_extractor_schema_version,
         num_ctx=settings.discord_memory_extractor_num_ctx,
         temperature=settings.discord_memory_extractor_temperature,
@@ -439,7 +444,7 @@ def run_extraction_phase(cases: list[dict]) -> tuple[bool, dict]:
     )
     verifier = DiscordMemoryVerifierAdapter(
         base_url=settings.ollama_base_url,
-        model=settings.discord_memory_verifier_model,
+        model=resolved.model_name("verifier"),
         timeout_seconds=settings.discord_memory_verifier_timeout_seconds,
     )
     print(

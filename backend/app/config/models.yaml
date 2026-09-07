@@ -1,94 +1,20 @@
 # ──────────────────────────────────────────────────────────────────────────────
-# models.yaml  –  LLM model configuration
+# models.yaml  –  RAG / agent / storage policy (no model names live here)
 #
-# SWITCHING PROVIDERS
-# -------------------
-# Each model slot has a `provider` field. Change it (and the `name`) to route
-# that slot to a different backend. Restart the server after any change.
+# MODEL NAMES MOVED to model_versions.yaml (same directory): every role —
+# general, condenser, embedding, vision, ocr, reranker, extractor, verifier —
+# is a versioned record there with one `active` pointer per role, and
+# Settings.load_models() serves the active version's `config:` block verbatim,
+# so the flat keys the code reads (name, provider, temperature, context, ...)
+# are unchanged. Switching provider or model = edit that pointer (or set
+# MODEL_VERSION_<ROLE>=<id> in the shell for one machine) and restart.
+#   cd backend && python -m app.config.model_registry --check   # CI runs this
 #
-#   provider: ollama    → local Ollama server (OLLAMA_BASE_URL in .env)
-#   provider: gemini    → Google Gemini API   (GEMINI_API_KEY in .env)
-#   provider: deepseek  → DeepSeek API        (DEEPSEEK_API_KEY in .env)
-#
-# QUICK-SWITCH EXAMPLES (copy one block over the active `general` slot):
-#
-#   # --- Gemini ---
-#   general:
-#     provider: gemini
-#     name: gemini-2.0-flash         # or gemini-2.5-pro, gemini-2.5-flash
-#     temperature: 0.4
-#     top_p: 0.9
-#     max_tokens: 8192
-#
-#   # --- DeepSeek ---
-#   general:
-#     provider: deepseek
-#     name: deepseek-chat            # or deepseek-reasoner (R1/V4 reasoning model)
-#     temperature: 0.4
-#     top_p: 0.9
-#     max_tokens: 8192
-#
-#   # --- Ollama (local) ---
-#   general:
-#     provider: ollama
-#     name: qwen3.5:9b
-#     context: 16384
-#     temperature: 0.4
-#     top_p: 0.9
-#     think: false
-#     keep_alive: 5m
+# What stays here is policy that names no model: rag.* (chunk budgets,
+# retrieval mode, contextual retrieval, injection defense, reranker on/off and
+# candidate_limit), agent.*, storage.*. load_config()/load_storage_config()
+# read it exactly as before. Restart the server after any change.
 # ──────────────────────────────────────────────────────────────────────────────
-
-models:
-  # ── ACTIVE CONFIGURATION ─────────────────────────────────────────────────
-  general:
-    provider: ollama
-    name: qwen3.5:9b
-    context: 16384
-    temperature: 0.4
-    top_p: 0.9
-    think: false
-    keep_alive: 5m
-  # Tier 3 condensation (memory_design.md §7.3). MUST stay indented inside
-  # `models:` — a block at the outer level never reaches load_models() and
-  # fails silently. Only the background condensation worker reads this slot;
-  # the answer path stays on `general` (invariant #7). Needs GEMINI_API_KEY;
-  # without it the worker stays inert and says so.
-  condenser:
-    provider: gemini
-    name: gemini-2.5-flash
-    temperature: 0.2
-    max_tokens: 4096
-  embedding:
-    # Embedding only works with provider: ollama
-    provider: ollama
-    name: qwen3-embedding:0.6b
-    context: 32768
-    # Cache identity — all three keys are required for the PostgreSQL
-    # embedding cache to engage. Bump `revision` whenever the underlying
-    # model weights change; cached vectors are then safely invalidated.
-    # `dimensions` must match the model's output size or lookups miss.
-    revision: qwen3-embedding-0.6b-r1
-    normalization: raw
-    dimensions: 1024
-  vision:
-    provider: ollama
-    name: qwen3.5:9b
-    context: 16384
-    temperature: 0.3
-    keep_alive: 5m
-  ocr:
-    # OCR only works with provider: ollama (vision_chat API)
-    provider: ollama
-    name: glm-ocr:latest
-    enabled: true
-    context: 16384
-    temperature: 0.1
-    keep_alive: 5m
-    prompt: "Text Recognition:"
-    dpi: 200
-    min_text_characters: 80
-    min_alphanumeric_ratio: 0.45
 
 rag:
   # Token budgets. The built-in Unicode tokenizer is deterministic; benchmark these
@@ -143,7 +69,6 @@ rag:
   reranker:
     enabled: true
     provider: sentence-transformers
-    model: cross-encoder/mmarco-mMiniLMv2-L12-H384-v1
     candidate_limit: 15
 
 agent:

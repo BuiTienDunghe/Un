@@ -36,6 +36,49 @@ class OllamaClient:
         except httpx.HTTPError:
             return False
 
+    def list_models(self) -> dict[str, str] | None:
+        """GET /api/tags within health_timeout -> {name: digest}; None on any error or timeout.
+
+        A startup probe for the model registry, so ONE attempt and never /api/pull: a
+        rejected version must never start a download (invariant #5), and a retry loop
+        would turn "Ollama is slow" into a minute-long boot. None means "could not
+        decide", which the resolver keeps apart from "tag absent" (a dict without it):
+        Ollama being down is not a reason to switch models.
+        """
+        try:
+            response = httpx.get(f"{self.base_url}/api/tags", timeout=self.health_timeout)
+            if not response.is_success:
+                return None
+            models = response.json().get("models") or []
+        except Exception:
+            # httpx errors, timeouts and an unparsable body alike: a probe never raises.
+            return None
+        return {
+            str(item["name"]): str(item.get("digest") or "")
+            for item in models
+            if isinstance(item, dict) and item.get("name")
+        }
+
+    def probe_embed_dimension(self, model: str, text: str = "local-ai-core probe") -> int | None:
+        """ONE POST /api/embed with timeout=health_timeout and no retry loop; len(embeddings[0]).
+
+        None on 404/error/timeout — "could not decide", never "wrong size": the resolver
+        marks the embedding role unverified on None and degraded only on a width that
+        contradicts the record (a same-width swap is exactly what it must catch).
+        """
+        try:
+            response = httpx.post(
+                f"{self.base_url}/api/embed", json={"model": model, "input": text}, timeout=self.health_timeout
+            )
+            if not response.is_success:
+                return None
+            embeddings = response.json().get("embeddings")
+        except Exception:
+            return None
+        if not isinstance(embeddings, list) or not embeddings or not isinstance(embeddings[0], list):
+            return None
+        return len(embeddings[0])
+
     def chat(self, model: str, messages: list[dict[str, str]], options: dict[str, Any], keep_alive: str, think: bool | None = None) -> str:
         payload = {
             "model": model,

@@ -75,6 +75,21 @@ def main() -> int:
     latencies: list[int] = []
     started = time.monotonic()
     with httpx.Client(timeout=120, headers=api_key_headers()) as client:
+        # Model registry (invariant #4): a report names the version ids that produced
+        # it, read from the server, and is never written for a fallback — checked
+        # BEFORE the queries, because three thousand of them against the wrong
+        # version would be GPU time spent on a number nothing may cite.
+        served = client.get(f"{arguments.base_url}/models")
+        served.raise_for_status()
+        payload = served.json()
+        registry = payload.get("registry") if isinstance(payload.get("registry"), dict) else {}
+        deviating = sorted(role for role, row in registry.items() if row.get("fallback"))
+        if deviating:
+            print(f"TU CHOI ghi bao cao: {', '.join(deviating)} khong chay dung phien ban trong registry "
+                  f"(fallback) - xem {arguments.base_url}/models. Sua roi khoi dong lai API va chay lai.")
+            return 1
+        versions = {role: (registry.get(role) or {}).get("loaded") for role in ("general", "embedding", "reranker")}
+        rag = payload.get("rag") if isinstance(payload.get("rag"), dict) else {}
         for position, case in enumerate(cases, start=1):
             relevant = set(case["expected_docs"])
             response = client.post(f"{arguments.base_url}/rag/search",
@@ -115,6 +130,8 @@ def main() -> int:
         "dataset": arguments.dataset,
         "base_url": arguments.base_url,
         "label": arguments.label,
+        "versions": versions,
+        "rag": rag,
         "top_k_requested": arguments.top_k,
         "retrieval_depth_reached": depth,
         "depth_note": (

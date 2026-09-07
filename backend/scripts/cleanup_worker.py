@@ -64,7 +64,12 @@ def main() -> int:
     if not settings.database_url:
         raise RuntimeError("DATABASE_URL is required")
     sessions = create_session_factory(create_postgres_engine(settings.database_url))
-    qdrant = QdrantStore(settings.qdrant_url, settings.qdrant_timeout_seconds, documents_collection=settings.qdrant_documents_collection)
+    # Model registry: the active collection comes from the embedding pointer (pure
+    # derivation, no probe) and deletes sweep every registered version's collection,
+    # or an inactive, frozen collection would keep the vectors of a document this
+    # worker just removed and resurrect them on demotion.
+    collections = settings.qdrant_collections()
+    qdrant = QdrantStore(settings.qdrant_url, settings.qdrant_timeout_seconds, documents_collection=collections.documents, documents_sweep=collections.all_documents)
     from sqlalchemy import text
     with sessions() as session:
         session.execute(text("SELECT 1"))

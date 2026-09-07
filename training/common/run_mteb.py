@@ -150,6 +150,10 @@ def main() -> int:
                         help="Task names; default is the four native Vietnamese retrieval tasks.")
     parser.add_argument("--instruction", action="store_true",
                         help="Send a query-side instruction (Qwen3-Embedding is trained for it).")
+    parser.add_argument("--version-id", default=None,
+                        help="model_versions.yaml roles.embedding id whose weights --model serves; stamped into "
+                             "summary.json as versions.embedding (mteb talks to Ollama directly, so the id is declared, "
+                             "and `--check` verifies summary.model == that version's config.name).")
     parser.add_argument("--output-folder", default=None)
     parser.add_argument("--batch-size", type=int, default=128,
                         help="Texts per embedding request. The default of 32 upstream means four times "
@@ -204,6 +208,7 @@ def main() -> int:
     summary = output / "summary.json"
     summary.write_text(json.dumps({
         "model": arguments.model,
+        "versions": {"embedding": arguments.version_id},
         "endpoint": arguments.endpoint,
         "instruction": arguments.instruction,
         "elapsed_minutes": round(elapsed / 60, 2),

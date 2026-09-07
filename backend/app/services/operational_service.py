@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from redis import Redis
 from rq import Queue, Worker
@@ -22,6 +23,9 @@ from app.postgres.models import (
 )
 from app.services.job_routing import DISCORD_MEMORY_INGEST_JOB_TYPE
 
+if TYPE_CHECKING:
+    from app.config.model_registry import Resolved
+
 
 class OperationalService:
     def __init__(
@@ -38,6 +42,7 @@ class OperationalService:
         backups_path: Path | None = None,
         backup_heartbeat_path: Path | None = None,
         backup_max_age_hours: float = 24.0,
+        model_registry: "Resolved | None" = None,
     ) -> None:
         self.sessions, self.redis_url, self.prefix, self.qdrant, self.ollama = sessions, redis_url, prefix, qdrant, ollama
         self.cleanup_heartbeat_path = cleanup_heartbeat_path
@@ -46,6 +51,10 @@ class OperationalService:
         self.backups_path = backups_path
         self.backup_heartbeat_path = backup_heartbeat_path
         self.backup_max_age_hours = backup_max_age_hours
+        # Model registry: the API's resolution (Settings.resolve_models()), asked
+        # per /health call so the reranker's warmup verdict is included. None
+        # (tests that build the service bare) reads as "ok".
+        self.model_registry = model_registry
 
     def _backup_status(self) -> tuple[str, float | None]:
         """Report the newest recovery point, not whether a worker is running.
@@ -70,6 +79,13 @@ class OperationalService:
 
     def health(self) -> dict[str, object]:
         components: dict[str, str] = {"ollama": "ok" if self.ollama.healthcheck() else "unavailable", "qdrant": "ok" if self.qdrant.healthcheck() else "unavailable"}
+        # Model registry: "fallback" when any role serves something other than
+        # what its pointer names (or nothing at all). A FLAT key, because the
+        # dashboard renders nested objects as [object Object]; and it never
+        # touches `status` — control.py and the smoke test gate on that boolean,
+        # and a fallback is a serving state to be seen, not an outage. The
+        # per-role detail is /models.registry.
+        components["model_fallback"] = self.model_registry.fallback_flag() if self.model_registry is not None else "ok"
         if self.sessions:
             try:
                 with self.sessions() as session: session.execute(text("SELECT 1"))

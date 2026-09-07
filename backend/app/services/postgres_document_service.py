@@ -46,7 +46,7 @@ class PostgresDocumentService:
 
     allowed_file_types = {".pdf": {"application/pdf"}, ".docx": {"application/vnd.openxmlformats-officedocument.wordprocessingml.document"}, ".txt": {"text/plain"}, ".md": {"text/markdown", "text/plain"}}
 
-    def __init__(self, session_factory: sessionmaker, embedding_cache: EmbeddingCacheStore, qdrant: QdrantStore, router: ModelRouter, logging_service: LoggingService, documents_path: Path, chunk_tokens: int, chunk_overlap_tokens: int, ocr_service: OCRService, job_queue: object | None = None, job_max_attempts: int = 3, chunk_context: object | None = None, on_corpus_change: object | None = None) -> None:
+    def __init__(self, session_factory: sessionmaker, embedding_cache: EmbeddingCacheStore, qdrant: QdrantStore, router: ModelRouter, logging_service: LoggingService, documents_path: Path, chunk_tokens: int, chunk_overlap_tokens: int, ocr_service: OCRService, job_queue: object | None = None, job_max_attempts: int = 3, chunk_context: object | None = None, on_corpus_change: object | None = None, embedding_version: str | None = None) -> None:
         self.sessions, self.embedding_cache, self.qdrant, self.router = session_factory, embedding_cache, qdrant, router
         self.logging_service, self.documents_path = logging_service, documents_path
         self.chunk_tokens, self.chunk_overlap_tokens, self.parser = chunk_tokens, chunk_overlap_tokens, SmartParser(ocr_service)
@@ -59,6 +59,11 @@ class PostgresDocumentService:
         # P4-2: optional contextual-retrieval annotator; None or disabled means
         # both index paths behave exactly as before.
         self.chunk_context = chunk_context
+        # Model registry: the resolved embedding version id of THIS process
+        # (Resolved.embedding_version_id()), written to
+        # document_versions.embedding_model at activation and nowhere else. None
+        # leaves the column untouched (callers that predate the registry).
+        self.embedding_version = embedding_version
 
     @staticmethod
     def _document_payload(document: Document, run: IngestionRun | None = None, version: DocumentVersion | None = None) -> dict[str, object]:
@@ -457,7 +462,7 @@ class PostgresDocumentService:
                         raise RuntimeError("system activation is forbidden when RQ execution is enabled")
                     from loguru import logger
                     logger.warning("Using thread fallback system activation for run {}", run_id)
-                    PostgresDocumentRepository(session).activate(run_id, system_context=True)
+                    PostgresDocumentRepository(session).activate(run_id, system_context=True, embedding_version=self.embedding_version)
                 self._notify_corpus_change()
                 self.logging_service.log_request("/documents/index", None, 0, "ok")
             except Exception as error:
@@ -524,7 +529,7 @@ class PostgresDocumentService:
         self._set_stage(run_id, "activating", embedded_chunks=len(chunks), progress_percent=95)
         if checkpoint and not checkpoint(): raise PermissionError("worker lost job ownership before activation")
         with self.sessions.begin() as session:
-            PostgresDocumentRepository(session).activate(run_id, job_id, worker_id)
+            PostgresDocumentRepository(session).activate(run_id, job_id, worker_id, embedding_version=self.embedding_version)
         self._notify_corpus_change()
 
     def _notify_corpus_change(self) -> None:
@@ -579,6 +584,13 @@ class PostgresDocumentService:
 
     def _embed_with_cache(self, content: str, model: str, long_call: Callable[[], object] | None = None) -> list[float]:
         """Use cache only when the full identity is known; model work is session-free."""
+        # The registry's refusal guards the INDEX path, not only the Ollama call: a cache
+        # hit returns below without ever reaching router.embed(), and a cached vector
+        # that reaches upsert_chunks creates the collection the probe found missing
+        # (ModelRouter.require_embedding). getattr: the test fakes are bare embed() objects.
+        require = getattr(self.router, "require_embedding", None)
+        if require is not None:
+            require()
         configured_dimensions = self.router.models.get("embedding", {}).get("dimensions")
         identity = self._cache_identity(content, int(configured_dimensions)) if configured_dimensions else None
         if identity is not None:
@@ -591,7 +603,7 @@ class PostgresDocumentService:
             if cached is not None:
                 return cached
         with (long_call() if long_call else nullcontext()):
-            vector, returned_model = self.router.embed(content)
+            vector, returned_model = self.router.embed(content, side="passage")
         vector = [float(value) for value in vector]
         identity = self._cache_identity(content, len(vector))
         if identity is not None:

@@ -38,7 +38,7 @@ class PostgresRetrievalService:
         return reranked
 
     def _dense(self, query: str, top_k: int, document_id: str | list[str] | None) -> list[dict[str, object]]:
-        vector, _ = self.router.embed(query)
+        vector, _ = self.router.embed(query, side="query")
         with self.sessions() as session:
             repository = PostgresDocumentRepository(session)
             requested = [document_id] if isinstance(document_id, str) else document_id

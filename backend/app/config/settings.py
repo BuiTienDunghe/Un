@@ -1,12 +1,25 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import field_validator, model_validator
+from pydantic import PrivateAttr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from app.config.model_registry import (
+    DEFAULT_REGISTRY_PATH,
+    ProductionProbes,
+    QdrantCollections,
+    Registry,
+    Resolved,
+    derive_collections,
+    load_registry,
+    overrides_from_settings,
+    resolve,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -51,13 +64,17 @@ class Settings(BaseSettings):
     # p95 4.6 s, 65 tok/s (was 4.1 tok/s) —
     # data/benchmarks/discord_memory_extractor_20260904_qwen9b_full150.json.
     # Anything that reasons about the background budget should start there.
-    discord_memory_extractor_model: str = "qwen3.5:9b"
+    # WAS "qwen3.5:9b". None = follow model_versions.yaml roles.extractor.active
+    # (the tag now lives there); a tag = ad-hoc per-machine pin (source env_tag,
+    # no fallback, no provenance — the D2 ship path). MODEL_VERSION_EXTRACTOR is
+    # the provenance-carrying pin; setting both is refused below.
+    discord_memory_extractor_model: str | None = None
     # Job 4 (memory_design.md 13.2 E1): the 1-vs-1 verifier. Ships DARK on
     # purpose - enabling it adds one background model call per candidate, and
     # auto-apply additionally requires verdict == "entailment". Turn on after
     # the --with-extractor benchmark clears the 13.4 thresholds.
     discord_memory_verifier_enabled: bool = False
-    discord_memory_verifier_model: str = "qwen3.5:9b"
+    discord_memory_verifier_model: str | None = None
     discord_memory_verifier_timeout_seconds: float = 90.0
     # v2 = vocabulary v2 (user.birthday, user.favorite_drink/food). The wire
     # format is unchanged; the bump re-keys job/candidate idempotency so old
@@ -122,6 +139,27 @@ class Settings(BaseSettings):
     # production reads. Nothing in the answer path changes unless it is set —
     # unset follows models.yaml, which stays hybrid.
     rag_retrieval_mode: str | None = None
+    # ── Model version registry (backend/app/config/model_versions.yaml) ──
+    # One record per model version, one `active` pointer per role, read ONCE per
+    # process; restart to switch. MODEL_REGISTRY_PATH points a test at a fixture
+    # (relative = from the repo root); unset = the shipped file.
+    model_registry_path: str | None = None
+    # MODEL_STARTUP_PROBES=false skips every startup probe (/api/tags, one probe
+    # embed, collection width/count, Postgres counts). The test suite pins it:
+    # its mocked 3-d embeds and *_test collections would contradict a real
+    # 1024-d probe and mark the embedding role degraded.
+    model_startup_probes: bool = True
+    # MODEL_VERSION_<ROLE>=<id listed in the registry>: per-machine pin, shell
+    # only, never .env (a pin left in .env would make every eval grade the wrong
+    # version). Unset = follow the registry's `active`. An unknown id refuses
+    # boot naming the variable.
+    model_version_general: str | None = None
+    model_version_condenser: str | None = None
+    model_version_embedding: str | None = None
+    model_version_ocr: str | None = None
+    model_version_reranker: str | None = None
+    model_version_extractor: str | None = None
+    model_version_verifier: str | None = None
     superseded_version_grace_days: int = 7
     backup_dir: str = "data/backups"
     # Second copy of every dump/source archive, e.g. another volume or a
@@ -163,12 +201,41 @@ class Settings(BaseSettings):
     # nap prompt luc nguoi, +6ms luc am, 0 loi goi sinh chu them.
     conversation_history_limit: int = 40
 
+    # Loaded once per process and reused by every load_models()/resolve_models()
+    # call, so the API's two router-construction sites and every worker read one
+    # resolution (constraint: API and worker must never disagree).
+    _registry: Registry | None = PrivateAttr(default=None)
+    _resolved: Resolved | None = PrivateAttr(default=None)
+
     @field_validator("discord_memory_auto_apply_threshold", mode="before")
     @classmethod
     def _auto_apply_off_words(cls, value: object) -> object:
         # `.env` files have no null literal; the natural way an operator turns
         # autonomy off is an empty value or the word "off".
         if isinstance(value, str) and value.strip().lower() in {"", "off", "none", "disabled"}:
+            return None
+        return value
+
+    @field_validator(
+        "model_registry_path",
+        "model_version_general",
+        "model_version_condenser",
+        "model_version_embedding",
+        "model_version_ocr",
+        "model_version_reranker",
+        "model_version_extractor",
+        "model_version_verifier",
+        "discord_memory_extractor_model",
+        "discord_memory_verifier_model",
+        mode="before",
+    )
+    @classmethod
+    def _empty_pin_is_unset(cls, value: object) -> object:
+        # Same reason as above: docker-compose passes `${MODEL_VERSION_X:-}` and a
+        # shell `set MODEL_VERSION_X=` both arrive as "", which must mean "unset",
+        # never "pin the version named ''". Only the exact empty string maps:
+        # whitespace is a typo the validator below refuses rather than silences.
+        if value == "":
             return None
         return value
 
@@ -182,8 +249,16 @@ class Settings(BaseSettings):
             raise ValueError("DATABASE_URL must use a PostgreSQL SQLAlchemy dialect, not SQLite")
         if not self.discord_memory_extractor_schema_version.strip():
             raise ValueError("DISCORD_MEMORY_EXTRACTOR_SCHEMA_VERSION must not be empty")
-        if not self.discord_memory_extractor_model.strip():
-            raise ValueError("DISCORD_MEMORY_EXTRACTOR_MODEL must not be empty")
+        if self.discord_memory_extractor_model is not None and not self.discord_memory_extractor_model.strip():
+            raise ValueError("DISCORD_MEMORY_EXTRACTOR_MODEL must not be blank when set")
+        if self.discord_memory_verifier_model is not None and not self.discord_memory_verifier_model.strip():
+            raise ValueError("DISCORD_MEMORY_VERIFIER_MODEL must not be blank when set")
+        # Two pins for one role would leave the log unable to say which one
+        # served; the registry pin carries provenance, the tag pin does not.
+        if self.discord_memory_extractor_model is not None and self.model_version_extractor is not None:
+            raise ValueError("DISCORD_MEMORY_EXTRACTOR_MODEL and MODEL_VERSION_EXTRACTOR are both set: set one, not both")
+        if self.discord_memory_verifier_model is not None and self.model_version_verifier is not None:
+            raise ValueError("DISCORD_MEMORY_VERIFIER_MODEL and MODEL_VERSION_VERIFIER are both set: set one, not both")
         if self.discord_memory_extractor_num_ctx < 512:
             raise ValueError("DISCORD_MEMORY_EXTRACTOR_NUM_CTX must be at least 512")
         if self.discord_memory_extractor_temperature != 0.0:
@@ -270,12 +345,40 @@ class Settings(BaseSettings):
     def load_storage_config(self) -> dict[str, Any]:
         return self.load_config().get("storage", {})
 
+    @property
+    def model_registry_file(self) -> Path:
+        if not self.model_registry_path:
+            return DEFAULT_REGISTRY_PATH
+        path = Path(self.model_registry_path)
+        return path if path.is_absolute() else PROJECT_ROOT / path
+
+    def registry(self) -> Registry:
+        """The parsed, validated registry; loaded once per Settings instance."""
+        if self._registry is None:
+            self._registry = load_registry(self.model_registry_file)
+        return self._registry
+
+    def resolve_models(self, *, allow_missing_collections: bool = False) -> Resolved:
+        """Pointer -> probe -> fallback chain -> status, once per process (first call
+        wins, so the API's two load_models() calls and a worker's first job pay the
+        probes exactly once). Probes run only when MODEL_STARTUP_PROBES is true."""
+        if self._resolved is None:
+            overrides = overrides_from_settings(self)
+            if allow_missing_collections:
+                overrides = replace(overrides, allow_missing_collections=True)
+            probes = ProductionProbes(self) if self.model_startup_probes else None
+            self._resolved = resolve(self.registry(), overrides, probes)
+        return self._resolved
+
     def load_models(self) -> dict[str, dict[str, Any]]:
-        payload = self.load_config()
-        models = payload.get("models")
-        if not isinstance(models, dict):
-            raise ValueError("models.yaml must contain a models mapping")
-        return models
+        # Signature unchanged: every router construction site keeps calling this
+        # and receives the active version's `config:` block per role, verbatim.
+        return self.resolve_models().flat_models()
+
+    def qdrant_collections(self) -> QdrantCollections:
+        """Collection names from the pointer alone — no probe, no resolve — for the
+        collection-only consumers (cleanup worker, forget_member, migrations)."""
+        return derive_collections(self.registry(), overrides_from_settings(self))
 
 
 @lru_cache

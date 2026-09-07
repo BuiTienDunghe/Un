@@ -68,14 +68,24 @@ def _service() -> tuple[PostgresDocumentService, object, JobQueueService]:
     settings = get_settings()
     if not settings.database_url:
         raise RuntimeError("DATABASE_URL is required for RQ workers")
-    router = ModelRouter(OllamaClient(settings.ollama_base_url, settings.ollama_chat_timeout_seconds, settings.ollama_health_timeout_seconds, settings.ollama_retry_count), settings.load_models())
     sessions = create_session_factory(create_postgres_engine(settings.database_url))
     # Workers use PostgreSQL for document state, auxiliary domains, and the
     # embedding cache.  SQLite remains isolated to the cleanup process.
     auxiliary_store = PostgresAuxiliaryStore(sessions)
+    # The durable log sink is installed BEFORE the resolver runs, so a worker's
+    # model_version_* events (a fallback, a degraded embedding) land in the same
+    # file the API's do (invariant #6). The first job of the process pays the
+    # probes; every later job reuses settings._resolved.
+    logging_service = LoggingService(auxiliary_store, settings.logs_path)
+    resolved = settings.resolve_models()
+    # A `degraded` embedding makes router.embed raise EmbeddingRefusedError before
+    # Ollama: index_for_worker fails the run DOCUMENT_INDEX_FAILED, the previous
+    # active version stays, and RQ classifies it non-retryable.
+    router = ModelRouter({"ollama": OllamaClient(settings.ollama_base_url, settings.ollama_chat_timeout_seconds, settings.ollama_health_timeout_seconds, settings.ollama_retry_count)}, settings.load_models(), embedding_refusal=resolved.embedding_refusal())
     rag_config = settings.load_config().get("rag", {})
     chunk_context = ChunkContextService.from_config(router, rag_config, enabled_override=settings.rag_contextual_retrieval_enabled)
-    service = PostgresDocumentService(sessions, PostgresEmbeddingCacheStore(sessions), QdrantStore(settings.qdrant_url, settings.qdrant_timeout_seconds, documents_collection=settings.qdrant_documents_collection), router, LoggingService(auxiliary_store, settings.logs_path), settings.documents_path, int(rag_config.get("chunk_tokens", 480)), int(rag_config.get("chunk_overlap_tokens", 80)), OCRService(router, auxiliary_store), chunk_context=chunk_context)
+    collections = settings.qdrant_collections()
+    service = PostgresDocumentService(sessions, PostgresEmbeddingCacheStore(sessions), QdrantStore(settings.qdrant_url, settings.qdrant_timeout_seconds, documents_collection=collections.documents, documents_sweep=collections.all_documents), router, logging_service, settings.documents_path, int(rag_config.get("chunk_tokens", 480)), int(rag_config.get("chunk_overlap_tokens", 80)), OCRService(router, auxiliary_store), chunk_context=chunk_context, embedding_version=resolved.embedding_version_id())
     return (
         service,
         sessions,

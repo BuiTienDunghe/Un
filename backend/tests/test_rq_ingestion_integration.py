@@ -31,6 +31,8 @@ def _worker_service(resources, tmp_path: Path, qdrant: FakeQdrantStore, router: 
         480,
         80,
         FakeOcrService(),
+        # Model registry: what workers/tasks.py passes from Resolved.embedding_version_id().
+        embedding_version="embedding-v0",
     )
 
 
@@ -78,6 +80,8 @@ def test_rq_ingestion_end_to_end(worker_integration_resources, monkeypatch, tmp_
         assert document.active_version_id == version_id
         assert run.current_stage == "completed" and run.status == "completed"
         assert len([item for item in versions if item.status == "active"]) == 1
+        # The worker-path activation stamps the embedding version whose vectors it wrote.
+        assert next(item for item in versions if item.status == "active").embedding_model == "embedding-v0"
         assert pages and chunks
         assert all(item.document_id == document_id and item.version_id == version_id for item in [*pages, *chunks])
         assert {job.status for job in jobs} == {"completed"}

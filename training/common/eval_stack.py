@@ -70,8 +70,25 @@ def pid_file(profile: str) -> Path:
     return PROJECT_ROOT / "data" / f"eval_stack_{profile}.pids"
 
 
+def version_pins(model_versions: list[str] | None) -> dict[str, str]:
+    """--model-version ROLE=ID, repeatable -> {MODEL_VERSION_<ROLE>: ID}.
+
+    The pin goes into the stack's env ONLY (never .env, never this shell): a
+    candidate is measured on the isolated stack while every other process keeps
+    resolving the registry's `active`. An unknown id refuses the API's boot
+    naming the variable, which `start` then prints from the log tail.
+    """
+    pins: dict[str, str] = {}
+    for item in model_versions or []:
+        role, separator, version = item.partition("=")
+        if not separator or not role.strip() or not version.strip():
+            raise SystemExit(f"--model-version can dang ROLE=ID (vi du reranker=reranker-d2-v1), nhan duoc {item!r}")
+        pins[f"MODEL_VERSION_{role.strip().upper()}"] = version.strip()
+    return pins
+
+
 def stack_env(profile: str, reranker: bool | None, mode: str | None = None,
-              contextual: bool | None = None) -> dict[str, str]:
+              contextual: bool | None = None, model_versions: list[str] | None = None) -> dict[str, str]:
     spec = PROFILES[profile]
     sys.path.insert(0, str(BACKEND))
     from app.config.settings import get_settings
@@ -84,9 +101,18 @@ def stack_env(profile: str, reranker: bool | None, mode: str | None = None,
         "DATABASE_URL": f"{base}/{spec['database']}",
         "QDRANT_DOCUMENTS_COLLECTION": spec["collection"],
         "RQ_QUEUE_PREFIX": spec["queue"],
+        # Settings.logs_path of the stack's API and workers (relative to the repo root):
+        # the API writes data/logs/<LOG_DIR>/ATTENTION_model_fallback.txt when a role
+        # deviates and DELETES it when nothing does. On production's data/logs a stack
+        # started with --model-version reranker=<candidate> whose candidate is rejected
+        # would leave a marker the morning check attributes to production, and a clean
+        # stack boot would erase the one production earned. The uvicorn stdout logs
+        # (eval_<profile>_*.log) stay in data/logs, where the operator reads them.
+        "LOG_DIR": f"data/logs/eval_{profile}",
         "RAG_CONTEXTUAL_RETRIEVAL_ENABLED": "true" if (spec["contextual"] if contextual is None else contextual) else "false",
         "RAG_RERANKER_ENABLED": "true" if use_reranker else "false",
         **({"RAG_RETRIEVAL_MODE": mode} if mode else {}),
+        **version_pins(model_versions),
     }
 
 
@@ -108,14 +134,15 @@ def healthy(port: int, timeout: float = 240.0) -> bool:
     return False
 
 
-def start(profile: str, reranker: bool | None, mode: str | None = None, contextual: bool | None = None) -> int:
+def start(profile: str, reranker: bool | None, mode: str | None = None, contextual: bool | None = None,
+          model_versions: list[str] | None = None) -> int:
     spec = PROFILES[profile]
     port = spec["port"]
     if listening(port):
         print(f"Da co tien trinh nghe cong {port}. Chay --stop truoc.")
         return 1
     LOG_DIR.mkdir(parents=True, exist_ok=True)
-    env = stack_env(profile, reranker, mode, contextual)
+    env = stack_env(profile, reranker, mode, contextual, model_versions)
     processes = {}
     api_log = (LOG_DIR / f"eval_{profile}_api.log").open("w", encoding="utf-8")
     processes["api"] = subprocess.Popen(
@@ -138,6 +165,9 @@ def start(profile: str, reranker: bool | None, mode: str | None = None, contextu
           f"queue={spec['queue']} · contextual={'ON' if spec['contextual'] else 'OFF'} · "
           f"reranker={'ON' if (spec['reranker'] if reranker is None else reranker) else 'OFF'} · "
           f"mode={mode or spec.get('mode') or 'theo models.yaml'}")
+    pins = version_pins(model_versions)
+    if pins:
+        print("   phien ban ghim: " + ", ".join(f"{key}={value}" for key, value in pins.items()))
     for name, process in processes.items():
         print(f"   {name:14} pid {process.pid}")
     return 0
@@ -186,9 +216,12 @@ def main() -> int:
     parser.add_argument("--no-contextual", dest="contextual", action="store_false")
     parser.add_argument("--mode", choices=["dense", "bm25", "hybrid"], default=None,
                         help="Do mot tang mot: chi vector, chi BM25, hay ca hai. Bo trong = theo models.yaml.")
+    parser.add_argument("--model-version", action="append", default=None, metavar="ROLE=ID",
+                        help="Ghim mot phien ban trong model_versions.yaml cho RIENG stack nay "
+                             "(MODEL_VERSION_<ROLE> trong env cua stack, khong dong vao .env). Lap lai duoc.")
     arguments = parser.parse_args()
     if arguments.start:
-        return start(arguments.profile, arguments.reranker, arguments.mode, arguments.contextual)
+        return start(arguments.profile, arguments.reranker, arguments.mode, arguments.contextual, arguments.model_version)
     if arguments.stop:
         return stop(arguments.profile)
     return status(arguments.profile)

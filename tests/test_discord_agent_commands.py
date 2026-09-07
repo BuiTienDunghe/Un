@@ -73,18 +73,22 @@ def test_format_health_marks_ok_disabled_and_broken_components() -> None:
         "outbox_dispatcher": "disabled",
         "backup": "ok",
         "backup_age_hours": "3.2",
+        "model_fallback": "fallback",
     })
     assert text.startswith("⚠️ **Local AI Core: degraded**")
     assert "✅ PostgreSQL: ok" in text
     assert "⚠️ Ollama: error" in text
     assert "➖ Outbox: disabled" in text
     assert "Backup: ok · 3.2h tuổi" in text
+    # Model registry: a fallback is a serving state (/health stays "ok"), so this
+    # row is where /status makes it visible.
+    assert "⚠️ Model versions: fallback" in text
 
 
 def test_format_health_all_ok() -> None:
     payload = {key: "ok" for key, _ in (
         ("postgres", ""), ("redis", ""), ("qdrant", ""), ("ollama", ""),
-        ("worker_memory", ""), ("outbox_dispatcher", ""), ("backup", ""),
+        ("worker_memory", ""), ("outbox_dispatcher", ""), ("backup", ""), ("model_fallback", ""),
     )}
     payload["status"] = "ok"
     text = format_health(payload)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -89,8 +90,9 @@ def test_legacy_embedding_rows_are_not_imported(cache_store):
 class _MemoryCache:
     def __init__(self, *, fail_get: bool = False, fail_save: bool = False):
         self.rows, self.fail_get, self.fail_save = {}, fail_get, fail_save
-        self.saves = 0
+        self.saves, self.gets = 0, 0
     def get(self, identity):
+        self.gets += 1
         if self.fail_get: raise ConnectionError("cache down")
         return self.rows.get(identity)
     def save(self, identity, vector):
@@ -100,7 +102,7 @@ class _MemoryCache:
 
 class _Router:
     def __init__(self, config): self.models, self.calls = {"embedding": config}, 0
-    def embed(self, text): self.calls += 1; return [0.1, 0.2, 0.3], self.models["embedding"]["name"]
+    def embed(self, text, *, side=None): self.calls += 1; return [0.1, 0.2, 0.3], self.models["embedding"]["name"]
 
 
 def _service_for_cache(cache, config):
@@ -119,3 +121,46 @@ def test_cache_lookup_and_save_failure_do_not_break_embedding():
     config = {"name": "model", "revision": "r1", "normalization": "unit", "dimensions": 3}
     assert _service_for_cache(_MemoryCache(fail_get=True), config)._embed_with_cache("content", "model") == [0.1, 0.2, 0.3]
     assert _service_for_cache(_MemoryCache(fail_save=True), config)._embed_with_cache("content", "model") == [0.1, 0.2, 0.3]
+
+
+def test_a_degraded_embedding_refuses_before_the_cache_is_consulted():
+    """index-safety review: EmbeddingRefusedError was raised only inside router.embed(), which
+    a cache hit never reaches. With the collection absent and the corpus non-empty, a re-index
+    of a document whose chunks were all cached carried its vectors to upsert_chunks, which
+    CREATED the collection the probe found missing; the next boot probed `incomplete` for a
+    one-document index and the "run rebuild_qdrant" refusal was gone. The refusal now sits
+    ahead of the lookup (ModelRouter.require_embedding), so nothing hands the index path a
+    vector while the role is degraded."""
+    from app.services.model_router import EmbeddingRefusedError, ModelRouter
+
+    config = {"provider": "ollama", "name": "qwen3-embedding:0.6b", "revision": "r1", "normalization": "raw", "dimensions": 3}
+    reason = "embedding-v0: collection documents does not exist while active chunks = 10; run python -m scripts.rebuild_qdrant --missing-only with MODEL_VERSION_EMBEDDING=embedding-v0"
+    cache = _MemoryCache()
+    serving = PostgresDocumentService(None, cache, None, ModelRouter({}, {"embedding": config}), None, Path("."), 1, 0, None)
+    cache.rows[serving._cache_identity("nội dung", 3)] = [0.1, 0.2, 0.3]
+    assert serving._embed_with_cache("nội dung", "qwen3-embedding:0.6b") == [0.1, 0.2, 0.3] and cache.gets == 1, "a hit is fine while the role serves"
+
+    degraded = PostgresDocumentService(None, cache, None, ModelRouter({}, {"embedding": config}, embedding_refusal=reason), None, Path("."), 1, 0, None)
+    with pytest.raises(EmbeddingRefusedError, match="see /models.registry"):
+        degraded._embed_with_cache("nội dung", "qwen3-embedding:0.6b")
+    assert cache.gets == 1, "the cache was never consulted"
+
+
+def test_registry_embedding_block_has_the_identity_of_a_hand_written_flat_dict():
+    """Model registry, design §5 layer 4: the resolved embedding block is the `config:`
+    sub-mapping and nothing else, so id / collection_suffix / eval / vram_mib / probe
+    never reach the fingerprint and landing the registry invalidates no cached vector.
+    Prefixes DO re-key the cache — they live inside `config:` for exactly that reason."""
+    from app.config.settings import Settings
+
+    resolved = Settings(database_url="postgresql+psycopg://user:password@localhost/test", _env_file=None).resolve_models()
+    registry_block = resolved.flat_models()["embedding"]
+    hand_written = {"provider": "ollama", "name": "qwen3-embedding:0.6b", "context": 32768, "revision": "qwen3-embedding-0.6b-r1", "normalization": "raw", "dimensions": 1024}
+
+    from_registry = _service_for_cache(_MemoryCache(), registry_block)._cache_identity("nội dung", 1024)
+    from_literal = _service_for_cache(_MemoryCache(), hand_written)._cache_identity("nội dung", 1024)
+
+    assert from_registry is not None and from_registry == from_literal
+    with_prefixes = {**hand_written, "query_prefix": "query: ", "passage_prefix": "passage: "}
+    assert _service_for_cache(_MemoryCache(), with_prefixes)._cache_identity("nội dung", 1024) != from_literal
+    assert _service_for_cache(_MemoryCache(), registry_block)._embed_with_cache("nội dung", "qwen3-embedding:0.6b") == [0.1, 0.2, 0.3]

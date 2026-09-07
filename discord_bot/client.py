@@ -82,6 +82,9 @@ HEALTH_ROWS = (
     ("worker_memory", "Worker memory"),
     ("outbox_dispatcher", "Outbox"),
     ("backup", "Backup"),
+    # Model registry: "ok" | "fallback" — a role serving something other than its
+    # pointer in model_versions.yaml; format_health marks anything but "ok" ⚠️.
+    ("model_fallback", "Model versions"),
 )
 
 

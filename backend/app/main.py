@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app import __version__
+from app.config.model_registry import write_attention_marker
 from app.config.settings import PROJECT_ROOT, get_settings
 from app.llm_clients.ollama_client import OllamaClient
 from app.llm_clients.gemini_client import GeminiClient
@@ -82,14 +83,35 @@ async def lifespan(app: FastAPI):
     app.state.postgres_sessions = postgres_sessions
     auxiliary_store = PostgresAuxiliaryStore(postgres_sessions)
     logging_service = LoggingService(auxiliary_store, settings.logs_path)
-    router = ModelRouter(llm_clients, settings.load_models())
+    # Model registry: pointer -> probe -> fallback chain, ONCE per process, and
+    # only now that the durable log sink exists so every model_version_* event
+    # (a fallback is an autonomous action, invariant #6) reaches the file. The
+    # I/O is bounded and single-attempt: one GET /api/tags, one probe embed for
+    # the embedding pointer, one get_collection + one count per embedding
+    # collection, one Postgres count pair — never a pull, never a retry loop.
+    resolved = settings.resolve_models()
+    # A `degraded` embedding (a verified contradiction between the version and
+    # its collections) makes router.embed refuse before Ollama, so nothing ever
+    # writes foreign vectors into a collection and no query pays the Qdrant
+    # retry sleep for a known-bad state.
+    router = ModelRouter(llm_clients, settings.load_models(), embedding_refusal=resolved.embedding_refusal())
     config = settings.load_config()
     rag_config = config.get("rag", {})
     storage_config = config.get("storage", {})
-    qdrant_store = QdrantStore(settings.qdrant_url, settings.qdrant_timeout_seconds, settings.qdrant_memories_collection, settings.qdrant_documents_collection)
+    # One embedding version == one collection pair, derived from the same
+    # pointer that picks the query model; the sweep lists every registered
+    # version's collection so a delete reaches a frozen inactive pair too.
+    collections = settings.qdrant_collections()
+    qdrant_store = QdrantStore(
+        settings.qdrant_url, settings.qdrant_timeout_seconds, collections.memories, collections.documents,
+        documents_sweep=collections.all_documents, memories_sweep=collections.all_memories,
+    )
     app.state.auxiliary_store = auxiliary_store
     app.state.ollama_client = ollama_client
-    app.state.models = settings.load_models()
+    # The SAME dict the router serves (the second load_models() call is gone):
+    # /models and the answer path can never disagree about a name.
+    app.state.models = router.models
+    app.state.model_registry = resolved
     app.state.settings = settings
     app.state.qdrant_store = qdrant_store
     app.state.logging_service = logging_service
@@ -159,6 +181,7 @@ async def lifespan(app: FastAPI):
         int(rag_config.get("chunk_tokens", rag_config.get("chunk_size", 480))),
         int(rag_config.get("chunk_overlap_tokens", rag_config.get("chunk_overlap", 80))), ocr_service, queue, settings.job_max_attempts,
         chunk_context=chunk_context_service, on_corpus_change=bm25_service.invalidate,
+        embedding_version=resolved.embedding_version_id(),
     )
     app.state.operational_service = OperationalService(
         postgres_sessions,
@@ -172,13 +195,35 @@ async def lifespan(app: FastAPI):
         backups_path=settings.postgres_backups_path,
         backup_heartbeat_path=settings.documents_path.parent / "backup-worker.heartbeat",
         backup_max_age_hours=float(storage_config.get("backup_interval_hours", 24)),
+        model_registry=resolved,
     )
     app.state.ocr_job_service = OcrJobService(router, settings.ocr_runs_path, auxiliary_store, ocr_service)
     app.state.chunk_inspection_service = ChunkInspectionService(postgres_sessions)
-    reranker_service = RerankerService.from_config(rag_config, enabled_override=settings.rag_reranker_enabled)
-    # Fail here, on a machine that turned the reranker on without the [rerank]
-    # extra, rather than on that machine's first question (P4-3).
-    reranker_service.warmup()
+    reranker_service = RerankerService.from_config(
+        rag_config, enabled_override=settings.rag_reranker_enabled, versions=resolved.reranker_chain(),
+    )
+    # Find out here, on a machine that turned the reranker on without the
+    # [rerank] extra, rather than on that machine's first question (P4-3). Since
+    # the registry the chain ends in `disabled` instead of a refused boot
+    # (invariant #5); the verdict is reported back to the resolver — the torch
+    # load happens only in this process — so /health, the ATTENTION marker and
+    # the nightly read one predicate for "serving what the pointer names".
+    outcome = reranker_service.warmup()
+    resolved.record_reranker(
+        loaded_id=outcome.loaded_id,
+        status={
+            "loaded": "active" if outcome.source == "active" else "fallback",
+            "rejected_all": "disabled",
+            "flag_off": "off",
+            "no_versions": "unconfigured",
+        }[outcome.status],
+        reason=outcome.reason,
+        latency_ms=outcome.latency_ms,
+    )
+    # API process only (workers just log): data/logs/ATTENTION_model_fallback.txt
+    # names every deviating role and the one-step revert; removed when nothing
+    # deviates, so a stale marker never outlives the state it described.
+    write_attention_marker(resolved, settings.logs_path)
     retrieval_mode = (settings.rag_retrieval_mode or "").strip() or str(rag_config.get("retrieval_mode", "hybrid"))
     if settings.rag_retrieval_mode:
         # Say so where the operator will see it. A machine measuring one
@@ -187,6 +232,14 @@ async def lifespan(app: FastAPI):
 
         logger.bind(event="retrieval_mode_override", mode=retrieval_mode, source="env").info(
             "Retrieval mode {} (per-machine env override)", retrieval_mode)
+    # /models.rag: the flags this process really runs with. Set AFTER warmup so
+    # a rejected reranker chain reports reranker: false, and after the retrieval
+    # mode is known — a baseline records these from the server, not by guessing.
+    app.state.rag_flags = {
+        "contextual_retrieval": chunk_context_service.enabled,
+        "reranker": reranker_service.enabled,
+        "retrieval_mode": retrieval_mode,
+    }
     retrieval_service = PostgresRetrievalService(qdrant_store, router, postgres_sessions, bm25_service, reranker_service, retrieval_mode, int(rag_config.get("rrf_k", 60)))
     injection_defense = InjectionDefense.from_config(rag_config, enabled_override=settings.rag_injection_defense_enabled)
     app.state.rag_service = RagService(

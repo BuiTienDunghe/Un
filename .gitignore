@@ -116,3 +116,12 @@ data/eval_stack_*.pids
 # Moi truong do benchmark (mteb keo theo torch CPU). Dung lai bang:
 #   py -3.11 -m venv .venv-eval && .venv-eval\Scripts\pip install -r training/requirements-eval.txt
 .venv-eval/
+
+# Checkpoint xuat cho registry mo hinh (data/models/<role>/<id>/, model_versions.yaml):
+# trong so KHONG commit (repo public, moi checkpoint hang tram MB); Modelfile va
+# export.json thi commit — chung la hop dong giua exporter va --check. Ca hai dong
+# "!" can co: git khong nhin vao thu muc da bi loai de tim file duoc mo lai.
+data/models/**
+!data/models/**/
+!data/models/**/Modelfile
+!data/models/**/export.json

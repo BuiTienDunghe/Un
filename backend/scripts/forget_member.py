@@ -122,11 +122,17 @@ def forget(guild_id: str, author_id: str, *, apply: bool) -> dict[str, object]:
     # 1. Vectors first: a Postgres-only delete would leave them searchable.
     removed_vectors = 0
     if memory_ids:
+        # Model registry: one collection pair per embedding version, and an inactive
+        # pair is frozen, not mirrored — so the delete sweeps every registered
+        # memories collection, or the revoked vectors come back on demotion.
+        collections = settings.qdrant_collections()
         store = QdrantStore(
             settings.qdrant_url,
             settings.qdrant_timeout_seconds,
-            settings.qdrant_memories_collection,
-            settings.qdrant_documents_collection,
+            collections.memories,
+            collections.documents,
+            memories_sweep=collections.all_memories,
+            documents_sweep=collections.all_documents,
         )
         for value in memory_ids:
             try:

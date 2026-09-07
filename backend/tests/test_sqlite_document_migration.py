@@ -152,7 +152,7 @@ def test_validation_collection_payload_batch_loads_postgres_chunk(factory, monke
     if not record:
         pytest.skip("Phase 5B validation collection is not populated")
     vector = record[0].vector
-    router = type("Router", (), {"embed": lambda self, _: (vector, "validation")})()
+    router = type("Router", (), {"embed": lambda self, _, **kwargs: (vector, "validation")})()
     monkeypatch.setattr(PostgresDocumentRepository, "active_versions", lambda self, requested=None: {document_id: version_id})
     result = PostgresRetrievalService(store, router, factory).retrieve("validation", 1, document_id)
     assert result and result[0]["document_id"] == document_id and result[0]["version_id"] == version_id

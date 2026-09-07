@@ -1126,7 +1126,7 @@ function syncApiKeyState() {
 async function loadModelsInfo() {
   const box = $("models-info");
   try {
-    const { models } = await api("/models");
+    const { models, registry } = await api("/models");
     const labels = { general: "Trò chuyện & RAG", embedding: "Embedding", vision: "Vision", ocr: "OCR" };
     box.replaceChildren();
     for (const [key, label] of Object.entries(labels)) {
@@ -1138,6 +1138,18 @@ async function loadModelsInfo() {
         .filter(Boolean).join(" · ");
       row.append(el("span", "", key === "ocr" && config.enabled === false ? `${detail} (tắt)` : detail));
       box.append(row);
+    }
+    // Model registry (reranker included): phien ban DANG phuc vu moi vai tro va
+    // trang thai cua no; do khi lech con tro trong model_versions.yaml (fallback),
+    // ly do trong tooltip. Cac dong tren van la ten mo hinh nhu truoc.
+    for (const [role, row] of Object.entries(registry || {})) {
+      const line = el("div", "kv");
+      line.append(el("b", "", `Phiên bản ${role}`));
+      const value = el("span", "", `${row.loaded ?? "—"} (${row.status})`);
+      if (row.reason) value.title = row.reason;
+      if (row.fallback) value.style.color = "var(--danger)";
+      line.append(value);
+      box.append(line);
     }
   } catch {
     box.replaceChildren(el("p", "muted", "Không đọc được cấu hình mô hình."));

@@ -21,7 +21,7 @@ class MemoryService:
 
     def add(self, content: str, memory_type: str, importance: float) -> dict[str, object]:
         memory_id = f"mem_{uuid4().hex}"
-        vector, _ = self.router.embed(content)
+        vector, _ = self.router.embed(content, side="passage")
         self.qdrant.upsert_memory(memory_id, content, memory_type, importance, vector)
         try:
             self.store.create_memory(memory_id, content, memory_type, importance)
@@ -39,7 +39,7 @@ class MemoryService:
         of stacking duplicates. Qdrant upsert is naturally idempotent; the
         relational row falls back to update when the insert already happened.
         """
-        vector, _ = self.router.embed(content)
+        vector, _ = self.router.embed(content, side="passage")
         self.qdrant.upsert_memory(memory_id, content, memory_type, importance, vector)
         try:
             if not self.store.update_memory(memory_id, content, memory_type, importance):
@@ -59,17 +59,18 @@ class MemoryService:
         return existed
 
     def search(self, query: str, top_k: int) -> list[dict[str, object]]:
-        vector, _ = self.router.embed(query)
+        vector, _ = self.router.embed(query, side="query")
         return self.qdrant.search_memories(vector, top_k)
 
     def update(self, memory_id: str, content: str, memory_type: str, importance: float) -> dict[str, object]:
         previous = self._require(memory_id)
-        vector, _ = self.router.embed(content)
+        vector, _ = self.router.embed(content, side="passage")
         self.qdrant.upsert_memory(memory_id, content, memory_type, importance, vector)
         try:
             self.store.update_memory(memory_id, content, memory_type, importance)
         except Exception:
-            previous_vector, _ = self.router.embed(str(previous["content"]))
+            # A rollback re-embeds a stored memory: a passage, like the write it undoes.
+            previous_vector, _ = self.router.embed(str(previous["content"]), side="passage")
             self.qdrant.upsert_memory(memory_id, str(previous["content"]), str(previous["memory_type"]), float(previous["importance"]), previous_vector)
             raise
         self.logging_service.log_request("/memory/update", None, 0, "ok")
@@ -81,7 +82,8 @@ class MemoryService:
         try:
             self.store.delete_memory(memory_id)
         except Exception:
-            previous_vector, _ = self.router.embed(str(previous["content"]))
+            # A rollback re-embeds a stored memory: a passage, like the write it undoes.
+            previous_vector, _ = self.router.embed(str(previous["content"]), side="passage")
             self.qdrant.upsert_memory(memory_id, str(previous["content"]), str(previous["memory_type"]), float(previous["importance"]), previous_vector)
             raise
         self.logging_service.log_request("/memory/delete", None, 0, "ok")
