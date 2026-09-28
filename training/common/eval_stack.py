@@ -82,7 +82,7 @@ def version_pins(model_versions: list[str] | None) -> dict[str, str]:
     for item in model_versions or []:
         role, separator, version = item.partition("=")
         if not separator or not role.strip() or not version.strip():
-            raise SystemExit(f"--model-version can dang ROLE=ID (vi du reranker=reranker-d2-v1), nhan duoc {item!r}")
+            raise SystemExit(f"--model-version can dang ROLE=ID (vi du reranker=reranker-vi-v1), nhan duoc {item!r}")
         pins[f"MODEL_VERSION_{role.strip().upper()}"] = version.strip()
     return pins
 

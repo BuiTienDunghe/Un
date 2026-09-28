@@ -50,7 +50,7 @@ def marker_path() -> Path:
 def broken_active_registry(tmp_path: Path) -> Path:
     """The shipped registry with reranker.active pointed at a version whose weights are
     absent — a `path` entry with no directory — listed right after reranker-v0, so the
-    chain is [broken, reranker-v0] and reranker-d2-v1 stays a candidate after it."""
+    chain is [broken, reranker-v0] and reranker-vi-v1 stays a candidate after it."""
     document = copy.deepcopy(SHIPPED)
     reranker = document["roles"]["reranker"]
     reranker["versions"].insert(1, {
@@ -165,7 +165,7 @@ def pinned_app(monkeypatch, registry_events):
     untouched (`active` stays reranker-v0), so the pin — not the file — is what re-triggers
     the fallback on every restart, and the marker has to say so."""
     loader = Loader()
-    for client in _boot(monkeypatch, registry=None, reranker_on=True, loader=loader, pins={"MODEL_VERSION_RERANKER": "reranker-d2-v1"}):
+    for client in _boot(monkeypatch, registry=None, reranker_on=True, loader=loader, pins={"MODEL_VERSION_RERANKER": "reranker-vi-v1"}):
         client.loader = loader
         yield client
 
@@ -258,10 +258,10 @@ def test_a_pinned_candidate_that_falls_back_tells_the_operator_to_unset_the_pin(
     """operator-ux review: the marker said `edit roles.reranker.active` while `active` already
     WAS reranker-v0 — the shell pin was the thing to undo, and the file never said so."""
     row = pinned_app.get("/models").json()["registry"]["reranker"]
-    assert (row["active"], row["requested"], row["loaded"], row["source"], row["status"]) == ("reranker-v0", "reranker-d2-v1", "reranker-v0", "env", "fallback")
+    assert (row["active"], row["requested"], row["loaded"], row["source"], row["status"]) == ("reranker-v0", "reranker-vi-v1", "reranker-v0", "env", "fallback")
     assert pinned_app.get("/health").json()["model_fallback"] == "fallback"
     text = marker_path().read_text(encoding="utf-8")
-    assert "reranker: requested=reranker-d2-v1 loaded=reranker-v0 status=fallback" in text
+    assert "reranker: requested=reranker-vi-v1 loaded=reranker-v0 status=fallback" in text
     assert "revert: unset MODEL_VERSION_RERANKER in this shell (or set it to reranker-v0), then restart run-local-ai-core.bat" in text
     assert "edit roles.reranker.active" not in text and "<a previous id>" not in text
 

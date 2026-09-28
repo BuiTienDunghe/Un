@@ -1,0 +1,30 @@
+{
+  "activation_fn": "identity",
+  "probe_pairs": [
+    [
+      "thủ tục cấp lại căn cước công dân",
+      "Điều 24. Trình tự, thủ tục cấp lại thẻ căn cước công dân khi bị mất, hư hỏng"
+    ],
+    [
+      "thủ tục cấp lại căn cước công dân",
+      "Bảng giá dịch vụ in ảnh khổ 10x15 và 13x18 tại xưởng"
+    ],
+    [
+      "lịch nghỉ tết âm lịch 2026 của công ty",
+      "Thông báo: công ty nghỉ Tết Nguyên đán từ 14/02 đến 22/02/2026"
+    ]
+  ],
+  "scores": [
+    1.1332,
+    -7.7654,
+    5.4036
+  ],
+  "tolerance": 0.05,
+  "digest_file": "model.safetensors",
+  "model_safetensors_sha256": "34ba6053392a906e47345981f95cb5ba7b82b61e5cf4fc8ebc87d10849d72360",
+  "exported_with": "sentence-transformers==5.7.0",
+  "base": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+  "base_revision": "1427fd652930e4ba29e8149678df786c240d8825",
+  "git_sha": "f88380fdf27606da87e4ba71e1d585a8412062f2",
+  "train_data_sha256": "dacc646bf311ec9d64462c7df4fafcec829f73001a7850419fa7757d3e8f0596"
+}

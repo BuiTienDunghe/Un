@@ -1,0 +1,37 @@
+{
+  "built_by": "training/reranker/mine_negatives.py",
+  "seed": 20260907,
+  "window": 90,
+  "negatives_per_query": 10,
+  "dev_pool": 45,
+  "corpus": {
+    "path": "data\\heldout_raw\\zalo-legal\\corpus.jsonl",
+    "documents": 61043,
+    "chunks": 81174,
+    "chunker": "chunk_pages(480, 80)"
+  },
+  "tokenizer_version": "pyvi-0.1.1",
+  "retriever": "rank_bm25.BM25Okapi — sparse layer only; dense adds +0.004 Acc@1 on this corpus",
+  "counts": {
+    "positives": 2376,
+    "negatives": 21580,
+    "ranks_under_10": 2238,
+    "train_no_label": 10,
+    "dev_pool_hits": 113
+  },
+  "sha256": {
+    "train_pairs.jsonl": "dacc646bf311ec9d64462c7df4fafcec829f73001a7850419fa7757d3e8f0596",
+    "dev_pool.jsonl": "7a6ec6f21c484098dda8894e60cb58dc333f921603cd738072e88089786271f5"
+  },
+  "poison_check": {
+    "negatives_scored": 21580,
+    "share_at_or_above_0.9": 0.0857,
+    "threshold": 0.1,
+    "verdict": "sach",
+    "scored_with": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1 @ 1427fd65 (untrained)",
+    "dropped_above": 0.9,
+    "negatives_dropped": 1850,
+    "negatives_kept": 19730,
+    "clean_file": "train_pairs_clean.jsonl"
+  }
+}

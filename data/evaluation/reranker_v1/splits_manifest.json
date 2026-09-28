@@ -4,6 +4,7 @@
   "source": "GreenNode/zalo-ai-legal-text-retrieval-vn (MIT)",
   "queries_deduplicated": 102,
   "contaminated_queries_dropped_from_train": 24,
+  "dev_queries_dropped_for_document_overlap": 106,
   "contaminated_query_ids": [
     "12aa2415daa67ab4c04be1c30828a5b1",
     "1b9aefd60ed95e9a9ddf12ef0f9d5a13",
@@ -36,8 +37,8 @@
       "sha256": "7138da57e287f33533d88d3e84409567690e78ebec16414bd624ab41fc1618fd"
     },
     "dev": {
-      "queries": 240,
-      "sha256": "0616953d7de8ef40f9519842bdab60d8e5e2e5ef41c2e1e57011bcd0f3f419d8"
+      "queries": 134,
+      "sha256": "7f93f73efcd525bb823c6adc9dbec843cc3acaa84800d60bbd1594e32f39c91c"
     },
     "test": {
       "queries": 788,
@@ -47,7 +48,7 @@
   "label_completeness_warning": "Test labels are sparse: the 24 dropped queries each carry a different relevant document in train than in test, proving the real relevance set is larger than either file records. Every score on this set understates true performance.",
   "roles": {
     "train": "gradient updates only",
-    "dev": "early stopping and hyperparameter choice; never reported as a result",
+    "dev": "early stopping and hyperparameter choice; never reported as a result. Disjoint from train by document as well as by query.",
     "test": "reported numbers only; a baseline was measured on it on 04/09/2026"
   }
 }

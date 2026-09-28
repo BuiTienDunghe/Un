@@ -125,3 +125,8 @@ data/models/**
 !data/models/**/
 !data/models/**/Modelfile
 !data/models/**/export.json
+
+# Du lieu train reranker (97MB): training/reranker/mine_negatives.py sinh lai,
+# ma bam trong mining_manifest.json - khong push (chu du an quyet 29/09/2026).
+data/evaluation/reranker_v1/train_pairs*.jsonl
+data/evaluation/reranker_v1/dev_pool.jsonl

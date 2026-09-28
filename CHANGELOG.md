@@ -11,6 +11,18 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+### Added
+- **Thí nghiệm fine-tune reranker tiếng Việt — trượt, không ship** (07/09). `training/reranker/`
+  thêm `mine_negatives.py`, `train.py`, `export_checkpoint.py`; dữ liệu train
+  (2 376 chunk dương, 21 580 âm đào bằng BM25, seed 20260907) không nằm trong repo —
+  `mine_negatives.py` sinh lại, mã băm trong `mining_manifest.json`;
+  `data/evaluation/reranker_v1/` giữ các lần so sánh loss. Checkpoint `reranker-vi-v1` vào registry dưới
+  dạng **candidate** (digest, probe, provenance; trọng số không commit), `reranker-v0` vẫn
+  active: 4/6 điều kiện viết trước khi chạy không đạt — Acc@1 0,8033 < 0,8163, Acc@3 thiếu một
+  câu, 13 câu từ tìm thấy thành mất, cổng 82 câu mất 2. Lần 2 (bỏ 8,6% âm mà model gốc chấm là
+  dương) tệ hơn cả không train: dev Acc@1 0,4179 so với 0,5373. Chi tiết:
+  `.scratch/reranker-finetune/spec.md`.
+
 ### Fixed
 - **OCR hỏng trên mọi trang mà không để lại dấu vết** (29/09; đo được trên Ollama 0.34.2 và 0.34.4,
   máy lên 0.34.1 từ 0.33.3 ngày 17/09 nên lỗi có thể đã có từ đó). Ollama 0.34.x chạy

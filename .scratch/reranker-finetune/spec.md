@@ -145,13 +145,31 @@ window** as whole documents (median 376, p95 2 031 subwords).
 | Drop pairs over 512 | one line of filtering | loses 38.2% of an already small set, and loses precisely the long, hard documents |
 | Keep and let them truncate | costs nothing | teaches the model "this pair is positive" on text that may not contain the answer |
 
-**The 89 shared documents between train and dev.**
+**The 89 shared documents between train and dev — settled 07/09/2026: drop from dev.**
+
+Measured before deciding: 89 articles answer a train question and a dev question both, so
+**106 of the 240 dev questions (44%)** asked about text the model had already trained on,
+while 298 train questions (14%) touch a dev article. The spec's first draft said rebuilding
+dev disjoint "costs training data" — that was wrong, and the correction is what made the
+decision easy: dropping the 106 dev questions costs **no** training data, only dev size.
 
 | Option | For | Against |
 | --- | --- | --- |
-| Rebuild dev disjoint from train by document | dev becomes an honest proxy for test | costs training data; dev hash changes |
-| Keep two dev sets, require both to improve | loses nothing, shows both angles | doubles evaluation cost; the rule is untested |
-| Keep as is, record the bias | free | choosing checkpoints with a ruler known to be bent, by an unknown amount |
+| **Drop the 106 dev questions** (chosen) | dev measures the task test measures; train untouched at 2 168 | dev is 134 questions, so checkpoint choice is noisier |
+| Drop the 298 train questions | dev stays 240 | throws away 14% of the scarce side to buy a ruler |
+| Keep as is, record the bias | free | early stopping on a systematically easier set stops late |
+| Two dev sets, both must improve | loses nothing, shows the gap | doubles evaluation per checkpoint; the rule is untested |
+
+The dropped questions are **not moved into train**: the chunk-level judgement pass covered
+the train split only, so a moved question would arrive without the labels training needs.
+The rule now lives in `build_splits.py` rather than in a one-off edit — rerunning it
+reproduces train and test byte-for-byte (sha `7138da57…`, `e595e33b…` unchanged) and
+writes the 134-question dev.
+
+**Dev carries no chunk labels, and needs none.** The judgement pass covered train only, so
+dev is scored the way the reported test set is: by document identity over the mined BM25
+pool of 45 candidates per question, a hit being a chunk whose article answers the question.
+Its ceiling is whatever BM25 put in the pool, and every run prints it.
 
 ## Negative mining — the one thing that is settled
 
@@ -193,6 +211,84 @@ The change is not shipped, the result is recorded as a negative one, and
 question — whether the gap between this reranker and Vietnamese-specialised ones
 is closable with 2 168 in-domain examples — and costs less to believe.
 
-## Result
+## Result — 07/09/2026: the rule FAILS, the change is not shipped
 
-*(filled in after the run)*
+Trained `BinaryCrossEntropyLoss`, 2 epochs, batch 16, lr 2e-5, seed 20260907, on 2 376
+positive chunks and 21 580 mined negatives. Checkpoint `data/models/reranker/reranker-vi-v1`
+(sha256 `34ba6053…`), registered as a **candidate**; `reranker-v0` keeps serving.
+
+| # | Condition | Required | Measured | |
+| --- | --- | --- | --- | --- |
+| 1 | Acc@1 on 788 test questions | >= 0.8163 | **0.8033** (+0.0190 over control) | **FAIL**, short by 0.0130 |
+| 2 | Acc@3 | >= 0.9557 | **0.9556** | **FAIL by one question** |
+| 3 | found -> missed | 0 | **13** | **FAIL** |
+| 4 | latency, 15 candidates | <= 100 ms | 10 ms (registry warmup) | PASS |
+| 5 | 82-question technical-doc gate | 0 lost | **2 lost**, doc_hit 0.9268 -> 0.8659 | **FAIL** |
+| 6 | loads under sentence-transformers 3.4.1 | yes | drift **0.0000**, Identity forced | PASS |
+
+**Acc@1 did rise by +0.0190, and that is a real gain** — it is simply not the +0.032 that a
+paired McNemar test resolves on 788 questions, so it cannot be distinguished from chance,
+which is exactly why the threshold was written before the run.
+
+### What the model actually learned
+
+Measured against the same index with **no reranking at all**, so the two rerankers are
+compared on what each does to the retriever's own order:
+
+| | rank 1 | in top 5 | promotes | demotes | destroys | rescues |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| no reranker | 600 | 764 | | | | |
+| reranker-v0, untrained | 618 | 773 | 84 | 72 | 5 | 14 |
+| **reranker-vi-v1, fine-tuned** | **633** | **767** | **110** | **83** | **16** | **19** |
+
+Fine-tuning made the reranker **more decisive in both directions**: it moves 26 more
+questions up than the untrained model does, and it also throws 11 more correct answers
+out of the returned set entirely. Net rank-1 is better (+33 against +18) and net top-5 is
+**worse** (+3 against +9). That is a higher-variance reranker, not a more accurate one.
+
+The 13 destroyed questions are not marginal cases: **12 of 13 stood at rank 1, 2 or 3**
+under the untrained model, and one at rank 4. The fine-tuned model did not nudge them out;
+it rejected answers it had been confident about.
+
+The likely mechanism, and it was visible in the data before training: the poison check
+found **8.6% of the mined negatives are scored as confident positives by the base model**,
+and `build_splits.py` already documented that these qrels are sparse — the 24 dropped
+queries carry a *different* relevant article in train than in test, proving the real
+relevance set is larger than either file records. Training a binary classifier on labels
+that call answering passages "negative" teaches confident rejection of correct answers.
+
+### Attempt 2 — remove the suspect negatives: REFUTED, and worse than doing nothing
+
+The diagnosis above pointed at the 8.6% of mined negatives that the untrained model scores
+as confident positives: sparse qrels, a binary loss taught that answering passages are
+"negative", confident rejection of correct answers. Dropping them was cheap to test, so it
+was tested rather than argued.
+
+| Training set | dev Acc@1 | dev Acc@3 | dev MRR | rows |
+| --- | ---: | ---: | ---: | ---: |
+| untrained baseline | 0.5373 | 0.6716 | 0.6237 | |
+| all mined negatives | **0.6194** | 0.7612 | 0.6971 | 23 956 |
+| negatives scoring >= 0.9 dropped (1 850, 8.6%) | **0.4179** | 0.6269 | 0.5485 | 22 106 |
+
+**Worse than not training at all**, by 16 of 134 dev questions — twenty times the
+one-question run-to-run noise measured earlier, so this is not a close call. The held-out
+evaluation was not run: a model below the untrained baseline on dev cannot clear a
+threshold set above the untrained baseline on test, and 27 minutes of measurement would
+have bought nothing.
+
+The probe scores say what happened. Base `[2.998, -8.978, 7.515]`; trained on everything
+`[1.133, -7.765, 5.404]`; trained on the filtered set `[8.728, -5.917, 9.710]` — the
+filtered model scores *everything* high, including the passage about print-shop prices that
+answers nothing. Removing the negatives the base model finds hard removed the only examples
+that taught it to say no.
+
+So the 8.6% were not noise to be cleaned out; they were where the signal was. The failure
+of attempt 1 is a **calibration** problem — the model rejects too confidently — not a
+label-quality problem, and the fix has to change how confidence is used, not which rows
+are trained on.
+
+### Not shipped
+
+`reranker-v0` remains `active` in `model_versions.yaml`. `reranker-vi-v1` is recorded as a
+candidate with its digest, probe scores and provenance, so the run is reproducible and the
+next attempt starts from a measured baseline rather than from scratch.

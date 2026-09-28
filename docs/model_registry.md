@@ -225,7 +225,7 @@ reads.
 ## Promote a reranker, end to end
 
 Worked for a `path` version exported from `training/reranker` (the shipped candidate record
-is `reranker-d2-v1`).
+is `reranker-vi-v1`).
 
 1. **Export** into `data/models/reranker/<id>/` with sentence-transformers 5.x. The exporter
    writes `export.json` beside the weights: `activation_fn: identity`, `probe_pairs` copied from

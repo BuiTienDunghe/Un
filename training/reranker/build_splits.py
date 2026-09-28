@@ -81,6 +81,17 @@ def main() -> int:
     dev_size = int(len(ids) * arguments.dev_fraction)
     dev_ids, train_ids = set(ids[:dev_size]), set(ids[dev_size:])
 
+    # Disjoint by DOCUMENT, not only by query. 89 articles answered a train question and a
+    # dev question both, so 106 of the 240 dev questions (44%) asked about text the model
+    # had already been trained on — a dev set systematically easier than test, which stops
+    # early stopping late and picks checkpoints with a bent ruler. Those 106 are DROPPED,
+    # not moved into train: the chunk-level judgement pass covered the train split only, so
+    # a moved question would arrive without the labels training needs. Dev pays, train does
+    # not, because training data is the scarce side (owner's decision, 07/09/2026).
+    train_documents = {document for query_id in train_ids for document in train_rel[query_id]}
+    contaminated_dev = {query_id for query_id in dev_ids if train_rel[query_id] & train_documents}
+    dev_ids -= contaminated_dev
+
     OUT.mkdir(parents=True, exist_ok=True)
     written = {}
     for name, keep, source in (("train", train_ids, train_rel),
@@ -110,6 +121,7 @@ def main() -> int:
         "source": "GreenNode/zalo-ai-legal-text-retrieval-vn (MIT)",
         "queries_deduplicated": duplicates,
         "contaminated_queries_dropped_from_train": len(contaminated),
+        "dev_queries_dropped_for_document_overlap": len(contaminated_dev),
         "contaminated_query_ids": contaminated,
         "splits": {name: {"queries": n, "sha256": hashlib.sha256(p.read_bytes()).hexdigest()}
                    for name, (n, p) in written.items()},
@@ -120,7 +132,8 @@ def main() -> int:
         ),
         "roles": {
             "train": "gradient updates only",
-            "dev": "early stopping and hyperparameter choice; never reported as a result",
+            "dev": "early stopping and hyperparameter choice; never reported as a result. "
+                   "Disjoint from train by document as well as by query.",
             "test": "reported numbers only; a baseline was measured on it on 04/09/2026",
         },
     }
@@ -128,6 +141,7 @@ def main() -> int:
 
     print(f"queries.jsonl: bo {duplicates} dong trung, con {len(queries)} cau hoi")
     print(f"bo khoi TRAIN {len(contaminated)} cau hoi bi nhiem tu test")
+    print(f"bo khoi DEV   {len(contaminated_dev)} cau hoi dung tai lieu cua train")
     for name, (n, path) in written.items():
         print(f"  {name:6} {n:5} cau hoi -> {path.name}")
     print(f"kiem cheo: khong cap tap nao chung cau hoi")

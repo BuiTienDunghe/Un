@@ -163,10 +163,15 @@ def test_modelfile_versions_in_a_chain_need_the_file_and_the_gguf_hash(tmp_path)
 
 def test_active_path_reranker_needs_digest_scores_and_a_matching_export(tmp_path):
     document = _shipped_document()
-    document["roles"]["reranker"]["active"] = "reranker-d2-v1"
     candidate = document["roles"]["reranker"]["versions"][1]
+    document["roles"]["reranker"]["active"] = candidate["id"]
+    # A fresh export before its record is filled in: no digest, no scores, no checkpoint on
+    # disk. The shipped candidate is past that stage, so the test puts it back there.
+    candidate["digest"]["sha256"] = None
+    candidate["probe"]["scores"] = None
+    candidate["path"] = str(tmp_path / "not-exported-yet")
     candidate["vram_mib"] = 700
-    candidate["eval"]["reports"]["d1_multidoc"] = _report(tmp_path, "d1.json", {"versions": {"reranker": "reranker-d2-v1"}})
+    candidate["eval"]["reports"]["d1_multidoc"] = _report(tmp_path, "d1.json", {"versions": {"reranker": candidate["id"]}})
     errors = _errors(tmp_path, document)
     assert any("digest.sha256 must be non-null" in error for error in errors)
     assert any("probe.scores must be non-null" in error for error in errors)
