@@ -54,6 +54,9 @@ class SmartParser:
                 with (long_call() if long_call else nullcontext()):
                     extracted.update(dict(parser.parse_pages(path, [page_number])))
             except Exception as error:
+                # last_warnings has no reader; without this line a broken OCR model failed
+                # every page in 09/2026 (Ollama 0.34.x) and left no trace anywhere.
+                logger.warning("OCR failed on page {}; keeping native text: {}", page_number, error)
                 warnings.append(f"page {page_number}: {error}")
             if checkpoint and not checkpoint():
                 raise PermissionError("worker lost ownership after OCR page")

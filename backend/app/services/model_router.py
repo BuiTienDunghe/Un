@@ -232,6 +232,8 @@ class ModelRouter:
             options["temperature"] = config["temperature"]
         if "context" in config:
             options["num_ctx"] = config["context"]
+        if "max_tokens" in config:
+            options["num_predict"] = config["max_tokens"]
         answer = ollama.vision_chat(
             model=model_name,
             prompt=prompt,

@@ -22,6 +22,12 @@ class OllamaTimeoutError(Exception):
     pass
 
 
+class OllamaIncompleteOutputError(Exception):
+    """The model answered but never ended its turn: it hit num_predict, or Ollama aborted it
+    ("token repeat limit reached"). Deterministic at OCR temperatures, so never retried, and
+    the text is discarded — a looped page is worse in the index than the native text."""
+
+
 class OllamaClient:
     def __init__(self, base_url: str, chat_timeout: float, health_timeout: float, retry_count: int) -> None:
         self.base_url = base_url.rstrip("/")
@@ -240,12 +246,17 @@ class OllamaClient:
                     raise OllamaModelNotLoadedError(
                         f"Model {model} is unavailable. Run: ollama pull {model}"
                     )
+                if response.status_code >= 500 and "repeat limit" in response.text:
+                    raise OllamaIncompleteOutputError(f"{model} was aborted by Ollama: {response.text[:200]}")
                 response.raise_for_status()
-                content = response.json().get("message", {}).get("content")
+                body = response.json()
+                content = body.get("message", {}).get("content")
                 if not isinstance(content, str):
                     raise OllamaUnavailableError("Ollama returned an invalid vision chat response")
+                if body.get("done_reason") == "length":
+                    raise OllamaIncompleteOutputError(f"{model} reached num_predict without ending its turn ({len(content)} chars discarded)")
                 return content
-            except OllamaModelNotLoadedError:
+            except (OllamaModelNotLoadedError, OllamaIncompleteOutputError):
                 raise
             except httpx.TimeoutException as error:
                 if attempt == self.retry_count:
