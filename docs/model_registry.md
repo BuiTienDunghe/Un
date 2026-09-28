@@ -81,7 +81,8 @@ An empty value (`set MODEL_VERSION_X=`, `${MODEL_VERSION_X:-}` in compose) means
 
 Once per process, before any request (`Settings.resolve_models()`): pointer → probe →
 fallback chain → status. The I/O is bounded and single-attempt — one `GET /api/tags`, one
-probe embed for the embedding pointer, one `get_collection` + one `count` per embedding
+probe embed for the embedding pointer, one probe OCR per ocr candidate whose tag is present
+(`keep_alive: 0s`, 60 s timeout for a cold load), one `get_collection` + one `count` per embedding
 collection, one Postgres count pair (connect timeout 5 s; the Ollama calls use
 `OLLAMA_HEALTH_TIMEOUT_SECONDS`, Qdrant `QDRANT_TIMEOUT_SECONDS`). Nothing ever pulls a tag or
 downloads a checkpoint: a rejected version may never start a download (invariant #5).
@@ -101,7 +102,13 @@ downloads a checkpoint: a rejected version may never start a download (invariant
 
 Per provider: an Ollama version passes when its tag is in `/api/tags` (and its `digest`
 matches when set); Gemini / DeepSeek pass when the API key is set; the embedding version
-additionally gets the width and completeness checks above. **Embedding never falls back**: a
+additionally gets the width and completeness checks above. **An ocr version must also read one
+line and end its turn**: `local-ai-core probe 4831` is rendered to a PNG, sent with the
+version's `prompt` and `num_predict: 64`, and passes only on `done_reason: "stop"` with the
+digits in the answer. A version that runs to the cap or is aborted by Ollama ("token repeat
+limit reached", a 500) is skipped like an absent tag; no answer at all is `unverified`. The
+tag check alone kept passing while `glm-ocr:latest` looped on every page (measured on Ollama
+0.34.2 and 0.34.4; this machine left 0.33.3 for 0.34.1 on 17/09/2026) — see *OCR: why ocr-v1 is built, not pulled*. **Embedding never falls back**: a
 different model must never write into the active collection, and a fallback would make
 `document_versions.embedding_model` lie. Keep-pointer-and-refuse is the only truthful state.
 
@@ -169,8 +176,51 @@ On the shipped file today: 0 errors, 4 warnings (the four v0 reports carry no st
 Other modes: `--ollama-pull-list` (one hub tag per line — the launcher pulls these: the
 requested tag plus every fallback tag of every Ollama role that is not off; on the shipped
 file exactly `qwen3.5:9b`, `qwen3-embedding:0.6b`, `glm-ocr:latest`), `--ollama-create-list`
-(`tag<TAB>modelfile` for create-built tags; empty today), `--record-probe <id>` (hub reranker
+(`tag<TAB>modelfile` for create-built tags; on the shipped file exactly
+`local-ai/glm-ocr:eot-v1` with `data/models/ocr/ocr-v1/Modelfile`), `--record-probe <id>` (hub reranker
 versions only: score `probe.pairs` on this runtime and print the `scores:` line to paste).
+
+## OCR: why ocr-v1 is built, not pulled
+
+`glm-ocr` ends its answer with the token `<|user|>` (id 59253). Its GGUF declares that only in
+`tokenizer.ggml.eos_token_ids = [59246, 59253]`; the llama-server runner Ollama switched this
+model to by 0.34.2 reads the singular `eos_token_id` (59246, `<|endoftext|>`) and nothing
+else, so the model's real turn end was ignored. It then invented a second turn, re-emitted the
+page and looped on ```` ``` ```` until Ollama aborted with a 500 "token repeat limit reached",
+or — on a sparse page — returned 200 with tens of thousands of looped characters. A `stop`
+option of `<|user|>` cannot help: special tokens are dropped before stop matching.
+
+`ocr-v1` is the same GGUF with one key added, `tokenizer.ggml.eot_token_id = 59253` — what
+llama.cpp's own GLM converter writes. Weights are byte-identical; the runner then lists both
+tokens as end-of-generation. Measured 29/09/2026 on Ollama 0.34.4, `num_predict` 4096:
+
+| Image | ocr-v0 (`glm-ocr:latest`) | ocr-v1 (`local-ai/glm-ocr:eot-v1`) |
+| --- | --- | --- |
+| three rendered Vietnamese lines | 4096 tokens, `length`, text repeated then ```` ``` ```` | 38 tokens, `stop` |
+| *Attention* p.5 (dense, formulas) | 500 repeat limit | 873 tokens, `stop`, LaTeX kept |
+| *Attention* p.14 (figure page the trigger sends to OCR) | 4096 tokens, `length`, 12 591 chars | 75 tokens, `stop`, 266 chars |
+
+Build it (the launcher's `ollama create` step cannot, because the GGUF is gitignored):
+
+```bat
+pip install ".[ocr-build]"
+cd backend
+python -m scripts.build_ocr_model
+```
+
+The script refuses unless `glm-ocr:latest` is the blob ocr-v0 was measured on
+(`sha256-65493e1f…`) and the written file hashes to `ollama.gguf_sha256`; it then runs
+`ollama create` and deletes the 2.2 GB file (`--keep-gguf` keeps it). On a machine where
+it was never run, the resolver walks to ocr-v0, whose probe fails on Ollama 0.34.2 / 0.34.4, and OCR
+resolves `disabled` — visible in `/health` and the ATTENTION marker instead of inside
+ingestion.
+
+Two more guards sit on the request path. `config.max_tokens` (4096) is sent as `num_predict`,
+and `OllamaClient.vision_chat` raises `OllamaIncompleteOutputError` on `done_reason: "length"`
+or a repeat-limit 500 — never retried (deterministic at temperature 0.1), text discarded, the
+page keeps its native text. `SmartParser` logs every failed OCR page (`OCR failed on page N;
+keeping native text`); before 29/09 the failure went only into `last_warnings`, which nothing
+reads.
 
 ## Promote a reranker, end to end
 

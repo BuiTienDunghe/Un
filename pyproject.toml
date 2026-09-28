@@ -29,6 +29,10 @@ dynamic = ["version", "dependencies"]
 #   pip install --index-url https://download.pytorch.org/whl/cu128 "torch==2.9.1+cu128"
 # Details and the measurement: docs/DEVELOPMENT_PLAN.md 3e, docs/p4_progress.md.
 rerank = ["sentence-transformers>=3.0,<4.0"]
+# Only for rebuilding the ocr-v1 GGUF (backend/scripts/build_ocr_model.py). Pinned:
+# the registry pins the written file's sha256, and a different writer may lay out
+# the same metadata in different bytes.
+ocr-build = ["gguf==0.19.0"]
 
 [project.urls]
 Homepage = "https://github.com/BuiTienDunghe/Un"

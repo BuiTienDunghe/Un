@@ -50,13 +50,16 @@ def test_ci_ollama_cache_key_equals_the_active_embedding_revision():
     assert keys == [f"ollama-{revision}"]
 
 
-def test_pull_list_cli_prints_the_launcher_tags_and_create_list_prints_nothing():
+def test_pull_list_cli_prints_the_launcher_tags_and_create_list_prints_the_ocr_build():
     env = {**ENV, "DATABASE_URL": os.environ.get("DATABASE_URL") or "postgresql+psycopg://x:y@localhost/x"}
     pull = subprocess.run([sys.executable, "-m", "app.config.model_registry", "--ollama-pull-list"], cwd=BACKEND, capture_output=True, text=True, env=env, check=False)
     assert pull.returncode == 0, pull.stderr
     assert pull.stdout.split() == ["qwen3.5:9b", "qwen3-embedding:0.6b", "glm-ocr:latest"]
     create = subprocess.run([sys.executable, "-m", "app.config.model_registry", "--ollama-create-list"], cwd=BACKEND, capture_output=True, text=True, env=env, check=False)
-    assert create.returncode == 0 and create.stdout.strip() == ""
+    assert create.returncode == 0, create.stderr
+    # glm-ocr:latest stays in the pull list: it is ocr-v1's source blob as well as ocr-v0.
+    assert [line.split("	") for line in create.stdout.strip().splitlines()] == [
+        ["local-ai/glm-ocr:eot-v1", str(PROJECT_ROOT / "data" / "models" / "ocr" / "ocr-v1" / "Modelfile")]]
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="git not on PATH")

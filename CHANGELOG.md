@@ -11,7 +11,20 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
-_Chưa có gì kể từ 1.1.0._
+### Fixed
+- **OCR hỏng trên mọi trang mà không để lại dấu vết** (29/09; đo được trên Ollama 0.34.2 và 0.34.4,
+  máy lên 0.34.1 từ 0.33.3 ngày 17/09 nên lỗi có thể đã có từ đó). Ollama 0.34.x chạy
+  `glm-ocr` bằng runner llama-server, runner này chỉ đọc `eos_token_id` số ít nên bỏ qua token
+  kết thúc thật của model (`<|user|>`, chỉ có trong `eos_token_ids`): model đọc đúng trang rồi
+  không dừng, lặp đến khi Ollama chém 500 "token repeat limit reached" — hoặc, ở trang thưa, trả
+  200 với hàng chục nghìn ký tự lặp. Ingestion nuốt lỗi vào `SmartParser.last_warnings` (không
+  ai đọc), CI dùng OCR giả, `/health` chỉ kiểm tag có mặt, nên không lớp nào báo. Sửa:
+  `ocr-v1` = cùng GGUF thêm đúng một khóa `tokenizer.ggml.eot_token_id = 59253`, dựng bằng
+  `python -m scripts.build_ocr_model` (ghim mã băm cả nguồn lẫn đích); probe khởi động bắt mọi
+  phiên bản OCR đọc một dòng và tự kết thúc lượt, không thì bỏ qua như thiếu tag; `num_predict`
+  4096 và mọi câu trả lời không dừng bị loại, không thử lại, trang giữ chữ gốc; mỗi trang OCR
+  hỏng có một dòng log. Đo trên Ollama 0.34.4: v0 hỏng 3/3 ảnh thử, v1 dừng đúng 3/3.
+  Chi tiết: `docs/model_registry.md`, *OCR: why ocr-v1 is built, not pulled*.
 
 ## [1.1.0] - 2026-09-07
 

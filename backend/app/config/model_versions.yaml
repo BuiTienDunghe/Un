@@ -125,11 +125,16 @@ roles:
   # ── ocr: a missing tag turns the role OFF (config.enabled false on the served
   # copy) instead of today's per-page silent warnings. `glm-ocr:latest` is a
   # mutable tag: fill `digest` from GET /api/tags to pin it (the probe verifies it).
+  # Beyond the tag, every ocr candidate must read one rendered line and END its
+  # turn (done_reason "stop"); one that runs to its token cap or is aborted is
+  # skipped like an absent tag. That probe exists because ocr-v0 broke silently
+  # after this machine's Ollama 0.33.3 -> 0.34.1 update (17/09/2026): tag present, every
+  # page aborted (measured on 0.34.2 and 0.34.4; 0.34.1 itself never measured).
   ocr:
-    active: ocr-v0
+    active: ocr-v1
     versions:
-      - id: ocr-v0
-        provider: ollama
+      - id: ocr-v0                     # fails the stop probe on 0.34.2 / 0.34.4; kept as the fallback for a
+        provider: ollama               #   machine where it still passes (never measured passing here)
         digest: null
         config:                        # == models.yaml models.ocr as shipped
           provider: ollama
@@ -137,6 +142,28 @@ roles:
           enabled: true
           context: 16384
           temperature: 0.1
+          keep_alive: 5m
+          prompt: "Text Recognition:"
+          dpi: 200
+          min_text_characters: 80
+          min_alphanumeric_ratio: 0.45
+      - id: ocr-v1                     # ocr-v0's weights, <|user|> declared end-of-turn (Modelfile header)
+        provider: ollama
+        ollama:
+          source: modelfile
+          modelfile: data/models/ocr/ocr-v1/Modelfile   # build: cd backend && python -m scripts.build_ocr_model
+          gguf_sha256: b2891fe9ce386254e6ad799ff3a03d2b262f22f21973549ca1e71b71260817be
+        digest: null
+        notes: >-
+          29/09/2026, Ollama 0.34.4: ocr-v0 aborted 3/3 probe images ("token repeat
+          limit reached" or 4096-token loop); ocr-v1 stopped on 3/3 with the same text.
+        config:
+          provider: ollama
+          name: local-ai/glm-ocr:eot-v1
+          enabled: true
+          context: 16384
+          temperature: 0.1
+          max_tokens: 4096             # num_predict; a page that reaches it is rejected, not indexed
           keep_alive: 5m
           prompt: "Text Recognition:"
           dpi: 200

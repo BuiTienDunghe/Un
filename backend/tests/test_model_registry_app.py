@@ -36,7 +36,8 @@ V0 = next(record for record in SHIPPED["roles"]["reranker"]["versions"] if recor
 BROKEN_ID = "reranker-missing-v9"
 BROKEN_DIR = PROJECT_ROOT / "data" / "models" / "reranker" / BROKEN_ID
 # Every Ollama tag the shipped file names, present with an arbitrary digest.
-TAGS = {"qwen3.5:9b": "sha256:general", "qwen3-embedding:0.6b": "sha256:embedding", "glm-ocr:latest": "sha256:ocr"}
+TAGS = {"qwen3.5:9b": "sha256:general", "qwen3-embedding:0.6b": "sha256:embedding", "glm-ocr:latest": "sha256:ocr",
+        "local-ai/glm-ocr:eot-v1": "sha256:ocr-v1"}
 # The states that are a decision, never a deviation (RoleResolution.deviates).
 DELIBERATE = {"active", "off", "unconfigured"}
 
@@ -95,10 +96,11 @@ class Loader:
 
 
 def fake_probes(monkeypatch) -> None:
-    """Every tag present, the probe embed 1024 wide, no collection yet, an empty corpus:
+    """Every tag present, the probe embed 1024 wide, OCR ending its turn, no collection yet, an empty corpus:
     the fresh-install state, in which every probed pointer resolves `active`."""
     monkeypatch.setattr(ProductionProbes, "ollama_tags", lambda self: dict(TAGS))
     monkeypatch.setattr(ProductionProbes, "ollama_embed_dimension", lambda self, model: 1024)
+    monkeypatch.setattr(ProductionProbes, "ollama_ocr_stops", lambda self, model, prompt: True)
     monkeypatch.setattr(ProductionProbes, "qdrant_dimension", lambda self, collection: None)
     monkeypatch.setattr(ProductionProbes, "qdrant_point_count", lambda self, collection: 0)
     monkeypatch.setattr(ProductionProbes, "postgres_counts", lambda self: PostgresCounts(0, 0))
@@ -292,7 +294,7 @@ def test_shipped_registry_with_every_probe_answering_is_all_active_off_or_unconf
     }
     assert all(row["fallback"] is False and row["source"] == "registry" for row in rows.values())
     assert [role for role, row in rows.items() if row["verified"]] == ["general", "embedding", "ocr"]
-    assert {role: row["loaded"] for role, row in rows.items() if row["loaded"]} == {"general": "general-v0", "embedding": "embedding-v0", "ocr": "ocr-v0"}
+    assert {role: row["loaded"] for role, row in rows.items() if row["loaded"]} == {"general": "general-v0", "embedding": "embedding-v0", "ocr": "ocr-v1"}
     assert health["status"] == "ok" and health["model_fallback"] == "ok"
     assert not marker_path().exists(), "a stale marker is removed by a boot in which nothing deviates"
     assert events_named(registry_events, "model_version_fallback") == []

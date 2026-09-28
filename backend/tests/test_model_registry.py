@@ -119,8 +119,9 @@ def load(tmp_path: Path, document: dict):
 class FakeProbes:
     """Recording fake: every answer is a constructor argument, every call is logged."""
 
-    def __init__(self, *, tags=ALL_TAGS, width=1024, dims=None, points=None, counts=PostgresCounts(0, 0), qdrant_down=False):
+    def __init__(self, *, tags=ALL_TAGS, width=1024, dims=None, points=None, counts=PostgresCounts(0, 0), qdrant_down=False, ocr_stops=None):
         self.tags, self.width, self.counts, self.qdrant_down = tags, width, counts, qdrant_down
+        self.ocr_stops = {} if ocr_stops is None else ocr_stops    # {tag: True | False | None}; absent = True
         self.dims = {} if dims is None else dims
         self.points = {} if points is None else points
         self.calls: list[object] = []
@@ -132,6 +133,10 @@ class FakeProbes:
     def ollama_embed_dimension(self, model):
         self.calls.append(("embed", model))
         return self.width
+
+    def ollama_ocr_stops(self, model, prompt):
+        self.calls.append(("ocr", model))
+        return self.ocr_stops.get(model, True)
 
     def qdrant_dimension(self, collection):
         self.calls.append(("dim", collection))
@@ -161,7 +166,7 @@ def test_shipped_registry_loads_every_role_with_todays_pointers():
     assert tuple(registry.roles) == ROLES
     assert {role: entry.active for role, entry in registry.roles.items()} == {
         "general": "general-v0", "condenser": "condenser-v0", "embedding": "embedding-v0", "vision": None,
-        "ocr": "ocr-v0", "reranker": "reranker-v0", "extractor": "extractor-v0", "verifier": "verifier-v0",
+        "ocr": "ocr-v1", "reranker": "reranker-v0", "extractor": "extractor-v0", "verifier": "verifier-v0",
     }
     assert registry.get("embedding", "embedding-v0").collection_suffix == ""
     assert registry.get("embedding", "embedding-e5l-v1").collection_suffix == "e5l"
@@ -175,8 +180,12 @@ def test_flat_models_equals_the_models_yaml_blocks_the_registry_replaced():
     flat = resolved.flat_models()
     # Four blocks are served verbatim, key order included (the embedding cache
     # fingerprints every key, so order-insensitive equality would not be enough).
-    for role in ("general", "condenser", "embedding", "ocr"):
+    for role in ("general", "condenser", "embedding"):
         assert list(flat[role].items()) == list(TODAY[role].items()), role
+    # ocr is the one block that moved on purpose (ocr-v1, 29/09/2026: v0 stopped ending its
+    # turn on Ollama 0.34.x). v0 stays recorded verbatim; v1 differs in the tag and the cap only.
+    assert list(resolved.registry.get("ocr", "ocr-v0").config.items()) == list(TODAY["ocr"].items())
+    assert flat["ocr"] == {**TODAY["ocr"], "name": "local-ai/glm-ocr:eot-v1", "max_tokens": 4096}
     # vision: active null = not served, so the block is absent from the served dict
     # but still recorded verbatim under its version id.
     assert "vision" not in flat
@@ -199,7 +208,8 @@ def test_shipped_pull_list_is_exactly_what_the_launcher_pulled_by_hand():
     registry = load_registry()
     overrides = Overrides(disabled_roles=FLAGS_OFF)
     assert ollama_pull_list(registry, overrides) == ["qwen3.5:9b", "qwen3-embedding:0.6b", "glm-ocr:latest"]
-    assert ollama_create_list(registry, overrides) == []
+    # ocr-v1 is built, not pulled; glm-ocr:latest above is both ocr-v0 and ocr-v1's source blob.
+    assert ollama_create_list(registry, overrides) == [("local-ai/glm-ocr:eot-v1", PROJECT_ROOT / "data" / "models" / "ocr" / "ocr-v1" / "Modelfile")]
 
 
 def test_import_leaves_pydantic_out_of_sys_modules():
@@ -492,6 +502,82 @@ def test_ocr_without_its_tag_is_disabled_and_its_served_copy_says_enabled_false(
     assert ocr.status == "disabled" and ocr.deviates and not ocr.serving
     assert ocr.flat_config["enabled"] is False and resolved.flat_models()["ocr"]["enabled"] is False
     assert resolved.registry.get("ocr", "ocr-v0").config["enabled"] is True, "the record itself is never edited"
+
+
+def ocr_v1() -> dict:
+    return {"id": "ocr-v1", "provider": "ollama", "config": {"provider": "ollama", "name": "local-ai/glm-ocr:eot-v1", "enabled": True}}
+
+
+OCR_TAGS = ALL_TAGS | {"local-ai/glm-ocr:eot-v1": "sha256:d"}
+
+
+def test_ocr_that_does_not_end_its_turn_falls_back_to_one_that_does(tmp_path):
+    registry = load(tmp_path, add_version(base_document(), "ocr", ocr_v1()))
+    probes = ready_probes(tags=OCR_TAGS, ocr_stops={"local-ai/glm-ocr:eot-v1": False})
+    ocr = resolve(registry, Overrides(disabled_roles=FLAGS_OFF), probes).roles["ocr"]
+    assert ocr.status == "fallback" and ocr.loaded_id == "ocr-v0" and ocr.deviates and ocr.serving
+    assert ocr.probe.kind == "ocr_stop" and "did not read the probe line and end its turn" in ocr.reason
+    assert ("ocr", "local-ai/glm-ocr:eot-v1") in probes.calls and ("ocr", "glm-ocr:latest") in probes.calls
+
+
+def test_ocr_chain_where_nothing_ends_its_turn_is_disabled_not_served(tmp_path):
+    # The state found on 29/09/2026: every tag present, every page looping.
+    registry = load(tmp_path, add_version(base_document(), "ocr", ocr_v1()))
+    probes = ready_probes(tags=OCR_TAGS, ocr_stops={"local-ai/glm-ocr:eot-v1": False, "glm-ocr:latest": False})
+    resolved = resolve(registry, Overrides(disabled_roles=FLAGS_OFF), probes)
+    ocr = resolved.roles["ocr"]
+    assert ocr.status == "disabled" and ocr.deviates and not ocr.serving
+    assert resolved.flat_models()["ocr"]["enabled"] is False
+
+
+def test_ocr_probe_without_an_answer_keeps_the_pointer(tmp_path):
+    registry = load(tmp_path, add_version(base_document(), "ocr", ocr_v1()))
+    ocr = resolve(registry, Overrides(disabled_roles=FLAGS_OFF), ready_probes(tags=OCR_TAGS, ocr_stops={"local-ai/glm-ocr:eot-v1": None})).roles["ocr"]
+    assert ocr.status == "unverified" and ocr.loaded_id == "ocr-v1" and ocr.probe.kind == "ocr_stop" and ocr.probe.ok is None
+
+
+def test_ocr_behaviour_probe_runs_only_on_a_present_tag(tmp_path):
+    registry = load(tmp_path, add_version(base_document(), "ocr", ocr_v1()))
+    probes = ready_probes(tags=ALL_TAGS)            # v1 never built on this machine
+    ocr = resolve(registry, Overrides(disabled_roles=FLAGS_OFF), probes).roles["ocr"]
+    assert ocr.status == "fallback" and ocr.loaded_id == "ocr-v0" and "absent from /api/tags" in ocr.reason
+    assert ("ocr", "local-ai/glm-ocr:eot-v1") not in probes.calls
+
+
+class _Reply:
+    def __init__(self, status_code, body):
+        self.status_code, self._body = status_code, body
+        self.is_success = 200 <= status_code < 300
+
+    def json(self):
+        return self._body
+
+
+@pytest.mark.parametrize(("reply", "expected"), [
+    (_Reply(200, {"done_reason": "stop", "message": {"content": "local-ai-core probe 4831"}}), True),
+    (_Reply(200, {"done_reason": "length", "message": {"content": "local-ai-core probe 4831\n```markdown\n```\n```"}}), False),
+    (_Reply(500, {"error": "prediction aborted, token repeat limit reached"}), False),
+    (_Reply(200, {"done_reason": "stop", "message": {"content": "I cannot read this image."}}), False),
+    (_Reply(404, {"error": "model not found"}), None),
+    (ConnectionError("refused"), None),
+])
+def test_production_ocr_probe_decides_from_done_reason_and_the_digits(monkeypatch, reply, expected):
+    import httpx
+
+    from app.config.model_registry import ProductionProbes
+
+    sent = {}
+
+    def fake_post(url, json, timeout):
+        sent.update(url=url, json=json)
+        if isinstance(reply, Exception):
+            raise reply
+        return reply
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    assert ProductionProbes(_settings()).ollama_ocr_stops("local-ai/glm-ocr:eot-v1", "Text Recognition:") is expected
+    assert sent["url"].endswith("/api/chat") and sent["json"]["keep_alive"] == "0s"
+    assert sent["json"]["options"]["num_predict"] == 64 and sent["json"]["messages"][0]["images"][0]
 
 
 def test_enabled_extractor_without_its_tag_is_disabled(tmp_path):

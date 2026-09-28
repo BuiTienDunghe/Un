@@ -1,0 +1,16 @@
+# ocr-v1 — glm-ocr:latest with <|user|> (id 59253) declared as end-of-turn.
+#
+# The upstream GGUF lists two end tokens in tokenizer.ggml.eos_token_ids
+# [<|endoftext|>, <|user|>]; the llama-server runner Ollama 0.34.x uses reads
+# only the singular eos_token_id, so the model's real turn end was ignored and
+# every page looped until "token repeat limit reached". The only change is one
+# added key, tokenizer.ggml.eot_token_id = 59253; weights are byte-identical.
+#
+# Built by  cd backend && python -m scripts.build_ocr_model
+# which writes glm-ocr-eot.gguf beside this file (gitignored) and runs
+# `ollama create`. Every line below is the upstream Modelfile verbatim.
+FROM ./glm-ocr-eot.gguf
+TEMPLATE {{ .Prompt }}
+RENDERER glm-ocr
+PARSER glm-ocr
+PARAMETER temperature 0

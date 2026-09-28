@@ -34,6 +34,9 @@ DEFAULT_REGISTRY_PATH = Path(__file__).with_name("model_versions.yaml")
 CI_WORKFLOW_PATH = PROJECT_ROOT / ".github" / "workflows" / "ci.yml"
 ATTENTION_FILENAME = "ATTENTION_model_fallback.txt"
 PROBE_TEXT = "local-ai-core probe"
+OCR_PROBE_LINE = f"{PROBE_TEXT} 4831"   # the digits make "read it" checkable, not just "said something"
+OCR_PROBE_MAX_TOKENS = 64                # the line is 11 tokens; a model that does not end its turn hits this
+OCR_PROBE_TIMEOUT_SECONDS = 60.0         # covers a cold load of the 2.2 GB tag (measured 4-10 s)
 
 ROLES = ("general", "condenser", "embedding", "vision", "ocr", "reranker", "extractor", "verifier")
 MODEL_ROLES = ("general", "condenser", "embedding", "vision", "ocr", "extractor", "verifier")   # carry `config:`
@@ -576,6 +579,7 @@ class Probes(Protocol):
     a distinct value from 'decided no'."""
     def ollama_tags(self) -> Mapping[str, str] | None: ...                        # {tag: digest}; None = unreachable/timeout; called once per resolve()
     def ollama_embed_dimension(self, model: str) -> int | None: ...              # one POST /api/embed of "local-ai-core probe"; None = failed/timeout, NOT wrong size
+    def ollama_ocr_stops(self, model: str, prompt: str) -> bool | None: ...      # one POST /api/chat on OCR_PROBE_LINE rendered; True = read it AND ended the turn, None = no answer
     def qdrant_dimension(self, collection: str) -> int | None | QdrantUnreachable: ...
     def qdrant_point_count(self, collection: str) -> int | QdrantUnreachable: ...  # 0 when absent
     def postgres_counts(self) -> PostgresCounts | None: ...                       # None = DB did not answer (connect timeout 5 s)
@@ -621,6 +625,40 @@ class ProductionProbes:
         if not isinstance(embeddings, list) or not embeddings or not isinstance(embeddings[0], list):
             return None
         return len(embeddings[0])
+
+    def ollama_ocr_stops(self, model: str, prompt: str) -> bool | None:
+        """A present tag is not a working OCR model: glm-ocr:latest kept its tag through the
+        Ollama 0.34.x update and then looped on every page. keep_alive 0 so the probe does
+        not hold 2.2 GB of VRAM beside the general model."""
+        import base64
+
+        import fitz
+        import httpx
+
+        document = fitz.open()
+        try:
+            page = document.new_page(width=360, height=48)
+            page.insert_text((12, 32), OCR_PROBE_LINE, fontsize=20)
+            png = page.get_pixmap(dpi=144).tobytes("png")
+        finally:
+            document.close()
+        try:
+            response = httpx.post(
+                f"{self._settings.ollama_base_url.rstrip('/')}/api/chat",
+                json={"model": model, "stream": False, "keep_alive": "0s",
+                      "options": {"temperature": 0, "num_predict": OCR_PROBE_MAX_TOKENS},
+                      "messages": [{"role": "user", "content": prompt, "images": [base64.b64encode(png).decode("ascii")]}]},
+                timeout=OCR_PROBE_TIMEOUT_SECONDS,
+            )
+        except Exception:
+            return None
+        if response.status_code >= 500:
+            return False                 # Ollama answered and refused: "token repeat limit reached" is a 500
+        if not response.is_success:
+            return None
+        body = response.json()
+        content = (body.get("message") or {}).get("content") or ""
+        return body.get("done_reason") == "stop" and "4831" in content
 
     def _qdrant(self) -> Any:
         if self._qdrant_client is None:
@@ -684,7 +722,7 @@ class ProductionProbes:
 @dataclass
 class ProbeOutcome:
     kind: Literal["skipped", "tags", "tags+digest", "embed_dimension", "collection_dimension",
-                  "collection_count", "provider", "reranker_load"]
+                  "collection_count", "provider", "reranker_load", "ocr_stop"]
     ok: bool | None                   # None = could not decide
     detail: str | None = None
     ms: int | None = None
@@ -986,9 +1024,24 @@ class _Walker:
         if candidate.digest and tags[tag] != candidate.digest:
             return "next", ProbeOutcome("tags+digest", False, f"digest_mismatch for {tag} (registry {candidate.digest[:19]}…, server {tags[tag][:19]}…)", elapsed()), None
         kind = "tags+digest" if candidate.digest else "tags"
+        if role == "ocr":
+            return self._probe_ocr(candidate, started)
         if role != "embedding":
             return "pass", ProbeOutcome(kind, True, f"tag {tag} present", elapsed()), None
         return self._probe_embedding(candidate, started)
+
+    def _probe_ocr(self, candidate: VersionRecord, started: float) -> tuple[str, ProbeOutcome, str | None]:
+        """A model that cannot end its turn is skipped like an absent tag: the chain walks on,
+        and an exhausted chain turns OCR off (DISABLE_ON_MISS_ROLES) where /health shows it,
+        instead of every page failing inside ingestion where nothing did."""
+        elapsed = lambda: int((perf_counter() - started) * 1000)  # noqa: E731
+        assert self.probes is not None
+        stops = self.probes.ollama_ocr_stops(str(candidate.config["name"]), str(candidate.config.get("prompt", "Text Recognition:")))
+        if stops is None:
+            return "unverified", ProbeOutcome("ocr_stop", None, "probe OCR did not answer", elapsed()), f"{candidate.id}: probe OCR did not answer; pointer kept"
+        if not stops:
+            return "next", ProbeOutcome("ocr_stop", False, "did not read the probe line and end its turn", elapsed()), None
+        return "pass", ProbeOutcome("ocr_stop", True, "read the probe line and stopped", elapsed()), None
 
     def _probe_embedding(self, candidate: VersionRecord, started: float) -> tuple[str, ProbeOutcome, str | None]:
         elapsed = lambda: int((perf_counter() - started) * 1000)  # noqa: E731
