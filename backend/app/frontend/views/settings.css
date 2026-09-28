@@ -1,0 +1,50 @@
+/* /ui/views/settings.css — style riêng của màn hình "Cài đặt" (#/settings); tokens + primitives ở /ui/styles.css.
+   Số đo lấy từ prototype P:565-592 (P:n = dòng của "Local AI Core v2.dc.html").
+   Mọi lớp mang tiền tố .set- để không đụng màn hình khác. */
+
+/* ── Đầu mỗi section card (P:570, 575, 579, 586) ──────────────────
+   Chữ đã có ở .section-label + .section-label-wide (11px/700/.06em/uppercase). */
+.set-head { margin: 0; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+
+/* ── Một hàng cài đặt — khung là .setting-row của styles.css ────── */
+.set-main { flex: 1; min-width: 0; }
+.set-title { font-size: 13.5px; font-weight: 600; }
+.set-sub { font-size: 12.5px; color: var(--text-3); }
+/* Hàng cuối của "Giao diện" không có gạch dưới (P:572). Ba hàng "Trò chuyện"
+   thì CÓ — prototype để nguyên, thành hai vạch chồng viền card (P:576). */
+.set-row-flush { border-bottom: 0; }
+
+/* ── Segmented chủ đề (P:571): đệm 12 mỗi bên ───────────────────
+   Prototype tắt hẳn transition ở ba nút này; bản này giữ .15s mặc định của
+   .seg-item để mọi segmented trong ứng dụng cư xử giống nhau — html[data-motion="off"]
+   đã là chỗ tắt hiệu ứng chung. Ảnh so pixel chụp với --no-anim nên không đổi. */
+.set-seg .seg-item { padding: 0 12px; }
+
+/* ── Hàng tài khoản ─────────────────────────────────────────────
+   Tên đăng nhập dài tới 64 ký tự: .card-flush{overflow:hidden} cắt phẳng giữa
+   thân chữ ở màn hẹp. Cắt bằng «…» như thanh bên (P:101); tên đầy đủ vẫn ở
+   title. line-height cố định để hộp một dòng không xén dấu tiếng Việt. */
+.set-acct .set-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.5; }
+/* Chỉ hiện sau khi máy chủ trả 404 cho POST /auth/me/password. */
+.set-miss { margin-top: 2px; }
+
+/* ── Thân section chỉ có chữ (Bảo mật P:580, riêng tư P:588) ────── */
+.set-body { padding: 14px 18px; display: flex; flex-direction: column; gap: 12px; }
+.set-para { margin: 0; font-size: 12.5px; color: var(--text-2); line-height: 1.6; }
+.set-para-row { padding: 14px 18px; }
+
+/* ── Hàng khóa truy cập (P:582) ─────────────────────────────────── */
+.set-key { display: flex; align-items: center; gap: 10px; }
+.set-key-ok { display: flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--ok); }
+.set-key-input { width: 240px; flex: none; }
+
+/* ── Hẹp: ô khóa 240px + nút không còn đủ chỗ cạnh nhãn ─────────── */
+@media (max-width: 600px) {
+  .set-key { flex-wrap: wrap; }
+  .set-key-main { flex: 1 0 100%; }
+  .set-key-input { flex: 1; width: auto; min-width: 0; }
+  .set-page .setting-row { flex-wrap: wrap; }
+  /* Hàng tài khoản: tên + vai trò chiếm trọn dòng (38px avatar + 16px gap),
+     hai nút xuống dòng dưới thay vì ép câu vai trò thành cột chữ hẹp. */
+  .set-acct .set-main { flex: 1 0 calc(100% - 54px); }
+}

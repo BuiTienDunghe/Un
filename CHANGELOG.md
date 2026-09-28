@@ -23,6 +23,37 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   dương) tệ hơn cả không train: dev Acc@1 0,4179 so với 0,5373. Chi tiết:
   `.scratch/reranker-finetune/spec.md`.
 
+### Changed
+- **Giao diện web dựng lại: bốn trang rời thành một app shell + 10 màn** (16/09; thiết kế
+  `design_handoff_local_ai_core_v2/` (giữ ngoài repo), hợp đồng thực thi `.scratch/web-ui-v2/spec.md`). Trước đó
+  `/ui/` là bốn trang HTML độc lập (`index`, `dashboard`, `ocr`, `chunks`), mỗi trang nạp lại từ
+  đầu và chỉ trang chat biết chuyện đăng nhập; bảng điều khiển gánh cả hàng đợi duyệt ghi nhớ,
+  tóm tắt hội thoại, điều khiển bot và bảng model vì không có chỗ nào khác. Nay `index.html` là
+  shell duy nhất (sidebar + header + `<main id="view">`) với hash router: `#/chat[/id]`,
+  `#/documents[?doc=]`, `#/memory[?tab=]`, `#/dashboard`, `#/ocr`, `#/bot`, `#/models`, `#/users`,
+  `#/settings`, `#/chunks/<docId>`. Mỗi màn là một IIFE trong `views/` **không để lại tên nào ở
+  phạm vi global** — mười file dùng chung một phạm vi, một `const state` lọt ra là màn sau chết
+  ngay lúc nạp, nên `backend/tests/test_frontend.py` ghép cả 15 script theo đúng thứ tự trong
+  `index.html` rồi cho `node --check` chạy, thay vì chỉ kiểm từng file như CI cũ (`node --check`
+  của CI cũng đã mở rộng sang `views/*.js`). `common.js` **không đổi một dòng** (prefs, theme,
+  `authHeaders`, `requestJson`, refresh gộp một promise, `ERROR_HINTS`); mọi lời gọi mới đi qua
+  `Shell.api`/`Shell.fetchBlob`, nên ngân sách `fetch(` thô còn đúng ba chỗ có lý do: refresh
+  (common.js), tải nhị phân có header (shell.js), luồng SSE của chat (views/chat.js) — test ghim
+  con số này.
+- **Phân quyền và trạng thái "máy chủ chưa hỗ trợ" là một phần của thiết kế, không phải lỗi.**
+  Thành viên chỉ thấy 5 mục nav; route admin bị đưa về `#/chat`. Những chức năng thiết kế yêu cầu
+  mà backend chưa có (ghim/thư mục hội thoại, tag tài liệu, xem trước trang, thông báo, khóa/đặt
+  lại mật khẩu, promote/revert model, restart bot) đều gọi đúng endpoint đề xuất rồi hiện trạng
+  thái rỗng/khóa kèm tên endpoint, thay vì giả vờ thành công. Danh sách đầy đủ:
+  `.scratch/web-ui-v2/backend-todo.md`.
+- Font: dùng bộ font hệ thống thay vì tải Be Vietnam Pro — máy trong LAN nào cũng có sẵn, không
+  cần tệp phụ. Ảnh đối chiếu được chụp lại bằng chính bộ font này để phép so pixel còn ý nghĩa.
+
+### Removed
+- `backend/app/frontend/app.js`, `dashboard.js`, `ocr.js`, `chunks.js` (logic chuyển hết vào
+  `views/`). `dashboard.html`, `ocr.html`, `chunks.html` chỉ còn là redirect một dòng, nên link cũ
+  `/ui/chunks.html?document_id=…` và `/ui/#c=<id>` của bảng điều khiển vẫn mở đúng chỗ.
+
 ### Fixed
 - **OCR hỏng trên mọi trang mà không để lại dấu vết** (29/09; đo được trên Ollama 0.34.2 và 0.34.4,
   máy lên 0.34.1 từ 0.33.3 ngày 17/09 nên lỗi có thể đã có từ đó). Ollama 0.34.x chạy
@@ -37,6 +68,15 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   4096 và mọi câu trả lời không dừng bị loại, không thử lại, trang giữ chữ gốc; mỗi trang OCR
   hỏng có một dòng log. Đo trên Ollama 0.34.4: v0 hỏng 3/3 ảnh thử, v1 dừng đúng 3/3.
   Chi tiết: `docs/model_registry.md`, *OCR: why ocr-v1 is built, not pulled*.
+- **Khối mã ```` ```c++ ```` làm treo cứng tab trình duyệt** — bộ dựng markdown cũ (`app.js:198`
+  vs `:246`) gặp dòng mở đầu bằng ``` mà không khớp `^```(\w*)\s*$` thì không bao giờ tăng chỉ số
+  dòng: vòng lặp đẩy `<p></p>` cho tới khi hết bộ nhớ. Tái hiện được bằng ```` ```c# ````,
+  `` ``` python `` (có dấu cách) và bốn dấu huyền, kể cả khi đang stream dở.
+- Hash `#c=<id>` chỉ được đọc lúc nạp trang (không có listener `hashchange`), ký tự U+2028 trong
+  một token làm hỏng cả lượt trả lời, `lac.docsel` hỏng làm chết trang, lỗi mạng hiện nguyên văn
+  "Failed to fetch", tiêu đề hội thoại mới không bao giờ đổi theo tên máy chủ đặt, xung đột upload
+  thứ tư (`content_owned_by_another_document`) bị hủy câm không nói lý do, "Tải thêm" của hàng đợi
+  duyệt thất bại trong im lặng, và nhịp tự làm mới 20 giây nuốt mất các trang đã tải thêm.
 
 ## [1.1.0] - 2026-09-07
 

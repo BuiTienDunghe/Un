@@ -1,0 +1,133 @@
+/* /ui/views/ocr.css — style riêng của màn hình "OCR" (#/ocr); tokens + primitives ở /ui/styles.css.
+   Số đo lấy từ prototype P:441-472 (grid 1fr|1.4fr gap 14, thẻ padding 18 gap 14, thanh bước 3px,
+   log mono 11.5/1.7 cao tối đa 120). Mọi lớp ở đây mang tiền tố .ocr-. */
+
+/* ── khung 2 cột ──────────────────────────────────────────────── */
+.ocr-grid {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 14px; align-items: start;
+}
+.ocr-panel, .ocr-job-body {
+  display: flex; flex-direction: column; gap: 14px; min-width: 0;
+}
+.ocr-job.is-empty .ocr-job-body { flex: 1; justify-content: center; }
+.ocr-job.is-empty .empty-state { flex: 1; padding: 24px 12px; }
+
+/* ── "Chạy OCR mới" ───────────────────────────────────────────── */
+.ocr-drop.has-file { gap: 6px; }
+.ocr-drop-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.ocr-drop .type-badge { margin-bottom: 2px; }
+
+.ocr-dpi { display: flex; align-items: center; gap: 10px; }
+.ocr-dpi-label { font-size: 12.5px; font-weight: 600; color: var(--text-2); }
+.ocr-model {
+  margin-left: auto; min-width: 0; font-size: 11.5px; color: var(--text-3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ocr-msg { font-size: 12.5px; line-height: 1.5; color: var(--text-2); }
+.ocr-msg.is-error { color: var(--danger); }
+/* lý do nút Bắt đầu đang khóa — chữ nhạt hơn lời nhắn về tệp vừa chọn */
+.ocr-hint { color: var(--text-3); }
+
+/* ── thẻ job ──────────────────────────────────────────────────── */
+.ocr-job-head { display: flex; align-items: center; gap: 10px; }
+.ocr-job-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0; }
+.ocr-job-name { font-size: 13.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ocr-job-meta { font-size: 12px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ocr-job-pct { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--accent); }
+.ocr-job-pct.is-ok { color: var(--ok); }
+.ocr-job-pct.is-danger { color: var(--danger); }
+.ocr-job-pct.is-muted { color: var(--text-3); }
+.ocr-spin { animation: spin 1.6s linear infinite; }
+.ocr-job-loading { display: flex; flex-direction: column; gap: 14px; }
+/* Khung xương phải cao đúng bằng phần đầu thật (13,5px + 12px dòng = 38px) và tách
+   làm hai dòng, nếu không nó là một vệt liền và thẻ nhảy 4px lúc dữ liệu về. */
+.ocr-job-loading .ocr-job-main { gap: 6px; min-height: 38px; justify-content: center; }
+
+/* Thanh tiến độ = primitive .progress-8 + nền gradient của prototype (P:452).
+   Không dùng lớp .brand của .progress-8.brand: .brand đã là khối thương hiệu ở thanh
+   bên (padding 16px 16px 12px) nên thanh 8px sẽ bị đẩy cao 28px và ruột còn 0. */
+.ocr-bar > .fill { background: var(--brand-grad-x); animation: bar 1.2s cubic-bezier(.2, .8, .2, 1) both; }
+/* lần đầu chạy animation "bar", sau đó chuyển sang transition */
+.ocr-bar > .fill.is-settled { animation: none; transition: width .4s ease; }
+.ocr-bar.is-danger > .fill { background: var(--danger); }
+.ocr-bar.is-muted > .fill { background: var(--border-2); }
+
+/* ── 4 bước Tải lên / Render / OCR / Kết quả ──────────────────── */
+.ocr-steps { display: flex; gap: 0; }
+.ocr-step { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.ocr-step .stage-bar { background: var(--surface-3); }
+.ocr-step-label { font-size: 11.5px; font-weight: 600; color: var(--text-3); }
+.ocr-step.is-done .stage-bar { background: var(--accent); }
+.ocr-step.is-done .ocr-step-label { color: var(--text); }
+.ocr-step.is-active .stage-bar {
+  background: linear-gradient(90deg, var(--accent) var(--fill, 0%), var(--surface-3) var(--fill, 0%));
+}
+.ocr-step.is-active .ocr-step-label { color: var(--accent); }
+/* bước đang chạy nhưng chưa đo được (đang chờ / đang render): vệt sáng chạy qua lại;
+   tắt hiệu ứng động thì đứng yên ở dạng vệt sáng giữa thanh — không giả vờ là một tỉ lệ */
+.ocr-step.is-indet .stage-bar {
+  background: linear-gradient(90deg, var(--surface-3) 0 30%, var(--accent) 50%, var(--surface-3) 70% 100%);
+  background-size: 250% 100%; animation: ocr-indet 1.6s linear infinite;
+}
+.ocr-step.is-indet .ocr-step-label { color: var(--accent); }
+/* Tắt animation KHÔNG dừng ảnh nền ở giữa: nó đứng ở background-position 0%, tức là
+   xám 73% bên trái rồi loang xanh ở mép phải — đọc hệt một thanh "đã xong ~75%".
+   Ghim về 50% để vệt sáng nằm giữa (background-size 250% → 50% ảnh = giữa thanh). */
+:root[data-motion="off"] .ocr-step.is-indet .stage-bar { background-position: 50% 0; }
+@media (prefers-reduced-motion: reduce) {
+  .ocr-step.is-indet .stage-bar { background-position: 50% 0; }
+}
+.ocr-step.is-danger .stage-bar { background: var(--danger); }
+.ocr-step.is-danger .ocr-step-label { color: var(--danger); }
+.ocr-step.is-muted .stage-bar {
+  background: linear-gradient(90deg, var(--border-2) var(--fill, 100%), var(--surface-3) var(--fill, 100%));
+}
+.ocr-step.is-muted .ocr-step-label { color: var(--text-3); }
+@keyframes ocr-indet { from { background-position: 120% 0; } to { background-position: -20% 0; } }
+
+/* ── nhật ký ──────────────────────────────────────────────────── */
+.ocr-log > div { white-space: pre-wrap; overflow-wrap: anywhere; }
+.ocr-log .t { color: var(--text-3); }
+.ocr-log .s { color: var(--accent); }
+.ocr-log .is-warn { color: var(--warn); }
+.ocr-log .is-warn .s, .ocr-log .is-warn .t { color: var(--warn); }
+.ocr-log .is-error { color: var(--danger); }
+.ocr-log .is-error .s, .ocr-log .is-error .t { color: var(--danger); }
+.ocr-log-empty { color: var(--text-3); }
+.ocr-log:focus-visible { outline-offset: -2px; }
+
+/* ── ghi chú + hàng nút ───────────────────────────────────────── */
+.ocr-notes { display: flex; flex-direction: column; gap: 8px; }
+.ocr-note { display: flex; align-items: flex-start; gap: 8px; }
+.ocr-note > .ico { margin-top: 2px; }
+.ocr-note-text { flex: 1; min-width: 0; }
+.ocr-note-act { flex: none; white-space: nowrap; align-self: center; }
+a.ocr-note-act { font-size: 12px; font-weight: 600; }
+.ocr-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* ── kết quả nhận dạng ────────────────────────────────────────── */
+.ocr-result-head { gap: 10px; }
+.ocr-result-head .card-meta { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ocr-result-body { padding: 14px 18px; max-height: 420px; overflow: auto; display: flex; flex-direction: column; gap: 14px; }
+.ocr-page { display: flex; flex-direction: column; gap: 5px; }
+.ocr-page-head { display: flex; align-items: baseline; gap: 8px; }
+.ocr-page-meta { font-size: 11.5px; color: var(--text-3); }
+.ocr-page-text { font-size: 13px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-2); }
+.ocr-page-text.is-blank { color: var(--text-3); font-style: italic; }
+.ocr-result-cut { font-size: 12px; color: var(--text-3); }
+
+/* ── lịch sử ──────────────────────────────────────────────────── */
+.ocr-hist-wrap { overflow-x: auto; }
+.ocr-hist td:last-child { text-align: right; white-space: nowrap; }
+.ocr-td-file { font-size: 13px; font-weight: 600; }
+.ocr-file-name { display: block; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ocr-td-pages { font-size: 13px; color: var(--text-2); }
+.ocr-td-model { font-size: 12.5px; color: var(--text-2); }
+.ocr-td-time { font-size: 12.5px; color: var(--text-3); white-space: nowrap; }
+.ocr-hist-loading { display: flex; flex-direction: column; gap: 14px; padding: 18px; }
+
+/* ── hẹp: hai thẻ xếp dọc ─────────────────────────────────────── */
+@media (max-width: 960px) {
+  .ocr-grid { grid-template-columns: minmax(0, 1fr); }
+  .ocr-file-name { max-width: 200px; }
+}

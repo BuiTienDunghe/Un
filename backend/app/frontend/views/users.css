@@ -1,0 +1,97 @@
+/* /ui/views/users.css — style riêng của màn hình "Người dùng" (#/users); tokens + primitives ở /ui/styles.css.
+   Số đo lấy từ prototype P:534-563 (P:n = dòng của "Local AI Core v2.dc.html").
+   Mọi lớp mang tiền tố .usr- để không đụng màn hình khác. */
+
+/* ── Thanh công cụ (P:538-543) — khung là .toolbar của styles.css ── */
+/* Ô tìm: cao 36 (mặc định .search), co giãn nhưng không quá 320px. */
+.usr-search { flex: 1; max-width: 320px; cursor: text; }
+/* Prototype để <input> nguyên padding mặc định của trình duyệt; .search input đặt 0. */
+.usr-search input { padding: 1px 2px; }
+.usr-count { font-size: 12.5px; color: var(--text-3); }
+/* Nút "Thêm người dùng" không bị bóp khi câu đếm dài. */
+.usr-add { flex: none; }
+
+/* ── Bảng tài khoản (P:544-556) ──
+   Khung: .card .card-flush + .table .table-inset .table-roomy của styles.css
+   (th 11px 12px / 18px cột đầu, td 11px 12px / 18px cột đầu — đúng prototype). */
+/* Vùng cuộn ngang nhận được focus (tabindex ở users.js) nên phải có vòng focus như
+   mọi vùng khác, nếu không người dùng bàn phím không biết mình đang đứng ở đâu. */
+.usr-table-wrap { overflow-x: auto; }
+.usr-table-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 10px; }
+/* Màn hẹp: bảng cuộn ngang thay vì ép các cột dính vào nhau. */
+.usr-table { min-width: 620px; }
+/* .col-act cho <th> cuối padding 1px (đúng prototype) nhưng kèm width 40px; prototype để cột
+   này tự co giãn theo phần dư của bảng, nên trả width về auto — nếu không cả 5 cột lệch trái. */
+.usr-table th.col-act { width: auto; }
+
+.usr-user { display: flex; align-items: center; gap: 10px; }
+/* Không dùng nowrap + ellipsis: nó nâng min-content của cột đầu và đẩy cả 4 cột sau
+   sang phải so với prototype. Tên đăng nhập dài thì xuống dòng.
+   `anywhere` chứ không phải `break-word`: break-word ngắt dòng khi vẽ nhưng KHÔNG hạ
+   bề rộng nội tại, nên một tên 64 ký tự (giới hạn của backend) vẫn bắt bảng rộng ra
+   và đẩy 2 cột cuối ra ngoài card. Với dữ liệu prototype hai giá trị cho bố cục y hệt
+   nhau (6 mốc cột trái không đổi ở 1440px). */
+.usr-user-main { min-width: 0; overflow-wrap: anywhere; }
+.usr-name { font-size: 13px; font-weight: 600; }
+.usr-meta { font-size: 11.5px; color: var(--text-3); }
+
+/* Avatar 32px: mặc định màu cố định theo tên (avatarColor, style inline).
+   Quản trị viên và tài khoản đã khóa dùng hai màu riêng. */
+.usr-avatar.is-admin { background: var(--accent); color: #fff; }
+.usr-avatar.is-off { background: var(--surface-3); color: var(--text-3); }
+
+.usr-perms { font-size: 12.5px; color: var(--text-2); }
+.usr-activity { font-size: 12.5px; color: var(--text-3); }
+
+/* Trạng thái: .status-text (12px, chấm 7px currentColor) + màu theo trạng thái. */
+.usr-status.is-ok { color: var(--ok); }
+.usr-status.is-off { color: var(--text-3); }
+
+/* Nút ⋯ nằm sát mép phải của hàng. .icon-btn là display:grid (khối) nên text-align
+   không đẩy được nó; margin-left:auto mới đúng. */
+.usr-act-cell { text-align: right; }
+.usr-act-cell > .icon-btn { margin-left: auto; }
+
+/* Khung xương lúc đang tải. */
+.usr-skel-lines { display: flex; flex-direction: column; gap: 6px; }
+
+/* Trạng thái rỗng nằm trong một ô của bảng: bỏ viền đáy để không thành gạch ngang lửng.
+   Phải kèm .usr-table cho đủ mạnh hơn `.table td` / `.table-roomy td` của styles.css. */
+.usr-table td.usr-empty-cell { border-bottom: 0; padding: 0; }
+
+/* ── 2 card mô tả quyền (P:557-560) ── */
+.usr-roles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.usr-role-title { font-size: 13.5px; display: block; margin-bottom: 8px; }
+.usr-role-text { margin: 0; font-size: 12.5px; color: var(--text-2); line-height: 1.6; }
+
+/* Card trạng thái tắt tài khoản / lỗi + 2 card quyền nằm trong cùng một cột, cách 16px như .page-inner. */
+.usr-body { display: flex; flex-direction: column; gap: 16px; }
+
+@media (max-width: 720px) {
+  .usr-search { max-width: none; flex-basis: 100%; }
+  .usr-roles { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Màn hẹp: prototype không có bố cục này, nên đây là quyết định của màn hình này.
+   Bảng rộng tối thiểu 620px không lọt vào 356px của màn 390px, mà cuộn ngang trong
+   card thì không có gì báo cho người dùng biết là cuộn được — cột Trạng thái và nút ⋯
+   (đường DUY NHẤT để đổi vai trò / đặt lại mật khẩu / khóa) nằm hẳn ngoài màn. Bỏ 2
+   cột suy ra được từ cột Vai trò (Quyền là mô tả cố định theo vai trò; Hoạt động là
+   thông tin phụ). Mốc 680px chứ không phải 600px: từ 601 đến ~670px phần trong của
+   trang vẫn hẹp hơn 620px, tức là vẫn còn đúng cái cuộn ngầm ấy. */
+@media (max-width: 680px) {
+  .usr-table { min-width: 0; }
+  .usr-table .usr-col-perms, .usr-table .usr-col-activity,
+  .usr-table td.usr-perms, .usr-table td.usr-activity { display: none; }
+}
+
+/* Dưới 440px cột tên vẫn chật tới mức chữ bị ngắt giữa chừng: bỏ "@tên đăng nhập"
+   (đúng bằng dòng ngay trên nó) và thu đệm ngang, giữ lại ngày tạo. */
+@media (max-width: 440px) {
+  .usr-at { display: none; }
+  /* Ngày tạo là một mẩu, đừng để nó gãy làm hai dòng. */
+  .usr-meta { white-space: nowrap; }
+  .usr-table th, .usr-table td { padding-left: 10px; padding-right: 10px; }
+  .usr-table.table-inset th:first-child, .usr-table.table-inset td:first-child { padding-left: 12px; padding-right: 12px; }
+  .usr-user { gap: 8px; }
+}

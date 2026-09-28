@@ -50,7 +50,7 @@ Khi thay nội dung, version cũ vẫn active cho tới khi version mới OCR/in
 
 | Thành phần | Trách nhiệm |
 | --- | --- |
-| Web UI | Chat, quản lý tài liệu, theo dõi tác vụ và tình trạng hệ thống. |
+| Web UI | Một trang duy nhất (`/ui/`, hash router, không build step) với 10 màn: Chat, Tài liệu, Ghi nhớ, Bảng điều khiển, OCR, Bot Discord, Model, Người dùng, Cài đặt, Chunks. Link cũ `/ui/dashboard.html`, `/ui/ocr.html`, `/ui/chunks.html?document_id=` vẫn chạy nhờ redirect. |
 | FastAPI | API, khóa truy cập X-API-Key (lớp 1), hội thoại, upload, RAG và nghiệp vụ ứng dụng. |
 | PostgreSQL 16 | Dữ liệu chuẩn: users, conversations, documents, versions, chunks, jobs, outbox và metadata. |
 | Redis + RQ | Hàng đợi và điều phối tác vụ nền. |

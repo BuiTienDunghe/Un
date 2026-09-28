@@ -130,3 +130,7 @@ data/models/**
 # ma bam trong mining_manifest.json - khong push (chu du an quyet 29/09/2026).
 data/evaluation/reranker_v1/train_pairs*.jsonl
 data/evaluation/reranker_v1/dev_pool.jsonl
+
+# Goi thiet ke web UI v2 (prototype + anh doi chieu) - giu ngoai repo.
+design_handoff_local_ai_core_v2/
+Redesign web interface xanh.zip

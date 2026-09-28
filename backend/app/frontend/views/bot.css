@@ -1,0 +1,138 @@
+/* /ui/views/bot.css — style riêng của màn hình "Bot Discord" (#/bot); tokens + primitives ở /ui/styles.css.
+   Số đo lấy từ prototype P:474-510 (P:n = dòng của "Local AI Core v2.dc.html"). */
+
+/* ── Banner gradient (P:478-483) — khung là .banner-brand của styles.css ── */
+/* Vòng tròn trang trí nằm TRÊN chữ và nút như prototype (phần tử định vị vẽ sau khối thường),
+   nên phải bỏ nhận chuột, nếu không nó nuốt cú bấm vào hai nút bên phải. */
+.bot-banner-deco {
+  position: absolute; right: -40px; top: -40px; width: 220px; height: 220px; border-radius: 50%;
+  background: rgba(255, 255, 255, .08); pointer-events: none;
+}
+.bot-banner-main { flex: 1; min-width: 0; }
+.bot-banner-kicker { font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; opacity: .85; }
+.bot-banner-name { font-size: 22px; font-weight: 700; letter-spacing: -.01em; margin-top: 2px; }
+/* Chấm đi theo DÒNG ĐẦU, không theo cả khối: lời lỗi của docker dài thành 2 dòng thì canh giữa sẽ
+   đẩy chấm xuống khe giữa hai dòng. Lệch chấm = (chiều cao một dòng − 8px)/2, đúng bằng chỗ nó đứng
+   trong trường hợp một dòng, nên ảnh so pixel không đổi. */
+.bot-banner-status { display: flex; align-items: flex-start; gap: 8px; margin-top: 4px; font-size: 13px; opacity: .9; }
+/* Lời lỗi của docker có thể dài: cắt ở 2 dòng, còn nguyên trong tooltip. */
+.bot-banner-status-text {
+  min-width: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
+}
+.bot-status-stale { opacity: .85; }
+.bot-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex: none;
+  margin-top: 5.75px; margin-top: calc((1lh - 8px) / 2);   /* 5,75px = (19,5 − 8)/2; calc cho trình duyệt hiểu lh */
+  background: #4ade80; box-shadow: 0 0 0 4px rgba(74, 222, 128, .25);
+}
+.bot-dot[data-state="stopped"] { background: #cbd5e1; box-shadow: 0 0 0 4px rgba(203, 213, 225, .22); }
+.bot-dot[data-state="unknown"], .bot-dot[data-state="busy"] { background: #fbbf24; box-shadow: 0 0 0 4px rgba(251, 191, 36, .28); }
+.bot-dot[data-state="error"] { background: #fca5a5; box-shadow: 0 0 0 4px rgba(252, 165, 165, .3); }
+.bot-dot[data-state="loading"] { background: rgba(255, 255, 255, .7); box-shadow: 0 0 0 4px rgba(255, 255, 255, .15); }
+.bot-dot[data-state="busy"] { animation: bot-pulse 1.4s ease-in-out infinite; }
+@keyframes bot-pulse { 50% { opacity: .35; } }
+
+.bot-banner-actions { display: flex; gap: 8px; flex: none; }
+/* .btn:disabled (và .btn[aria-disabled]) của styles.css đổi chữ sang --text-3: xám trên nền gradient
+   là không đọc nổi, nên nút trên banner giữ màu của chính nó. */
+.bot-banner .btn-on-brand:disabled, .bot-banner .btn-on-brand[aria-disabled="true"] { color: #fff; opacity: .55; }
+.bot-banner .btn-on-brand-solid:disabled { color: var(--accent); opacity: .7; }
+.bot-banner .btn.is-busy { cursor: progress; opacity: .8; }
+.bot-banner .btn-on-brand.is-locked { opacity: .6; }
+/* Nút khóa vẫn bấm được (để nói vì sao) nhưng không được sáng lên như nút làm được việc. */
+.bot-banner .btn-on-brand.is-locked:hover { background: rgba(255, 255, 255, .12); }
+/* Vòng focus mặc định vẽ bằng --accent — chính là màu nền gradient này, nên trên banner nó vô hình
+   (đo được 1,72:1 ở nền sáng, 1,33:1 ở nền tối). Viền trắng trên gradient cũng mới chỉ 2,8:1, nên
+   dùng vòng hai màu: trắng ở trong, quầng tối bọc ngoài — trắng cạnh quầng tối là 6,6:1 (WCAG 1.4.11). */
+.bot-banner .btn:focus-visible { outline-color: #fff; box-shadow: 0 0 0 6px rgba(15, 23, 42, .45); }
+/* Khung chờ của hai nút trong lần đọc trạng thái đầu: nền tối của .skeleton chìm nghỉm trên gradient. */
+.bot-banner-actions .skeleton { background: rgba(255, 255, 255, .22); }
+.bot-spin { animation: spin 1s linear infinite; }
+.bot-ico-fill { fill: currentColor; }
+
+/* ── Lời báo sau một lệnh (không có trong prototype: prototype không có trạng thái lỗi) ── */
+.bot-notice {
+  display: flex; align-items: flex-start; gap: 10px; padding: 10px 10px 10px 14px; border-radius: 12px;
+  font-size: 12.5px; line-height: 1.5;
+}
+.bot-notice > .ico { margin-top: 2px; flex: none; }
+.bot-notice-body { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.bot-notice-title { font-weight: 600; }
+.bot-notice-detail { color: var(--text-2); margin-top: 1px; }
+.bot-notice .bot-notice-close { color: inherit; }
+.bot-notice .bot-notice-close:hover:not(:disabled) { background: rgba(127, 127, 127, .18); color: inherit; }
+
+/* ── 4 thẻ số (P:484-485) ── */
+.bot-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.bot-stats .skeleton { display: inline-block; vertical-align: middle; }
+
+/* ── Lưới 1.5fr | 1fr (P:487) ── */
+.bot-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.bot-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+
+/* ── Phiên gần đây (P:488-491) ── */
+/* Hàng cuối vẫn có border-bottom như prototype (2px cùng viền thẻ). */
+.bot-session { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid var(--border); }
+.bot-session:hover { background: var(--surface-2); }
+.bot-session.is-skeleton:hover { background: transparent; }
+.bot-session-tile {
+  width: 32px; height: 32px; border-radius: 9px; flex: none; display: grid; place-items: center;
+  background: var(--surface-2); color: var(--text-2); font-size: 12px; font-weight: 700;
+}
+.bot-session-body { flex: 1; min-width: 0; }
+.bot-skel-lines { display: flex; flex-direction: column; gap: 6px; }
+.bot-session-place { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bot-session-sub { font-size: 11.5px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bot-session-time { font-size: 12px; color: var(--text-3); min-width: 80px; text-align: right; white-space: nowrap; }
+.bot-sessions .card-meta.is-error { color: var(--danger); }
+
+/* ── Lượt theo trạng thái (P:493-496) ── */
+.bot-card-title { display: block; font-size: 13.5px; font-weight: 700; margin-bottom: 12px; }
+.bot-config .bot-card-title { margin-bottom: 10px; }
+.bot-bars { display: flex; flex-direction: column; gap: 8px; }
+.bot-bar-row { display: flex; align-items: center; gap: 10px; font-size: 12.5px; }
+/* Cột nhãn cố định 72px (P:495): trạng thái lạ có tên dài phải bị cắt, không được đè lên thanh. */
+.bot-bar-label {
+  width: 72px; flex: none; color: var(--text-2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.bot-bar-track { flex: 1; height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.bot-bar-fill { height: 100%; border-radius: 4px; animation: bar .9s ease both; transition: width .5s ease; }
+/* Tỉ lệ thật trên tổng: vài lượt trên vài trăm là dưới 1 px — giữ tối thiểu 4 px để "có" khác "không". */
+.bot-bar-fill.is-nonzero { min-width: 4px; }
+.bot-bar-count { width: 34px; flex: none; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.bot-muted { font-size: 12.5px; color: var(--text-3); }
+.bot-bars-note { margin-top: 10px; }
+
+/* ── Lệnh & cấu hình (P:497-505) ── */
+.bot-cmds { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; }
+.bot-cmd { display: flex; gap: 10px; align-items: baseline; }
+.bot-cmd-desc { color: var(--text-2); }
+.bot-flags {
+  margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.bot-flag { display: flex; align-items: center; gap: 10px; font-size: 12.5px; }
+.bot-flag-label { flex: 1; min-width: 0; color: var(--text-2); }
+/* Công tắc chỉ để xem: không phải nút, không bấm được (README §6 "đọc từ cấu hình, chỉ hiển thị"). */
+.bot-switch { cursor: default; }
+/* "Không rõ" ≠ "tắt": núm về giữa + viền nét đứt, để một công tắc mờ nhưng núm bên trái không bị
+   đọc nhầm thành máy chủ đã nói là tắt. */
+.bot-switch.is-unknown { opacity: .55; background: transparent; box-shadow: inset 0 0 0 1px var(--border-2); }
+.bot-switch.is-unknown::after { left: 9px; background: var(--text-3); box-shadow: none; }
+.bot-flag-note { font-size: 11px; color: var(--warn); flex: none; }
+.bot-flags .skeleton { flex: none; }
+.bot-flags-note { font-size: 11.5px; color: var(--text-3); line-height: 1.5; }
+
+/* ── Hẹp lại ── */
+@media (max-width: 900px) {
+  .bot-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .bot-banner { flex-wrap: wrap; gap: 14px 16px; padding: 18px; }
+  .bot-banner .icon-tile-56 { width: 48px; height: 48px; border-radius: 14px; }
+  .bot-banner-actions { flex-basis: 100%; flex-wrap: wrap; }
+  .bot-banner-actions .btn { flex: 1; }
+  .bot-session { padding: 12px 14px; gap: 10px; }
+  .bot-session-time { min-width: 0; }
+}

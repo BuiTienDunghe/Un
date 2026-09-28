@@ -1,0 +1,78 @@
+/* /ui/views/models.css — style riêng của màn hình "Model" (#/models); tokens + primitives ở /ui/styles.css.
+   Số đo lấy từ prototype P:512-532 (P:n = dòng của "Local AI Core v2.dc.html").
+   Mọi lớp mang tiền tố .mdl- để không đụng màn hình khác. */
+
+/* ── Thanh trạng thái (P:516) — khung là .status-bar của styles.css ── */
+.mdl-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--ok); }
+.mdl-dot.is-bad { background: var(--danger); }
+.mdl-dot.is-unknown { background: var(--border-2); }
+.mdl-bar-text { font-size: 13px; color: var(--text-2); }
+/* Nút không co lại khi câu chữ dài (prototype: flex:none). Khoảng đẩy dùng .spacer của styles.css. */
+.mdl-bar-btn { flex: none; }
+/* Đang chạy --check: nút vẫn giữ được focus (không disabled), nên phải tự nói là đang bận. */
+.mdl-bar-btn[aria-busy="true"] { opacity: .6; cursor: progress; }
+
+/* ── Lưới card (P:517) ── */
+.mdl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+
+/* ── Card một vai trò (P:518-529) ── */
+.mdl-card { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+/* fallback / missing / degraded / incomplete / disabled: viền cả card đổi sang --warn. */
+.mdl-card.is-warn { border-color: var(--warn); }
+
+.mdl-head { display: flex; align-items: center; gap: 10px; }
+.mdl-head-main { flex: 1; min-width: 0; }
+.mdl-role { font-size: 13.5px; font-weight: 700; }
+.mdl-key { font-size: 11.5px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Ô "ĐANG PHỤC VỤ" — khung .serving-box của styles.css, chữ theo prototype. */
+.mdl-serving-label { font-size: 11px; color: var(--text-3); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+/* Tên model thật có thể rất dài ("cross-encoder/mmarco-…"): xuống dòng thay vì tràn card. */
+.mdl-serving-name { font: 13px var(--mono); margin-top: 3px; color: var(--text); overflow-wrap: anywhere; }
+.mdl-serving-sub { font-size: 12px; color: var(--text-2); margin-top: 2px; overflow-wrap: anywhere; }
+
+/* ── Danh sách version (P:523) ── */
+.mdl-versions { display: flex; flex-direction: column; gap: 4px; }
+.mdl-vrow-fill { background: var(--bg); }
+.mdl-vdot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--border-2); }
+.mdl-vdot.is-active { background: var(--accent); }
+.mdl-vdot.is-serving { background: var(--warn); }
+/* flex 0 1 auto: đúng bề rộng chữ khi còn chỗ (bằng prototype), chỉ cắt khi id quá dài. */
+.mdl-vid { font: 12px var(--mono); color: var(--text); flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mdl-vname { color: var(--text-3); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mdl-vlabel { font-size: 11px; font-weight: 600; color: var(--text-3); flex: none; }
+.mdl-vlabel.is-active { color: var(--accent); }
+.mdl-vlabel.is-serving { color: var(--warn); }
+
+/* ── Ghi chú (P:527) — khung .note + .tone-warn của styles.css ── */
+.mdl-notes { display: flex; flex-direction: column; gap: 6px; }
+
+/* ── Hàng nút (P:528) ── */
+.mdl-actions { display: flex; align-items: center; gap: 6px; margin-top: auto; }
+
+/* ── Khung xương lúc đang tải ── */
+.mdl-skel .serving-box { display: flex; flex-direction: column; gap: 6px; }
+.mdl-skel .mdl-head-main { display: flex; flex-direction: column; gap: 6px; }
+
+/* ── Nội dung dialog (Chi tiết → / Kiểm tra registry) ──
+   Khối này đi qua dialog({content}) nên đã là con trực tiếp của .dialog (flex column):
+   chỉ còn phải nới bề ngang cho bảng key/value và kết quả --check.
+   Ghi chú cho lead: đây là chỗ DUY NHẤT màn hình này còn đè lên selector dùng chung,
+   và :has() giới hạn nó trong đúng dialog của màn hình này (Chrome 105+ / Safari 15.4+;
+   nơi chưa hỗ trợ :has() dialog vẫn dùng được, chỉ giữ bề ngang 440px). */
+.dialog:has(.mdl-sheet) { width: min(620px, 94vw); }
+.mdl-sheet { display: flex; flex-direction: column; gap: 12px; max-height: 56vh; overflow-y: auto; }
+.mdl-sheet-sec { display: flex; flex-direction: column; gap: 6px; }
+.mdl-kv { display: flex; flex-direction: column; gap: 3px; }
+.mdl-kv-row { display: flex; gap: 10px; align-items: baseline; }
+.mdl-kv-key { font: 12px var(--mono); color: var(--text-3); flex: none; width: 92px; overflow-wrap: anywhere; }
+.mdl-kv-val { font: 12px var(--mono); color: var(--text); flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.mdl-kv-empty { font-size: 12.5px; color: var(--text-3); }
+.mdl-problems { display: flex; flex-direction: column; gap: 6px; }
+.mdl-problem { font-size: 12.5px; color: var(--warn); background: var(--warn-soft); border-radius: 8px; padding: 7px 10px; line-height: 1.5; overflow-wrap: anywhere; }
+/* .log của styles.css cao tối đa 120px; kết quả --check dài hơn thế.
+   white-space: pre giữ nguyên các cột đã canh của lệnh --check (pre-wrap làm gãy hàng). */
+.mdl-out { margin: 0; max-height: 260px; white-space: pre; overflow: auto; }
+
+/* Menu chọn version: id mono, tên model mờ bên phải. */
+.mdl-menu .menu-item .label { font-family: var(--mono); font-size: 12px; }

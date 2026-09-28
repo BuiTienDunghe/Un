@@ -1,0 +1,108 @@
+/* ══════════════════════════════════════════════════════════════════
+   /ui/views/memory.css — style riêng của màn hình "Ghi nhớ" (#/memory).
+   Tokens + primitives (.page, .toolbar, .seg-bordered/.seg-lg, .badge-count,
+   .search, .card, .tag, .quote, .progress-4, .chip-meta, .pill, .icon-tile,
+   .note, .banner-warn, .btn…) ở /ui/styles.css; file này chỉ thêm bố cục và
+   các khối riêng. Mọi class riêng mang tiền tố mv-. P:n = dòng prototype.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Thanh công cụ: tab + ô tìm (P:333-338) ───────────────────── */
+.mv-search { flex: 1; max-width: 320px; margin-left: auto; cursor: text; }
+/* P:337: ô nhập giữ padding 1px 2px mặc định của trình duyệt (primitive .search đặt 0) */
+.mv-search input { padding: 1px 2px; }
+.mv-search-clear {
+  display: grid; place-items: center; width: 22px; height: 22px; margin-right: -6px; padding: 0; flex: none;
+  border: 0; border-radius: 6px; background: transparent; color: var(--text-3); cursor: pointer;
+}
+.mv-search-clear:hover { background: var(--surface-2); color: var(--text); }
+
+/* Mỗi tab là một cột gap 16 như chính .page-inner (P:332), để đoạn giới thiệu và lưới cách đều. */
+.mv-panel { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.mv-body { min-width: 0; }
+.mv-intro { margin: 0; font-size: 13px; color: var(--text-2); line-height: 1.6; }   /* P:340, P:366 */
+.mv-stale { font-size: 12.5px; }
+.mv-state { overflow: hidden; }
+/* Ghi chú trên thẻ là vùng chữ luôn nằm trong DOM (để đọc màn hình thấy khi đổi); rỗng thì tự ẩn,
+   không dùng [hidden] — ghi chữ vào khối display:none thì không được đọc lên. */
+.mv-note { margin: 0; overflow-wrap: anywhere; }
+.mv-note:empty { display: none; }
+
+/* Số đếm chưa biết (đang tải / khóa / chưa có API): giữ đúng chỗ 18×18 để dải tab không nhảy ngang. */
+.mv-tabs .badge-count.is-blank { visibility: hidden; }
+
+/* ── Chờ duyệt: lưới thẻ đề xuất (P:341-349) ──────────────────── */
+.mv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 12px; }
+.mv-cand { display: flex; flex-direction: column; gap: 12px; min-width: 0; animation: fadeUp .3s ease backwards; }
+.mv-cand-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.mv-cand-author { font-size: 12px; color: var(--text-3); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mv-conf { margin-left: auto; flex: none; font-size: 12px; font-weight: 700; color: var(--text-3); }
+.mv-conf.is-warn { color: var(--warn); }
+.mv-conf.is-ok { color: var(--ok); }
+.mv-fact { font-size: 14px; font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
+/* Đề xuất xóa (canonical_fact rỗng): không có câu để in đậm */
+.mv-fact.is-empty { color: var(--text-3); font-weight: 500; font-style: italic; }
+.mv-evidence { overflow-wrap: anywhere; }
+.mv-source { font-size: 11.5px; color: var(--text-3); margin-top: 3px; }
+.mv-source.is-first { margin-top: 0; }
+.mv-cand-actions { display: flex; gap: 8px; }
+
+/* ── Đang hiệu lực + kết quả tìm: danh sách trong card (P:354-363) ── */
+.mv-row { display: flex; align-items: center; gap: 14px; padding: 13px 16px; border-bottom: 1px solid var(--border); }
+.mv-row:hover { background: var(--surface-2); }
+.mv-row-text { flex: 1; min-width: 0; }
+.mv-row-fact { font-size: 13.5px; font-weight: 600; overflow-wrap: anywhere; }
+.mv-row-fact.is-empty { color: var(--text-3); font-weight: 500; font-style: italic; }
+.mv-row-meta { font-size: 12px; color: var(--text-3); margin-top: 2px; overflow-wrap: anywhere; }
+.mv-row .mv-note { margin-top: 6px; }
+.mv-row .chip-meta { flex: none; white-space: nowrap; }
+.mv-row > .btn { flex: none; }
+.mv-list.is-busy { opacity: .6; transition: opacity .15s; }
+
+/* ── Tóm tắt hội thoại: thẻ ngang (P:367-374) ─────────────────── */
+.mv-stack { display: flex; flex-direction: column; gap: 10px; }
+.mv-batch { display: flex; gap: 16px; align-items: flex-start; min-width: 0; }
+.mv-batch-side { width: 180px; flex: none; }
+.mv-batch-span { font-size: 12.5px; font-weight: 600; }
+.mv-batch-meta { font-size: 11.5px; color: var(--text-3); margin-top: 2px; }
+.mv-batch-pill { margin-top: 8px; }
+.mv-batch-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.mv-props { margin: 0; padding-left: 16px; font-size: 13px; line-height: 1.6; color: var(--text-2); overflow-wrap: anywhere; }
+.mv-props.is-empty { padding-left: 0; color: var(--text-3); font-style: italic; }
+.mv-speaker { color: var(--text-3); }
+.mv-batch-actions { display: flex; gap: 6px; flex: none; }
+
+/* ── Tải thêm (P:612 cùng cỡ nút) ─────────────────────────────── */
+.mv-more { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.mv-more-error { margin: 0; font-size: 12.5px; color: var(--danger); text-align: center; }
+
+/* ── Tìm ghi nhớ ─────────────────────────────────────────────── */
+.mv-search-head { margin: 0; font-size: 12.5px; color: var(--text-3); min-height: 19px; overflow-wrap: anywhere; }
+.mv-search-head strong { color: var(--text); font-weight: 600; }
+
+/* ── Khung chờ ───────────────────────────────────────────────── */
+.mv-skel { animation: none; pointer-events: none; }
+.mv-skel-col { display: flex; flex-direction: column; gap: 8px; }
+.mv-batch-side.mv-skel-col { gap: 7px; }
+
+/* ── Màn hẹp ─────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  /* 3 tab rộng ~390px: cuộn ngang trong khung của nó (view tự kéo tab đang chọn vào tầm nhìn),
+     trang không tràn ngang; giấu thanh cuộn vì dải tab chỉ cao 36px */
+  .mv-tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .mv-tabs::-webkit-scrollbar { display: none; }
+  /* Thanh cuộn bị giấu → mờ hai mép khi còn tab ngoài khung (view gắn .is-scrollable), để chữ bị cắt
+     đọc ra là "còn nữa bên cạnh" chứ không phải lỗi vẽ. */
+  .mv-tabs.is-scrollable {
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+  }
+  .mv-search { flex-basis: 100%; max-width: none; margin-left: 0; }
+  /* Màn hẹp không có ảnh prototype để so: nội dung dài làm hàng cao gấp mấy lần ô 34px, canh giữa thì
+     ô biểu tượng rơi xuống dưới cả dòng meta → canh theo dòng đầu. */
+  .mv-row { flex-wrap: wrap; row-gap: 8px; align-items: flex-start; }
+  .mv-row-text { flex-basis: calc(100% - 48px); }
+  .mv-row .chip-meta { margin-left: 48px; }
+  .mv-batch { flex-wrap: wrap; row-gap: 10px; }
+  .mv-batch-side { width: 100%; }
+  .mv-batch-body { flex-basis: 100%; }
+}

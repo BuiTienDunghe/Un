@@ -1,0 +1,180 @@
+/* ══════════════════════════════════════════════════════════════════
+   /ui/views/documents.css — style riêng của màn hình "Tài liệu" (#/documents).
+   Tokens + primitives (.page, .toolbar, .search, .seg, .stat-doc, .table,
+   .drawer-380, .version-card, .timeline, .tag, .pill…) ở /ui/styles.css;
+   file này chỉ thêm bố cục và các khối riêng. Mọi class riêng mang tiền tố
+   dv- (chat.css đã dùng .doc-… và .docs-… không phạm vi). P:n = dòng prototype.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Khung: trang cuộn + panel chi tiết 380 (P:267-268, P:310) ── */
+.view-root[data-view="documents"] { flex-direction: row; }
+/* container: bảng co cột theo bề ngang THẬT của trang (panel 380 mở, cửa sổ hẹp) — xem .dv-col-tag */
+.dv-page { min-width: 0; container-type: inline-size; container-name: dv-page; }
+/* Kéo tệp vào trang: viền accent bên trong khung cuộn */
+.dv-page.is-drop { box-shadow: inset 0 0 0 2px var(--accent); background: var(--accent-soft); }
+
+/* ── Thanh công cụ (P:269-276) ────────────────────────────────── */
+.dv-search { min-width: 240px; flex: 1; max-width: 360px; cursor: text; }
+/* P:270: ô nhập giữ padding 1px 2px mặc định của trình duyệt (primitive .search đặt 0) */
+.dv-search input { padding: 1px 2px; }
+.dv-search-clear {
+  display: grid; place-items: center; width: 22px; height: 22px; margin-right: -6px; padding: 0; flex: none;
+  border: 0; border-radius: 6px; background: transparent; color: var(--text-3); cursor: pointer;
+}
+.dv-search-clear:hover { background: var(--surface-2); color: var(--text); }
+.dv-stale { font-size: 12.5px; }
+
+/* ── Tiến trình tải lên từng tệp (README §1: thanh 4px accent) ── */
+.dv-uploads { display: flex; flex-direction: column; gap: 8px; }
+.dv-up {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(90px, 200px) auto 24px; align-items: center; gap: 12px;
+  padding: 9px 10px 9px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
+  animation: fadeUp .2s ease backwards;
+}
+.dv-up .type-badge { border-radius: 6px; font-size: 8px; }
+.dv-up-text { min-width: 0; }
+.dv-up-name { font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dv-up-stage { font-size: 11.5px; color: var(--text-3); line-height: 1.45; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dv-up-state { font-size: 11px; font-weight: 600; color: var(--accent); white-space: nowrap; }
+.dv-up .progress > .fill { animation: none; transition: width .3s ease; }
+.dv-up.is-done .dv-up-state { color: var(--ok); }
+.dv-up.is-done .progress > .fill { background: var(--ok); }
+.dv-up.is-warn .dv-up-state { color: var(--warn); }
+.dv-up.is-warn .progress > .fill { background: var(--warn); }
+.dv-up.is-error .dv-up-state, .dv-up.is-error .dv-up-stage { color: var(--danger); }
+.dv-up.is-error .progress > .fill { background: var(--danger); }
+.dv-up .dv-up-x { color: var(--text-3); }
+
+/* ── 4 thẻ số (P:277-278): auto-fit ≥170, gap 10, không bóng ──── */
+.dv-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+/* P:278 không có tabular-nums (primitive .stat-value có) */
+.dv-stats .stat-value { font-variant-numeric: normal; }
+.dv-stats .stat[title] { cursor: help; }
+
+/* ── Bảng (P:280-307) ─────────────────────────────────────────── */
+/* Khung cuộn ngang: tên dài / màn hẹp không bị cắt mất cột ⋯ (card giữ overflow:hidden cho bo góc) */
+.dv-scroll { overflow-x: auto; }
+.dv-table td { vertical-align: middle; }
+.dv-file { display: flex; align-items: center; gap: 10px; min-width: 0; }
+/* Lưới minmax(0, auto): cột Tên co được (tên dài → "…") thay vì đẩy bảng tràn ngang khi panel 380 mở;
+   rộng tối đa vẫn là tên đầy đủ, chặn ở 260px như P:296. */
+.dv-file-text { min-width: 0; display: grid; grid-template-columns: minmax(110px, auto); }
+/* Hộp tên chỉ rộng bằng chữ (P:296) — vòng focus và vùng bấm không thừa ra ~36px như khi hộp
+   luôn lấy trọn đáy 110px của cột; tên dài vẫn bị cắt bằng "…" đúng bề rộng cột. */
+.dv-name {
+  display: block; width: fit-content; max-width: min(260px, 100%); font-size: 13px; font-weight: 600; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dv-name:hover { color: var(--text); }
+.dv-meta { font-size: 11.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dv-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+/* Trang hẹp (panel 380 mở ở 1440px, hoặc cửa sổ nhỏ): cột Tag chỉ rộng bằng chip dài nhất, chip xuống
+   dòng như prototype P:297 ở trạng thái chi tiết — nhường chỗ cho tên tệp thay vì cắt tên. */
+@container dv-page (max-width: 900px) {
+  .dv-table .dv-col-tag { width: 1px; }
+  /* pill trạng thái không bao giờ xuống dòng (prototype để chữ tràn khỏi pill 24px): bù ~36px bằng lề ô 12→9 */
+  .dv-table th:not(.col-check):not(.col-act), .dv-table td:not(.col-check):not(.col-act) { padding-left: 9px; padding-right: 9px; }
+}
+/* Hẹp hơn nữa (laptop 1366/1280 khi panel 380 mở): bảng cần 680px mà chỗ chỉ còn 672/586 → thanh cuộn
+   ngang trong card và MỌI tên tệp bị cắt ở đáy 110px. Bỏ cột Tag (tag vẫn xem/sửa được ở panel, ô tìm
+   vẫn khớp tag) còn 589, hạ đáy tên xuống 96 còn 575 → 1366 và 1280 đều vừa, cột Tên nhận lại 245px.
+   Ngưỡng 700 chọn theo bề ngang THẬT của trang: 1440 + panel = 748 nên trạng thái tham chiếu giữ cột Tag. */
+@container dv-page (max-width: 700px) {
+  .dv-table .dv-col-tag { display: none; }
+  .dv-file-text { grid-template-columns: minmax(96px, auto); }
+}
+/* chip tag là <button> (bấm = lọc): giữ đúng hình .tag của <span> P:297 */
+.dv-tag, .dv-d-tag { border: 0; line-height: 1.5; cursor: pointer; transition: color .15s, background .15s; }
+.dv-tag:hover, .dv-d-tag:hover { color: var(--accent); }
+.dv-num { font-size: 13px; }
+.dv-ver { font-size: 13px; color: var(--text-2); }
+.dv-upd { font-size: 12.5px; color: var(--text-3); white-space: nowrap; }
+.dv-table tr.dv-skel { cursor: default; height: 57.75px; }
+.dv-table td.col-check { cursor: default; }
+.dv-table tr.dv-skel:hover { background: transparent; }
+.dv-skel-text { display: flex; flex-direction: column; gap: 6px; }
+.dv-skel-num { display: flex; justify-content: flex-end; }
+.dv-box > .empty-state { padding: 40px 24px; }
+
+/* ── Panel chi tiết 380 (P:310-324) ───────────────────────────── */
+.dv-detail .drawer-head .type-badge { flex: none; }
+.dv-d-title { flex: 1; min-width: 0; }
+.dv-d-name { font-size: 13.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dv-d-meta { font-size: 11.5px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dv-d-actions { display: flex; gap: 8px; }
+/* P:313: "Hỏi tài liệu này" flex:1, không đặt padding → UA 1px 6px */
+.dv-d-actions .dv-ask { flex: 1; padding: 1px 6px; }
+
+.dv-d-progress {
+  display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--bg);
+}
+.dv-d-progress-top { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.dv-d-progress-title { flex: 1; font-weight: 600; color: var(--warn); }
+.dv-d-progress-pct { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-2); }
+.dv-d-progress .progress > .fill { background: var(--warn); animation: none; transition: width .3s ease; }
+.dv-d-progress-sub { font-size: 11.5px; color: var(--text-3); }
+.dv-d-notice .note { margin: 0; }
+
+/* .drawer-body là flex column: mọi khối con mặc định co được (flex-shrink 1), nên khi nội dung dài hơn
+   panel thì ô xem trước 150px bị bóp còn 115/28/2px thay vì để thân panel cuộn. Khóa mọi khối ở đúng
+   chiều cao của nó; phần dư cuộn trong .drawer-body (đã có overflow-y:auto). */
+.dv-detail .drawer-body > * { flex: none; }
+
+/* Xem trước trang 1 (P:314): 150px, viền, bo 12 */
+.dv-d-preview { height: 150px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.dv-d-preview.has-img { background: var(--surface-2); }
+.dv-d-preview > img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+.dv-d-preview.is-loading { animation: shimmer 1.4s infinite linear; background-size: 200% 100%; }
+
+.dv-d-label { margin-bottom: 8px; }
+.dv-d-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.dv-hint { margin-top: 8px; font-size: 11.5px; line-height: 1.5; color: var(--text-3); }
+.dv-hint.is-danger { color: var(--danger); }
+
+/* Version (P:316-317): vN 12/700 · "sha · ngày" 12.5 text-2 · nhãn 11/600 */
+.dv-versions { display: flex; flex-direction: column; gap: 6px; }
+.dv-v-n { font-size: 12px; font-weight: 700; color: var(--text-3); }
+.dv-v-meta { flex: 1; min-width: 0; font-size: 12.5px; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dv-v-label { font-size: 11px; font-weight: 600; color: var(--text-3); white-space: nowrap; }
+.version-card.is-active .dv-v-n, .version-card.is-active .dv-v-label { color: var(--accent); }
+.dv-v.is-staging .dv-v-label { color: var(--warn); }
+.dv-v.is-failed .dv-v-label { color: var(--danger); }
+.dv-v.is-loading { height: 38.75px; }
+
+/* Lịch sử xử lý (P:319-321): chấm ok / mờ (tải lên) / lỗi / đang chạy */
+.dv-dot-ok { background: var(--ok); }
+.dv-dot-muted { background: var(--text-3); }
+.dv-dot-danger { background: var(--danger); }
+.dv-dot-warn { background: var(--warn); }
+.dv-detail .timeline-item .dv-skel-text { padding-top: 3px; }
+
+/* Chân panel (P:322) */
+.dv-d-foot { display: flex; gap: 8px; padding-top: 6px; border-top: 1px solid var(--border); }
+.dv-d-empty > .empty-state { padding: 32px 8px; }
+.dv-d-skel { display: flex; flex-direction: column; gap: 14px; }
+
+/* ── Hẹp ──────────────────────────────────────────────────────── */
+/* styles.css biến drawer thành lớp phủ từ ≤960px. Riêng màn hình này còn thanh bên 264 + panel 380,
+   nên trong dải 961–1100px cột danh sách chỉ còn ≤336px: thanh lọc (309px) tràn khỏi hộp và CẢ TRANG
+   cuộn ngang. Nâng ngưỡng lớp phủ lên 1100 cho riêng màn hình này (không đụng styles.css dùng chung). */
+@media (max-width: 1100px) {
+  .view-root[data-view="documents"] .dv-detail {
+    position: fixed; top: 0; right: 0; bottom: 0; z-index: 50; width: min(92vw, 380px); box-shadow: var(--shadow-2);
+  }
+  .view-root[data-view="documents"] .drawer-backdrop {
+    display: block; position: fixed; inset: 0; z-index: 45; background: var(--overlay);
+  }
+}
+@media (max-width: 960px) {
+  .dv-search { min-width: 0; flex-basis: 100%; max-width: none; }
+  .dv-up { grid-template-columns: auto minmax(0, 1fr) auto 24px; }
+  .dv-up-bar { grid-column: 1 / -1; grid-row: 2; }
+}
+@media (max-width: 600px) {
+  .toolbar .dv-upload { flex: 1; }
+  /* .spacer (flex:1) rớt xuống cùng hàng với nút Tải lên ở ~360px và chia đôi chỗ với nó: bỏ hẳn,
+     nút chiếm trọn hàng ở mọi bề ngang điện thoại. */
+  .dv-page .toolbar .spacer { display: none; }
+  .dv-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

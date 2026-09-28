@@ -1,0 +1,157 @@
+/* /ui/views/dashboard.css — style riêng của màn hình "Bảng điều khiển" (#/dashboard); tokens + primitives ở /ui/styles.css.
+   Số đo lấy từ prototype: thẻ số P:386-388, biểu đồ P:389-409, nhật ký P:412-424, sức khỏe + hàng đợi P:425-433.
+   Mọi lớp ở đây bắt đầu bằng .dash- (trừ khi dùng lại primitive dùng chung). */
+
+/* ── lưới ba khối ──────────────────────────────────────────────── */
+.dash-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); gap: 10px; }
+.dash-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 14px; }
+.dash-lower { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 14px; }
+
+/* ── đầu khung card ────────────────────────────────────────────── */
+.dash-card { min-width: 0; }
+.dash-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; min-width: 0; }
+.dash-head.is-chart { margin-bottom: 10px; }
+.dash-head > strong { font-size: 13.5px; }
+/* "Xem tất cả →" (P:413): link 12px/600, không phải .btn (giữ đúng khoảng của prototype) */
+.dash-more {
+  margin-left: auto; border: 0; padding: 0; background: none; color: var(--accent);
+  font-family: inherit; font-size: 12px; font-weight: 600; line-height: 1.5; cursor: pointer; white-space: nowrap;
+}
+.dash-more:hover { color: var(--accent-2); }
+/* dữ liệu giữ lại từ lần làm mới trước, lần này hỏng */
+.dash-stale { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 500; color: var(--warn); white-space: nowrap; }
+
+/* ── dải lỗi lõi ───────────────────────────────────────────────── */
+.dash-error {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px;
+  background: var(--danger-soft); color: var(--danger); font-size: 12.5px; font-weight: 500;
+}
+.dash-error-text { flex: 1; min-width: 0; }
+.dash-error .btn { flex: none; }
+
+/* ── thẻ số ────────────────────────────────────────────────────── */
+/* min-height = 26px × line-height 1.2: khung thẻ lúc còn skeleton cao đúng bằng lúc có số, không
+   thì lần tải đầu cả trang tụt xuống 9,4px khi sáu con số về (cùng thủ thuật với .stat-delta). */
+.dash-stat .stat-value { display: flex; align-items: baseline; min-height: 31.2px; }
+.dash-stat.is-locked .stat-value { color: var(--text-3); }
+.dash-stat .stat-delta { display: flex; align-items: center; gap: 4px; min-height: 17px; }
+.dash-skel-inline { display: inline-block; vertical-align: middle; }
+/* dải thẻ số không có đầu khung: chip "chưa làm mới được" nằm ngay trên dải, sát mép phải */
+.dash-stats-note { display: flex; justify-content: flex-end; margin-bottom: -6px; }
+.dash-strip { display: flex; }
+.dash-state-strip { flex: 1; background: var(--surface); }
+
+/* ── trạng thái nhỏ trong khung (khóa / lỗi / chưa hỗ trợ / rỗng) ── */
+.dash-state {
+  display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border: 1px dashed var(--border-2);
+  border-radius: 12px; font-size: 12.5px; color: var(--text-2); line-height: 1.5;
+}
+.dash-state > .ico { margin-top: 2px; color: var(--text-3); }
+.dash-state.is-error, .dash-state.is-error > .ico { color: var(--danger); }
+.dash-state.is-empty, .dash-state.is-empty > .ico { color: var(--text-3); }
+.dash-state-text { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
+.dash-state-sub { color: var(--text-3); font-size: 12px; }
+.dash-state.is-error .dash-state-sub { color: var(--text-2); }
+.dash-span { grid-column: 1 / -1; }
+.dash-retry {
+  border: 0; padding: 0; background: none; color: var(--accent); font-family: inherit; font-size: 12px;
+  font-weight: 600; line-height: 1.5; cursor: pointer; text-decoration: none;
+}
+.dash-retry:hover { color: var(--accent-2); }
+
+/* ── biểu đồ (P:392-408) ───────────────────────────────────────── */
+.dash-chart { position: relative; container-type: inline-size; }
+.dash-chart > svg { width: 100%; height: auto; display: block; overflow: visible; }
+.dash-grid-line { stroke: var(--border); stroke-width: 1; }
+.dash-bar {
+  fill: var(--accent); transform-box: fill-box; transform-origin: bottom;
+  animation: grow .7s cubic-bezier(.2, .8, .2, 1) both;
+}
+.dash-err {
+  fill: var(--danger); transform-box: fill-box; transform-origin: bottom;
+  animation: grow .7s cubic-bezier(.2, .8, .2, 1) both;
+}
+.dash-area { fill: var(--accent-soft); opacity: .7; }
+.dash-line {
+  fill: none; stroke-linejoin: round; stroke-linecap: round;
+  stroke-dasharray: var(--dash-len, 1400); animation: dash-draw 1.4s ease-out both;
+}
+.dash-line.is-p50 { stroke: var(--accent); stroke-width: 2.5; }
+.dash-line.is-p95 { stroke: var(--warn); stroke-width: 2; animation-duration: 1.6s; }
+.dash-dot.is-p50 { fill: var(--accent); }
+.dash-dot.is-p95 { fill: var(--warn); }
+.dash-xl { font-size: 10px; fill: var(--text-3); text-anchor: middle; }
+/* Chữ trong SVG nằm trong hệ toạ độ viewBox (560 đơn vị) nên co theo bề rộng thẻ: thẻ rộng 320px
+   thì 10px vẽ ra 5,7px thật, không đọc được. Dưới ~470px thì nâng cỡ trong hệ toạ độ để chữ trên
+   màn hình vẫn ~9-12px. Ở 1440px thẻ rộng ~515px nên số đo tham chiếu không đổi. */
+@container (max-width: 470px) {
+  .dash-xl { font-size: 13px; }
+}
+@container (max-width: 360px) {
+  .dash-xl { font-size: 17px; }
+}
+.dash-cap { font-size: 10px; fill: var(--text-3); }
+.dash-hit { fill: transparent; }
+.dash-hit:hover { fill: var(--text); fill-opacity: .05; }
+/* lần vẽ lại (số mới trong lúc đang xem): thay tại chỗ, không chạy lại hiệu ứng */
+.dash-still .dash-bar, .dash-still .dash-err, .dash-still .dash-line { animation: none; }
+/* đường p50/p95 dài hơn 1400 đơn vị vẫn vẽ hết (dasharray = chiều dài thật) */
+@keyframes dash-draw { from { stroke-dashoffset: var(--dash-len, 1400); } }
+
+.dash-note { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0 14px 14px; pointer-events: none; }
+.dash-note > .skeleton { width: 46%; }
+.dash-note-box {
+  pointer-events: auto; display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center;
+  text-align: center; font-size: 12.5px; color: var(--text-3); background: var(--surface); border-radius: 10px; padding: 8px 12px;
+}
+.dash-note-box.is-error { color: var(--danger); }
+.dash-note-box.is-error .dash-state-sub { color: var(--text-2); }
+.dash-note-box.is-locked, .dash-note-box.is-missing { color: var(--text-2); }
+
+/* ── nhật ký hành động agent (P:416-420) ───────────────────────── */
+.dash-act-list { display: flex; flex-direction: column; }
+.dash-act-list.is-open { max-height: 480px; overflow-y: auto; margin-right: -8px; padding-right: 8px; }
+.dash-act { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.dash-act-body { flex: 1; min-width: 0; }
+.dash-act-kind { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dash-act-kind > span { color: var(--text-3); font-weight: 400; }
+.dash-act-title { font-size: 12px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dash-act-time { font-size: 11.5px; color: var(--text-3); white-space: nowrap; min-width: 52px; text-align: right; }
+.dash-act .pill { flex: none; }
+/* đang gửi thu hồi: aria-disabled (giữ được focus) nên phải tự vẽ trạng thái mờ */
+.dash-revert { flex: none; }
+.dash-revert[aria-disabled="true"] { opacity: .55; cursor: default; }
+.dash-revert[aria-disabled="true"]:hover { background: var(--surface); border-color: var(--border); color: var(--text-2); }
+.dash-skel-col { display: flex; flex-direction: column; gap: 6px; }
+.dash-act-list > .dash-state { margin: 10px 0 2px; }
+
+/* ── sức khỏe hệ thống (P:426-428) ─────────────────────────────── */
+/* 2 cột như prototype khi còn đủ chỗ; ô hẹp hơn ~185px thì tên thành phần bị cắt ("Worker Me…"),
+   nên tự xuống 1 cột — điều kiện là bề rộng THẺ, không phải bề rộng cửa sổ: ở cửa sổ 1024px thẻ
+   sức khỏe cũng chỉ còn ~320px. */
+.dash-health { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(185px, 100%), 1fr)); gap: 6px; }
+.dash-hname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dash-hstate { font-size: 11px; color: var(--text-3); }
+.dash-hcount { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--ok); white-space: nowrap; }
+.dash-hcount.is-warn { color: var(--warn); }
+.dash-hcount .dot { background: currentColor; }
+
+/* ── hàng đợi (P:431) ──────────────────────────────────────────── */
+.dash-queue { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.dash-q { display: flex; align-items: center; gap: 10px; font-size: 12.5px; }
+.dash-q-label { width: 110px; flex: none; color: var(--text-2); }
+.dash-q .progress { flex: 1; }
+.dash-q .progress > .fill { transition: width .4s ease; }
+.dash-q-n { width: 28px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.dash-q-state { display: flex; flex-direction: column; gap: 6px; }
+
+/* ── nút làm mới trên header ───────────────────────────────────── */
+.dash-refresh.is-busy .ico { animation: spin 1s linear infinite; }
+
+/* ── màn hẹp ───────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  /* nhãn giữ một dòng, thanh co lại (110px cố định làm "Hàng đợi memory" xuống dòng) */
+  .dash-q-label { width: auto; white-space: nowrap; }
+  .dash-act { gap: 10px; }
+  .dash-act-time { min-width: 44px; }
+}

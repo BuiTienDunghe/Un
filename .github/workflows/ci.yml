@@ -36,10 +36,11 @@ jobs:
         run: python -m compileall -q backend/app backend/alembic backend/tests discord_bot tests tools
 
       # The web UI has no build step, so a parser is the only thing standing
-      # between a typo and a blank page in the browser.
+      # between a typo and a blank page in the browser. v2 moved every screen
+      # into views/, which the old top-level glob would have skipped silently.
       - name: Syntax-check the frontend scripts
         run: |
-          for file in backend/app/frontend/*.js; do
+          for file in backend/app/frontend/*.js backend/app/frontend/views/*.js; do
             node --check "$file"
           done
 

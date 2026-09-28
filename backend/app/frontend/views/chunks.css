@@ -1,0 +1,71 @@
+/* /ui/views/chunks.css — style riêng của màn hình "Chunks" (#/chunks); tokens + primitives ở /ui/styles.css. */
+
+/* ── hàng đầu (P:597-602) ──────────────────────────────────────── */
+/* .btn dựng cho <button> (line-height: normal của trình duyệt); thẻ <a> thừa
+   kế 1.5 của body nên phải ép lại để cao 32px khớp từng pixel với prototype. */
+.ck-back { line-height: normal; }
+.ck-badge { display: inline-flex; flex: none; }
+.ck-title { flex: 1; min-width: 0; }
+.ck-name { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ck-sub { font-size: 12px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ck-search { width: 280px; flex: none; cursor: text; }
+/* P:601: ô nhập giữ padding 1px 2px mặc định của trình duyệt (primitive .search đặt 0) */
+.ck-search input { padding: 1px 2px; }
+/* Ô lọc bị vô hiệu lúc đang tải phải trông khác ô dùng được (như .btn:disabled). */
+.ck-search.is-disabled { cursor: default; opacity: .6; }
+
+/* ── chú giải (P:603) ──────────────────────────────────────────── */
+.ck-legend {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  font-size: 12px; color: var(--text-3); padding: 0 2px;
+}
+.ck-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.ck-sw { width: 14px; height: 10px; border-radius: 3px; flex: none; }
+.ck-sw-overlap { background: var(--surface-3); }
+.ck-sw-ctx { background: var(--warn-soft); border-left: 3px solid var(--warn); }
+.ck-loaded { margin-left: auto; }
+
+/* ── danh sách + card đoạn (P:604-611) ─────────────────────────── */
+/* Khoảng cách giữa các card bằng gap của .page-inner.gap-12, nên bọc trong
+   .ck-list mà nhìn vẫn như các card nằm thẳng trong cột. */
+.ck-list { display: flex; flex-direction: column; gap: 12px; }
+.ck-card { display: flex; flex-direction: column; gap: 8px; }
+.ck-card.is-flagged { border-color: var(--danger); }
+
+.ck-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--text-3); }
+.ck-idx { font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.ck-heading { margin-left: auto; font-size: 12px; color: var(--text-2); text-align: right; }
+.ck-heading.is-none { color: var(--text-3); font-style: italic; }
+
+/* Chữ của đoạn giữ nguyên xuống dòng (pre-wrap). overflow-wrap là bổ sung
+   ngoài prototype: dữ liệu thật có chuỗi dài không dấu cách (URL, base64)
+   sẽ tràn khỏi card nếu không cho ngắt. */
+.ck-content { font-size: 13.5px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: break-word; }
+/* Bảng: font đơn cách + KHÔNG bẻ dòng + cuộn ngang, như trang cũ
+   (chunks.html:27, checklist hành vi cũ mục 98). Bẻ dòng giữa ô làm mất canh
+   cột — đúng thứ font đơn cách sinh ra để giữ. */
+.ck-content.is-mono { font-family: var(--mono); white-space: pre; overflow-x: auto; overflow-wrap: normal; }
+.ck-overlap { background: var(--surface-3); border-radius: 3px; color: var(--text-2); }
+
+.ck-foot { display: flex; align-items: center; gap: 8px; padding-top: 6px; border-top: 1px solid var(--border); }
+.ck-flag { border-radius: 8px; }
+.ck-note { font-size: 12px; color: var(--text-3); min-width: 0; overflow-wrap: break-word; }
+
+/* ── khung xương & chân trang ──────────────────────────────────── */
+.ck-skel .ck-meta { gap: 8px; }
+.ck-skel-lines { display: flex; flex-direction: column; gap: 7px; padding: 2px 0 4px; }
+.ck-footrow { display: flex; justify-content: center; }
+.ck-state { display: flex; flex-direction: column; }
+/* Trạng thái 409 có hai lối đi: kiểm tra lại (tài liệu đang index xong lúc nào
+   không biết) và mở tài liệu. emptyState nhận thẳng một node làm hành động. */
+.ck-state-actions { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+
+/* Dưới ~760px ô lọc 280px bóp nát tên tệp và dòng "version N · M đoạn · T
+   token"; cho nó xuống hàng riêng (.toolbar đã flex-wrap). */
+@media (max-width: 760px) {
+  .ck-search { width: 100%; }
+}
+
+@media (max-width: 600px) {
+  .ck-heading { margin-left: 0; text-align: left; width: 100%; }
+}
