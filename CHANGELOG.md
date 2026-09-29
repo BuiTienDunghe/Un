@@ -61,6 +61,12 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   UTF-16 không BOM qua vị trí byte NUL, rồi UTF-8, cuối cùng Windows-1258 kèm chuẩn hoá NFC (để
   khớp câu hỏi gõ dựng sẵn); file UTF-8 chỉ hỏng vài byte vẫn giữ UTF-8. 4 045 `.txt` và 98 `.md`
   đang có trong kho đọc ra y hệt trước.
+- **Word mất số tự đánh và công thức** (29/09). Số "Điều 1." / "1." / "a)" mà Word tự đánh nằm
+  trong `numbering.xml`, không nằm trong đoạn văn, nên bị mất — đúng những chữ dùng để trích dẫn;
+  công thức (`m:oMath`) mất hẳn. Nay số được đếm lại theo thứ tự tài liệu (nhiều cấp, bắt đầu lại,
+  a/i/I, số kế thừa từ style); mục danh sách ghi thành `- 1. …` để bộ chia đoạn không coi là tiêu
+  đề, tiêu đề có số giữ `#`; công thức thành một dòng như `(a+b)/2`, `x^2`. File `.docx` thật duy
+  nhất trong kho: tiêu đề có thêm số mục (1, 2.1, 3.2.1, A, B), số đoạn không đổi (23).
 - **OCR hỏng trên mọi trang mà không để lại dấu vết** (29/09; đo được trên Ollama 0.34.2 và 0.34.4,
   máy lên 0.34.1 từ 0.33.3 ngày 17/09 nên lỗi có thể đã có từ đó). Ollama 0.34.x chạy
   `glm-ocr` bằng runner llama-server, runner này chỉ đọc `eos_token_id` số ít nên bỏ qua token
