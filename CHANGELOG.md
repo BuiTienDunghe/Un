@@ -55,6 +55,12 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   `/ui/chunks.html?document_id=…` và `/ui/#c=<id>` của bảng điều khiển vẫn mở đúng chỗ.
 
 ### Fixed
+- **TXT/MD không phải UTF-8 bị đọc thành chữ rác** (29/09). Mọi file đều bị giải mã như UTF-8,
+  ký tự lỗi thay bằng dấu hỏi: bản Notepad lưu "Unicode" (UTF-16) ra chữ rác hoàn toàn, bản
+  Windows-1258 mất 35% ký tự, cả hai vẫn được index mà không tìm ra được. Nay đọc theo BOM, nhận
+  UTF-16 không BOM qua vị trí byte NUL, rồi UTF-8, cuối cùng Windows-1258 kèm chuẩn hoá NFC (để
+  khớp câu hỏi gõ dựng sẵn); file UTF-8 chỉ hỏng vài byte vẫn giữ UTF-8. 4 045 `.txt` và 98 `.md`
+  đang có trong kho đọc ra y hệt trước.
 - **OCR hỏng trên mọi trang mà không để lại dấu vết** (29/09; đo được trên Ollama 0.34.2 và 0.34.4,
   máy lên 0.34.1 từ 0.33.3 ngày 17/09 nên lỗi có thể đã có từ đó). Ollama 0.34.x chạy
   `glm-ocr` bằng runner llama-server, runner này chỉ đọc `eos_token_id` số ít nên bỏ qua token
