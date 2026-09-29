@@ -297,6 +297,30 @@ measure an embedding model alone while the first measures a whole pipeline.
 of this system on a corpus of realistic size, and it says the p50 target of 900 ms
 does not survive three thousand documents.
 
+**Fine-tuning the shipped reranker on this dataset's train split failed its own rule
+(07/09/2026) and was not shipped.** Same 788 test questions, reranker on; the untrained
+row is the control the rule was written against:
+
+| Reranker | Acc@1 | Acc@3 | Recall@5 | MRR | Evidence |
+| --- | ---: | ---: | ---: | ---: | --- |
+| **reranker-v0, untrained (shipped)** | **0.7843** | **0.9657** | **0.9810** | **0.8722** | `results/kept/heldout-treat-rerankerON-20260906-185648.json` |
+| reranker-vi-v1, fine-tuned | 0.8033 | 0.9556 | 0.9734 | 0.8786 | `heldout_retrieval_v1/results/heldout-vi-v1-rerankerON-20260907-225726.json` |
+
+The rule, fixed before training, asked for Acc@1 ≥ 0.8163 (the smallest gain a paired
+test resolves on 788 questions), Acc@3 ≥ 0.9557, no question going from found to
+missed, and nothing lost on the 82-question gate. The +0.0190 at rank 1 cannot be told
+apart from chance at this size; 13 questions the untrained model found were lost, 12 of
+which had stood at rank 1–3; and the 82-question gate lost 2 questions — recall@5
+1.0000 → 0.9756, doc_hit 0.9268 → 0.8659 (`results/kept/rag-multidoc-20260907-225859.json`
+against `results/kept/rag-multidoc-20260907-023932.json`). Latency and loading under the
+production runtime passed. A second attempt, dropping the 8.6% of mined negatives the
+base model scores as confident positives, did worse than not training at all on dev:
+Acc@1 0.4179 against 0.5373 untrained and 0.6194 for the first attempt
+(`reranker_v1/loss_comparison_clean.json`, `reranker_v1/loss_comparison_final.json`). So
+2 158 training questions, used this way, did not produce a reranker this project would
+ship. The checkpoint stays a registry candidate; the full record is
+`.scratch/reranker-finetune/spec.md`.
+
 ## Chunking: numbered clauses are not headings (04/09/2026)
 
 The chunker read any line shaped `<number>. <text>` as a heading. Vietnamese legal

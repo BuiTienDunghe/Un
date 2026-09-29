@@ -235,6 +235,13 @@ roles:
           loss: BinaryCrossEntropyLoss  # chosen on dev over 5 others; PListMLE collapsed to acc@1 0.10
           hyperparameters: 2 epochs, batch 16, lr 2e-5, seed 20260907
           training_data: 2158 questions, 2376 positive chunks, 21580 mined negatives, Vietnamese legal only
+        notes: >-
+          provenance.git_sha is the commit the run started from, but the training scripts
+          were untracked then and were first committed in 30b3d42 (29/09/2026). That copy
+          is not the one that trained this checkpoint: train.py and mine_negatives.py were
+          last modified at 23:34 on 07/09 (machine time), after this export (export.json and
+          loss_comparison_final.json, 21:50) and five minutes before attempt 2's result
+          (loss_comparison_clean.json, 23:39). The exact training code was not kept.
 
   # ── extractor / verifier: env-only today. DISCORD_MEMORY_EXTRACTOR_MODEL=<tag>
   # stays as the ad-hoc per-machine pin (D2 ship path; source=env_tag, no fallback,
