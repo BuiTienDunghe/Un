@@ -248,3 +248,27 @@ def test_json_call_maps_transport_failures_to_the_ollama_error_types():
         ResearchService(None, None, ollama_base_url="http://x", model_router=_Router(), http_post=garbage)._json_call([], schema, 1)
     with pytest.raises(OllamaModelNotLoadedError):
         ResearchService(None, None, ollama_base_url="http://x", model_router=type("R", (), {"models": {}})(), http_post=garbage)._json_call([], schema, 1)
+
+
+def test_thread_title_is_the_first_question_collapsed_and_capped_at_80():
+    from app.services.research_service import thread_title_from_question
+
+    assert thread_title_from_question("  Attention\n là gì?  ") == "Attention là gì?"
+    assert thread_title_from_question("   ") is None
+    long = thread_title_from_question("a" * 100)
+    assert len(long) == 80 and long.endswith("…")
+
+
+def test_attach_paper_refs_maps_citations_to_papers_and_keeps_the_page():
+    from app.services.research_service import attach_paper_refs
+
+    messages = [
+        {"role": "user", "content": "?", "sources": []},
+        {"role": "assistant", "content": "!", "sources": [{"document_id": "doc_1", "page_start": 3, "excerpt": "x"}, {"document_id": "doc_gone", "page_start": None, "excerpt": "y"}]},
+    ]
+    out = attach_paper_refs(messages, {"doc_1": {"paper_id": "pap_1", "short_name": "Attention", "color_index": 2}})
+    assert out[0]["sources"] == []
+    first, gone = out[1]["sources"]
+    assert (first["paper_id"], first["short_name"], first["color_index"], first["page"]) == ("pap_1", "Attention", 2, 3)
+    assert (gone["paper_id"], gone["short_name"], gone["color_index"], gone["page"]) == (None, None, None, None)
+    assert messages[1]["sources"][0] == {"document_id": "doc_1", "page_start": 3, "excerpt": "x"}  # không sửa đầu vào

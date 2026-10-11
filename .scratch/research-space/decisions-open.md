@@ -19,7 +19,7 @@ kia là việc có chi phí rõ. Không mục nào là lỗi.
 | # | Chỗ | Đang làm | Hướng kia |
 |---|---|---|---|
 | 7 | Render trang | PNG dpi 110 từ máy chủ, phóng bằng CSS tới 150% rồi tải lại dpi 160 | pdf.js trong trình duyệt: chữ nét ở mọi zoom, nhưng phải vendor ~1 MB JS, mở ngân sách `fetch(` và danh sách script trong test |
-| 8 | Chat trong panel | Lịch sử chỉ trong phiên (không lưu conversation) | Lưu như `/rag/chat` (truyền `conversation_id`) để quay lại đọc tiếp — thêm cột `conversation_id` vào paper/project |
+| 8 | Chat trong panel | **Đã chốt B (11/10, chiều)**: nhiều luồng mỗi paper / dự án, bảng `research_threads` trỏ tới `conversations`, đổi tên / xoá — xem spec.md mục bổ sung | (A: một luồng mỗi paper; C: lưu trình duyệt — bỏ) |
 | 9 | Dự án | Lọc theo chủ sở hữu khi bật tài khoản (như hội thoại) | Dự án dùng chung cả nhóm (bỏ lọc owner) |
 | 10 | Thêm paper từ link arXiv/DOI | 501 kèm câu "máy chủ chạy offline" | Cho phép khi có mạng: tải PDF arXiv về rồi đi tiếp pipeline (thêm `httpx` GET + kiểm tra kích thước) |
 | 11 | Bố cục | `Shell.setLayout("full")`: ẩn sidebar + header của app, nút ← về `#/chat`; **đăng xuất không với tới** khi đang ở Nghiên cứu | Giữ header 58 của app (mất 58px dọc, lệch prototype) hoặc thêm nút đăng xuất vào bộ chọn dự án |

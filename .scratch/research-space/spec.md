@@ -137,3 +137,34 @@ stages: {ocr: "done"|"running"|"failed"|"pending", metadata: …, outline: …, 
 1. `node --check` + `pytest backend/tests/test_frontend.py`.
 2. Backend: pytest các file `test_research_*`, `test_document_pages.py`; test cần Postgres/Docker thì nói rõ nếu Docker không chạy (đừng im lặng skip).
 3. Mở `/ui/#/research` với máy chủ giả (scratchpad) và/hoặc API thật, chụp 1440×900 so với `r01…r08`.
+
+## Bổ sung 11/10 (chiều): luồng chat lưu được — hướng B trong decisions-open #8
+
+Chủ dự án chốt **B**: mỗi paper (và mỗi dự án, cho "Hỏi cả dự án") có **nhiều luồng** chat, lưu máy chủ, đổi tên / xoá
+được. Luồng = một dòng trỏ tới một `conversations` sẵn có (tin nhắn + nguồn trích dẫn đã được `rag_service` lưu ở đó).
+
+### Bảng `research_threads` (migration `20261011_34`, down_revision `20261011_33`)
+id `thr_…` · project_id FK cascade · paper_id FK cascade **nullable** (null = luồng của dự án) · conversation_id
+String nullable, index (null cho tới tin đầu tiên) · title String(200) nullable · created_at · updated_at ·
+last_message_at nullable. Index (project_id), (paper_id).
+
+### API
+| Endpoint | Hợp đồng |
+|---|---|
+| `GET /research/threads?scope=paper\|project&id=<paperId\|projectId>` | `[Thread]` mới nhất trước (theo `last_message_at` rồi `created_at`) |
+| `POST /research/threads {scope, id, title?}` | 201 Thread (`conversation_id: null`) |
+| `GET /research/threads/{id}` | Thread + `messages: [{role, content, model_used, created_at, sources:[ConversationMessageSource + paper_id, short_name, color_index, page (= page_start)]}]`; `messages: []` khi chưa có conversation |
+| `PATCH /research/threads/{id} {title}` → 200 Thread · `DELETE` → 204 (xoá luôn conversation phía sau qua service hội thoại) | |
+| `POST /research/chat` thêm `thread_id?` | có `thread_id` → dùng `thread.conversation_id` làm `conversation_id`; sau khi luồng tạo conversation mới thì ghi `conversation_id`, `last_message_at = now`, và `title` = câu hỏi đầu cắt 80 ký tự nếu `title` null; `meta` thêm `thread_id`. Không `thread_id` → như cũ. Thread không thuộc scope/id gửi kèm → 422 `RESEARCH_THREAD_MISMATCH`; không có → 404 `RESEARCH_THREAD_NOT_FOUND` |
+`Thread` = `{id, scope, project_id, paper_id, conversation_id, title, message_count, created_at, updated_at, last_message_at}`.
+Quyền: read_guard / `require_api_key` cho ghi như các route research khác; kiểm chủ sở hữu dự án như hiện có.
+
+### Frontend (panel Hỏi paper / Hỏi cả dự án)
+- Đầu panel: hàng **luồng**: tiêu đề luồng hiện tại (600, cắt 1 dòng) + nút ⋯ (dropdown: danh sách luồng với tiêu đề,
+  "N tin · thời gian tương đối", đổi tên, xoá có confirm) + nút "+ Luồng mới" (28px).
+- Mở panel: `GET /research/threads` theo scope; chọn luồng dùng gần nhất (`lac.research` lưu `threadByKey`) hoặc mới
+  nhất; `GET /research/threads/{id}` → dựng lại tin nhắn, chip trích dẫn từ `sources` (thứ tự `[n]` = thứ tự
+  `sources`, trang = `page`). Chưa có luồng → panel trống với gợi ý; gửi tin đầu tiên thì `POST /research/threads`
+  rồi gửi `thread_id`. Sau tin đầu, tải lại danh sách để lấy `title` máy chủ đặt.
+- Khoá state chat: `${scope}:${id}:${threadId}`; Abort khi đổi luồng. 404 không mã → `missingApiState`.
+- Giữ nguyên sửa trước đó: bấm chip trích dẫn chỉ nhảy trang, **không** đổi panel.

@@ -256,7 +256,7 @@ async def lifespan(app: FastAPI):
     )
     # Không gian Nghiên cứu: paper = Document sẵn có; tóm tắt gọi Ollama ra JSON với
     # model vai trò general; hỏi paper đi qua rag_service.stream_response.
-    app.state.research_service = ResearchService(postgres_sessions, app.state.document_service, ollama_base_url=settings.ollama_base_url, model_router=router)
+    app.state.research_service = ResearchService(postgres_sessions, app.state.document_service, ollama_base_url=settings.ollama_base_url, model_router=router, conversation_store=auxiliary_store)
     agent_config = config.get("agent", {})
     # Job 1+2 (28/08): sổ gốc writes + guild-scoped verbatim history search.
     app.state.discord_history_service = DiscordHistoryService(postgres_sessions)

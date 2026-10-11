@@ -5,9 +5,12 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from app.schemas.conversation_schema import ConversationMessageSource
+
 PaperStatus = Literal["unread", "reading", "read"]
 EdgeType = Literal["builds", "competes", "backbone"]
 Stage = Literal["done", "running", "failed", "pending"]
+ThreadScope = Literal["paper", "project"]
 
 
 # ── Dự án ────────────────────────────────────────────────────────────────────
@@ -247,12 +250,58 @@ class OutlineResponse(BaseModel):
 
 
 class ResearchChatRequest(BaseModel):
-    scope: Literal["paper", "project"]
+    scope: ThreadScope
     id: str
     question: str = Field(min_length=1)
     quote: str | None = None
     conversation_id: str | None = None
+    thread_id: str | None = None  # có → conversation_id lấy từ luồng, bỏ qua trường conversation_id
     top_k: int | None = Field(default=None, ge=1, le=50)
+
+
+# ── Luồng chat lưu được ──────────────────────────────────────────────────────
+class ThreadCreateRequest(BaseModel):
+    scope: ThreadScope
+    id: str = Field(min_length=1)
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+
+
+class ThreadPatchRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+
+
+class ThreadRow(BaseModel):
+    id: str
+    scope: ThreadScope
+    project_id: str
+    paper_id: str | None = None
+    conversation_id: str | None = None
+    title: str | None = None
+    message_count: int = 0
+    created_at: str
+    updated_at: str
+    last_message_at: str | None = None
+
+
+class ThreadMessageSource(ConversationMessageSource):
+    """Trích dẫn lưu kèm tin nhắn + paper nó thuộc về (None khi paper đã rời dự án); `page` = page_start."""
+
+    paper_id: str | None = None
+    short_name: str | None = None
+    color_index: int | None = None
+    page: int | None = None
+
+
+class ThreadMessage(BaseModel):
+    role: str
+    content: str
+    model_used: str | None = None
+    created_at: str
+    sources: list[ThreadMessageSource] = Field(default_factory=list)
+
+
+class ThreadDetail(ThreadRow):
+    messages: list[ThreadMessage] = Field(default_factory=list)
 
 
 # ── Trang tài liệu (routers/documents.py) ────────────────────────────────────

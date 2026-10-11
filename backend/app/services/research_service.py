@@ -27,7 +27,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import sessionmaker
 
 from app.llm_clients.ollama_client import OllamaModelNotLoadedError, OllamaTimeoutError, OllamaUnavailableError
-from app.postgres.models import Document, IngestionRun, ResearchAnnotation, ResearchCluster, ResearchEdge, ResearchPaper, ResearchProject, new_id
+from app.postgres.models import Document, IngestionRun, Message, ResearchAnnotation, ResearchCluster, ResearchEdge, ResearchPaper, ResearchProject, ResearchThread, new_id
 from app.postgres.repositories import PostgresDocumentRepository
 from app.schemas.research_schema import PaperSummary, ProjectInsights
 from app.services import document_pages
@@ -73,6 +73,14 @@ class FetchUnsupportedError(ResearchError):
 
 class InvalidEdgeError(ResearchError):
     pass
+
+
+class ThreadNotFoundError(ResearchError):
+    pass
+
+
+class ThreadMismatchError(ResearchError):
+    """Luồng tồn tại nhưng không thuộc scope/id gửi kèm."""
 
 
 # ── Hàm thuần: metadata, mục lục, prompt, xuất ───────────────────────────────
@@ -455,6 +463,30 @@ def parse_json_object(content: str) -> dict[str, Any]:
     return value
 
 
+THREAD_TITLE_CAP = 80
+
+
+def thread_title_from_question(question: str, cap: int = THREAD_TITLE_CAP) -> str | None:
+    """Tiêu đề tự đặt = câu hỏi đầu, gộp khoảng trắng, cắt `cap` ký tự; None khi rỗng."""
+    text = " ".join(question.split())
+    if not text:
+        return None
+    return text if len(text) <= cap else text[: cap - 1].rstrip() + "…"
+
+
+def attach_paper_refs(messages: list[dict[str, Any]], paper_map: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    """Gắn paper_id / short_name / color_index / page (= page_start) vào từng trích dẫn
+    theo document_id; paper không còn trong dự án → ba trường None, page vẫn có."""
+    out: list[dict[str, Any]] = []
+    for message in messages:
+        sources = []
+        for source in message.get("sources") or []:
+            ref = paper_map.get(str(source.get("document_id")), {})
+            sources.append({**source, "paper_id": ref.get("paper_id"), "short_name": ref.get("short_name"), "color_index": ref.get("color_index"), "page": source.get("page_start")})
+        out.append({**message, "sources": sources})
+    return out
+
+
 def _iso(value: datetime | None) -> str | None:
     return value.isoformat() if value else None
 
@@ -465,9 +497,10 @@ def _now() -> datetime:
 
 # ── Dịch vụ ───────────────────────────────────────────────────────────────────
 class ResearchService:
-    def __init__(self, session_factory: sessionmaker, document_service, *, ollama_base_url: str, model_router=None, http_post=None) -> None:
+    def __init__(self, session_factory: sessionmaker, document_service, *, ollama_base_url: str, model_router=None, http_post=None, conversation_store=None) -> None:
         self.sessions = session_factory
         self.documents = document_service
+        self.conversations = conversation_store  # auxiliary_store: đọc / xoá conversation đứng sau một luồng
         self.ollama_base_url = ollama_base_url.rstrip("/")
         self.router = model_router if model_router is not None else getattr(document_service, "router", None)
         self._post = http_post or httpx.post
@@ -940,6 +973,113 @@ class ResearchService:
     def export_markdown(self, owner: str | None, paper_id: str) -> str:
         detail = self.get_paper(owner, paper_id)
         return export_markdown(detail, detail["annotations"])
+
+    # ── luồng chat lưu được ──────────────────────────────────────────────
+    def _thread(self, session, thread_id: str, owner: str | None) -> tuple[ResearchThread, ResearchProject]:
+        thread = session.get(ResearchThread, thread_id)
+        if thread is None:
+            raise ThreadNotFoundError(thread_id)
+        try:
+            project = self._project(session, thread.project_id, owner)
+        except ProjectNotFoundError as error:
+            raise ThreadNotFoundError(thread_id) from error
+        return thread, project
+
+    def _thread_scope(self, session, scope: str, target_id: str, owner: str | None) -> tuple[ResearchProject, ResearchPaper | None]:
+        if scope == "paper":
+            paper, project = self._paper(session, target_id, owner)
+            return project, paper
+        return self._project(session, target_id, owner), None
+
+    def _message_counts(self, session, conversation_ids: list[str]) -> dict[str, int]:
+        if not conversation_ids:
+            return {}
+        rows = session.execute(select(Message.conversation_id, func.count()).where(Message.conversation_id.in_(conversation_ids)).group_by(Message.conversation_id)).all()
+        return {conversation_id: int(count) for conversation_id, count in rows}
+
+    @staticmethod
+    def _thread_row(thread: ResearchThread, message_count: int) -> dict[str, Any]:
+        return {
+            "id": thread.id, "scope": "paper" if thread.paper_id else "project", "project_id": thread.project_id, "paper_id": thread.paper_id,
+            "conversation_id": thread.conversation_id, "title": thread.title, "message_count": message_count,
+            "created_at": _iso(thread.created_at) or "", "updated_at": _iso(thread.updated_at) or "", "last_message_at": _iso(thread.last_message_at),
+        }
+
+    def list_threads(self, owner: str | None, scope: str, target_id: str) -> list[dict[str, Any]]:
+        """Mới nhất trước: coalesce(last_message_at, created_at) giảm dần — luồng vừa tạo
+        chưa có tin đứng đầu thay vì bị NULL đẩy xuống cuối."""
+        with self.sessions() as session:
+            project, paper = self._thread_scope(session, scope, target_id, owner)
+            query = select(ResearchThread).where(ResearchThread.paper_id == paper.id) if paper is not None else select(ResearchThread).where(ResearchThread.project_id == project.id, ResearchThread.paper_id.is_(None))
+            threads = list(session.scalars(query.order_by(func.coalesce(ResearchThread.last_message_at, ResearchThread.created_at).desc(), ResearchThread.created_at.desc())))
+            counts = self._message_counts(session, [thread.conversation_id for thread in threads if thread.conversation_id])
+            return [self._thread_row(thread, counts.get(thread.conversation_id or "", 0)) for thread in threads]
+
+    def create_thread(self, owner: str | None, scope: str, target_id: str, title: str | None) -> dict[str, Any]:
+        with self.sessions.begin() as session:
+            project, paper = self._thread_scope(session, scope, target_id, owner)
+            now = _now()
+            thread = ResearchThread(id=new_id("thr"), project_id=project.id, paper_id=paper.id if paper is not None else None, title=(title or "").strip() or None, created_at=now, updated_at=now)
+            session.add(thread)
+            session.flush()
+            return self._thread_row(thread, 0)
+
+    def _paper_map(self, session, project_id: str) -> dict[str, dict[str, Any]]:
+        """document_id → {paper_id, short_name, color_index} cho MỌI paper của dự án (kể cả
+        chưa index) — trích dẫn cũ vẫn tìm được paper của nó."""
+        papers = list(session.scalars(select(ResearchPaper).where(ResearchPaper.project_id == project_id)))
+        clusters = {cluster.id: cluster for cluster in session.scalars(select(ResearchCluster).where(ResearchCluster.project_id == project_id))}
+        return {paper.document_id: {"paper_id": paper.id, "short_name": paper.short_name, "color_index": clusters[paper.cluster_id].color_index if paper.cluster_id in clusters else None} for paper in papers}
+
+    def get_thread(self, owner: str | None, thread_id: str) -> dict[str, Any]:
+        with self.sessions() as session:
+            thread, project = self._thread(session, thread_id, owner)
+            paper_map = self._paper_map(session, project.id)
+            conversation = self.conversations.get_conversation(thread.conversation_id) if thread.conversation_id and self.conversations is not None else None
+            messages = attach_paper_refs(list(conversation.get("messages") or []), paper_map) if conversation else []
+            return {**self._thread_row(thread, len(messages)), "messages": messages}
+
+    def patch_thread(self, owner: str | None, thread_id: str, title: str) -> dict[str, Any]:
+        with self.sessions.begin() as session:
+            thread, _ = self._thread(session, thread_id, owner)
+            thread.title = title.strip()
+            thread.updated_at = _now()
+            session.flush()
+            counts = self._message_counts(session, [thread.conversation_id] if thread.conversation_id else [])
+            return self._thread_row(thread, counts.get(thread.conversation_id or "", 0))
+
+    def delete_thread(self, owner: str | None, thread_id: str) -> None:
+        with self.sessions.begin() as session:
+            thread, _ = self._thread(session, thread_id, owner)
+            conversation_id = thread.conversation_id
+            session.delete(thread)
+        if conversation_id and self.conversations is not None:
+            self.conversations.delete_conversation(conversation_id)  # False (đã xoá trước) là bình thường
+
+    def thread_for_chat(self, owner: str | None, thread_id: str, scope: str, target_id: str) -> str | None:
+        """conversation_id của luồng (None khi chưa có tin). ThreadMismatchError khi luồng
+        không thuộc scope/id gửi kèm; ThreadNotFoundError (kể cả không phải chủ) trước."""
+        with self.sessions() as session:
+            thread, _ = self._thread(session, thread_id, owner)
+            matches = (thread.paper_id == target_id) if scope == "paper" else (thread.paper_id is None and thread.project_id == target_id)
+            if not matches:
+                raise ThreadMismatchError(thread_id)
+            return thread.conversation_id
+
+    def record_thread_turn(self, thread_id: str, conversation_id: str | None, question: str) -> None:
+        """Sau khi luồng có conversation: ghi conversation_id (lần đầu), tiêu đề từ câu hỏi
+        đầu nếu chưa có, và last_message_at = now. Người gọi phải nuốt lỗi — không được
+        làm đứt luồng token."""
+        with self.sessions.begin() as session:
+            thread = session.get(ResearchThread, thread_id)
+            if thread is None:
+                return
+            if conversation_id and not thread.conversation_id:
+                thread.conversation_id = conversation_id
+            if thread.title is None:
+                thread.title = thread_title_from_question(question)
+            thread.last_message_at = thread.updated_at = _now()
+
 
     # ── hỏi AI: phạm vi tài liệu ─────────────────────────────────────────
     def chat_scope(self, owner: str | None, scope: str, target_id: str) -> tuple[list[str], dict[str, dict[str, Any]]]:

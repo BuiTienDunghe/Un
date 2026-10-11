@@ -16,7 +16,7 @@ from app.llm_clients.ollama_client import OllamaTimeoutError
 from app.main import http_error_handler
 from app.routers import research
 from app.security.api_key import require_api_key_for_read
-from app.services.research_service import NotIndexedError, PaperNotFoundError, ProjectNotFoundError, SummaryMissingError
+from app.services.research_service import NotIndexedError, PaperNotFoundError, ProjectNotFoundError, SummaryMissingError, ThreadMismatchError, ThreadNotFoundError
 from fastapi import Depends, HTTPException
 
 NOW = "2026-10-11T08:00:00+00:00"
@@ -114,6 +114,58 @@ class FakeResearchService:
         if target_id == "prj_empty":
             raise NotIndexedError(target_id)
         return ["doc_1"], {"doc_1": {"paper_id": "pap_1", "short_name": "Attention", "color_index": 2}}
+
+    # ── luồng chat ──
+    THREADS = {
+        "thr_1": {"id": "thr_1", "scope": "paper", "project_id": "prj_1", "paper_id": "pap_1", "conversation_id": "conv_1", "title": "Attention là gì", "message_count": 2, "created_at": NOW, "updated_at": NOW, "last_message_at": NOW},
+        "thr_new": {"id": "thr_new", "scope": "project", "project_id": "prj_1", "paper_id": None, "conversation_id": None, "title": None, "message_count": 0, "created_at": NOW, "updated_at": NOW, "last_message_at": None},
+    }
+
+    def _thread(self, thread_id):
+        if thread_id not in self.THREADS:
+            raise ThreadNotFoundError(thread_id)
+        return self.THREADS[thread_id]
+
+    def list_threads(self, owner, scope, target_id):
+        if scope == "paper" and target_id != "pap_1":
+            raise PaperNotFoundError(target_id)
+        if scope == "project":
+            self._check(target_id)
+        self.calls.append(("list_threads", owner, scope, target_id))
+        return [row for row in self.THREADS.values() if row["scope"] == scope]
+
+    def create_thread(self, owner, scope, target_id, title):
+        if scope == "project":
+            self._check(target_id)
+        self.calls.append(("create_thread", owner, scope, target_id, title))
+        return {**self.THREADS["thr_new"], "scope": scope, "paper_id": target_id if scope == "paper" else None, "title": title}
+
+    def get_thread(self, owner, thread_id):
+        row = self._thread(thread_id)
+        if row["conversation_id"] is None:
+            return {**row, "messages": []}
+        source = {"document_id": "doc_1", "chunk_id": "chunk_1", "filename": "attention.pdf", "page_start": 3, "page_end": 3, "heading_path": None, "score": 0.9, "excerpt": "Scaled", "paper_id": "pap_1", "short_name": "Attention", "color_index": 2, "page": 3}
+        return {**row, "messages": [{"role": "user", "content": "Attention là gì", "model_used": None, "created_at": NOW, "sources": []}, {"role": "assistant", "content": "Là …", "model_used": "qwen3:8b", "created_at": NOW, "sources": [source]}]}
+
+    def patch_thread(self, owner, thread_id, title):
+        row = self._thread(thread_id)
+        self.calls.append(("patch_thread", thread_id, title))
+        return {**row, "title": title}
+
+    def delete_thread(self, owner, thread_id):
+        self._thread(thread_id)
+        self.calls.append(("delete_thread", thread_id))
+
+    def thread_for_chat(self, owner, thread_id, scope, target_id):
+        row = self._thread(thread_id)
+        if row["scope"] != scope or (row["paper_id"] or row["project_id"]) != target_id:
+            raise ThreadMismatchError(thread_id)
+        return row["conversation_id"]
+
+    def record_thread_turn(self, thread_id, conversation_id, question):
+        if getattr(self, "record_fails", False):
+            raise RuntimeError("db down")
+        self.calls.append(("record_thread_turn", thread_id, conversation_id, question))
 
 
 class FakeRagService:
@@ -272,3 +324,75 @@ def test_member_identity_scopes_projects_but_admin_sees_everything(api):
     calls = api.app.state.research_service.calls
     assert ("list", "11111111-1111-1111-1111-111111111111") in calls
     assert ("create", None, "x", None) in calls
+
+
+# ── luồng chat lưu được ──────────────────────────────────────────────────────
+def test_threads_list_create_get_patch_delete(api):
+    listed = api.get("/research/threads", params={"scope": "paper", "id": "pap_1"})
+    assert listed.status_code == 200 and [row["id"] for row in listed.json()] == ["thr_1"]
+    assert api.get("/research/threads", params={"scope": "all", "id": "pap_1"}).status_code == 422
+    assert api.get("/research/threads", params={"scope": "paper", "id": "pap_x"}).json()["error_code"] == "RESEARCH_PAPER_NOT_FOUND"
+
+    created = api.post("/research/threads", json={"scope": "project", "id": "prj_1"})
+    assert created.status_code == 201
+    assert created.json()["conversation_id"] is None and created.json()["message_count"] == 0 and created.json()["title"] is None
+    assert ("create_thread", None, "project", "prj_1", None) in api.app.state.research_service.calls
+    assert api.post("/research/threads", json={"scope": "project", "id": "prj_missing"}).json()["error_code"] == "RESEARCH_PROJECT_NOT_FOUND"
+    assert api.post("/research/threads", json={"scope": "paper", "id": "pap_1", "title": ""}).status_code == 422
+
+    detail = api.get("/research/threads/thr_1").json()
+    assert detail["message_count"] == 2 and [message["role"] for message in detail["messages"]] == ["user", "assistant"]
+    source = detail["messages"][1]["sources"][0]
+    assert (source["paper_id"], source["short_name"], source["color_index"], source["page"]) == ("pap_1", "Attention", 2, 3)
+    assert api.get("/research/threads/thr_new").json()["messages"] == []
+    missing = api.get("/research/threads/thr_x")
+    assert missing.status_code == 404 and missing.json()["error_code"] == "RESEARCH_THREAD_NOT_FOUND"
+
+    assert api.patch("/research/threads/thr_1", json={"title": "Mới"}).json()["title"] == "Mới"
+    assert api.patch("/research/threads/thr_1", json={}).status_code == 422
+    assert api.patch("/research/threads/thr_x", json={"title": "Mới"}).status_code == 404
+    assert api.delete("/research/threads/thr_1").status_code == 204
+    assert ("delete_thread", "thr_1") in api.app.state.research_service.calls
+    assert api.delete("/research/threads/thr_x").json()["error_code"] == "RESEARCH_THREAD_NOT_FOUND"
+
+
+def test_chat_with_a_thread_uses_its_conversation_and_records_the_turn(api):
+    with api.stream("POST", "/research/chat", json={"scope": "paper", "id": "pap_1", "question": "Tiếp theo?", "quote": "q", "thread_id": "thr_1", "conversation_id": "conv_ignored"}) as response:
+        assert response.status_code == 200
+        body = "".join(response.iter_text())
+    events = [line for line in body.split("\n\n") if line]
+    assert events[0].startswith("event: meta\n") and '"thread_id": "thr_1"' in events[0]
+    assert events[3].startswith("event: done\n")
+    # Luồng thắng conversation_id gửi kèm.
+    assert api.app.state.rag_service.calls[0][3] == "conv_1"
+    # Ghi câu hỏi gốc (không kèm đoạn trích), một lần sau meta và một lần sau khi stream xong.
+    assert api.app.state.research_service.calls.count(("record_thread_turn", "thr_1", "conv_1", "Tiếp theo?")) == 2
+
+
+def test_chat_with_a_fresh_thread_starts_a_new_conversation_and_persists_it(api):
+    with api.stream("POST", "/research/chat", json={"scope": "project", "id": "prj_1", "question": "Tổng quan?", "thread_id": "thr_new"}) as response:
+        body = "".join(response.iter_text())
+    assert api.app.state.rag_service.calls[0][3] is None
+    assert '"conversation_id": "conv_1"' in body
+    assert ("record_thread_turn", "thr_new", "conv_1", "Tổng quan?") in api.app.state.research_service.calls
+
+
+def test_chat_thread_errors_and_a_failing_record_never_breaks_the_stream(api):
+    missing = api.post("/research/chat", json={"scope": "paper", "id": "pap_1", "question": "?", "thread_id": "thr_x"})
+    assert missing.status_code == 404 and missing.json()["error_code"] == "RESEARCH_THREAD_NOT_FOUND"
+    mismatch = api.post("/research/chat", json={"scope": "project", "id": "prj_1", "question": "?", "thread_id": "thr_1"})
+    assert mismatch.status_code == 422 and mismatch.json()["error_code"] == "RESEARCH_THREAD_MISMATCH"
+    assert api.app.state.rag_service.calls == []
+
+    api.app.state.research_service.record_fails = True
+    with api.stream("POST", "/research/chat", json={"scope": "paper", "id": "pap_1", "question": "?", "thread_id": "thr_1"}) as response:
+        body = "".join(response.iter_text())
+    events = [line for line in body.split("\n\n") if line]
+    assert [event.split("\n")[0] for event in events] == ["event: meta", "event: token", "event: token", "event: done"]
+
+
+def test_chat_without_a_thread_is_unchanged(api):
+    with api.stream("POST", "/research/chat", json={"scope": "paper", "id": "pap_1", "question": "?"}) as response:
+        body = "".join(response.iter_text())
+    assert '"thread_id": null' in body
+    assert not [call for call in api.app.state.research_service.calls if call[0] == "record_thread_turn"]

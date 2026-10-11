@@ -389,6 +389,19 @@
 .rs-note-state { font-size: 11px; color: var(--text-3); min-height: 14px; }
 .rs-note-state.is-error { color: var(--danger); }
 /* chat */
+/* Hàng luồng: dính đầu panel (phủ padding 14 của .rs-panel-body), tiêu đề 600 cắt 1 dòng, ⋯ + "Luồng mới" 28px. */
+.rs-thread-row {
+  position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 6px; margin: -14px -14px 0; padding: 8px 10px 8px 14px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.rs-thread-title { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rs-thread-title.is-new { color: var(--text-3); font-style: italic; }
+.rs-thread-meta { font-size: 11px; color: var(--text-3); white-space: nowrap; }
+.rs-thread-row .rs-ibtn { color: var(--text-3); }
+.rs-thread-new { height: 28px; padding: 0 9px; font-size: 11.5px; }
+.rs-thread-state .empty-state { padding: 14px 8px; }
+.rs-thread-menu .menu-item .label { font-weight: 600; }
+.rs-thread-menu .menu-item .hint { font-size: 10.5px; }
 .rs-chat-note { font-size: 11.5px; color: var(--text-3); line-height: 1.5; }
 .rs-chat-note strong { color: var(--text); }
 .rs-quote { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-radius: 9px; background: var(--surface-2); font-size: 12px; color: var(--text-2); line-height: 1.5; }
@@ -542,10 +555,73 @@
 .rs-file .rs-ibtn { width: 20px; height: 20px; color: var(--text-3); }
 
 /* ── Hẹp ──────────────────────────────────────────────────────── */
+.rs-menu-btn, .rs-side-backdrop { display: none; }
 @media (max-width: 960px) {
   .rs-side { width: 240px; }
   .rs-panel { width: min(300px, 46%); }
   .rs-ov { padding: 16px 16px 32px; }
   .rs-insights { grid-template-columns: minmax(0, 1fr); }
   .rs-insights-side { border-left: 0; padding-left: 0; border-top: 1px solid var(--border); padding-top: 12px; }
+}
+
+/* ── Điện thoại ≤768: kho paper = drawer trái, rail = thanh dưới 52px, panel = lớp phủ toàn màn,
+   trang vừa bề rộng ô (× zoom), không chia đôi / tập trung / phím tắt. JS: isPhone() (research.js). ── */
+@media (max-width: 768px) {
+  .rs { --rs-bar: calc(52px + env(safe-area-inset-bottom, 0px)); }
+  /* 1. drawer — cùng mẫu với .sidebar của shell (styles.css): trượt + visibility, backdrop */
+  .rs-side {
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: 50; width: min(86vw, 300px); border-right: 0;
+    transform: translateX(-102%); visibility: hidden; animation: none;
+    transition: transform .22s var(--ease-out), box-shadow .22s, visibility 0s linear .22s;
+  }
+  .rs.is-drawer-open .rs-side {
+    transform: none; visibility: visible; box-shadow: var(--shadow-2);
+    transition: transform .22s var(--ease-out), box-shadow .22s, visibility 0s;
+  }
+  .rs-side-backdrop { display: block; position: fixed; inset: 0; z-index: 45; background: var(--overlay); animation: fadeUp .2s ease backwards; }
+  .rs-side-backdrop[hidden] { display: none; }
+  .rs-menu-btn { display: grid; }
+  .rs-side-foot { padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+  /* 6. tab bar: không Chia đôi / Cuộn đồng bộ / Tập trung / ? */
+  .rs-tabbar { padding-left: 8px; }
+  .rs-tabbar-right { display: none; }
+  /* 2. rail → thanh dưới cố định; vùng đọc chừa chỗ */
+  .rs-rail {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; width: auto; height: var(--rs-bar); flex-direction: row; justify-content: space-evenly;
+    gap: 0; padding: 0 4px env(safe-area-inset-bottom, 0px); border-left: 0; border-top: 1px solid var(--border);
+  }
+  .rs-tool { width: 40px; height: 40px; }
+  .rs-reader { padding-bottom: var(--rs-bar); }
+  .rs-ov { padding: 14px 14px 32px; }
+  /* 3. panel phủ toàn màn, trên thanh dưới; thân cuộn, ô nhập ở đáy (hàng luồng dính đầu) */
+  .rs-panel {
+    position: fixed; top: 0; left: 0; right: 0; bottom: var(--rs-bar); z-index: 40; width: auto; border-left: 0;
+    height: calc(100dvh - var(--rs-bar)); animation: fadeUp .18s ease backwards;
+  }
+  .rs-panel-head { height: 46px; }
+  .rs-panel-head .rs-ibtn { width: 34px; height: 34px; }
+  .rs-panel-body { padding: 12px; }
+  .rs-thread-row { margin: -12px -12px 0; padding: 8px 8px 8px 12px; }
+  .rs-ask textarea { font-size: 16px; }   /* iOS không tự zoom khi focus ô < 16px */
+  /* 4. trang = (bề rộng ô − 16px) × zoom; zoom > 1 cuộn ngang */
+  /* align flex-start + margin auto: vừa thì căn giữa, rộng hơn ô thì mép trái vẫn cuộn tới được */
+  .rs-pages { padding: 8px; overflow-x: auto; align-items: flex-start; }
+  .rs-page { width: calc((100cqw - 16px) * var(--rs-zoom, 1)); margin-inline: auto; }
+  .rs-toolbar { padding: 0 6px; }
+  .rs-tb-name { font-size: 12px; }
+  /* menu bôi đen: nút ≥36px, không phím tắt, luôn nằm trong ô (top 52 + clamp bề rộng) */
+  .rs-selmenu { top: 50px; max-width: calc(100% - 16px); gap: 2px; padding: 4px; }
+  .rs-selmenu button { height: 36px; padding: 0 10px; font-size: 12.5px; }
+  .rs-selmenu kbd { display: none; }
+  .rs-margin { display: none; }
+  /* 5. tổng quan một cột; nút "+ Cụm" / "+ Kết nối" xuống dòng */
+  .rs-ov-head { gap: 10px; }
+  .rs-ov-head h1 { font-size: 19px; }
+  .rs-sec-head { flex-wrap: wrap; }
+  .rs-clusters, .rs-resume { grid-template-columns: minmax(0, 1fr); }
+  .rs-edge-row { flex-wrap: wrap; gap: 6px 10px; padding: 10px 12px; }
+  .rs-edge-body { flex-wrap: wrap; padding: 0 12px 12px; }
+  .rs-proj-menu { max-width: 92vw; }
+  /* phím tắt vô nghĩa trên cảm ứng */
+  .rs-keys { display: none; }
 }

@@ -77,10 +77,18 @@
     RESEARCH_NOT_INDEXED: "Paper chưa lập chỉ mục xong (chưa có chữ) — chờ OCR hoàn tất.",
     DOCUMENT_PAGE_NOT_FOUND: "Máy chủ không có trang này.",
     DOCUMENT_NOT_FOUND: "Tài liệu không còn trên máy chủ.",
+    RESEARCH_THREAD_NOT_FOUND: "Luồng chat này không còn trên máy chủ.",
+    RESEARCH_THREAD_MISMATCH: "Luồng chat này không thuộc paper / dự án đang mở.",
     INTERNAL_ERROR: "Máy chủ gặp lỗi nội bộ.",
   };
   const CHAT_HINTS_PAPER = ["Giải thích Eq. 4 tiếng Việt", "Tóm tắt phần thí nghiệm", "Hạn chế chính?"];
   const CHAT_HINTS_PROJECT = ["Paper nào dùng 2DGS?", "Xu hướng 2024 → 2025", "Khoảng trống chưa ai làm"];
+  // Điện thoại (≤768): kho paper thành drawer, rail thành thanh dưới, panel phủ toàn màn, không chia đôi.
+  // CSS làm phần lớn (@media trong research.css); JS chỉ quyết định những gì phụ thuộc trạng thái.
+  const PHONE_MQ = typeof window.matchMedia === "function" ? window.matchMedia("(max-width: 768px)") : null;
+  const isPhone = () => Boolean(PHONE_MQ && PHONE_MQ.matches);
+  const NEW_THREAD = "new";          // luồng chưa tạo trên máy chủ (POST khi gửi tin đầu)
+  const SESSION_THREAD = "session";  // máy chủ chưa có /research/threads → lịch sử chỉ sống trong phiên
 
   /* ── trạng thái sống qua các lần mount ───────────────────────── */
   const S = {
@@ -91,7 +99,11 @@
     focusMode: false, sync: false, collapsed: {}, hl: HL[0].color, showAnno: true,
     filter: "all", search: "", sel2: new Set(),
     details: new Map(),     // paperId → {data, busy, error, seq, sumBusy, sumError, sumTried, outline, outlineBusy, outlineError}
-    chats: new Map(),       // "paper:<id>" | "project:<pid>" → {msgs: [], draft: "", ctrl: AbortController|null}
+    // "<scope>:<id>:<threadId>" → {msgs: [], draft: "", ctrl: AbortController|null, loaded, loading, loadError}
+    // threadId = id máy chủ, NEW_THREAD (chưa tạo) hoặc SESSION_THREAD (máy chủ chưa có route luồng).
+    chats: new Map(),
+    // "<scope>:<id>" → {list: Thread[]|null, busy, error, missing, current: threadId|null, seq}
+    threads: new Map(),
     quoteCtx: null,         // {paperId, text}
     pendingSel: null,       // {paperId, page, rects, quote, paneId}
     noteFilter: "all",
@@ -100,6 +112,7 @@
     focusAnno: null,        // id annotation cần focus ô ghi chú khi panel notes mở
     insightsBusy: false, insightsError: null,
     pendingOpen: null,      // paper trên URL chờ GET project xong: {paperId, page, tool}
+    drawerOpen: false,      // điện thoại: kho paper đang trượt ra
   };
   let V = null;
 
@@ -173,7 +186,7 @@
     const s = (all.projects && all.projects[pid]) || {};
     S.tabs = Array.isArray(s.tabs) ? s.tabs.filter((t) => typeof t === "string") : [];
     S.active = typeof s.active === "string" ? s.active : "overview";
-    S.split = Boolean(s.split);
+    S.split = Boolean(s.split) && !isPhone();   // điện thoại: luôn một ô
     S.second = typeof s.second === "string" ? s.second : null;
     S.tool = TOOLS.some((t) => t.id === s.tool) ? s.tool : null;
     S.collapsed = s.collapsed && typeof s.collapsed === "object" ? s.collapsed : {};
@@ -185,6 +198,25 @@
     S.quoteCtx = null;
     S.pendingSel = null;
     S.openEdge = null;
+    S.drawerOpen = false;
+  }
+  /* Đổi qua/lại ngưỡng điện thoại (xoay máy, kéo cửa sổ): ép một ô, tắt tập trung, đóng drawer. */
+  function applyPhone() {
+    if (isPhone()) {
+      if (S.split) { S.split = false; S.sync = false; S.focused = 0; }
+      S.focusMode = false;
+    } else S.drawerOpen = false;
+    if (V) { saveSession(); renderAll(); syncUrl(); }
+  }
+  function setDrawer(open) {
+    S.drawerOpen = Boolean(open) && isPhone();
+    if (V) renderDrawer();
+  }
+  function renderDrawer() {
+    if (!V) return;
+    V.root.classList.toggle("is-drawer-open", S.drawerOpen);
+    V.menuBtn.setAttribute("aria-expanded", String(S.drawerOpen));
+    V.backdrop.hidden = !S.drawerOpen;
   }
   function saveSession() {
     if (!S.pid) return;
@@ -198,6 +230,16 @@
     try { localStorage.setItem(STORE_KEY, JSON.stringify(all)); } catch { /* bị chặn: chỉ sống trong phiên */ }
   }
   const lastProject = () => readStoreAll().lastProject || null;
+  /* Luồng chat dùng gần nhất theo "paper:<id>" | "project:<pid>" — khóa cấp cao của lac.research
+     (saveSession chỉ ghi lại all.projects[pid] nên không đụng tới). */
+  const storedThread = (tkey) => { const m = readStoreAll().threadByKey; return m && typeof m === "object" && typeof m[tkey] === "string" ? m[tkey] : null; };
+  function rememberThread(tkey, threadId) {
+    const all = readStoreAll();
+    all.threadByKey = all.threadByKey && typeof all.threadByKey === "object" ? all.threadByKey : {};
+    if (threadId) all.threadByKey[tkey] = threadId;
+    else delete all.threadByKey[tkey];
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(all)); } catch { /* bị chặn */ }
+  }
 
   /* Dọn tab trỏ tới paper không còn trong dự án. */
   function pruneTabs() {
@@ -320,6 +362,7 @@
   /* Mở paper trong tab (tab đã có thì chuyển sang). page → cuộn tới; tool → mở panel; side → ô 2 khi chia đôi. */
   function openPaper(id, { page = null, tool, side = false } = {}) {
     if (!paperById(id)) return;
+    S.drawerOpen = false;
     if (side && S.split && S.active !== id) {
       S.second = id;
       S.focused = 1;
@@ -344,6 +387,7 @@
 
   function setActive(id) {
     S.active = id;
+    S.drawerOpen = false;
     S.focused = 0;
     S.pendingSel = null;
     if (id !== "overview" && S.second === id) S.second = null;
@@ -386,6 +430,7 @@
   }
 
   function toggleSplit() {
+    if (isPhone()) { toast("Chia đôi chỉ dùng trên màn hình rộng.", "danger"); return; }
     if (!S.split) {
       if (S.active === "overview") {
         const first = S.tabs[0] || (papers()[0] || {}).id;
@@ -418,6 +463,7 @@
   }
 
   function toggleFocusMode() {
+    if (isPhone()) return;   // điện thoại: không có thanh bên để ẩn
     S.focusMode = !S.focusMode;
     if (S.focusMode) S.tool = null;
     renderAll();
@@ -504,6 +550,9 @@
     scroll.addEventListener("wheel", () => { pane.jumpTo = null; }, { passive: true });
     scroll.addEventListener("touchmove", () => { pane.jumpTo = null; }, { passive: true });
     scroll.addEventListener("mouseup", () => setTimeout(() => readSelection(pane), 0));
+    // Cảm ứng: tay kéo chốt chọn không bắn mouseup; đọc lại sau khi nhấc tay (chốt cập nhật trễ một nhịp).
+    scroll.addEventListener("touchend", () => setTimeout(() => readSelection(pane), 60), { passive: true });
+    scroll.addEventListener("pointerup", (event) => { if (event.pointerType !== "mouse") setTimeout(() => readSelection(pane), 60); });
     scroll.addEventListener("keyup", (event) => { if (event.shiftKey) readSelection(pane); });
 
     pane.ro = new ResizeObserver((entries) => {
@@ -732,6 +781,7 @@
     const keep = pane.cur;
     pane.zoom = zoom;
     pane.scroll.style.setProperty("--rs-page-w", `${Math.round(PAGE_W * zoom)}px`);
+    pane.scroll.style.setProperty("--rs-zoom", String(zoom));   // điện thoại: bề rộng trang = (ô − 16px) × zoom
     pane.zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
     const dpi = zoom >= 1.5 ? DPI_HI : DPI;
     if (dpi !== pane.dpi) {
@@ -851,7 +901,8 @@
     hideSelMenu(pane, false);
     const item = (label, key, iconName, cls, fn) => h("button", { type: "button", class: cls, onClick: (event) => { event.stopPropagation(); fn(); } },
       icon(iconName, { size: 12, sw: 2.2 }), label, h("kbd", null, `${MOD}+${key}`));
-    pane.menu = h("div", { class: "rs-selmenu", role: "toolbar", "aria-label": "Thao tác với vùng chọn", onMousedown: (event) => event.stopPropagation() },
+    // touchstart/pointerdown không preventDefault (giữ click); selectionchange toàn cục trì hoãn việc ẩn trên cảm ứng.
+    pane.menu = h("div", { class: "rs-selmenu", role: "toolbar", "aria-label": "Thao tác với vùng chọn", onMousedown: (event) => event.stopPropagation(), onTouchstart: (event) => event.stopPropagation() },
       item("Highlight", "H", "highlighter", null, () => selAction("highlight")),
       item("Ghi chú", "E", "pen", null, () => selAction("note")),
       item("Hỏi AI", "A", "chat", "is-accent", () => selAction("ask")),
@@ -878,8 +929,7 @@
     if (kind === "ask" || kind === "translate") {
       S.quoteCtx = { paperId: sel.paperId, text: sel.quote };
       S.tool = "chat";
-      const key = `paper:${sel.paperId}`;
-      chatOf(key).draft = kind === "ask" ? "Giải thích đoạn này bằng tiếng Việt" : "Dịch đoạn này sang tiếng Việt";
+      chatOf(chatKey("paper", sel.paperId)).draft = kind === "ask" ? "Giải thích đoạn này bằng tiếng Việt" : "Dịch đoạn này sang tiếng Việt";
       if (pane) hideSelMenu(pane);
       window.getSelection()?.removeAllRanges();
       saveSession();
@@ -909,15 +959,193 @@
   }
 
   /* ══════════════════════════════════════════════════════════════
-     HỎI PAPER / HỎI CẢ DỰ ÁN — SSE qua Shell.stream, lịch sử trong phiên
+     HỎI PAPER / HỎI CẢ DỰ ÁN — SSE qua Shell.stream; nhiều LUỒNG mỗi
+     paper / dự án, lưu máy chủ (/research/threads). Máy chủ chưa có
+     route luồng → một luồng SESSION_THREAD chỉ sống trong phiên như cũ.
      ══════════════════════════════════════════════════════════════ */
   function chatOf(key) {
     let c = S.chats.get(key);
-    if (!c) { c = { msgs: [], draft: "", ctrl: null }; S.chats.set(key, c); }
+    if (!c) { c = { msgs: [], draft: "", ctrl: null, loaded: false, loading: false, loadError: null }; S.chats.set(key, c); }
     return c;
   }
 
-  async function sendQuestion(key, scope, id, question, quote) {
+  const threadKey = (scope, id) => `${scope}:${id}`;
+  function threadsOf(tkey) {
+    let t = S.threads.get(tkey);
+    if (!t) { t = { list: null, busy: false, error: null, missing: false, current: null, seq: 0 }; S.threads.set(tkey, t); }
+    return t;
+  }
+  /* Luồng đang mở của một paper / dự án: id máy chủ, NEW_THREAD khi chưa có, SESSION_THREAD khi route thiếu. */
+  function currentThreadId(tkey) {
+    const t = threadsOf(tkey);
+    if (t.missing) return SESSION_THREAD;
+    return t.current || NEW_THREAD;
+  }
+  const chatKey = (scope, id) => `${threadKey(scope, id)}:${currentThreadId(threadKey(scope, id))}`;
+  const currentThread = (tkey) => { const t = threadsOf(tkey); return (t.list || []).find((x) => x.id === t.current) || null; };
+  const threadTitle = (thread) => (thread && thread.title) || "Luồng chưa đặt tên";
+  const sortThreads = (list) => [...list].sort((a, b) => String(b.last_message_at || b.created_at || "").localeCompare(String(a.last_message_at || a.created_at || "")));
+
+  /* Danh sách luồng (GET /research/threads?scope=&id=) rồi chọn luồng: đang mở → dùng gần nhất (lac.research) → mới nhất → NEW. */
+  async function loadThreads(tkey, scope, id, { quiet = false } = {}) {
+    const t = threadsOf(tkey);
+    if (t.busy) return t;
+    const my = ++t.seq;
+    t.busy = true;
+    if (!quiet) t.error = null;
+    try {
+      const rows = await Shell.api(`/research/threads?scope=${enc(scope)}&id=${enc(id)}`, { signal: V ? V.ctx.signal : undefined });
+      if (my !== t.seq) return t;
+      t.list = sortThreads(Array.isArray(rows) ? rows.filter((r) => r && typeof r.id === "string") : []);
+      t.missing = false;
+      t.error = null;
+      pickThread(tkey);
+    } catch (error) {
+      if (my !== t.seq || isAbort(error)) return t;
+      if (routeMissing(error)) { t.missing = true; t.list = []; }
+      else t.error = error;
+    } finally {
+      if (my === t.seq) t.busy = false;
+    }
+    if (V) renderPanel();
+    return t;
+  }
+
+  function pickThread(tkey) {
+    const t = threadsOf(tkey);
+    const list = t.list || [];
+    const has = (id) => list.some((x) => x.id === id);
+    if (t.current === NEW_THREAD) return;              // người dùng vừa bấm "+ Luồng mới": giữ panel trống
+    if (t.current && has(t.current)) return;
+    const stored = storedThread(tkey);
+    const next = (stored && has(stored) ? stored : null) || (list[0] ? list[0].id : null);
+    // Bản nháp gõ trước khi danh sách về được chuyển sang luồng được chọn.
+    const draft = S.chats.get(`${tkey}:${NEW_THREAD}`);
+    t.current = next;
+    if (next && draft && draft.draft && !chatOf(`${tkey}:${next}`).draft) { chatOf(`${tkey}:${next}`).draft = draft.draft; draft.draft = ""; }
+  }
+
+  function setThread(tkey, threadId) {
+    const t = threadsOf(tkey);
+    const before = `${tkey}:${currentThreadId(tkey)}`;
+    if (t.current === threadId) return;
+    stopQuestion(before);
+    t.current = threadId;
+    rememberThread(tkey, threadId && threadId !== NEW_THREAD ? threadId : null);
+    renderPanel();
+  }
+
+  /* GET /research/threads/{id} → dựng lại tin nhắn; chip [n] = sources[n-1] (page, paper_id/document_id). */
+  async function loadThreadMessages(tkey, threadId) {
+    const key = `${tkey}:${threadId}`;
+    const chat = chatOf(key);
+    if (chat.loaded || chat.loading || chat.ctrl) return;
+    chat.loading = true;
+    chat.loadError = null;
+    try {
+      const data = await Shell.api(`/research/threads/${enc(threadId)}`, { signal: V ? V.ctx.signal : undefined });
+      if (chat.ctrl) return;                            // đã bắt đầu hỏi trong lúc chờ: không ghi đè
+      const msgs = [];
+      let lastQ = "";
+      for (const m of Array.isArray(data && data.messages) ? data.messages : []) {
+        if (!m || typeof m !== "object") continue;
+        const text = String(m.content ?? "");
+        if (m.role === "user") { lastQ = text; msgs.push({ role: "user", text, quote: null }); continue; }
+        const sources = Array.isArray(m.sources) ? m.sources.filter((s) => s && typeof s === "object") : [];
+        msgs.push({ role: "ai", text, sources, papers: {}, live: false, error: null, question: lastQ, quote: null, model: m.model_used || null, node: null, frame: 0 });
+      }
+      chat.msgs = msgs;
+      chat.loaded = true;
+      const t = threadsOf(tkey);
+      if (data && data.id && t.list) {
+        const at = t.list.findIndex((x) => x.id === data.id);
+        if (at !== -1) t.list[at] = { ...t.list[at], ...data, messages: undefined };
+      }
+    } catch (error) {
+      if (isAbort(error)) return;
+      if (error && error.code === "RESEARCH_THREAD_NOT_FOUND") { dropThread(tkey, threadId); toast(ERROR_VI.RESEARCH_THREAD_NOT_FOUND, "danger"); }
+      else chat.loadError = error;
+    } finally {
+      chat.loading = false;
+    }
+    if (V) renderPanel();
+  }
+
+  /* Luồng biến mất phía máy chủ (xoá / 404): bỏ khỏi danh sách, quên trong store, chọn luồng khác. */
+  function dropThread(tkey, threadId) {
+    const t = threadsOf(tkey);
+    if (t.list) t.list = t.list.filter((x) => x.id !== threadId);
+    S.chats.delete(`${tkey}:${threadId}`);
+    if (storedThread(tkey) === threadId) rememberThread(tkey, null);
+    if (t.current === threadId) { t.current = null; pickThread(tkey); }
+  }
+
+  async function createThread(tkey, scope, id) {
+    const row = await Shell.api("/research/threads", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ scope, id }) });
+    if (!row || typeof row.id !== "string") throw new Error("Máy chủ không trả về luồng vừa tạo.");
+    const t = threadsOf(tkey);
+    t.list = [row, ...(t.list || []).filter((x) => x.id !== row.id)];
+    // Bản nháp / tin nhắn của luồng NEW chuyển sang luồng thật.
+    const fresh = S.chats.get(`${tkey}:${NEW_THREAD}`);
+    if (fresh) { S.chats.delete(`${tkey}:${NEW_THREAD}`); fresh.loaded = true; S.chats.set(`${tkey}:${row.id}`, fresh); }
+    else chatOf(`${tkey}:${row.id}`).loaded = true;
+    t.current = row.id;
+    rememberThread(tkey, row.id);
+    return row;
+  }
+
+  async function renameThread(tkey, thread) {
+    const title = await dialog({ icon: "pen", title: "Đổi tên luồng", input: { value: thread.title || "", placeholder: "Tên luồng…", maxlength: 200 }, confirmLabel: "Lưu", signal: V ? V.ctx.signal : undefined });
+    if (title === null || title === undefined || title === false) return;
+    const name = String(title).trim();
+    if (!name || name === thread.title) return;
+    try {
+      const row = await Shell.api(`/research/threads/${enc(thread.id)}`, { method: "PATCH", headers: JSON_HEADERS, body: JSON.stringify({ title: name }) });
+      const t = threadsOf(tkey);
+      if (t.list) t.list = t.list.map((x) => (x.id === thread.id ? { ...x, ...(row && row.id ? row : { title: name }) } : x));
+      renderPanel();
+    } catch (error) {
+      if (error && error.code === "RESEARCH_THREAD_NOT_FOUND") { dropThread(tkey, thread.id); renderPanel(); }
+      toast(say(error, "Không đổi tên được luồng."), "danger");
+    }
+  }
+
+  async function deleteThread(tkey, thread) {
+    const n = Number(thread.message_count) || 0;
+    const ok = await confirmDialog({ title: "Xoá luồng chat?", body: `«${threadTitle(thread)}»${n ? ` cùng ${n} tin nhắn` : ""} sẽ bị xoá khỏi máy chủ.`, confirmLabel: "Xoá", signal: V ? V.ctx.signal : undefined });
+    if (!ok) return;
+    try {
+      stopQuestion(`${tkey}:${thread.id}`);
+      await Shell.api(`/research/threads/${enc(thread.id)}`, { method: "DELETE" });
+      dropThread(tkey, thread.id);
+      rememberThread(tkey, threadsOf(tkey).current);
+      toast("Đã xoá luồng.");
+      renderPanel();
+    } catch (error) {
+      if (error && error.code === "RESEARCH_THREAD_NOT_FOUND") { dropThread(tkey, thread.id); renderPanel(); return; }
+      toast(say(error, "Không xoá được luồng."), "danger");
+    }
+  }
+
+  function threadMenu(anchor, tkey) {
+    const t = threadsOf(tkey);
+    const cur = currentThread(tkey);
+    const items = (t.list || []).map((x) => ({
+      label: threadTitle(x), icon: x.id === t.current ? "check" : "chat",
+      hint: `${Number(x.message_count) || 0} tin · ${fmtRelative(x.last_message_at || x.created_at)}`,
+      onSelect: () => setThread(tkey, x.id),
+    }));
+    if (!items.length) items.push({ label: "Chưa có luồng nào — gửi câu hỏi đầu tiên.", disabled: true });
+    dropdown(anchor, [
+      ...items,
+      { separator: true },
+      { label: "Luồng mới", icon: "plus", onSelect: () => setThread(tkey, NEW_THREAD) },
+      { label: "Đổi tên luồng này", icon: "pen", disabled: !cur, onSelect: () => cur && renameThread(tkey, cur) },
+      { label: "Xoá luồng này", icon: "trash", tone: "danger", disabled: !cur, onSelect: () => cur && deleteThread(tkey, cur) },
+    ], { align: "end", width: 280, className: "rs-thread-menu" });
+  }
+
+  async function sendQuestion(key, scope, id, question, quote, threadId) {
     const chat = chatOf(key);
     const q = String(question || "").trim();
     if (!q || chat.ctrl) return;
@@ -930,8 +1158,9 @@
     const stopOnLeave = () => ctrl.abort();
     if (V) V.ctx.signal.addEventListener("abort", stopOnLeave, { once: true });
     renderPanel();
+    const tkey = threadKey(scope, id);
     try {
-      await Shell.stream("/research/chat", { scope, id, question: q, quote: quote || undefined, stream: true }, {
+      await Shell.stream("/research/chat", { scope, id, question: q, quote: quote || undefined, thread_id: threadId || undefined, stream: true }, {
         signal: ctrl.signal, hints: ERROR_VI,
         on(type, data) {
           if (type === "meta") {
@@ -947,13 +1176,18 @@
     } catch (error) {
       if (isAbort(error)) ai.stopped = true;
       else if (routeMissing(error)) ai.missing = true;
-      else ai.error = say(error, "Không nhận được câu trả lời.");
+      else {
+        ai.error = say(error, "Không nhận được câu trả lời.");
+        if (threadId && error && error.code === "RESEARCH_THREAD_NOT_FOUND") dropThread(tkey, threadId);
+      }
     } finally {
       ai.live = false;
       chat.ctrl = null;
       if (V) V.ctx.signal.removeEventListener("abort", stopOnLeave);
     }
     if (V) renderPanel();
+    // Sau tin đầu máy chủ đặt title + message_count: tải lại danh sách (lặng, không xoá list cũ).
+    if (threadId && V) loadThreads(tkey, scope, id, { quiet: true });
   }
 
   function stopQuestion(key) {
@@ -997,6 +1231,12 @@
   }
 
   function sourcePaper(ai, src) {
+    // Nguồn đã lưu (GET /research/threads/{id}) mang sẵn paper_id / short_name / color_index.
+    if (src && typeof src.paper_id === "string") {
+      const row = paperById(src.paper_id);
+      const ci = Number(src.color_index);
+      return { id: src.paper_id, short: src.short_name || shortOf(row), color: ci >= 1 ? `var(--c${clamp(ci, 1, 5)})` : colorOf(row) };
+    }
     const docId = src && src.document_id;
     const fromMeta = docId && ai.papers && ai.papers[docId];
     if (fromMeta && fromMeta.paper_id) return { id: fromMeta.paper_id, short: fromMeta.short_name || shortOf(paperById(fromMeta.paper_id)), color: fromMeta.color_index ? `var(--c${clamp(Number(fromMeta.color_index), 1, 5)})` : colorOf(paperById(fromMeta.paper_id)) };
@@ -1014,7 +1254,8 @@
     const where = page ? `tr.${page}` : (heading ? heading.slice(0, 24) : "");
     return h("button", {
       type: "button", class: "rs-cite", title: [src.filename, heading, page ? `trang ${page}` : null].filter(Boolean).join(" · "),
-      onClick: () => openPaper(paper.id, { page, tool: "summary" }),
+      // Chỉ nhảy tới trang; giữ nguyên panel đang mở (Hỏi paper / Hỏi cả dự án) để còn đọc tiếp câu trả lời.
+      onClick: () => openPaper(paper.id, { page }),
     }, where ? `${paper.short} · ${where}` : paper.short);
   }
 
@@ -1041,15 +1282,60 @@
   }
 
   function buildChatPanel(scope, cp) {
-    const key = scope === "paper" ? `paper:${cp.id}` : `project:${S.pid}`;
-    const chat = chatOf(key);
     const targetId = scope === "paper" ? cp.id : S.pid;
+    const tkey = threadKey(scope, targetId);
+    const T = threadsOf(tkey);
+    // Khóa chat đổi theo luồng đang mở; panel được tái dùng (renderPanel → refresh) nên luôn tra lại.
+    const key = () => `${tkey}:${currentThreadId(tkey)}`;
+    const chat = () => chatOf(key());
+    let shownKey = key();
     const indexedCount = papers().filter((p) => p.indexed).length;
     const list = h("div", { class: "rs-msgs" });
     const quoteBox = h("div", { class: "rs-quote", hidden: true });
+    const threadBox = h("div", { class: "rs-thread-row" });
+    const threadState = h("div", { class: "rs-thread-state", hidden: true });
+    if (!T.missing) loadThreads(tkey, scope, targetId, { quiet: T.list !== null });
+
+    const renderThreadRow = () => {
+      threadBox.hidden = T.missing;
+      threadState.hidden = true;
+      threadState.replaceChildren();
+      if (T.missing) {
+        threadState.hidden = false;
+        threadState.append(missingApiState({ feature: "luồng chat lưu được", endpoint: "GET /research/threads", text: "Lịch sử hỏi đáp chỉ sống trong phiên này." }));
+        return;
+      }
+      const cur = currentThread(tkey);
+      const isNew = currentThreadId(tkey) === NEW_THREAD;
+      const titleText = T.list === null && T.busy ? "Đang tải luồng…" : isNew ? "Luồng mới" : threadTitle(cur);
+      const menuBtn = h("button", { type: "button", class: "rs-ibtn", title: "Luồng chat", "aria-label": "Luồng chat", "aria-haspopup": "menu", disabled: T.list === null && T.busy, onClick: () => threadMenu(menuBtn, tkey) }, icon("more-horizontal", { size: 14 }));
+      threadBox.replaceChildren(...[
+        h("span", { class: ["rs-thread-title", isNew && "is-new"], title: titleText }, titleText),
+        cur && Number(cur.message_count) ? h("span", { class: "rs-thread-meta" }, `${cur.message_count} tin`) : null,
+        menuBtn,
+        h("button", { type: "button", class: "rs-btn rs-thread-new", title: "Bắt đầu luồng chat mới", disabled: isNew && !chat().msgs.length, onClick: () => setThread(tkey, NEW_THREAD) }, icon("plus", { size: 12, sw: 2.4 }), "Luồng mới"),
+      ].filter(Boolean));
+      if (T.error) {
+        threadState.hidden = false;
+        threadState.append(h("div", { class: "rs-msg-err" }, say(T.error, "Không tải được danh sách luồng."),
+          h("button", { type: "button", class: "rs-btn", style: { height: "24px", fontSize: "11px" }, onClick: () => loadThreads(tkey, scope, targetId) }, icon("retry", { size: 12 }), "Thử lại")));
+      }
+    };
 
     const renderMsgs = () => {
-      list.replaceChildren(...chat.msgs.map((m) => {
+      const c = chat();
+      const tid = currentThreadId(tkey);
+      if (tid !== NEW_THREAD && tid !== SESSION_THREAD && !c.loaded && !c.loading && !c.loadError && !c.ctrl) loadThreadMessages(tkey, tid);
+      if (c.loading && !c.msgs.length) {
+        list.replaceChildren(h("div", { class: "rs-msg-user" }, skeleton({ w: "60%", h: 30, r: 12 })), skeleton({ w: "95%", h: 12 }), skeleton({ w: "88%", h: 12 }), skeleton({ w: "70%", h: 12 }));
+        return;
+      }
+      if (c.loadError && !c.msgs.length) {
+        list.replaceChildren(h("div", { class: "rs-msg-err" }, say(c.loadError, "Không tải được lịch sử luồng."),
+          h("button", { type: "button", class: "rs-btn", style: { height: "24px", fontSize: "11px" }, onClick: () => { c.loadError = null; refresh(); } }, icon("retry", { size: 12 }), "Thử lại")));
+        return;
+      }
+      list.replaceChildren(...c.msgs.map((m) => {
         if (m.role === "user") return h("div", { class: "rs-msg-user" }, h("div", null, m.quote ? h("div", { class: "rs-quote", style: { marginBottom: "6px", background: "var(--surface)" } }, icon("quote", { size: 12 }), h("span", null, m.quote)) : null, m.text));
         const text = h("div", { class: "rs-msg-text" });
         m.node = text;
@@ -1061,7 +1347,7 @@
         else if (m.stopped && !m.text) nodes.push(h("div", { class: "rs-chat-note" }, "Đã dừng."));
         if (!m.live && m.sources.length) {
           const ps = distinctPapers(m);
-          if (ps.length) nodes.push(h("div", { class: "rs-sources" }, h("small", null, "Nguồn đã dùng:"), ...ps.map((p) => h("button", { type: "button", class: "rs-src", onClick: () => openPaper(p.id, { tool: "summary" }) }, h("i", { style: { background: p.color } }), p.short))));
+          if (ps.length) nodes.push(h("div", { class: "rs-sources" }, h("small", null, "Nguồn đã dùng:"), ...ps.map((p) => h("button", { type: "button", class: "rs-src", onClick: () => openPaper(p.id) }, h("i", { style: { background: p.color } }), p.short))));
         }
         if (!m.live && m.text) {
           const ps = distinctPapers(m);
@@ -1073,32 +1359,54 @@
         return h("div", { class: "rs-msg-ai" }, ...nodes);
       }));
     };
-    const retry = (m) => { chat.draft = m.question; input.value = m.question; send(); };
+    const retry = (m) => { chat().draft = m.question; input.value = m.question; send(); };
 
     const input = h("textarea", { class: "rs-ask-input", rows: "1", placeholder: scope === "paper" ? "Hỏi về paper này…" : `Hỏi về ${indexedCount} paper trong dự án…`, "aria-label": "Câu hỏi", maxlength: "4000" });
-    input.value = chat.draft || "";
+    input.value = chat().draft || "";
     const sendBtn = h("button", { type: "button", title: "Gửi (Enter)" }, icon("send", { size: 13, sw: 2.2 }));
     const autosize = () => { input.style.height = "auto"; input.style.height = `${Math.min(120, input.scrollHeight)}px`; };
-    input.addEventListener("input", () => { chat.draft = input.value; autosize(); });
+    input.addEventListener("input", () => { chat().draft = input.value; autosize(); });
     input.addEventListener("keydown", (event) => {
       if (event.key === "Enter" && !event.shiftKey && !event.isComposing) { event.preventDefault(); send(); }
     });
-    const send = () => {
-      if (chat.ctrl) { stopQuestion(key); return; }
+    let creating = false;
+    const send = async () => {
+      const k = key();
+      const c = chat();
+      if (c.ctrl) { stopQuestion(k); return; }
+      if (creating) return;
       const quote = scope === "paper" && S.quoteCtx && S.quoteCtx.paperId === cp.id ? S.quoteCtx.text : null;
       const q = input.value.trim();
       if (!q) return;
       if (scope === "project" && !indexedCount) { toast("Chưa paper nào lập chỉ mục xong để hỏi.", "danger"); return; }
       if (scope === "paper" && cp && cp.indexed === false) { toast(ERROR_VI.RESEARCH_NOT_INDEXED, "danger"); return; }
+      let tid = currentThreadId(tkey);
+      if (tid === NEW_THREAD) {
+        if (T.list === null && T.busy) { toast("Đang tải danh sách luồng, thử lại sau một nhịp.", "danger"); return; }
+        // Tin đầu của luồng mới: tạo luồng trước rồi gửi kèm thread_id.
+        creating = true;
+        sendBtn.disabled = true;
+        try {
+          tid = (await createThread(tkey, scope, targetId)).id;
+        } catch (error) {
+          if (routeMissing(error)) { T.missing = true; tid = SESSION_THREAD; }
+          else { toast(say(error, "Không tạo được luồng chat."), "danger"); return; }
+        } finally {
+          creating = false;
+          sendBtn.disabled = false;
+        }
+        if (!el.isConnected) return;
+      }
       input.value = "";
       autosize();
-      sendQuestion(key, scope, targetId, q, quote);
+      sendQuestion(key(), scope, targetId, q, quote, tid === SESSION_THREAD ? null : tid);
     };
     sendBtn.addEventListener("click", send);
     const syncSend = () => {
-      sendBtn.classList.toggle("is-stop", Boolean(chat.ctrl));
-      sendBtn.replaceChildren(chat.ctrl ? icon("stop", { size: 12 }) : icon("send", { size: 13, sw: 2.2 }));
-      sendBtn.title = chat.ctrl ? "Dừng" : "Gửi (Enter)";
+      const busy = Boolean(chat().ctrl);
+      sendBtn.classList.toggle("is-stop", busy);
+      sendBtn.replaceChildren(busy ? icon("stop", { size: 12 }) : icon("send", { size: 13, sw: 2.2 }));
+      sendBtn.title = busy ? "Dừng" : "Gửi (Enter)";
     };
     const renderQuote = () => {
       const qc = scope === "paper" && S.quoteCtx && S.quoteCtx.paperId === cp.id ? S.quoteCtx : null;
@@ -1107,14 +1415,20 @@
         h("button", { type: "button", class: "rs-ibtn", title: "Bỏ đoạn trích", onClick: () => { S.quoteCtx = null; renderQuote(); } }, icon("x", { size: 11, sw: 2.4 })));
     };
 
-    const hints = (scope === "paper" ? CHAT_HINTS_PAPER : CHAT_HINTS_PROJECT).map((t) => h("button", { type: "button", class: "rs-hint", onClick: () => { input.value = t; chat.draft = t; autosize(); input.focus(); } }, t));
+    const hints = (scope === "paper" ? CHAT_HINTS_PAPER : CHAT_HINTS_PROJECT).map((t) => h("button", { type: "button", class: "rs-hint", onClick: () => { input.value = t; chat().draft = t; autosize(); input.focus(); } }, t));
     const note = scope === "project"
       ? h("div", { class: "rs-chat-note" }, "Trả lời dựa trên ", h("strong", null, `${indexedCount} paper`), ` đã lập chỉ mục trong dự án${indexedCount < papers().length ? ` (${papers().length - indexedCount} paper còn đang xử lý)` : ""}. Mỗi khẳng định có nhãn [paper · trang]; bấm để mở đúng chỗ.`)
       : (cp && cp.indexed === false ? h("div", { class: "rs-chat-note" }, ERROR_VI.RESEARCH_NOT_INDEXED) : null);
-    const el = h("div", { class: "rs-panel-body" }, note, quoteBox, list,
+    const el = h("div", { class: "rs-panel-body rs-chat" }, threadBox, threadState, note, quoteBox, list,
       h("div", { class: "rs-hints" }, ...hints),
       h("div", { class: "rs-ask" }, input, sendBtn));
-    const refresh = () => { renderMsgs(); renderQuote(); syncSend(); requestAnimationFrame(() => { if (el.isConnected) el.scrollTop = el.scrollHeight; }); };
+    const refresh = () => {
+      // Đổi luồng: cất bản nháp đang gõ vào luồng cũ, lấy bản nháp của luồng mới.
+      const k = key();
+      if (k !== shownKey) { const old = S.chats.get(shownKey); if (old) old.draft = input.value; shownKey = k; input.value = chat().draft || ""; autosize(); }
+      renderThreadRow(); renderMsgs(); renderQuote(); syncSend();
+      requestAnimationFrame(() => { if (el.isConnected) el.scrollTop = el.scrollHeight; });
+    };
     refresh();
     requestAnimationFrame(autosize);
     if (scope === "paper" && S.quoteCtx && S.quoteCtx.paperId === cp.id) requestAnimationFrame(() => input.focus());
@@ -1182,7 +1496,7 @@
     const qs = Array.isArray(sum.questions) ? sum.questions.filter(Boolean).slice(0, 3) : [];
     if (qs.length) {
       body.append(h("div", null, h("div", { class: "rs-label rs-sub" }, "Câu hỏi gợi ý"), h("div", { class: "rs-stack" }, ...qs.map((q) => h("button", {
-        type: "button", class: "rs-starter", onClick: () => { chatOf(`paper:${cp.id}`).draft = String(q); S.tool = "chat"; saveSession(); renderAll(); },
+        type: "button", class: "rs-starter", onClick: () => { chatOf(chatKey("paper", cp.id)).draft = String(q); S.tool = "chat"; saveSession(); renderAll(); },
       }, icon("chat", { size: 12 }), String(q))))));
     }
     const rel = edges().filter((e) => e.a_paper_id === cp.id || e.b_paper_id === cp.id);
@@ -1907,7 +2221,7 @@
       { label: "Tạo dự án mới…", icon: "folder-plus", onSelect: () => createProjectDialog() },
       { label: "Đổi tên", icon: "pen", disabled: !S.project, onSelect: renameProject },
       { label: "Xoá dự án", icon: "trash", tone: "danger", disabled: !S.project, onSelect: deleteProject },
-    ].filter(Boolean), { align: "start", width: 268 });
+    ].filter(Boolean), { align: "start", width: 268, className: "rs-proj-menu" });
   }
 
   async function renameProject() {
@@ -2225,6 +2539,7 @@
     renderPanel();
     renderRail();
     renderKeys();
+    renderDrawer();
     // GET project vừa xong mà URL đang trỏ tới một paper → mở nó (openPaper tự vẽ lại).
     if (S.project && S.pendingOpen) applyPendingOpen();
   }
@@ -2241,6 +2556,7 @@
     const reading = S.active !== "overview" && S.pid && S.project;
     const pane = reading ? V.panes.get(currentPaperId()) : null;
     if (event.key === "Escape") {
+      if (S.drawerOpen) { setDrawer(false); event.preventDefault(); return; }
       if (S.keysOpen) { S.keysOpen = false; renderKeys(); event.preventDefault(); return; }
       if (pane && pane.menu) { hideSelMenu(pane); event.preventDefault(); }
       return;
@@ -2293,13 +2609,16 @@
       list, selbar,
       h("div", { class: "rs-side-foot" }, h("button", { type: "button", class: "rs-add", onClick: () => addPaperDialog() }, icon("plus", { size: 14, sw: 2.2 }), "Thêm paper"), themeBtn));
 
+    // Điện thoại: ☰ mở kho paper (drawer) — CSS chỉ hiện ở ≤768.
+    const menuBtn = h("button", { type: "button", class: "rs-ibtn rs-ibtn-30 rs-menu-btn", title: "Kho paper", "aria-label": "Mở kho paper", "aria-expanded": false, onClick: () => setDrawer(!S.drawerOpen) }, icon("menu", { size: 16 }));
+    const backdrop = h("div", { class: "rs-side-backdrop", hidden: true, onClick: () => setDrawer(false) });
     const showSideBtn = h("button", { type: "button", class: "rs-ibtn rs-ibtn-30", title: "Hiện thanh bên", "aria-label": "Thoát chế độ tập trung", hidden: true, onClick: toggleFocusMode }, icon("panel", { size: 14 }));
     const tabs = h("div", { class: "rs-tabs", role: "tablist" });
     const splitBtn = h("button", { type: "button", class: "rs-btn", title: `Chia đôi (${MOD}+\\)`, onClick: toggleSplit }, icon("split", { size: 14 }), "Chia đôi");
     const syncBtn = h("button", { type: "button", class: "rs-btn is-sync", title: "Cuộn đồng bộ hai ô (theo tỉ lệ)", hidden: true, onClick: toggleSync }, icon("sync", { size: 14 }), "Cuộn đồng bộ");
     const focusBtn = h("button", { type: "button", class: "rs-ibtn rs-ibtn-30", title: `Chế độ tập trung (${MOD}+.)`, "aria-label": "Chế độ tập trung", onClick: () => { if (S.active === "overview") { toast("Mở một paper rồi bật Tập trung.", "danger"); return; } toggleFocusMode(); } }, icon("scan-frame", { size: 14 }));
     const keysBtn = h("button", { type: "button", class: "rs-ibtn rs-ibtn-30 rs-keys-btn", title: "Phím tắt", "aria-label": "Phím tắt", onClick: () => { S.keysOpen = !S.keysOpen; renderKeys(); } }, "?");
-    const tabbar = h("div", { class: "rs-tabbar" }, showSideBtn, tabs, h("div", { class: "rs-tabbar-right" }, splitBtn, syncBtn, focusBtn, keysBtn));
+    const tabbar = h("div", { class: "rs-tabbar" }, menuBtn, showSideBtn, tabs, h("div", { class: "rs-tabbar-right" }, splitBtn, syncBtn, focusBtn, keysBtn));
 
     const ov = h("div", { class: "rs-ov", hidden: true });
     const reader = h("div", { class: "rs-reader", hidden: true });
@@ -2325,10 +2644,10 @@
     const body = h("div", { class: "rs-body" }, ov, reader, panel, rail, keys);
     const main = h("div", { class: "rs-main" }, tabbar, body);
     const center = h("div", { class: "rs-center", hidden: true });
-    const root = h("div", { class: "rs" }, side, main, center);
+    const root = h("div", { class: "rs" }, side, backdrop, main, center);
     ctx.root.append(root);
     V = {
-      ctx, root, side, main, center, search, projName: projBtn.querySelector(".rs-proj-name"), projMeta: projBtn.querySelector(".rs-proj-meta"), filterBtns, list, selbar, selCount, themeBtn,
+      ctx, root, side, main, center, search, menuBtn, backdrop, projName: projBtn.querySelector(".rs-proj-name"), projMeta: projBtn.querySelector(".rs-proj-meta"), filterBtns, list, selbar, selCount, themeBtn,
       showSideBtn, tabs, splitBtn, syncBtn, focusBtn, ov, reader, panel, panelTitle, panelOf, panelBody, panelKey: null, panelRefresh: null, rail, tools, keys, panes: new Map(),
     };
   }
@@ -2376,12 +2695,33 @@
     ctx.setHeader("Nghiên cứu", "");
     buildShell(ctx);
     ctx.on(document, "keydown", onKeydown);
+    let selTimer = 0;
     ctx.on(document, "selectionchange", () => {
-      // bỏ chọn bằng bàn phím / bấm ra ngoài → ẩn menu
+      if (!V) return;
       const sel = window.getSelection();
-      if (!V || !sel || !sel.isCollapsed) return;
-      for (const pane of V.panes.values()) if (pane.menu && !pane.menu.matches(":hover")) hideSelMenu(pane);
+      clearTimeout(selTimer);
+      if (!sel || sel.isCollapsed) {
+        // bỏ chọn bằng bàn phím / bấm ra ngoài → ẩn menu. Cảm ứng: chạm vào nút menu cũng làm vùng chọn
+        // sập TRƯỚC khi click tới nơi → chờ một nhịp cho click chạy rồi mới ẩn.
+        const hide = () => { if (V) for (const pane of V.panes.values()) if (pane.menu && !pane.menu.matches(":hover")) hideSelMenu(pane); };
+        if (isPhone()) selTimer = setTimeout(hide, 350);
+        else hide();
+        return;
+      }
+      // Cảm ứng: kéo chốt chọn không có mouseup → đọc lại vùng chọn sau khi tay ngừng (gộp 250 ms).
+      if (!isPhone() || !sel.rangeCount) return;
+      selTimer = setTimeout(() => {
+        if (!V) return;
+        const node = sel.rangeCount ? sel.getRangeAt(0).commonAncestorContainer : null;
+        for (const pane of V.panes.values()) if (node && pane.scroll.contains(node)) readSelection(pane);
+      }, 250);
     });
+    // Đổi ngưỡng điện thoại: nghe cả MediaQueryList lẫn resize (một số WebView không bắn "change").
+    let wasPhone = isPhone();
+    const onPhoneMaybe = () => { const now = isPhone(); if (now !== wasPhone) { wasPhone = now; applyPhone(); } };
+    if (PHONE_MQ) ctx.on(PHONE_MQ, "change", onPhoneMaybe);
+    ctx.on(window, "resize", debounce(onPhoneMaybe, 80));
+    if (wasPhone) applyPhone();
     // Nút mặt trời/mặt trăng ở chân thanh bên theo data-theme (Cài đặt ở thẻ khác cũng đổi được); gỡ ở unmount.
     V.themeObserver = new MutationObserver(() => { if (V) renderSidebar(); });
     V.themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
@@ -2415,6 +2755,7 @@
     S.pendingSel = null;
     S.keysOpen = false;
     S.focusMode = false;
+    S.drawerOpen = false;
     V = null;
   }
 

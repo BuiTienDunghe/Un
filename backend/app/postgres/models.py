@@ -1255,3 +1255,20 @@ class ResearchEdge(Base):
     confidence: Mapped[float | None] = mapped_column(Float)
     source: Mapped[str] = mapped_column(String(16), nullable=False, default="manual")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class ResearchThread(Base):
+    """Một luồng chat của paper (paper_id) hoặc của cả dự án (paper_id NULL); trỏ tới
+    một `conversations` sẵn có — tin nhắn và trích dẫn do rag_service lưu ở đó.
+    conversation_id NULL cho tới tin đầu tiên."""
+
+    __tablename__ = "research_threads"
+
+    id: Mapped[str] = mapped_column(String(128), primary_key=True, default=lambda: new_id("thr"))
+    project_id: Mapped[str] = mapped_column(ForeignKey("research_projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    paper_id: Mapped[str | None] = mapped_column(ForeignKey("research_papers.id", ondelete="CASCADE"), index=True)
+    conversation_id: Mapped[str | None] = mapped_column(String(128), index=True)
+    title: Mapped[str | None] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    last_message_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

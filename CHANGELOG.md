@@ -11,6 +11,19 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+### Added
+- **Luồng chat lưu được trong Không gian Nghiên cứu** (11/10): mỗi paper và mỗi dự án có nhiều luồng
+  "Hỏi paper" / "Hỏi cả dự án", đổi tên, xoá; một luồng là một dòng `research_threads` (migration
+  `20261011_34`) trỏ tới hội thoại mà `rag_service` đã lưu, nên tin nhắn và trích dẫn không lưu hai nơi.
+  `POST /research/chat` nhận `thread_id` và tự đặt tên luồng theo câu hỏi đầu; `GET/POST/PATCH/DELETE /research/threads`.
+- **Bố cục điện thoại cho màn Nghiên cứu** (≤768px): kho paper thành ngăn trượt (☰), rail công cụ xuống
+  thanh đáy, panel phủ toàn màn, trang PDF co theo chiều ngang, menu bôi đen hoạt động với chạm; ẩn
+  Chia đôi / Cuộn đồng bộ / Tập trung / ghi chú lề.
+
+### Fixed
+- Bấm chip trích dẫn trong panel Hỏi paper chỉ nhảy tới trang, không còn tự chuyển panel sang Tóm tắt
+  (trước đó làm mất mạch đọc câu trả lời).
+
 ## [1.2.0] - 2026-10-11
 
 ### Added

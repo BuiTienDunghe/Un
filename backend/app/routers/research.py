@@ -5,6 +5,9 @@ cạnh Tài liệu / Ghi nhớ). Khi bật tài khoản, member chỉ chạm d�
 """
 from __future__ import annotations
 
+import logging
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import PlainTextResponse, StreamingResponse
 from starlette.datastructures import UploadFile  # request.form() trả lớp của Starlette, không phải fastapi.UploadFile
@@ -14,7 +17,7 @@ from app.routers.rag import _response_sources
 from app.schemas.research_schema import (
     AnnotationCreateRequest, AnnotationPatchRequest, AnnotationRow, ClusterCreateRequest, ClusterPatchRequest, ClusterRow, EdgeCreateRequest, EdgeRow,
     InsightsResponse, OutlineResponse, PaperAttachRequest, PaperDetail, PaperPatchRequest, PaperRow, ProjectCreateRequest, ProjectDetail, ProjectPatchRequest,
-    ProjectSummary, ResearchChatRequest, SummaryResponse,
+    ProjectSummary, ResearchChatRequest, SummaryResponse, ThreadCreateRequest, ThreadDetail, ThreadPatchRequest, ThreadRow,
 )
 from app.security.api_key import require_api_key
 from app.security.auth import auth_enabled, ensure_conversation_access, resolve_identity
@@ -25,11 +28,12 @@ from app.services.rag_service import InsufficientContextError
 from app.services.reranker_service import RerankerUnavailableError
 from app.services.research_service import (
     AnnotationNotFoundError, ClusterNotFoundError, EdgeNotFoundError, InvalidEdgeError, NotIndexedError, PaperNotFoundError, ProjectNotFoundError,
-    SummaryMissingError, compose_question,
+    SummaryMissingError, ThreadMismatchError, ThreadNotFoundError, compose_question,
 )
 from app.stores.qdrant_store import QdrantUnavailableError
 from app.utils.sse import sse_event
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/research", tags=["research"])
 write = [Depends(require_api_key)]
 
@@ -61,6 +65,10 @@ def _translate(error: Exception) -> HTTPException:
         return _error(404, "RESEARCH_CLUSTER_NOT_FOUND", f"Cụm {error} không tồn tại.")
     if isinstance(error, EdgeNotFoundError):
         return _error(404, "RESEARCH_EDGE_NOT_FOUND", f"Kết nối {error} không tồn tại.")
+    if isinstance(error, ThreadNotFoundError):
+        return _error(404, "RESEARCH_THREAD_NOT_FOUND", f"Luồng {error} không tồn tại.")
+    if isinstance(error, ThreadMismatchError):
+        return _error(422, "RESEARCH_THREAD_MISMATCH", f"Luồng {error} không thuộc paper / dự án gửi kèm.")
     if isinstance(error, DocumentNotFoundError):
         return _error(404, "DOCUMENT_NOT_FOUND", f"Document {error} does not exist")
     if isinstance(error, SummaryMissingError):
@@ -292,6 +300,48 @@ def delete_annotation(annotation_id: str, request: Request) -> Response:
     return Response(status_code=204)
 
 
+# ── Luồng chat lưu được ──────────────────────────────────────────────────────
+@router.get("/threads", response_model=list[ThreadRow])
+def list_threads(scope: Literal["paper", "project"], id: str, request: Request) -> list[ThreadRow]:
+    try:
+        return [ThreadRow(**row) for row in _service(request).list_threads(_owner(request), scope, id)]
+    except Exception as error:
+        raise _translate(error) from error
+
+
+@router.post("/threads", response_model=ThreadRow, status_code=201, dependencies=write)
+def create_thread(payload: ThreadCreateRequest, request: Request) -> ThreadRow:
+    try:
+        return ThreadRow(**_service(request).create_thread(_owner(request), payload.scope, payload.id, payload.title))
+    except Exception as error:
+        raise _translate(error) from error
+
+
+@router.get("/threads/{thread_id}", response_model=ThreadDetail)
+def get_thread(thread_id: str, request: Request) -> ThreadDetail:
+    try:
+        return ThreadDetail(**_service(request).get_thread(_owner(request), thread_id))
+    except Exception as error:
+        raise _translate(error) from error
+
+
+@router.patch("/threads/{thread_id}", response_model=ThreadRow, dependencies=write)
+def patch_thread(thread_id: str, payload: ThreadPatchRequest, request: Request) -> ThreadRow:
+    try:
+        return ThreadRow(**_service(request).patch_thread(_owner(request), thread_id, payload.title))
+    except Exception as error:
+        raise _translate(error) from error
+
+
+@router.delete("/threads/{thread_id}", status_code=204, dependencies=write)
+def delete_thread(thread_id: str, request: Request) -> Response:
+    try:
+        _service(request).delete_thread(_owner(request), thread_id)
+    except Exception as error:
+        raise _translate(error) from error
+    return Response(status_code=204)
+
+
 # ── Hỏi AI ───────────────────────────────────────────────────────────────────
 @router.post("/chat", dependencies=write)
 def research_chat(payload: ResearchChatRequest, request: Request) -> StreamingResponse:
@@ -299,12 +349,18 @@ def research_chat(payload: ResearchChatRequest, request: Request) -> StreamingRe
     với document_ids của paper / dự án; `meta` thêm `papers` để UI vẽ chip [Paper · tr.N]."""
     identity = resolve_identity(request)
     owner = identity.user_id if identity.is_user else None
+    service = _service(request)
     try:
-        if payload.conversation_id:
-            ensure_conversation_access(request, payload.conversation_id)
-        document_ids, papers = _service(request).chat_scope(_owner(request), payload.scope, payload.id)
+        if payload.thread_id:
+            # Luồng thắng conversation_id gửi kèm; quyền đi theo chủ dự án của luồng.
+            conversation_id = service.thread_for_chat(_owner(request), payload.thread_id, payload.scope, payload.id)
+        else:
+            conversation_id = payload.conversation_id
+            if conversation_id:
+                ensure_conversation_access(request, conversation_id)
+        document_ids, papers = service.chat_scope(_owner(request), payload.scope, payload.id)
         question = compose_question(payload.question, payload.quote)
-        tokens, model_used, sources, conversation_id, retrieval_question = request.app.state.rag_service.stream_response(question, payload.top_k, document_ids, payload.conversation_id, user_id=owner)
+        tokens, model_used, sources, conversation_id, retrieval_question = request.app.state.rag_service.stream_response(question, payload.top_k, document_ids, conversation_id, user_id=owner)
     except ConversationNotFoundError as error:
         raise _error(404, "CONVERSATION_NOT_FOUND", f"Conversation {error} does not exist") from error
     except InsufficientContextError as error:
@@ -317,13 +373,25 @@ def research_chat(payload: ResearchChatRequest, request: Request) -> StreamingRe
         raise _translate(error) from error
     response_sources = [source.model_dump() for source in _response_sources(sources)]
 
+    def record_thread() -> None:
+        # Ghi conversation_id / tiêu đề / last_message_at lên luồng — lỗi ở đây chỉ được log,
+        # không bao giờ làm đứt luồng token.
+        if not payload.thread_id:
+            return
+        try:
+            service.record_thread_turn(payload.thread_id, conversation_id, payload.question)
+        except Exception:  # noqa: BLE001
+            logger.warning("research thread %s: không ghi được conversation %s", payload.thread_id, conversation_id, exc_info=True)
+
     def events():
-        yield sse_event("meta", {"model_used": model_used, "conversation_id": conversation_id, "retrieval_question": retrieval_question, "sources": response_sources, "papers": papers, "scope": payload.scope, "id": payload.id})
+        record_thread()  # conversation vừa được rag_service tạo → luồng biết id ngay, kể cả khi stream đứt
+        yield sse_event("meta", {"model_used": model_used, "conversation_id": conversation_id, "thread_id": payload.thread_id, "retrieval_question": retrieval_question, "sources": response_sources, "papers": papers, "scope": payload.scope, "id": payload.id})
         answer_parts: list[str] = []
         try:
             for token in tokens:
                 answer_parts.append(token)
                 yield sse_event("token", {"content": token})
+            record_thread()  # last_message_at = lúc lượt trả lời đã được lưu
             yield sse_event("done", {"grounding": grade_rag_answer("".join(answer_parts), sources)})
         except (OllamaModelNotLoadedError, OllamaTimeoutError, OllamaUnavailableError) as error:
             yield sse_event("error", {"error_code": "STREAM_FAILED", "message": str(error)})
