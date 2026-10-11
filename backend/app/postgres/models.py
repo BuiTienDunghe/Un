@@ -1155,3 +1155,103 @@ class EmbeddingCache(Base):
     normalization_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
     vector: Mapped[list[float]] = mapped_column(JSONB, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+# ── Không gian Nghiên cứu (20261011_33) ───────────────────────────────────────
+# Một paper là một Document sẵn có cộng một dòng research_papers trỏ tới nó; xoá
+# paper không xoá Document. Mọi bảng dưới là additive-only.
+
+
+class ResearchProject(Base):
+    __tablename__ = "research_projects"
+
+    id: Mapped[str] = mapped_column(String(128), primary_key=True, default=lambda: new_id("prj"))
+    # NULL = tạo khi tắt tài khoản; khi bật, member chỉ thấy dự án của mình (như conversations).
+    owner_user_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    insights: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    insights_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
+
+
+class ResearchCluster(Base):
+    __tablename__ = "research_clusters"
+    __table_args__ = (CheckConstraint("color_index BETWEEN 1 AND 5", name="ck_research_clusters_color_index"),)
+
+    id: Mapped[str] = mapped_column(String(128), primary_key=True, default=lambda: new_id("clu"))
+    project_id: Mapped[str] = mapped_column(ForeignKey("research_projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    color_index: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class ResearchPaper(Base):
+    __tablename__ = "research_papers"
+    __table_args__ = (
+        UniqueConstraint("project_id", "document_id", name="uq_research_papers_project_document"),
+        CheckConstraint("status IN ('unread','reading','read')", name="ck_research_papers_status"),
+        CheckConstraint("stars BETWEEN 0 AND 5", name="ck_research_papers_stars"),
+    )
+
+    id: Mapped[str] = mapped_column(String(128), primary_key=True, default=lambda: new_id("pap"))
+    project_id: Mapped[str] = mapped_column(ForeignKey("research_projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True)
+    short_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    title: Mapped[str | None] = mapped_column(Text)
+    authors: Mapped[str | None] = mapped_column(Text)
+    venue: Mapped[str | None] = mapped_column(String(255))
+    year: Mapped[int | None] = mapped_column(Integer)
+    arxiv_id: Mapped[str | None] = mapped_column(String(32))
+    doi: Mapped[str | None] = mapped_column(String(255))
+    url: Mapped[str | None] = mapped_column(Text)
+    cluster_id: Mapped[str | None] = mapped_column(ForeignKey("research_clusters.id", ondelete="SET NULL"), index=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="unread")
+    stars: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_page: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    note_md: Mapped[str | None] = mapped_column(Text)
+    tags: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    summary: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    summary_model: Mapped[str | None] = mapped_column(String(255))
+    summary_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    outline: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    metadata_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    added_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class ResearchAnnotation(Base):
+    __tablename__ = "research_annotations"
+
+    id: Mapped[str] = mapped_column(String(128), primary_key=True, default=lambda: new_id("ann"))
+    paper_id: Mapped[str] = mapped_column(ForeignKey("research_papers.id", ondelete="CASCADE"), nullable=False, index=True)
+    page: Mapped[int] = mapped_column(Integer, nullable=False)
+    # [{x,y,w,h}] tỉ lệ 0..1 theo kích thước trang — không phụ thuộc dpi render.
+    rects: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
+    color: Mapped[str] = mapped_column(String(16), nullable=False)
+    quote: Mapped[str] = mapped_column(Text, nullable=False)
+    note: Mapped[str | None] = mapped_column(Text)
+    section: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class ResearchEdge(Base):
+    __tablename__ = "research_edges"
+    __table_args__ = (
+        CheckConstraint("type IN ('builds','competes','backbone')", name="ck_research_edges_type"),
+        CheckConstraint("source IN ('manual','ai')", name="ck_research_edges_source"),
+    )
+
+    id: Mapped[str] = mapped_column(String(128), primary_key=True, default=lambda: new_id("edg"))
+    project_id: Mapped[str] = mapped_column(ForeignKey("research_projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    a_paper_id: Mapped[str] = mapped_column(ForeignKey("research_papers.id", ondelete="CASCADE"), nullable=False, index=True)
+    b_paper_id: Mapped[str] = mapped_column(ForeignKey("research_papers.id", ondelete="CASCADE"), nullable=False, index=True)
+    type: Mapped[str] = mapped_column(String(16), nullable=False)
+    explain: Mapped[str | None] = mapped_column(Text)
+    quote: Mapped[str | None] = mapped_column(Text)
+    quote_src: Mapped[str | None] = mapped_column(Text)
+    confidence: Mapped[float | None] = mapped_column(Float)
+    source: Mapped[str] = mapped_column(String(16), nullable=False, default="manual")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())

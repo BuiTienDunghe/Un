@@ -12,8 +12,8 @@
    người → Router.resume(); người khác → nạp lại trang.
 
    Gọi mạng: sendJson/requestJson của common.js. Ngoại lệ duy nhất là
-   Shell.fetchBlob (tải nhị phân có header xác thực) — chỗ gọi mạng thô
-   duy nhất của file này.
+   Shell.fetchBlob (tải nhị phân có header xác thực) và Shell.stream (luồng SSE
+   cho chat / hỏi paper) — hai chỗ gọi mạng thô duy nhất của file này.
    ══════════════════════════════════════════════════════════════════ */
 "use strict";
 
@@ -21,6 +21,7 @@ const Shell = (() => {
   const NAV = [
     { name: "chat", label: "Chat", icon: "chat" },
     { name: "documents", label: "Tài liệu", icon: "docs" },
+    { name: "research", label: "Nghiên cứu", icon: "book" },
     { name: "memory", label: "Ghi nhớ", icon: "memory" },
     { name: "dashboard", label: "Bảng điều khiển", icon: "dash" },
     { name: "ocr", label: "OCR", icon: "ocr", admin: true },
@@ -182,6 +183,82 @@ const Shell = (() => {
     return response.blob();
   }
 
+  /* Luồng SSE "event: X\ndata: {…}" (POST JSON) có header xác thực → gọi on(type, data) cho từng sự kiện.
+     401 → refresh một lần rồi gửi lại. Sự kiện "error" của máy chủ → ném Error (.code/.status = 200).
+     hints: bảng mã lỗi → câu tiếng Việt riêng của view (tra sau ERROR_HINTS). Tách dòng CHỈ theo "\n"
+     (U+2028/U+2029 trong nội dung không được coi là xuống dòng). Luồng đóng mà không có "done" vẫn
+     resolve bình thường — view tự quyết coi là xong hay không. */
+  async function stream(path, body, { signal, on, hints } = {}) {
+    const isAbort = (e) => e && e.name === "AbortError";
+    const fail = (data, status) => {
+      const code = data && data.error_code;
+      const error = new Error(ERROR_HINTS[code] || (hints && hints[code]) || (data && data.message) || `Yêu cầu thất bại (${status}).`);
+      error.code = code;
+      error.status = status;
+      return error;
+    };
+    const send = () => fetch(path, { method: "POST", headers: authHeaders({ "Content-Type": "application/json" }), body: JSON.stringify(body), signal });
+    let response;
+    try {
+      response = await send();
+      if (response.status === 401 && (await refreshSoon())) response = await send();
+    } catch (error) {
+      if (isAbort(error)) throw error;
+      throw Object.assign(new Error("Không kết nối được máy chủ. Kiểm tra backend đang chạy."), { status: 0 });
+    }
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      const error = fail(data, response.status);
+      if (response.status === 401) onUnauthorized(error);
+      throw error;
+    }
+    if (!response.body || typeof response.body.getReader !== "function") throw new Error("Trình duyệt không đọc được luồng trả lời.");
+    const parseBlock = (block) => {
+      let type = "message";
+      const data = [];
+      for (const rawLine of block.split("\n")) {
+        const line = rawLine.endsWith("\r") ? rawLine.slice(0, -1) : rawLine;
+        if (line.startsWith("event:")) type = line.slice(6).replace(/^ /, "");
+        else if (line.startsWith("data:")) data.push(line.slice(5).replace(/^ /, ""));
+      }
+      if (!data.length) return null;
+      try { return { type, data: JSON.parse(data.join("\n")) }; } catch { throw new Error("Luồng trả lời từ máy chủ bị lỗi định dạng."); }
+    };
+    const dispatch = (block) => {
+      const event = parseBlock(block);
+      if (!event) return;
+      if (event.type === "error") throw fail(event.data, 200);
+      if (typeof on === "function") on(event.type, event.data || {});
+    };
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    try {
+      for (;;) {
+        let chunk;
+        try {
+          chunk = await reader.read();
+        } catch (error) {
+          if (isAbort(error) || (signal && signal.aborted)) throw Object.assign(new Error("Đã dừng."), { name: "AbortError" });
+          throw new Error("Mất kết nối khi đang nhận câu trả lời.");
+        }
+        if (chunk.done) break;
+        buffer += decoder.decode(chunk.value, { stream: true });
+        let match;
+        while ((match = /\r?\n\r?\n/.exec(buffer))) {
+          const block = buffer.slice(0, match.index);
+          buffer = buffer.slice(match.index + match[0].length);
+          dispatch(block);
+        }
+      }
+      buffer += decoder.decode();
+      if (buffer.trim()) dispatch(buffer);
+    } catch (error) {
+      reader.cancel().catch(() => {});
+      throw error;
+    }
+  }
+
   /* ── header / sidebar ────────────────────────────────────────── */
   function setHeader(title, sub) {
     dom.title.textContent = title == null ? "" : String(title);
@@ -207,9 +284,19 @@ const Shell = (() => {
     dom.spacer.hidden = true;
   }
 
-  /* Router gọi quanh phần đồng bộ của mount(): view mới không đặt khối sidebar → dọn khối cũ. */
-  function beginMount() { state.panelTouched = false; }
-  function endMount() { if (!state.panelTouched) setSidebarPanel(null); }
+  /* Bố cục: "app" = sidebar 264 + header 58 (mặc định); "full" = view chiếm trọn viewport
+     (Không gian Nghiên cứu tự vẽ kho paper / tab bar / rail). View không đặt → router trả về "app". */
+  function setLayout(mode) {
+    state.layoutTouched = true;
+    dom.app.classList.toggle("layout-full", mode === "full");
+  }
+
+  /* Router gọi quanh phần đồng bộ của mount(): view mới không đặt khối sidebar / bố cục → dọn về mặc định. */
+  function beginMount() { state.panelTouched = false; state.layoutTouched = false; }
+  function endMount() {
+    if (!state.panelTouched) setSidebarPanel(null);
+    if (!state.layoutTouched) setLayout("app");
+  }
 
   function setNavBadge(name, n) {
     state.badges[name] = n;
@@ -904,6 +991,8 @@ const Shell = (() => {
     motionOn,
     api,
     fetchBlob,
+    stream,
+    setLayout,
     _beginMount: beginMount,
     _endMount: endMount,
   };

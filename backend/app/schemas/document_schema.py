@@ -82,6 +82,8 @@ class DocumentStatusResponse(BaseModel):
     last_accessed_at: str | None = None
     ingestion: dict[str, object] | None = None
     error_message: str | None = None
+    # Số trang từ IngestionRun (0 → None khi chưa trích xuất); trình đọc dùng để vẽ khung trang.
+    total_pages: int | None = None
 
 
 class ChunkFeedbackInfo(BaseModel):

@@ -24,7 +24,7 @@ INDEX = (FRONTEND / "index.html").read_text(encoding="utf-8")
 #: Script tags in document order, as paths relative to the frontend folder.
 SCRIPTS = [src for src in re.findall(r'<script[^>]*\ssrc="/ui/([^"?]+)(?:\?[^"]*)?"', INDEX)]
 #: The screens the design handoff names (README "Kiến trúc đề xuất").
-VIEWS = ["chat", "documents", "memory", "dashboard", "ocr", "bot", "models", "users", "settings", "chunks"]
+VIEWS = ["chat", "documents", "research", "memory", "dashboard", "ocr", "bot", "models", "users", "settings", "chunks"]
 
 #: Top-level declarations that land in the shared global scope of a classic script.
 #: `var` and `async function` are in the list because an adversarial pass walked both
@@ -139,7 +139,8 @@ def test_there_is_one_refresh_implementation_and_no_stray_raw_fetch():
 
     The raw-fetch budget below is the list of deliberate carve-outs — a call that genuinely
     cannot go through requestJson: the refresh itself (common.js), a binary download with
-    auth headers (Shell.fetchBlob), and the SSE chat stream (views/chat.js).
+    auth headers (Shell.fetchBlob) and the SSE stream (Shell.stream) — both in shell.js, since
+    11/10/2026 when the research view needed the same stream as chat and the reader moved up.
     """
     everywhere = {script: source(script) for script in SCRIPTS}
 
@@ -147,7 +148,7 @@ def test_there_is_one_refresh_implementation_and_no_stray_raw_fetch():
     assert "async function refreshAccessToken" in everywhere["common.js"]
 
     budget = {script: 0 for script in SCRIPTS}
-    budget.update({"common.js": 2, "shell.js": 1, "views/chat.js": 1})
+    budget.update({"common.js": 2, "shell.js": 2})
     actual = {script: text.count("fetch(") for script, text in everywhere.items()}
 
     assert actual == budget, (

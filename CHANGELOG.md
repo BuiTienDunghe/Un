@@ -11,7 +11,27 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-11
+
 ### Added
+- **Không gian Nghiên cứu paper** (`#/research`, 11/10; thiết kế Phần 2 của gói
+  `design_handoff_local_ai_core_v2/` giữ ngoài repo, hợp đồng thực thi `.scratch/research-space/spec.md`).
+  Một dự án = một kho PDF: kho paper nhóm theo cụm ở trái, tab đọc ở giữa, rail 7 công cụ ở phải
+  (hỏi cả dự án, so sánh, tóm tắt AI, highlight & ghi chú, hỏi paper, mục lục & hình, thông tin).
+  Paper là một Document sẵn có cộng một dòng `research_papers`, nên tải lên, OCR, lập chỉ mục và hỏi đáp
+  đi qua đúng pipeline cũ; `POST /research/chat` bọc luồng SSE của `/rag/chat` và gắn thêm bản đồ
+  paper để chip trích dẫn mở đúng trang. Trình đọc hiển thị ảnh trang PNG do máy chủ vẽ bằng PyMuPDF
+  (`GET /documents/{id}/pages/{n}.png`, cache đĩa) phủ một lớp chữ trong suốt (`…/pages/{n}/words`)
+  để bôi đen bằng chuột thật; highlight lưu hình chữ nhật tỉ lệ theo trang. Tóm tắt là một lượt gọi
+  Ollama ra JSON (vấn đề / ý tưởng / kết quả / hạn chế / đầu vào / tính toán / dataset / code / 3 câu
+  gợi ý), gọi tay, cache trên dòng paper; "AI đọc gì từ kho này" sinh từ các tóm tắt. Cụm và kết nối
+  giữa paper tạo tay. Mới: migration `20261011_33` (5 bảng), `routers/research.py`,
+  `services/research_service.py`, `services/document_pages.py`, `views/research.js|css`;
+  `GET /documents/{id}/source` tải tệp gốc và `total_pages` trên mỗi Document.
+  Chưa làm, chờ chốt (`.scratch/research-space/decisions-open.md`): thẻ tham chiếu `[n]` (cần
+  Crossref/OpenAlex, hệ chạy offline), AI tự gộp cụm / gán nhãn quan hệ, "hỏi về hình này", tóm tắt
+  chạy nền.
+
 - **Thí nghiệm fine-tune reranker tiếng Việt — trượt, không ship** (07/09). `training/reranker/`
   thêm `mine_negatives.py`, `train.py`, `export_checkpoint.py`; dữ liệu train
   (2 376 chunk dương, 21 580 âm đào bằng BM25, seed 20260907) không nằm trong repo —
@@ -24,6 +44,11 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   `.scratch/reranker-finetune/spec.md`.
 
 ### Changed
+- `shell.js` có `Shell.setLayout("full")` (view chiếm trọn viewport, dùng cho Nghiên cứu) và
+  `Shell.stream` — bộ đọc SSE dùng chung; `views/chat.js` chuyển sang dùng nó thay vì bộ đọc riêng,
+  nên ngân sách `fetch(` thô trong `test_frontend.py` thành common 2 / shell 2 / view 0.
+- Thả PDF qua Nghiên cứu kích lập chỉ mục trong tiến trình, nên thành viên (member) cũng lập chỉ mục
+  được paper mình tải, dù `POST /documents/index` vẫn chỉ dành cho quản trị viên.
 - **Giao diện web dựng lại: bốn trang rời thành một app shell + 10 màn** (16/09; thiết kế
   `design_handoff_local_ai_core_v2/` (giữ ngoài repo), hợp đồng thực thi `.scratch/web-ui-v2/spec.md`). Trước đó
   `/ui/` là bốn trang HTML độc lập (`index`, `dashboard`, `ocr`, `chunks`), mỗi trang nạp lại từ
@@ -899,6 +924,7 @@ dẫn nguồn đã đo được chất lượng, hai kênh web và Discord dùng
 - Bộ eval mới phủ một tài liệu và đã bão hòa ở 100%, chưa đo được tiến bộ tiếp theo (G7).
 - BM25 chạy trong tiến trình, giới hạn quy mô corpus (G8).
 
-[Unreleased]: https://github.com/BuiTienDunghe/Un/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/BuiTienDunghe/Un/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/BuiTienDunghe/Un/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/BuiTienDunghe/Un/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/BuiTienDunghe/Un/releases/tag/v1.0.0

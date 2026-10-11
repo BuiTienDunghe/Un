@@ -38,17 +38,18 @@
   });
 })();
 </script>
-<link rel="stylesheet" href="/ui/styles.css?v=2.0.0">
-<link rel="stylesheet" href="/ui/views/chat.css?v=2.0.0">
-<link rel="stylesheet" href="/ui/views/documents.css?v=2.0.0">
-<link rel="stylesheet" href="/ui/views/memory.css?v=2.0.0">
-<link rel="stylesheet" href="/ui/views/dashboard.css?v=2.0.0">
-<link rel="stylesheet" href="/ui/views/ocr.css?v=2.0.0">
-<link rel="stylesheet" href="/ui/views/bot.css?v=2.0.0">
-<link rel="stylesheet" href="/ui/views/models.css?v=2.0.0">
-<link rel="stylesheet" href="/ui/views/users.css?v=2.0.0">
-<link rel="stylesheet" href="/ui/views/settings.css?v=2.0.0">
-<link rel="stylesheet" href="/ui/views/chunks.css?v=2.0.0">
+<link rel="stylesheet" href="/ui/styles.css?v=2.1.0">
+<link rel="stylesheet" href="/ui/views/chat.css?v=2.1.0">
+<link rel="stylesheet" href="/ui/views/documents.css?v=2.1.0">
+<link rel="stylesheet" href="/ui/views/research.css?v=2.1.0">
+<link rel="stylesheet" href="/ui/views/memory.css?v=2.1.0">
+<link rel="stylesheet" href="/ui/views/dashboard.css?v=2.1.0">
+<link rel="stylesheet" href="/ui/views/ocr.css?v=2.1.0">
+<link rel="stylesheet" href="/ui/views/bot.css?v=2.1.0">
+<link rel="stylesheet" href="/ui/views/models.css?v=2.1.0">
+<link rel="stylesheet" href="/ui/views/users.css?v=2.1.0">
+<link rel="stylesheet" href="/ui/views/settings.css?v=2.1.0">
+<link rel="stylesheet" href="/ui/views/chunks.css?v=2.1.0">
 <noscript><style>html[data-booting] .app{visibility:visible}</style></noscript>
 </head>
 <body>
@@ -128,6 +129,18 @@
   <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 2v10M18.4 6.6a9 9 0 1 1-12.8 0"/></symbol>
   <symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
   <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <!-- Không gian Nghiên cứu (hình học của prototype "Research Space v3") -->
+  <symbol id="i-grid" viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></symbol>
+  <symbol id="i-file-corner" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></symbol>
+  <symbol id="i-split" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></symbol>
+  <symbol id="i-sync" viewBox="0 0 24 24"><path d="M7 7h10M7 12h10M7 17h10M4 5v14M20 5v14"/></symbol>
+  <symbol id="i-chevrons" viewBox="0 0 24 24"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></symbol>
+  <symbol id="i-project" viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></symbol>
+  <symbol id="i-columns" viewBox="0 0 24 24"><path d="M3 3h7v18H3zM14 3h7v18h-7z"/></symbol>
+  <symbol id="i-highlighter" viewBox="0 0 24 24"><path d="m9 11-6 6v3h9l3-3M22 12l-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></symbol>
+  <symbol id="i-translate" viewBox="0 0 24 24"><path d="M5 8h14M12 4v4M7 20l5-12 5 12M9 16h6"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 2.5 2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z"/></symbol>
+  <symbol id="i-quote" viewBox="0 0 24 24"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.75-2-2-2H4c-1.25 0-2 .75-2 2v6c0 1.25.75 2 2 2h3M15 21c3 0 7-1 7-8V5c0-1.25-.75-2-2-2h-4c-1.25 0-2 .75-2 2v6c0 1.25.75 2 2 2h3"/></symbol>
 </svg>
 
 <div class="app" id="app">
@@ -187,20 +200,21 @@
 <div class="sr-only" id="sr-status" role="status" aria-live="polite"></div>
 <noscript><p class="noscript">Giao diện này cần JavaScript để chạy.</p></noscript>
 
-<script src="/ui/common.js?v=2.0.0" defer></script>
-<script src="/ui/components.js?v=2.0.0" defer></script>
-<script src="/ui/router.js?v=2.0.0" defer></script>
-<script src="/ui/shell.js?v=2.0.0" defer></script>
-<script src="/ui/uploads.js?v=2.0.0" defer></script>
-<script src="/ui/views/chat.js?v=2.0.0" defer></script>
-<script src="/ui/views/documents.js?v=2.0.0" defer></script>
-<script src="/ui/views/memory.js?v=2.0.0" defer></script>
-<script src="/ui/views/dashboard.js?v=2.0.0" defer></script>
-<script src="/ui/views/ocr.js?v=2.0.0" defer></script>
-<script src="/ui/views/bot.js?v=2.0.0" defer></script>
-<script src="/ui/views/models.js?v=2.0.0" defer></script>
-<script src="/ui/views/users.js?v=2.0.0" defer></script>
-<script src="/ui/views/settings.js?v=2.0.0" defer></script>
-<script src="/ui/views/chunks.js?v=2.0.0" defer></script>
+<script src="/ui/common.js?v=2.1.0" defer></script>
+<script src="/ui/components.js?v=2.1.0" defer></script>
+<script src="/ui/router.js?v=2.1.0" defer></script>
+<script src="/ui/shell.js?v=2.1.0" defer></script>
+<script src="/ui/uploads.js?v=2.1.0" defer></script>
+<script src="/ui/views/chat.js?v=2.1.0" defer></script>
+<script src="/ui/views/documents.js?v=2.1.0" defer></script>
+<script src="/ui/views/research.js?v=2.1.0" defer></script>
+<script src="/ui/views/memory.js?v=2.1.0" defer></script>
+<script src="/ui/views/dashboard.js?v=2.1.0" defer></script>
+<script src="/ui/views/ocr.js?v=2.1.0" defer></script>
+<script src="/ui/views/bot.js?v=2.1.0" defer></script>
+<script src="/ui/views/models.js?v=2.1.0" defer></script>
+<script src="/ui/views/users.js?v=2.1.0" defer></script>
+<script src="/ui/views/settings.js?v=2.1.0" defer></script>
+<script src="/ui/views/chunks.js?v=2.1.0" defer></script>
 </body>
 </html>

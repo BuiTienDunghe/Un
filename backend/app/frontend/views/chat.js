@@ -1115,91 +1115,20 @@
   }
 
   /* ══════════════════════════════════════════════════════════════
-     LUỒNG SSE — chỗ gọi mạng thô duy nhất của view
+     LUỒNG SSE — qua Shell.stream (mạng thô nằm trong shell.js); view chỉ ánh xạ sự kiện.
+     Luồng đóng mà không có "done" vẫn coi là xong (D10, giữ như app cũ).
      ══════════════════════════════════════════════════════════════ */
-  function streamError(data, status) {
-    const code = data && data.error_code;
-    const error = new Error(ERROR_HINTS[code] || CHAT_HINTS[code] || (data && data.message) || `Yêu cầu thất bại (${status}).`);
-    error.code = data && data.error_code;
-    error.status = status;
-    return error;
-  }
-
-  /* Khối "event: X\ndata: {…}" → {type, data}. Tách dòng CHỈ theo "\n" (sửa D9:
-     regex với "." của bản cũ cắt dữ liệu tại U+2028/U+2029 và làm hỏng cả lượt). */
-  function parseBlock(block) {
-    let type = "message";
-    const data = [];
-    for (const rawLine of block.split("\n")) {
-      const line = rawLine.endsWith("\r") ? rawLine.slice(0, -1) : rawLine;
-      if (line.startsWith("event:")) type = line.slice(6).replace(/^ /, "");
-      else if (line.startsWith("data:")) data.push(line.slice(5).replace(/^ /, ""));
-    }
-    if (!data.length) return null;
-    try {
-      return { type, data: JSON.parse(data.join("\n")) };
-    } catch {
-      throw new Error("Luồng trả lời từ máy chủ bị lỗi định dạng.");
-    }
-  }
-
   async function streamChat(path, body, signal, on) {
-    const send = () => fetch(path, { method: "POST", headers: authHeaders(JSON_HEADERS), body: JSON.stringify(body), signal });
-    let response;
-    try {
-      response = await send();
-      if (response.status === 401 && (await refreshAccessToken())) response = await send();
-    } catch (error) {
-      if (isAbort(error)) throw error;
-      throw new Error(OFFLINE); // sửa D8: không để lộ "Failed to fetch"
-    }
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      if (response.status === 401 && Shell.authEnabled) {
-        // Refresh hỏng: nhờ shell mở màn đăng nhập (Shell.api tự làm việc đó khi gặp 401 cuối).
-        Shell.api("/auth/me").catch(() => {});
-      }
-      throw streamError(data, response.status);
-    }
-    if (!response.body || typeof response.body.getReader !== "function") throw new Error("Trình duyệt không đọc được luồng trả lời.");
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    const dispatch = (block) => {
-      const event = parseBlock(block);
-      if (!event) return;
-      const data = event.data || {};
-      if (event.type === "meta") on.meta(data);
-      else if (event.type === "steps") on.steps(Array.isArray(data.steps) ? data.steps : []);
-      else if (event.type === "token") on.token(data.content);
-      else if (event.type === "done") on.done(data);
-      else if (event.type === "error") throw streamError(data, 200);
-    };
-    try {
-      for (;;) {
-        let chunk;
-        try {
-          chunk = await reader.read();
-        } catch (error) {
-          if (isAbort(error) || (signal && signal.aborted)) throw Object.assign(new Error("Đã dừng."), { name: "AbortError" });
-          throw new Error("Mất kết nối khi đang nhận câu trả lời.");
-        }
-        if (chunk.done) break;
-        buffer += decoder.decode(chunk.value, { stream: true });
-        let match;
-        while ((match = /\r?\n\r?\n/.exec(buffer))) {
-          const block = buffer.slice(0, match.index);
-          buffer = buffer.slice(match.index + match[0].length);
-          dispatch(block);
-        }
-      }
-      buffer += decoder.decode();
-      if (buffer.trim()) dispatch(buffer);
-    } catch (error) {
-      reader.cancel().catch(() => {});   // sự kiện error / lỗi định dạng: đóng luồng, không đọc tiếp
-      throw error;
-    }
-    // Luồng đóng mà không có "done" vẫn coi là xong (D10, giữ như app cũ).
+    await Shell.stream(path, body, {
+      signal,
+      hints: CHAT_HINTS,
+      on: (type, data) => {
+        if (type === "meta") on.meta(data);
+        else if (type === "steps") on.steps(Array.isArray(data.steps) ? data.steps : []);
+        else if (type === "token") on.token(data.content);
+        else if (type === "done") on.done(data);
+      },
+    });
   }
 
   /* Phạm vi hỏi đáp phải hợp lệ trước khi gửi → câu cần báo, hoặc null khi gửi được.

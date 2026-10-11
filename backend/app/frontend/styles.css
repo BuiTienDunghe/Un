@@ -39,6 +39,9 @@
   --shadow: 0 1px 2px rgba(15, 23, 42, .05), 0 8px 24px -14px rgba(15, 23, 42, .14);
   --shadow-2: 0 20px 60px -20px rgba(15, 23, 42, .35);
   --user-bubble: #e8efff;
+  /* Không gian Nghiên cứu: 5 màu cụm + nền trang PDF */
+  --c1: #2563eb; --c2: #0ea5e9; --c3: #7c3aed; --c4: #0d9488; --c5: #f59e0b;
+  --paper: #ffffff; --ink: #1f2937; --ink-2: #e5e7eb;
   --scroll: #c9d4e6;
 
   /* token phụ: giá trị chép từ literal của prototype */
@@ -76,6 +79,8 @@
   --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -14px rgba(0, 0, 0, .7);
   --shadow-2: 0 20px 60px -20px rgba(0, 0, 0, .8);
   --user-bubble: #17274a;
+  --c1: #60a5fa; --c2: #38bdf8; --c3: #a78bfa; --c4: #2dd4bf; --c5: #fbbf24;
+  --paper: #e9edf3; --ink: #1f2937; --ink-2: #cfd6e0;
   --scroll: #33456a;
 
   color-scheme: dark;
@@ -609,6 +614,8 @@ select.input { padding-right: 8px; }
   font: 14px/1.5 var(--font); overflow: hidden; position: relative;
 }
 html[data-booting] .app { visibility: hidden; }
+/* Bố cục "full" (Shell.setLayout): view chiếm trọn viewport, không sidebar / header của shell */
+.app.layout-full .sidebar, .app.layout-full .header, .app.layout-full .sidebar-backdrop { display: none !important; }
 
 /* Sidebar 264 */
 .sidebar {

@@ -67,7 +67,7 @@ class PostgresDocumentService:
 
     @staticmethod
     def _document_payload(document: Document, run: IngestionRun | None = None, version: DocumentVersion | None = None) -> dict[str, object]:
-        return {"document_id": document.id, "filename": document.original_filename, "status": document.status, "chunks_count": run.total_chunks if run else 0, "ocr_pages_count": run.ocr_pages if run else 0, "content_hash": document.content_hash, "active_index_version": version.version_number if version else 0, "active_version_id": document.active_version_id, "source_available": document.source_available, "source_removed_at": document.source_removed_at.isoformat() if document.source_removed_at else None, "pinned": document.pinned, "retention_policy": document.retention_policy, "last_accessed_at": document.last_accessed_at.isoformat() if document.last_accessed_at else None, "ingestion": PostgresDocumentService._run_payload(run, version) if run else None, "error_message": document.error_message}
+        return {"document_id": document.id, "filename": document.original_filename, "status": document.status, "chunks_count": run.total_chunks if run else 0, "ocr_pages_count": run.ocr_pages if run else 0, "content_hash": document.content_hash, "active_index_version": version.version_number if version else 0, "active_version_id": document.active_version_id, "source_available": document.source_available, "source_removed_at": document.source_removed_at.isoformat() if document.source_removed_at else None, "pinned": document.pinned, "retention_policy": document.retention_policy, "last_accessed_at": document.last_accessed_at.isoformat() if document.last_accessed_at else None, "ingestion": PostgresDocumentService._run_payload(run, version) if run else None, "error_message": document.error_message, "total_pages": (run.total_pages or None) if run else None}
 
     @staticmethod
     def _run_payload(run: IngestionRun, version: DocumentVersion | None = None) -> dict[str, object]:
@@ -631,3 +631,25 @@ class PostgresDocumentService:
 
     def _source_path(self, document: Document) -> Path:
         return self.documents_path / document.id / f"original{Path(document.stored_filename).suffix}"
+
+    # ── Trình đọc trang (Không gian Nghiên cứu) ──────────────────────────────
+    def source_file(self, document_id: str) -> tuple[Path, str]:
+        """Đường dẫn tệp gốc + tên hiển thị. SourceUnavailableError khi tệp đã bị
+        gỡ (`source_available=false`) hoặc không còn trên đĩa."""
+        document, _run, _version = self._load(document_id)
+        path = self._source_path(document)
+        if not document.source_available or not path.is_file():
+            raise SourceUnavailableError(document_id)
+        return path, document.original_filename
+
+    def page_cache_dir(self, document_id: str) -> Path:
+        return self.documents_path / document_id / "pages"
+
+    def chunk_locations(self, document_id: str, chunk_id: str) -> list[dict[str, object]] | None:
+        """`locations` của một chunk thuộc phiên bản đang active; None nếu không có chunk."""
+        with self.sessions() as session:
+            found = PostgresDocumentRepository(session).active_chunks_by_ids([chunk_id])
+            entry = found.get(chunk_id)
+            if entry is None or entry[0].id != document_id:
+                return None
+            return list(entry[2].locations or [])

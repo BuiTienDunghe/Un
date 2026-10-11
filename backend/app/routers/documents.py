@@ -1,6 +1,9 @@
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, Response, UploadFile
+from fastapi.responses import FileResponse
 
 from app.schemas.document_schema import ChunkFeedbackRequest, ChunkFeedbackResponse, ChunkListResponse, DocumentStatusResponse, IndexRequest, IndexResponse, IngestionStatusResponse, ReplaceSourceResponse, RetentionRequest, UploadResponse
+from app.schemas.research_schema import PageBoxesResponse, PageWordsResponse
+from app.services import document_pages
 from app.services.chunk_inspection_service import ChunkNotFoundError, DocumentNotFoundForInspection, DocumentNotIndexedError
 from app.services.postgres_document_service import DocumentAlreadyIndexingError, DocumentNotFoundError, IngestionNotFoundError, SourceUnavailableError
 from app.stores.qdrant_store import QdrantDimensionMismatchError
@@ -106,6 +109,54 @@ def remove_document_source(document_id: str, request: Request) -> None:
         raise HTTPException(status_code=404, detail={"error_code": "DOCUMENT_NOT_FOUND", "message": f"Document {error} does not exist"}) from error
     except DocumentAlreadyIndexingError as error:
         raise HTTPException(status_code=409, detail={"error_code": "DOCUMENT_ALREADY_INDEXING", "message": f"Document {error} is already indexing"}) from error
+
+
+# ── Trình đọc trang (Không gian Nghiên cứu) ─────────────────────────────────
+def _source_or_409(request: Request, document_id: str):
+    try:
+        return request.app.state.document_service.source_file(document_id)
+    except DocumentNotFoundError as error:
+        raise HTTPException(status_code=404, detail={"error_code": "DOCUMENT_NOT_FOUND", "message": f"Document {error} does not exist"}) from error
+    except SourceUnavailableError as error:
+        raise HTTPException(status_code=409, detail={"error_code": "RESEARCH_SOURCE_UNAVAILABLE", "message": "Tệp gốc của tài liệu này đã bị gỡ; tải lại tệp để đọc."}) from error
+
+
+def _page_not_found(document_id: str, number: int) -> HTTPException:
+    return HTTPException(status_code=404, detail={"error_code": "DOCUMENT_PAGE_NOT_FOUND", "message": f"Tài liệu {document_id} không có trang {number} (hoặc không phải PDF)."})
+
+
+@router.get("/{document_id}/source")
+def document_source(document_id: str, request: Request) -> FileResponse:
+    path, filename = _source_or_409(request, document_id)
+    return FileResponse(path, filename=filename, content_disposition_type="inline")
+
+
+@router.get("/{document_id}/pages/{number:int}.png")
+def document_page_png(document_id: str, number: int, request: Request, dpi: int = Query(default=document_pages.DEFAULT_DPI, ge=document_pages.MIN_DPI, le=document_pages.MAX_DPI)) -> Response:
+    path, _filename = _source_or_409(request, document_id)
+    try:
+        png = document_pages.render_page_png(path, number, dpi, request.app.state.document_service.page_cache_dir(document_id))
+    except document_pages.PageNotFoundError as error:
+        raise _page_not_found(document_id, number) from error
+    return Response(content=png, media_type="image/png", headers={"Cache-Control": "private, max-age=86400"})
+
+
+@router.get("/{document_id}/pages/{number:int}/words", response_model=PageWordsResponse)
+def document_page_words(document_id: str, number: int, request: Request) -> PageWordsResponse:
+    path, _filename = _source_or_409(request, document_id)
+    try:
+        return PageWordsResponse(**document_pages.page_words(path, number))
+    except document_pages.PageNotFoundError as error:
+        raise _page_not_found(document_id, number) from error
+
+
+@router.get("/{document_id}/pages/{number:int}/boxes", response_model=PageBoxesResponse)
+def document_page_boxes(document_id: str, number: int, request: Request, chunk_id: str = Query(min_length=1)) -> PageBoxesResponse:
+    try:
+        locations = request.app.state.document_service.chunk_locations(document_id, chunk_id)
+    except DocumentNotFoundError as error:
+        raise HTTPException(status_code=404, detail={"error_code": "DOCUMENT_NOT_FOUND", "message": f"Document {error} does not exist"}) from error
+    return PageBoxesResponse(boxes=document_pages.chunk_boxes(locations, number))
 
 
 @router.patch("/{document_id}/retention", response_model=DocumentStatusResponse, dependencies=[Depends(require_api_key)])

@@ -12,7 +12,7 @@ from app.config.settings import PROJECT_ROOT, get_settings
 from app.llm_clients.ollama_client import OllamaClient
 from app.llm_clients.gemini_client import GeminiClient
 from app.llm_clients.deepseek_client import DeepSeekClient
-from app.routers import agent, auth, bot, chat, condensations, conversations, dashboard, discord_history, discord_sessions, documents, health, memory, memory_review, models, ocr, rag, vision
+from app.routers import agent, auth, bot, chat, condensations, conversations, dashboard, discord_history, discord_sessions, documents, health, memory, memory_review, models, ocr, rag, research, vision
 from app.security.api_key import require_api_key_for_read
 from app.security.auth import require_admin
 from app.services.auth_service import AuthService
@@ -27,6 +27,7 @@ from app.services.postgres_document_service import PostgresDocumentService
 from app.services.ocr_job_service import OcrJobService
 from app.services.ocr_service import OCRService
 from app.services.rag_service import RagService
+from app.services.research_service import ResearchService
 from app.services.agent_service import AgentService
 from app.services.memory_service import MemoryService
 from app.services.postgres_retrieval_service import PostgresRetrievalService
@@ -253,6 +254,9 @@ async def lifespan(app: FastAPI):
         condense_enabled=bool(rag_config.get("condense_enabled", True)),
         defense=injection_defense,
     )
+    # Không gian Nghiên cứu: paper = Document sẵn có; tóm tắt gọi Ollama ra JSON với
+    # model vai trò general; hỏi paper đi qua rag_service.stream_response.
+    app.state.research_service = ResearchService(postgres_sessions, app.state.document_service, ollama_base_url=settings.ollama_base_url, model_router=router)
     agent_config = config.get("agent", {})
     # Job 1+2 (28/08): sổ gốc writes + guild-scoped verbatim history search.
     app.state.discord_history_service = DiscordHistoryService(postgres_sessions)
@@ -305,6 +309,7 @@ app.include_router(chat.router, dependencies=read_guard)
 app.include_router(documents.router, dependencies=read_guard)
 app.include_router(ocr.router, dependencies=read_guard)
 app.include_router(rag.router, dependencies=read_guard)
+app.include_router(research.router, dependencies=read_guard)
 app.include_router(memory.router, dependencies=read_guard)
 app.include_router(memory_review.router, dependencies=admin_guard)
 app.include_router(condensations.router, dependencies=admin_guard)
