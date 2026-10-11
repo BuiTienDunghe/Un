@@ -11,6 +11,8 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-12
+
 ### Added
 - **Luồng chat lưu được trong Không gian Nghiên cứu** (11/10): mỗi paper và mỗi dự án có nhiều luồng
   "Hỏi paper" / "Hỏi cả dự án", đổi tên, xoá; một luồng là một dòng `research_threads` (migration
@@ -937,7 +939,8 @@ dẫn nguồn đã đo được chất lượng, hai kênh web và Discord dùng
 - Bộ eval mới phủ một tài liệu và đã bão hòa ở 100%, chưa đo được tiến bộ tiếp theo (G7).
 - BM25 chạy trong tiến trình, giới hạn quy mô corpus (G8).
 
-[Unreleased]: https://github.com/BuiTienDunghe/Un/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/BuiTienDunghe/Un/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/BuiTienDunghe/Un/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/BuiTienDunghe/Un/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/BuiTienDunghe/Un/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/BuiTienDunghe/Un/releases/tag/v1.0.0
