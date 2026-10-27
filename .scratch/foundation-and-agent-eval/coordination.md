@@ -57,7 +57,16 @@ GPU tối 27/10 cho phần đo của **10**; 09 chạy lại trọn một mạch
 (`eval_stack --profile lab|heldout`) phải **dừng trước 02:45**: eval đêm 03:00 tự bật lab API ở
 cổng 8100 và cần GPU; đêm 27→28/10 là đêm nghiệm thu của ticket 01.
 
-## Xây trước, đo sau (chủ dự án, 28/10 01:20)
+## Giữ im Ollama đêm 28/10 (phiên Quản lý xin, 01:00)
+
+Từ khoảng 02:00 Quản lý đo độ trễ, cần GPU sạch tuyệt đối. Lúc 00:54 và 00:57 có hai lần glm-ocr được nạp, mỗi lần
+khoảng 6 giây: đó là bước kiểm tra model khi app khởi động (`model_startup_probes`), do một phiên Ún bật app hoặc
+chạy test. **Đến khi chủ dự án cho đo lại**, mọi lần chạy test hay bật app phải kèm
+`OLLAMA_BASE_URL=http://127.0.0.1:9 MODEL_STARTUP_PROBES=false` (Ollama trỏ vào cổng chết, giống CI). Không chạy
+`agent_eval`, `run_mteb`, `eval_stack`, `ollama run/pull`. Eval đêm 03:00 vẫn chạy (Quản lý tránh 03:00–03:05).
+Backup 02:00 chỉ dùng đĩa và CPU (`pg_dump`).
+
+## Xây trước, đo sau (chủ dự án, 28/10 00:58)
 
 "Hôm nay chưa cần chạy GPU nhiều quá, hãy xây dựng trước đã." Từ giờ: ưu tiên code (ticket 20 #2–#4, 22, 23,
 dựng BFCL); **hoãn** các lượt đo GPU dài (ba nhánh e5 của 09 ≈ 3 giờ, chạy BFCL). Các lần đo hồi quy Agent Eval
