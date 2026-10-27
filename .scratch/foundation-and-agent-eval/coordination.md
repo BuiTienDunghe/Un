@@ -9,6 +9,10 @@ hiện: "Nhân viên của Ún 1", "Nhân viên của Ún 2", "Nhân viên của
 **Harness là điểm nổi bật nhất của dự án** — xử lý tốt, hiệu quả. Khi phải chọn, việc harness (ticket 20, 22, và
 mọi khả năng agent) đi trước thí nghiệm model (M3). Mọi cải tiến harness phải có số đo trên Agent Eval.
 
+**Benchmark phải uy tín, có điểm công bố** (chủ dự án, 28/10 00:30): mọi khẳng định chất lượng dùng benchmark có
+paper/leaderboard chính thống, và tái lập một số đã công bố trước rồi mới đo thay đổi. Agent Eval tự viết chỉ là
+test hồi quy (bắt thoái lui, so trước/sau), không phải bằng chứng chất lượng. Đang khảo sát benchmark phù hợp (ticket 24).
+
 ## Vai trò
 
 | Phiên | Việc |
@@ -108,6 +112,7 @@ ticket mới, chờ các ticket đang chạy xong, rồi báo chủ dự án.
 | 21 | Tài liệu không có chủ: agent đọc mọi tài liệu, kể cả PDF Nghiên cứu của người khác | — | — | chờ chủ dự án |
 | 22 | Tách mềm Discord: lõi không import Discord; Discord tự cắm qua registry | 20 #1 (1) | fable thiết kế | chờ thiết kế |
 | 23 | Bảng điểm harness: đúng, hiệu quả, bền, minh bạch + lịch sử | — | Nhân viên 3 | đã giao |
+| 24 | Đo harness bằng benchmark uy tín có điểm công bố | — | agent phụ | đang khảo sát |
 
 ## Mốc so sánh của bộ test
 
