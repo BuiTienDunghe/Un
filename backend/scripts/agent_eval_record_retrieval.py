@@ -22,6 +22,15 @@ can never pass for an agent mistake. The manifest says which and what came back.
 
 /rag/search clips to models.yaml rag.max_context_chunks (5), which no env var
 overrides; the agent may ask for up to 8. The manifest records the clip.
+
+v0.3 (ticket 20): every document a search returned is also fetched whole
+(GET /documents/{id}/chunks, read-only) into documents.jsonl, which a read past
+the preview replays; a document already there must come back identical or
+nothing is written. A task marked `long_read` is the opposite case: its answer
+must NOT be visible in any returned preview, and is classed L-a (inside a
+returned chunk, past character 400) or L-b (only in a chunk next to a returned
+one); anything else stays pending. Each recording keeps the previous manifests
+under `earlier`.
 """
 from __future__ import annotations
 
@@ -64,6 +73,53 @@ def answer_in_chunks(task: dict[str, Any], chunks: list[dict[str, Any]]) -> bool
         return None
     visible = "\n".join(_clip(str(chunk.get("content") or ""), AGENT_EXCERPT_CHARS) for chunk in chunks)
     return grade({"must_mention": patterns}, [], visible, {})["passed"]
+
+
+def _points(task: dict[str, Any]) -> list[str]:
+    return task.get("evidence") or task.get("expect", {}).get("must_mention") or []
+
+
+def _has(pattern: str, text: str) -> bool:
+    return grade({"must_mention": [pattern]}, [], text, {})["passed"]
+
+
+def reading_needed(task: dict[str, Any], chunks: list[dict[str, Any]], documents: dict[str, dict[str, Any]]) -> str | None:
+    """A long-read task's class: "L-a" when every point is in a returned chunk
+    but past its 400-character preview, "L-b" when some point is only in a chunk
+    next to a returned one. None when a point shows in a preview (the agent could
+    answer without reading) or is nowhere near what came back."""
+    points = _points(task)
+    if not points:
+        return None
+    previews = "\n".join(_clip(str(chunk.get("content") or ""), AGENT_EXCERPT_CHARS) for chunk in chunks)
+    returned = "\n".join(str(chunk.get("content") or "") for chunk in chunks)
+    neighbours = []
+    for chunk in chunks:
+        document = documents.get(str(chunk.get("document_id")))
+        index = chunk.get("chunk_index")
+        if document and isinstance(index, int):
+            neighbours += [c["content"] for c in document["chunks"] if abs(c["chunk_index"] - index) == 1]
+    near = returned + "\n" + "\n".join(neighbours)
+    if any(_has(point, previews) for point in points) or not all(_has(point, near) for point in points):
+        return None
+    return "L-a" if all(_has(point, returned) for point in points) else "L-b"
+
+
+def fetch_document(client: httpx.Client, document_id: str) -> dict[str, Any]:
+    """The document's active version, whole, in the documents.jsonl shape."""
+    items: list[dict[str, Any]] = []
+    while True:
+        response = client.get(f"/documents/{document_id}/chunks", params={"limit": 200, "offset": len(items)})
+        response.raise_for_status()
+        body = response.json()
+        items += body["chunks"]
+        if not body["chunks"] or len(items) >= body["total_chunks"]:
+            break
+    chunks = [
+        {"chunk_index": item["chunk_index"], "page_start": item.get("page_start"), "page_end": item.get("page_end"), "content": item["content"]}
+        for item in sorted(items, key=lambda item: item["chunk_index"])
+    ]
+    return {"document_id": document_id, "filename": body["filename"], "chunks": chunks}
 
 
 def source_in_chunks(task: dict[str, Any], chunks: list[dict[str, Any]]) -> bool | None:
@@ -111,22 +167,42 @@ def record(
     models = client.get("/models")
     models.raise_for_status()
     served = models.json()
+    documents_path = dataset_dir / "documents.jsonl"
+    documents = {d["document_id"]: d for d in _read_jsonl(documents_path)} if documents_path.exists() else {}
+    fetched: dict[str, dict[str, Any]] = {}
     recorded: dict[str, dict[str, Any]] = {}
     for fixture in chosen:
         response = client.post("/rag/search", json={"message": fixture["query"], "top_k": AGENT_MAX_TOP_K})
         response.raise_for_status()
         body = response.json()
         chunks = [{key: source.get(key) for key in KEPT_FIELDS} for source in body["sources"]]
+        for chunk in chunks:
+            document_id = str(chunk["document_id"])
+            if document_id not in fetched:
+                fetched[document_id] = fetch_document(client, document_id)
+                known = documents.get(document_id)
+                if known is not None and known != fetched[document_id]:
+                    raise ValueError(f"{document_id} trên API khác documents.jsonl: dữ liệu đã ghi không còn khớp corpus, không ghi gì")
+            own = fetched[document_id]["chunks"]
+            if not (0 <= chunk["chunk_index"] < len(own) and own[chunk["chunk_index"]]["content"] == chunk["content"]):
+                raise ValueError(f"{fixture['task_id']}: đoạn {document_id}#{chunk['chunk_index']} của /rag/search khác đoạn của tài liệu")
         task = tasks.get(fixture["task_id"], {})
-        found, from_source = answer_in_chunks(task, chunks), source_in_chunks(task, chunks)
-        usable = found is not False and from_source is not False
+        from_source = source_in_chunks(task, chunks)
+        if task.get("long_read"):
+            reading = reading_needed(task, chunks, {**documents, **fetched})
+            found = None
+            usable = reading is not None and from_source is not False
+        else:
+            reading = None
+            found = answer_in_chunks(task, chunks)
+            usable = found is not False and from_source is not False
         recorded[fixture["task_id"]] = {
-            "chunks": chunks, "latency_ms": body.get("latency_ms"),
+            "chunks": chunks, "latency_ms": body.get("latency_ms"), "reading": reading,
             "answer_in_chunks": found, "source_in_chunks": from_source, "usable": usable,
         }
         progress(
-            f"{fixture['task_id']:<8} {len(chunks)} chunks {body.get('latency_ms')}ms"
-            + ("" if usable else f"  KEPT PENDING (answer visible: {found}, cited file present: {from_source})")
+            f"{fixture['task_id']:<8} {len(chunks)} chunks {body.get('latency_ms')}ms" + (f" {reading}" if reading else "")
+            + ("" if usable else f"  KEPT PENDING (answer visible: {found}, long read: {reading}, cited file present: {from_source})")
         )
 
     # Every request answered: only now does anything reach disk, and only the
@@ -137,6 +213,10 @@ def record(
             fixture["source"] = "recorded"
             fixture["chunks"] = item["chunks"]
     _write_lf(dataset_dir / "retrieval.jsonl", "".join(json.dumps(f, ensure_ascii=False) + "\n" for f in fixtures))
+    documents.update(fetched)
+    _write_lf(documents_path, "".join(json.dumps(d, ensure_ascii=False) + "\n" for d in documents.values()))
+    manifest_path = dataset_dir / "retrieval_manifest.json"
+    previous = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else None
     manifest = {
         "recorded_at": datetime.now(UTC).isoformat(),
         "commit": commit,
@@ -153,6 +233,7 @@ def record(
                 "chunks": len(item["chunks"]),
                 "latency_ms": item["latency_ms"],
                 "answer_in_chunks": item["answer_in_chunks"],
+                **({"reading": item["reading"]} if tasks.get(task_id, {}).get("long_read") else {}),
                 "source_in_chunks": item["source_in_chunks"],
                 # For a fixture left pending, what did come back: enough to fix the query.
                 **({} if item["usable"] else {"retrieved": [
@@ -161,8 +242,10 @@ def record(
             }
             for task_id, item in recorded.items()
         },
+        # Earlier recordings, newest first: the fixtures they wrote are still in use.
+        "earlier": ([{k: v for k, v in previous.items() if k != "earlier"}] + previous.get("earlier", [])) if previous else [],
     }
-    _write_lf(dataset_dir / "retrieval_manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
+    _write_lf(manifest_path, json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
     return manifest
 
 

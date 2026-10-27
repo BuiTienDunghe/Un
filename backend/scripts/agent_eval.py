@@ -40,7 +40,11 @@ from time import perf_counter
 from types import SimpleNamespace
 from typing import Any
 
+from annotated_types import MaxLen
+
 from app.llm_clients.usage import consume_usage
+from app.schemas.chat_schema import ChatRequest
+from app.schemas.discord_schema import DiscordTurnEnqueueRequest
 from app.services.agent_service import AGENT_GUIDE, AGENT_TOOLS, FINAL_RESERVE_SECONDS, TURN_BUDGET_SECONDS, AgentService
 from app.services.discord_history_service import _SAFE_LEXEME, DiscordHistoryHit
 from app.services.discord_speaker_context import DISCORD_SPEAKER_SYSTEM_INSTRUCTION, attributed_user_content
@@ -56,13 +60,26 @@ SYSTEM_PROMPT_PATH = BACKEND / "app" / "prompts" / "general_system.md"
 
 # Hashed in this order; README.md and retrieval_manifest.json describe the data
 # and never move the hash.
-DATA_FILES = ("dataset.json", "tasks.jsonl", "retrieval.jsonl")
+DATA_FILES = ("dataset.json", "tasks.jsonl", "retrieval.jsonl", "documents.jsonl")
 CATEGORIES = ("documents", "history", "status", "no_tool")
 SURFACES = ("web", "discord")
 # pending = a real-corpus question whose retrieval is not recorded yet
 # (scripts.agent_eval_record_retrieval); the runner refuses to replay it.
 RETRIEVAL_SOURCES = ("handwritten", "recorded", "pending")
 NO_SEED = "không seed"
+
+
+def _max_length(request: type, field: str) -> int:
+    return next(item.max_length for item in request.model_fields[field].metadata if isinstance(item, MaxLen))
+
+
+# The API refuses a longer message before the agent runs (422), so the eval does
+# too (ticket 20, v0.3). Read from the request schemas, so a changed limit moves
+# the eval with it.
+INPUT_MAX_CHARS = {
+    "web": _max_length(ChatRequest, "message"),
+    "discord": _max_length(DiscordTurnEnqueueRequest, "message"),
+}
 # Settings refuses to exist without a PostgreSQL URL; this run opens no
 # database, so a placeholder satisfies the validator and is never dialled.
 PLACEHOLDER_DATABASE_URL = "postgresql+psycopg://agent-eval@unused/none"
@@ -84,6 +101,9 @@ class Dataset:
     guild: dict[str, Any]
     status_snapshots: dict[str, dict[str, Any]]
     retrieval: dict[str, dict[str, Any]]
+    # Whole documents (v0.3, ticket 20 #1): what a read past the 400-character
+    # preview returns. Every recorded chunk is one of these, verbatim.
+    documents: dict[str, dict[str, Any]]
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -120,6 +140,21 @@ def load_dataset(directory: Path) -> Dataset:
             problems.append(f"{task['id']}: thiếu expect")
     problems += [f"retrieval cho bài không tồn tại: {task_id}" for task_id in retrieval if task_id not in ids]
     problems += [f"{task_id}: source {f.get('source')!r}" for task_id, f in retrieval.items() if f.get("source") not in RETRIEVAL_SOURCES]
+    documents = {document["document_id"]: document for document in _read_jsonl(directory / "documents.jsonl")}
+    for document_id, document in documents.items():
+        if [chunk["chunk_index"] for chunk in document["chunks"]] != list(range(len(document["chunks"]))):
+            problems.append(f"{document_id}: chunk_index phải liên tục từ 0")
+    # A readable chunk must be the document's own chunk, so reading it back
+    # shows the agent the same text the search did.
+    for task_id, fixture in retrieval.items():
+        for chunk in fixture["chunks"]:
+            if "document_id" not in chunk:
+                continue
+            document = documents.get(chunk["document_id"])
+            chunks = document["chunks"] if document else []
+            index = chunk.get("chunk_index")
+            if not (isinstance(index, int) and 0 <= index < len(chunks) and chunks[index]["content"] == chunk["content"]):
+                problems.append(f"{task_id}: đoạn {chunk['document_id']}#{index} không trùng documents.jsonl")
     if problems:
         raise ValueError(f"dataset {directory} hỏng: " + "; ".join(problems))
     return Dataset(
@@ -130,6 +165,7 @@ def load_dataset(directory: Path) -> Dataset:
         guild=meta["guild"],
         status_snapshots=snapshots,
         retrieval=retrieval,
+        documents=documents,
     )
 
 
@@ -336,6 +372,7 @@ def run_eval(
         **run_meta,
         "max_steps": max_steps,
         "tool_result_max_chars": tool_result_max_chars,
+        "input_max_chars": INPUT_MAX_CHARS,
         "turn_budget_seconds": turn_budget_seconds,
         "final_reserve_seconds": final_reserve_seconds,
         "injection_defense": defense.enabled,
@@ -379,10 +416,14 @@ def run_eval(
         steps: list[dict[str, object]] = []
         error: str | None = None
         started = perf_counter()
-        try:
-            answer, model, steps = agent.run(build_messages(task, system_prompt), tool_context=tool_context)
-        except Exception as exc:  # one broken task must not cost the others
-            error = f"{type(exc).__name__}: {exc}"
+        limit = INPUT_MAX_CHARS[task.get("surface", "web")]
+        if len(task["input"]) > limit:
+            error = f"INPUT_TOO_LONG: {len(task['input'])} > {limit} ký tự, API từ chối trước khi agent chạy"
+        else:
+            try:
+                answer, model, steps = agent.run(build_messages(task, system_prompt), tool_context=tool_context)
+            except Exception as exc:  # one broken task must not cost the others
+                error = f"{type(exc).__name__}: {exc}"
         latency_ms = int((perf_counter() - started) * 1000)
         rounds = recording.take()
         graded = grade(task["expect"], steps, answer, schemas, error)

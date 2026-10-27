@@ -55,3 +55,9 @@ judged by a rule registered in the ticket before running. Not shipped: 33/40 aga
 after the harness controls (turn budget, coded tool errors, content-free trace), one cold
 run each, judged by a rule registered in the ticket. 34/40 both; answers identical except
 on the three tasks whose tool error text changed. `decide.py` recomputes `analysis.json`.
+
+`agent-eval-v0.3-baseline-20261028/` is ticket 20's starting point: the shipped agent on
+`agent-eval-v0.3` (48 tasks, eight of them asking for more than the 400-character preview
+or a paste longer than the API accepts), two cold runs, identical. 35/48: the 40 old tasks
+repeat ticket 16's answers word for word, the six long-reading tasks all fail, the long
+paste is refused. `analyze.py` recomputes `analysis.json`.

@@ -115,24 +115,32 @@ def write_dataset(directory: Path, fixtures=FIXTURES, tasks=TASKS) -> Path:
     (directory / "dataset.json").write_text(json.dumps(meta), encoding="utf-8")
     (directory / "tasks.jsonl").write_text("".join(json.dumps(t, ensure_ascii=False) + "\n" for t in tasks), encoding="utf-8")
     (directory / "retrieval.jsonl").write_text("".join(json.dumps(f, ensure_ascii=False) + "\n" for f in fixtures), encoding="utf-8")
+    (directory / "documents.jsonl").write_text("", encoding="utf-8")
     return directory
 
 
-def source(content: str, chunk_id: str, score: float) -> dict:
+def source(content: str, chunk_id: str, score: float, chunk_index: int = 2) -> dict:
     # The /rag/search RagSource shape, trimmed to what a recorder sees.
     return {
-        "document_id": "doc-1", "filename": "backup_restore.md", "chunk_id": chunk_id, "chunk_index": 2, "index_version": 1,
+        "document_id": "doc-1", "filename": "backup_restore.md", "chunk_id": chunk_id, "chunk_index": chunk_index, "index_version": 1,
         "page": None, "heading_path": "Backup > Lịch", "score": score, "excerpt": content[:300], "content": content,
         "extraction_method": "markdown",
     }
 
 
-def fake_api(answers: dict[str, list[dict]], fail_on: str | None = None):
+def fake_api(answers: dict[str, list[dict]], fail_on: str | None = None, document: list[str] | None = None):
     seen: list[dict] = []
+    # doc-1 whole (GET /documents/doc-1/chunks): every served source at its own index, filler around them.
+    if document is None:
+        by_index = {s["chunk_index"]: s["content"] for sources in answers.values() for s in sources}
+        document = [by_index.get(i, f"đoạn {i}") for i in range(max(by_index, default=-1) + 2)]
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/models":
             return httpx.Response(200, json={"models": {"embedding": {"name": "qwen3-embedding:0.6b"}, "general": {"name": "qwen3.5:9b"}}, "registry": {}, "rag": {"reranker": True, "retrieval_mode": "hybrid", "contextual_retrieval": True}})
+        if request.url.path == "/documents/doc-1/chunks":
+            chunks = [{"chunk_index": i, "content": c, "page_start": None, "page_end": None} for i, c in enumerate(document)]
+            return httpx.Response(200, json={"document_id": "doc-1", "filename": "backup_restore.md", "total_chunks": len(chunks), "chunks": chunks})
         body = json.loads(request.content)
         seen.append(body)
         if body["message"] == fail_on:
@@ -146,7 +154,7 @@ def test_recording_fills_only_pending_fixtures_with_what_the_api_served(tmp_path
     dataset = write_dataset(tmp_path / "ds")
     client, seen = fake_api({
         "giờ chạy backup tự động": [source("Backup tự động chạy lúc 2 giờ sáng mỗi ngày.", "c1", 0.93)],
-        "số bản backup được giữ lại": [source("Lịch backup hằng tuần.", "c2", 0.51)],
+        "số bản backup được giữ lại": [source("Lịch backup hằng tuần.", "c2", 0.51, chunk_index=3)],
     })
 
     manifest = record(dataset, client, max_context_chunks=5, commit="abc", progress=lambda line: None)
@@ -168,12 +176,55 @@ def test_recording_fills_only_pending_fixtures_with_what_the_api_served(tmp_path
     # reader having to notice; the manifest keeps what came back.
     assert fixtures["doc-r2"] == FIXTURES[1]
     assert manifest["tasks"]["doc-r2"]["status"] == "kept pending" and manifest["tasks"]["doc-r2"]["answer_in_chunks"] is False
-    assert manifest["tasks"]["doc-r2"]["retrieved"] == [{"filename": "backup_restore.md", "chunk_index": 2, "score": 0.51}]
+    assert manifest["tasks"]["doc-r2"]["retrieved"] == [{"filename": "backup_restore.md", "chunk_index": 3, "score": 0.51}]
     assert json.loads((dataset / "retrieval_manifest.json").read_text(encoding="utf-8")) == manifest
-    # The recorded dataset loads and hashes like any other.
+    # The recorded dataset loads and hashes like any other, with the document
+    # every returned chunk came from fetched whole (v0.3).
     dataset_after = load_dataset(dataset)
     assert dataset_after.retrieval["doc-r1"]["source"] == "recorded"
     assert dataset_after.retrieval["doc-r2"]["source"] == "pending"
+    assert dataset_after.documents["doc-1"]["chunks"][2]["content"] == "Backup tự động chạy lúc 2 giờ sáng mỗi ngày."
+
+
+def test_a_long_read_task_is_classed_by_where_its_answer_lies(tmp_path):
+    from scripts.agent_eval_record_retrieval import reading_needed
+
+    task = {"long_read": True, "expect": {"must_mention": [r"\b7 bản"]}}
+    past_preview = {"document_id": "doc-1", "chunk_index": 2, "content": "x" * 450 + " Giữ 7 bản gần nhất."}
+    in_preview = {"document_id": "doc-1", "chunk_index": 2, "content": "Giữ 7 bản gần nhất. " + "x" * 450}
+    silent = {"document_id": "doc-1", "chunk_index": 2, "content": "x" * 500}
+    document = {"doc-1": {"chunks": [{"chunk_index": i, "content": c} for i, c in enumerate(["a", "b", "x" * 500, "Giữ 7 bản gần nhất.", "e"])]}}
+    assert reading_needed(task, [past_preview], document) == "L-a"
+    assert reading_needed(task, [silent], document) == "L-b", "only in the chunk after the one returned"
+    assert reading_needed(task, [in_preview], document) is None, "visible without reading: not a long-read task"
+    assert reading_needed(task, [{**silent, "chunk_index": 0}], document) is None, "two chunks away: too far to count"
+
+    tasks = [{**TASKS[1], "long_read": True}]
+    dataset = write_dataset(tmp_path / "ds", [FIXTURES[1]], tasks)
+    client, _ = fake_api({"số bản backup được giữ lại": [source("x" * 450 + " Giữ 7 bản gần nhất.", "c2", 0.8)]})
+    manifest = record(dataset, client, progress=lambda line: None)
+    assert manifest["tasks"]["doc-r2"]["status"] == "recorded" and manifest["tasks"]["doc-r2"]["reading"] == "L-a"
+
+
+def test_a_document_that_changed_since_it_was_recorded_writes_nothing(tmp_path):
+    dataset = write_dataset(tmp_path / "ds")
+    stale = {"document_id": "doc-1", "filename": "backup_restore.md", "chunks": [{"chunk_index": 0, "page_start": None, "page_end": None, "content": "cũ"}]}
+    (dataset / "documents.jsonl").write_text(json.dumps(stale, ensure_ascii=False) + "\n", encoding="utf-8")
+    before = (dataset / "retrieval.jsonl").read_bytes()
+    client, _ = fake_api({"giờ chạy backup tự động": [source("Backup lúc 2 giờ.", "c1", 0.9)], "số bản backup được giữ lại": []})
+
+    with pytest.raises(ValueError, match="doc-1 trên API khác documents.jsonl"):
+        record(dataset, client, progress=lambda line: None)
+    assert (dataset / "retrieval.jsonl").read_bytes() == before
+
+
+def test_a_second_recording_keeps_the_first_manifest(tmp_path):
+    dataset = write_dataset(tmp_path / "ds")
+    client, _ = fake_api({"giờ chạy backup tự động": [source("Backup lúc 2 giờ.", "c1", 0.9)], "số bản backup được giữ lại": [source("Giữ 7 bản.", "c2", 0.8, chunk_index=3)]})
+    record(dataset, client, task_ids=["doc-r1"], commit="first", progress=lambda line: None)
+    manifest = record(dataset, client, task_ids=["doc-r2"], commit="second", progress=lambda line: None)
+    assert manifest["commit"] == "second" and list(manifest["tasks"]) == ["doc-r2"]
+    assert manifest["earlier"][0]["commit"] == "first" and list(manifest["earlier"][0]["tasks"]) == ["doc-r1"]
 
 
 def test_a_visible_answer_from_another_document_stays_pending(tmp_path):
@@ -190,7 +241,7 @@ def test_a_visible_answer_from_another_document_stays_pending(tmp_path):
     dataset = write_dataset(tmp_path / "ds", tasks=tasks)
     client, _ = fake_api({
         "giờ chạy backup tự động": [source("Backup chạy lúc 2 giờ sáng.", "c1", 0.9)],
-        "số bản backup được giữ lại": [source("Giữ 7 bản gần nhất.", "c2", 0.8)],
+        "số bản backup được giữ lại": [source("Giữ 7 bản gần nhất.", "c2", 0.8, chunk_index=3)],
     })
 
     manifest = record(dataset, client, progress=lambda line: None)

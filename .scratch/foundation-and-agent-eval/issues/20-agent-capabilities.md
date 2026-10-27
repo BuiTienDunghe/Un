@@ -64,3 +64,29 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
   (`agent.read_result_max_chars` 6 000), tổ chức code (b) registry trong file. Phần Discord (`read_messages_around`,
   `message_id` trong `search_history`, R, D) **tạm giữ**: chủ dự án nêu ý tách bot Discord khỏi phần còn lại,
   đang hỏi lại phạm vi. Nhân viên 1 code (1) registry chỉ dời code → fable duyệt → (2) handle → (3) read_document.
+- 28/10 00:10 (Nhân viên 3) — **Đăng ký trước baseline v0.3**, viết trước khi chạy.
+  - Bộ bài `agent-eval-v0.3` (48 bài: 40 cũ đã sửa + 8 bài đọc dài), bộ chấm `agent-eval-grader-v0.3`. Code: main
+    `f2af55e` cộng các commit eval của nhánh `wip/20-eval-v03`, không đổi `backend/app`. Truy xuất của 6 bài
+    tài liệu mới ghi lúc 00:00 qua API lab (`retrieval_manifest.json`).
+  - Quy trình: worktree `20-eval-v03`, cây sạch; trước MỖI lần đo gỡ `qwen3.5:9b` (không đụng model nhúng);
+    t0, seed 42, `--probe`. Hai lần lạnh liên tiếp, `v0.3-base-r1-cold` và `v0.3-base-r2-cold`, để kiểm lặp lại
+    trên bộ bài mới.
+  - Đây là mốc, không có luật ship. Ghi: tổng; từng bài trong 8 bài mới; `by_check`; số lượt gọi công cụ ở doc-38.
+  - Dự đoán (sai thì báo, không sửa bài sau khi thấy kết quả):
+    - doc-33..37 và hist-11 trượt cả 6, vì đáp án nằm ngoài phần agent đọc được. Bài nào đạt thì đọc tay: nếu
+      model đoán trúng thì ghi là lỗi của bài, không lặng lẽ bỏ bài.
+    - doc-39 trượt với `INPUT_TOO_LONG`, 0 lượt gọi model.
+    - doc-38 (đối chứng) đạt.
+    - r1 trùng r2 từng chữ.
+  - Chưa có: bài L-b (đáp án ở đoạn kề), vì với mọi câu hỏi tự nhiên, 5 đoạn trả về trên tài liệu 10 đoạn đã
+    chứa đoạn có đáp án. Bài L-c (đọc theo số trang, P2) cũng chưa có, vì corpus lab chỉ có tệp txt/md, không
+    có trang. Cả hai cần thêm tài liệu dài hơn hoặc có trang vào corpus lab, và một phiên bản bộ bài sau.
+- 28/10 00:20 (Nhân viên 3) — **Kết quả baseline v0.3**, đo 00:04–00:11. Báo cáo:
+  `data/evaluation/results/kept/agent-eval-v0.3-baseline-20261028/REPORT.md`.
+  - Lạnh: r1 = r2 = 35/48, trùng từng chữ 48/48. Đúng cả bốn dự đoán: 6 bài đọc dài trượt; doc-39 bị từ chối
+    `INPUT_TOO_LONG`; doc-38 (đối chứng) đạt với 1 lượt tra; r1 = r2.
+  - 40 bài cũ: 34/40, trùng từng chữ với lần B của ticket 16 (22:57). Bộ chấm v0.3 không lật bài cũ nào.
+  - Bài đọc dài: phần lớn nói thật là không thấy; doc-34 nhận ra bảng bị cắt; ba bài tra lại 2–3 lần.
+    hist-11 bịa, ghép giờ họp và phòng B203 thành phương án dã ngoại.
+  - Model nhúng 0.6B còn nạp lúc bắt đầu cả hai lần (giống lần 22:57); điều kiện "không có model nhúng" chưa đo.
+  - Chờ v0.4: bài L-b, bài L-c, hist-11 cấm dữ kiện bịa, hist-03 cho tra tài liệu trước.
