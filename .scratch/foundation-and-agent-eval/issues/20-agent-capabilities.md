@@ -122,6 +122,6 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
   Nhân viên 1 duyệt: S1 (đoạn dán ở lại trong tin nhắn, chia đoạn lúc đọc, id `paste_`+sha256[:12], không migration,
   không lập chỉ mục), trần 100 000 ký tự ở chế độ công cụ (chat thường giữ 10 000, 422 INPUT_TOO_LONG), phiếu đầu-cuối
   ~600+600 ký tự. Chi tiết kỹ thuật do opus chốt; chủ dự án đổi được.
-- 28/10 01:45 (opus 5.5): #4 thiết kế của Nhân viên 1 duyệt phần kỹ thuật: móc `on_step` không chứa nội dung, nhãn do
+- 28/10 01:51 (opus 5.5): #4 thiết kế của Nhân viên 1 duyệt phần kỹ thuật: móc `on_step` không chứa nội dung, nhãn do
   công cụ mang, web W1 (luồng phụ + SSE `progress`; phải sao ContextVar hạn giờ sang luồng), kho tiến độ P-a (dict
   trong tiến trình API, xoá khi xong + trần giờ sống), endpoint tiến độ cho bot. Cách bot hiển thị (D1/D2/D3) chờ chủ dự án.
