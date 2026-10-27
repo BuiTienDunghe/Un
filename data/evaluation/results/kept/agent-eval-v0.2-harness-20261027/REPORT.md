@@ -80,8 +80,19 @@ Bài 1a làm mất (lạnh), giống nhau ở B và D:
 - hist-05: không lọc theo `author_id`.
 - hist-03 (chỉ B): chuyển sang tìm tài liệu.
 
-D đếm tay (hist-03 và hist-07 trả lời đúng, chỉ trượt mục "cấm `search_documents`") là 32/40, vẫn thấp
-hơn A.
+**Bằng chứng rõ nhất cho cái giá của 1a** là trích nguồn, rõ hơn cả tổng điểm (fable tính, mình kiểm
+lại; thêm ngày 27/10 sau khi duyệt). Tính trên mọi lượt chạy, gồm lạnh, nóng và 0.4:
+
+| | Lượt doc-26/27/28 mất trích dẫn |
+|---|---|
+| Có 1a (B, D) | **32/36** (B 15/18, D 17/18) |
+| Không có 1a (A, C) | **5/45** (A 1/27, C 4/18) |
+
+Chênh tổng điểm lạnh (−4) chỉ ngang mức nhiễu khoảng 5 bài khi đổi prompt; chênh trích dẫn thì vượt xa
+mức đó và lặp lại ở mọi trạng thái.
+
+D đếm tay (hist-03 và hist-07 trả lời đúng người và đúng nội dung, chỉ trượt mục "cấm
+`search_documents`") là 32/40, vẫn thấp hơn A.
 
 **Ba lần ở nhiệt độ 0.4** (như ship; có lấy mẫu thật, dao động khoảng ±2):
 
@@ -95,8 +106,12 @@ hơn A.
 Hai cách đo nói cùng một điều:
 - 1a tăng tỉ lệ chịu tra ở bài mục tiêu, nhưng tổng điểm giảm.
 - 2b không có tác dụng gì một mình.
-- 1a + 2b làm câu hỏi Discord đi đúng đường (8/8 lượt ở D trả lời đúng người, đúng thời gian), nhưng
-  vẫn chưa bù được phần 1a làm mất.
+- 1a + 2b làm câu hỏi Discord đi đúng đường, nhưng vẫn chưa bù được phần 1a làm mất. Trong 10 lượt
+  hist-03/07 của D (t0 nóng, lạnh, 3 lần 0.4; không tính lần khởi động), cả 10 đúng người và đúng
+  nội dung. Chỉ 8/10 đúng thời điểm đăng tin: 2 lượt ở 0.4 ghi ngày đăng của Trang là 24/10, là ngày
+  hạn chót, trong khi tin được đăng ngày 16/10. Bộ chấm không chấm thời điểm đăng, dù lời dặn đòi "nêu
+  lúc nào". A và C lạnh cũng đạt hist-03 với một ngày đăng sai. Ghi lại cho v0.3. Cột "chấm tay" ở các
+  bảng trên tính theo người và nội dung.
 
 Các lần đo nóng ở t0 của từng điều kiện (A 31, B 31, C 32, D 31) **không** dùng để so: mỗi lần đo ở
 một trạng thái máy chủ khác nhau, và trên prompt giống hệt đã thấy 7 bài lật. Bản đầu của báo cáo này
@@ -109,7 +124,7 @@ lượt gọi công cụ. Ghi chú: một câu trả lời ở 0.4 (D, hist-07) 
 
 | Loại | Thay đổi | Bằng chứng | Tác dụng lên điểm |
 |---|---|---|---|
-| KS | 3a: cắt theo từng mục, trả object khi tràn, mỗi tin tối đa 800 ký tự, mô tả công cụ nói rõ trần | 24 lần chạy v0.2: 748 kết quả công cụ, **0** lần cắt giữa JSON (v0.1: 6–7 lần mỗi lượt chạy), 85 lần bỏ bớt theo mục có ghi chú. Kiểm tất định bằng test | Chưa đo (theo quyết định) |
+| KS | 3a: cắt theo từng mục, trả object khi tràn, mỗi tin tối đa 800 ký tự, mô tả công cụ nói rõ trần | **0** lần cắt giữa JSON trong 748 kết quả công cụ (v0.1: 6–7 lần mỗi lượt chạy), 85 lần bỏ bớt theo mục có ghi chú. Số 748 đếm trên events của cả 24 lần chạy ở máy chạy; `kept/` chỉ giữ events của 8 lần, gồm 253 kết quả, và cũng 0. Kiểm tất định bằng test | Chưa đo (theo quyết định) |
 | CL | 1a: lời dặn "tra trước, đừng hỏi xin phép" | Lạnh: 34 → 30; mục tiêu 2/5 → 4/5 | **Âm** |
 | CL | 2b: gợi ý khi tìm tài liệu rỗng trên Discord | Lạnh: C = A | Không đổi một mình; chỉ có tác dụng cùng 1a |
 
@@ -131,9 +146,17 @@ tracing. Chưa có lỗi đo được nào đòi tới chúng:
      liệt kê dài, và giữ câu trích nguồn nổi bật. Đo lạnh A / 1a-v2 / 1a-v2 + 2b, khoảng 8 phút GPU.
      Ưu: không ship hồi quy đã đo được. Nhược: chậm một vòng.
    - Ý kiến: (c). Đây chỉ là ý kiến.
-2. **Tiêu chí của hist-03 và hist-07** (v0.3): giữ "cấm `search_documents`" (câu hỏi về chat phải đi
-   thẳng vào lịch sử), hay cho phép "tài liệu trước rồi lịch sử" khi câu trả lời đúng (khớp với thiết
-   kế của 2b)? Đổi thì là đổi sau khi đã xem câu trả lời, phải ghi lại và chạy lại.
+2. **Tiêu chí của hist-03 và hist-07** (v0.3). fable chỉ ra rằng mục tiêu của 2b **bất khả thi ngay từ
+   lúc đăng ký**: gợi ý chỉ hiện sau khi `search_documents` trả rỗng, nên bài nào 2b cứu được thì cũng
+   đã phạm "cấm `search_documents`". Đây là một mâu thuẫn biết trước được, không phải chấm lại sau khi
+   xem câu trả lời. Hai cách:
+   - (a) v0.3 tách "đúng câu trả lời" và "đúng đường đi" thành hai cột; hist-03/07 bỏ
+     `search_documents` khỏi danh sách cấm, vẫn bắt buộc `search_history`. Ưu: khớp với thiết kế của
+     2b. Nhược: chấp nhận thêm một lượt gọi công cụ.
+   - (b) Giữ tiêu chí, kết luận rằng 2b sai cơ chế, và sửa định tuyến ngay trong lời dặn. Ưu: rẻ khi
+     chạy. Nhược: 2b vô dụng theo định nghĩa.
+   
+   Chọn cách nào cũng thành v0.3 và phải chạy lại.
 3. **v0.3**: thêm "không trả về thông tin/kết quả" vào `NOT_FOUND_PATTERN` (doc-19), và chấm tay
    doc-19 dưới 1a.
 

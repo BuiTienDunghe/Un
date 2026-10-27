@@ -111,3 +111,10 @@ Tiêu chí nghiệm thu theo `spec.md` Mốc 4.
   **Đính chính quy tắc đo:** "bỏ một lần khởi động" là SAI — lần nóng không lặp lại được (cùng mọi
   hash prompt mà chỉ trùng 3/33 câu trả lời), lần lạnh thì lặp lại được (r1 = r6). Quy tắc đúng: gỡ model
   chính trước MỖI lần đo; seed không có tác dụng ở t0. Áp dụng cho bước 5 của ticket 16.
+- 27/10 21:40 (Nhân viên 3) — Sửa REPORT v0.2 theo bản duyệt của fable (nhánh `wip/10-report-fix`):
+  - Thêm bằng chứng trích nguồn: doc-26/27/28 mất trích dẫn ở 32/36 lượt có 1a, so với 5/45 lượt không
+    có 1a.
+  - "8/8 đúng người, đúng thời gian" → "10/10 đúng người và nội dung, 8/10 đúng thời điểm đăng". Bộ chấm
+    không chấm thời điểm đăng, ghi cho v0.3.
+  - "0/748" ghi rõ là đếm ở máy chạy, còn `kept/` giữ 253 kết quả, cũng 0.
+  - Câu hỏi 2 thêm phân tích "mục tiêu 2b bất khả thi từ lúc đăng ký" và hai cách (a)/(b).
