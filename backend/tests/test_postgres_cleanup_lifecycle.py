@@ -209,8 +209,11 @@ def test_postgres_log_and_ocr_retention_execute_only_due_rows(lifecycle):
         ))
     (documents.parent / "ocr_runs" / old_run).mkdir(parents=True)
     cleanup = PostgresCleanupService(factory, qdrant, documents, request_log_retention_days=7, ocr_runs_path=documents.parent / "ocr_runs", ocr_runs_ttl_days=14)
+    # The counts include whatever expired rows earlier, interrupted runs left in
+    # the shared test database (27/10: `assert 3 == 1`); which rows went is
+    # checked below, row by row, on the ones this test created.
     assert cleanup.cleanup_expired_logs() >= 1
-    assert cleanup.cleanup_expired_ocr_runs() == 1
+    assert cleanup.cleanup_expired_ocr_runs() >= 1
     with factory() as session:
         assert session.scalar(select(RequestLog).where(RequestLog.endpoint == "/phase7c-old")) is None
         assert session.scalar(select(RequestLog).where(RequestLog.endpoint == "/phase7c-new")) is not None
