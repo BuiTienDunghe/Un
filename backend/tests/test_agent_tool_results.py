@@ -11,7 +11,7 @@ import json
 from datetime import UTC, datetime, timedelta
 
 from app.services.agent_service import AgentService
-from app.services.discord_history_service import DiscordHistoryHit
+from app.services.discord_history_service import DiscordHistoryHit, history_hit_payload
 
 
 def hit(index: int) -> DiscordHistoryHit:
@@ -49,10 +49,13 @@ def test_latest_messages_keep_the_newest_and_say_how_many_older_ones_went():
 
     payload = json.loads(output)  # whole JSON, never cut mid-item
     assert len(output) <= 2400
-    note, *messages = payload
-    assert note["omitted"] == 18 - len(messages) and "cũ nhất" in note["note"]
+    # An overflow is an object, so the note can never be counted as a message.
+    assert set(payload) == {"omitted", "note", "items"}
+    messages = payload["items"]
+    assert payload["omitted"] == 18 - len(messages) and "cũ nhất" in payload["note"]
+    assert all("message" in item for item in messages)
     assert messages[-1]["message"].startswith("Tin số 18:"), "the newest message survives"
-    assert messages[0]["message"].startswith(f"Tin số {note['omitted'] + 1}:"), "only the oldest went, in order"
+    assert messages[0]["message"].startswith(f"Tin số {payload['omitted'] + 1}:"), "only the oldest went, in order"
 
 
 def test_a_ranked_list_gives_up_its_lowest_ranked_items():
@@ -60,21 +63,23 @@ def test_a_ranked_list_gives_up_its_lowest_ranked_items():
     # their newlines and quotes double in JSON).
     output = agent()._execute_tool("search_documents", {"query": "q", "top_k": 6}, None)
 
-    *chunks, note = json.loads(output)
+    payload = json.loads(output)
+    chunks = payload["items"]
     assert len(output) <= 2400
     assert [c["filename"] for c in chunks] == [f"tai_lieu_{i}.pdf" for i in range(1, len(chunks) + 1)], "top ranks kept"
-    assert note["omitted"] == 6 - len(chunks) >= 1 and "xếp cuối" in note["note"]
+    assert payload["omitted"] == 6 - len(chunks) >= 1 and "xếp cuối" in payload["note"]
 
     searched = json.loads(agent(History(18))._execute_tool("search_history", {"query": "tin", "limit": 10}, {"guild_id": "g"}))
-    assert searched[0]["message"].startswith("Tin số 18:") and "omitted" in searched[-1], "a keyword search is ranked: its tail goes"
+    assert searched["items"][0]["message"].startswith("Tin số 18:") and searched["omitted"] >= 1, "a keyword search is ranked: its tail goes"
 
 
 def test_a_result_that_fits_is_byte_identical_to_before():
+    hits = History(3).hits
     small = agent(History(3))._execute_tool("search_history", {"limit": 3}, {"guild_id": "g"})
-    assert "omitted" not in small and len(json.loads(small)) == 3
+    assert small == json.dumps([history_hit_payload(h) for h in hits], ensure_ascii=False, default=str)
 
     four = agent()._execute_tool("search_documents", {"query": "q", "top_k": 4}, None)
-    assert "omitted" not in four and len(json.loads(four)) == 4
+    assert isinstance(json.loads(four), list) and len(json.loads(four)) == 4 and "omitted" not in four
 
 
 def test_what_cannot_be_split_into_items_keeps_the_character_cut():

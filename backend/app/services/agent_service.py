@@ -283,7 +283,11 @@ class AgentService:
         the newest messages (Agent Eval baseline v0.1, hist-05: 8 of 18 gone).
         `drop="last"` gives up the end of a ranked list; `drop="first"` the
         front of a chronological one. Anything else, or a list whose single
-        item is already too long, falls back to the character cut."""
+        item is already too long, falls back to the character cut.
+
+        Only an overflow changes the shape, to {"omitted", "note", "items"}:
+        a note placed INSIDE the list could be counted as one more message
+        when the model is asked to summarise N of them (review 27/10)."""
         text = json.dumps(payload, ensure_ascii=False, default=str)
         limit = self.tool_result_max_chars
         if len(text) <= limit or not isinstance(payload, list):
@@ -292,11 +296,15 @@ class AgentService:
         while len(items) > 1:
             items = items[1:] if drop == "first" else items[:-1]
             omitted = len(payload) - len(items)
-            note = {
-                "omitted": omitted,
-                "note": f"đã bỏ {omitted} mục {'cũ nhất' if drop == 'first' else 'xếp cuối'} để vừa giới hạn kết quả công cụ",
-            }
-            fitted = json.dumps([note, *items] if drop == "first" else [*items, note], ensure_ascii=False, default=str)
+            fitted = json.dumps(
+                {
+                    "omitted": omitted,
+                    "note": f"đã bỏ {omitted} mục {'cũ nhất' if drop == 'first' else 'xếp cuối'} để vừa giới hạn kết quả công cụ",
+                    "items": items,
+                },
+                ensure_ascii=False,
+                default=str,
+            )
             if len(fitted) <= limit:
                 return fitted
         return _clip(text, limit)
