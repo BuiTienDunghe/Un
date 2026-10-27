@@ -17,7 +17,7 @@ import unicodedata
 from collections import defaultdict
 from typing import Any
 
-GRADER_VERSION = "agent-eval-grader-v0"
+GRADER_VERSION = "agent-eval-grader-v0.2"
 
 # "I can't / won't" in the phrasings qwen3.5 uses in Vietnamese. A task with
 # must_refuse may replace it with its own `refusal_pattern`.
@@ -43,6 +43,9 @@ NO_ACCESS_PATTERN = (
     r"không (thể|đọc|xem|truy cập|dùng được|có quyền|hỗ trợ|lấy được|có dữ liệu|xem được)"
     r"|chỉ (dùng|xem|đọc|hoạt động|truy cập|sử dụng|có thể|khả dụng|hỗ trợ|làm việc)( được)?"
     r"|chưa (thể|được)"
+    # v0.2: "công cụ … yêu cầu phải đang trong ngữ cảnh của một server Discord" (baseline
+    # v0.1, hist-09 at 0.4). Asking the user WHICH server is not this and must not match.
+    r"|(yêu cầu|cần) (phải )?(đang )?(ở|trong) (ngữ cảnh|kênh|server|máy chủ)"
 )
 
 # Ranges the tool descriptions state in prose (agent_service.AGENT_TOOLS); the

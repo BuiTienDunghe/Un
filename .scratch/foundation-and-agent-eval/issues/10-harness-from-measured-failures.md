@@ -23,3 +23,7 @@ Tiêu chí nghiệm thu theo `spec.md` Mốc 4.
   1a (lời dặn tra tài liệu, chất lượng) rồi 2b (gợi ý khi `search_documents` rỗng ở lượt có guild,
   kiểm soát), đo riêng từng cái, mỗi phía một lần khởi động bỏ đi. Không làm: 1c, 2c, lỗi 4; registry
   và ngân sách token/thời gian chưa có lỗi đo được nào đòi tới.
+- 27/10 (Nhân viên 3) — Bước 0, bộ bài v0.2: doc-18, hist-05 ("tuần này" → bỏ), mẫu `no_access`;
+  `GRADER_VERSION` lên `agent-eval-grader-v0.2`; dataset `agent-eval-v0.2`, sha256 `99b2e915…`.
+  Từ v0.2, bộ bài trong repo là nguồn sự thật: script sinh dữ liệu ở scratchpad không còn dùng được,
+  vì chạy lại sẽ xoá các đoạn đã ghi thật.

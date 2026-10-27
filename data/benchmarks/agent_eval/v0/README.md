@@ -171,3 +171,14 @@ Artifact `smoke-20261027-t0-seed42` có dataset trước tất cả các thay đ
 |---|---|---|---|
 | 27/10 | doc-22, 24, 27, 28, 29, 31, 32 | Nhận thêm cách viết đúng (biến môi trường, không có lịch tự động, thứ 7 đầu tháng, 2h/120 phút, 4h, bôi đen/giấu/mask, SVG thuần, 2500 ms). doc-31 thêm `must_not_mention` tên thư viện | fable duyệt v0.1, **trước** khi ghi truy xuất và trước mọi lần chạy |
 | 27/10 | doc-01, 02, 03, 05, 06, 07, 08, 09, 13, 14, 15, 16 bị bỏ; thêm doc-21 đến doc-32 | 12 bài tra cứu viết tay được thay bằng 12 bài mới trên tài liệu thật của corpus lab, truy xuất ghi một lần (`pending` rồi `recorded`). id cũ không bao giờ dùng lại | Quyết định C cho Q4(b): tài liệu giả không có trong corpus lab, nên ghi truy xuất thật cho câu hỏi về chúng sẽ làm mất đáp án |
+
+Baseline v0.1: `data/evaluation/results/kept/agent-eval-v0.1-baseline-20261027/`.
+
+**agent-eval-v0.2** (ticket 10). Cả ba thay đổi đến từ chấm tay baseline v0.1, tức là **sau** khi đã
+xem câu trả lời. Vì vậy theo quy tắc ở trên, v0.2 phải đo lại từ đầu, không chấm lại câu trả lời cũ:
+
+| Ngày | Bài | Thay đổi | Vì sao |
+|---|---|---|---|
+| 27/10 | doc-18 | Nhận thêm cách liệt kê ba ngày (`(hai\|2)…(tư\|4)…(sáu\|6)`) | Chấm tay: "thứ Hai, Tư và Sáu" là tóm tắt đúng nhưng bị trượt |
+| 27/10 | hist-05 | Bỏ "tuần này" khỏi câu hỏi; giữ id vì hành vi được kiểm không đổi (lọc theo `author_id`) | Agent không được biết hôm nay là ngày nào, nên "tuần này" không trả lời được |
+| 27/10 | `NO_ACCESS_PATTERN` (hist-08..10), `GRADER_VERSION` → v0.2 | Nhận "yêu cầu phải đang trong ngữ cảnh/kênh/server"; câu hỏi lại "server nào?" vẫn trượt | Chấm tay: hist-09 ở 0.4 nói đúng ý nhưng mẫu không nhận |

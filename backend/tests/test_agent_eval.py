@@ -292,6 +292,9 @@ MENTION_KEYS = ("must_mention", "must_not_mention", "must_say_not_found", "must_
     ("stat-03", "Sao lưu không ổn: bản gần nhất đã hơn 2 ngày.", True),
     ("stat-05", "Mình không xem được CPU, trạng thái hệ thống không có số liệu này.", True),
     ("hist-08", "Công cụ đọc lịch sử chỉ khả dụng trong kênh Discord, nên mình không lấy được tin hôm qua.", True),
+    # v0.2: the summary baseline v0.1 failed although a hand grader passed it.
+    ("doc-18", "Từ 01/11/2026 nhân viên làm tại văn phòng thứ Hai, Tư và Sáu, hai ngày còn lại làm từ xa nếu đã đăng ký.", True),
+    ("doc-18", "Từ 01/11/2026 nhân viên làm tại văn phòng.", False),
     # ...and wrong ones they must still fail.
     ("doc-19", "Ngân sách quảng cáo năm 2027 là 1,1 tỉ đồng.", False),
     ("stat-05", "CPU đang dùng 35%.", False),
@@ -420,6 +423,8 @@ def test_not_found_accepts_the_phrasings_review_listed(answer):
     "Tôi không thể xem lịch sử server Discord từ đây.",
     "Chat web không hỗ trợ đọc tin nhắn Discord.",
     "Mình không lấy được tin nhắn của server.",
+    # v0.2: the phrasing baseline v0.1 missed (hist-09 at temperature 0.4).
+    "Công cụ `search_history` yêu cầu phải đang trong ngữ cảnh của một server Discord cụ thể.",
 ])
 def test_no_access_accepts_the_phrasings_review_listed(answer):
     assert grade({"must_say_no_access": True}, steps_for(), answer, SCHEMAS)["passed"] is True
@@ -429,6 +434,9 @@ def test_not_found_and_no_access_fail_a_confident_answer():
     answer = "Hôm qua Lan và Minh bàn về lịch họp và deadline."
     assert grade({"must_say_not_found": True}, steps_for(), answer, SCHEMAS)["passed"] is False
     assert grade({"must_say_no_access": True}, steps_for(), answer, SCHEMAS)["passed"] is False
+    # Asking which server (hist-10 at 0.4) does not say the tool cannot work here.
+    which_server = "Có vẻ như tôi cần xác định rõ bạn đang hỏi về server nào. Bạn cho mình tên server nhé?"
+    assert grade({"must_say_no_access": True}, steps_for(), which_server, SCHEMAS)["passed"] is False
     # fable's review of 023c92c: a bare "không có" let this one through.
     invented = "Quy trình không có gì phức tạp: nộp đơn cho IT là xong."
     assert grade({"must_say_not_found": True}, steps_for(), invented, SCHEMAS)["passed"] is False
