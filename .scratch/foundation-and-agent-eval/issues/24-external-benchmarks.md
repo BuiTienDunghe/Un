@@ -1,6 +1,6 @@
 # 24 — Đo harness bằng benchmark uy tín có điểm công bố
 
-Status: đang làm — BFCL V4 phần offline (chủ dự án duyệt tải repo + qwen3:8b, 28/10 00:50); cài phụ thuộc chờ duyệt
+Status: đang làm — BFCL V4 phần offline, **cách A** (28/10 01:10): không tái lập Qwen3-8B; dựng venv + bộ chạy bài BFCL qua harness Ún; chỉ so trước/sau trên cùng thước
 Type: research
 Blocked by: —
 
@@ -31,3 +31,8 @@ trung thực), có leaderboard/điểm tham chiếu cho model 7–14B mở, ch�
   GPU đang nhường cho dự án decision model tới 02:55; mọi lần chạy BFCL sau đó hoặc sáng mai.
 - 28/10 01:00: `ollama pull qwen3:8b` xong — digest `500a1f067a9f`, 5,2 GB (bản mặc định của Ollama, lượng tử Q4);
   chưa nạp lên GPU (GPU đang nhường).
+- 28/10 01:10 (chủ dự án, sau khi hỏi "nếu đã có thông số qwen3 8b rồi thì cần gì test lại nữa"): "Chọn A: bỏ tái
+  lập Qwen3-8B. Dựng môi trường BFCL và bộ chạy bài BFCL qua harness của Ún, chỉ so trước/sau trên cùng thước."
+  Hệ quả: không tải tokenizer Qwen3-8B; `qwen3:8b` (5,2 GB) còn trong Ollama, xoá khi chủ dự án muốn. Số BFCL của Ún
+  **không** đặt cạnh bảng xếp hạng; chỉ dùng để so hai phiên bản harness trên cùng model, cùng cấu hình. Bộ chạy có
+  sẵn của BFCL gửi bài thẳng cho model (đo model) → phải viết bộ chạy riêng cho bài đi qua harness Ún (đo harness).
