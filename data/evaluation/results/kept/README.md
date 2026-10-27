@@ -50,3 +50,8 @@ sentence (1a-v2), alone and with 2b, against the baseline re-run, one cold run e
 judged by a rule registered in the ticket before running. Not shipped: 33/40 against
 34. The re-run baseline repeats the 19:43 cold run answer for answer, three hours later.
 `decide.py` recomputes `analysis.json` from the runs.
+
+`agent-eval-v0.2-harness-controls-20261027/` is ticket 16's step 5: the agent before and
+after the harness controls (turn budget, coded tool errors, content-free trace), one cold
+run each, judged by a rule registered in the ticket. 34/40 both; answers identical except
+on the three tasks whose tool error text changed. `decide.py` recomputes `analysis.json`.

@@ -349,3 +349,15 @@ qua ngày không. Mục tiêu là hist-08..10.
     `consume_usage()` ngay sau lời gọi bên trong, tức trước khi `AgentService` đọc, nên trong eval mọi bước có
     token rỗng. Đây là tạo tác của runner, không phải của 16. Token mỗi vòng đọc từ sự kiện `model_round`;
     cột token của bảng rút gọn được bảo đảm bởi test ở `957962c`.
+- 27/10 23:15 (Nhân viên 3) — **Kết quả bước 5**: đo 22:57–23:03, có 09 chạy song song (stack heldout khởi
+  động lại 22:57). Báo cáo: `data/evaluation/results/kept/agent-eval-v0.2-harness-controls-20261027/REPORT.md`.
+  - Lạnh: A (`49c696f`) 34/40, B (`2306d07`) 34/40; hist-08..10 đạt cả ở A lẫn B → **không suy giảm** theo luật.
+  - Dự đoán đúng cả ba: bốn mã băm prompt bằng nhau; 27/27 bài trước hist-08 trùng từng chữ; A trùng A lạnh
+    22:31 40/40. Câu trả lời chỉ khác ở đúng hist-08..10, không lan sang 10 bài sau.
+  - Đọc tay: hỏi lại "server nào" ở A 2/3 (hist-09, hist-10), ở B 0/3. Bộ chấm cho cả hai đạt, vì không bắt
+    việc hỏi lại; ghi cho v0.3. hist-08 của B lệch nhẹ: gợi ý "cấp quyền truy cập server".
+  - Ngân sách 90 s: 0 lần chạm (40/40 bước final là `final`); lượt chậm nhất 9,4 s (bài đầu, gồm nạp model).
+  - Bảng rút gọn, kiểm không qua DB trên 102 bước: cả năm phép kiểm 0 vi phạm. Token từng bước 0/102, đúng như
+    đã đăng ký (runner đọc trước); token mỗi vòng có ở 71/71 `model_round`.
+  - Lỡ tay: `decide.py` bị ghi vào worktree lúc 22:58, khi A đang chạy, rồi chuyển ra trước 22:58:19; manifest
+    A vẫn sạch, runner không đọc thư mục đó.

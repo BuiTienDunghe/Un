@@ -437,6 +437,12 @@ shared the GPU) keeps the same four targets and cuts the losses from 7 tasks to 
 the lost citations from 3/3 to 1/3, but still totals 33 against 34 and loses 3 of the 7
 tasks it had to keep. Not shipped, by a rule registered before the runs.
 
+Ticket 16's harness controls (90 s turn budget, coded tool errors, content-free trace;
+`results/kept/agent-eval-v0.2-harness-controls-20261027/`) score 34/40 cold before and
+after. Answers are identical word for word except on the three web tasks whose tool error
+text changed; there the agent stops asking which server (2 of 3 before, 0 after, by hand;
+the grader passes both). The budget never fired; the slowest turn took 9.4 s.
+
 Hand grading of 16 tasks agrees with the grader on 15; the one grader error (doc-18,
 a regex too narrow) would make the warm runs 35/40. The largest failure class is the
 agent **not calling** document search for a question that sounds generic, and
