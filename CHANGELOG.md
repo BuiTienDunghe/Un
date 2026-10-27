@@ -35,6 +35,10 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   một test, có ghi lý do. `api_key_headers()` dời sang `app/security/api_key_client.py`, chỉ dùng thư
   viện chuẩn, nên import harness eval không kéo fastapi hay tầng xác thực (0,2 s).
   `scripts.evaluate_rag` vẫn xuất tên cũ. `training/README.md` ghi venv nào chạy module nào.
+- Từ vựng của job (loại job, route hàng đợi, chính sách thử lại) dời từ `app/services/job_errors.py`
+  và `job_routing.py` sang gói mới `app/jobs/` (`retry.py`, `routing.py`), nằm dưới các tầng dùng nó.
+  Vì vậy tầng dữ liệu không còn import tầng nghiệp vụ; hai test khoá điều này. Truy vấn của dashboard
+  chuyển từ router vào `DashboardService`. Hành vi không đổi.
 - **Đường chạy bằng Docker đổi hành vi: worker trí nhớ trong container theo schema v2 như máy chủ**
   (27/10). `docker-compose.yml` từng tự khai 16 mặc định trùng Settings, trong đó
   `DISCORD_MEMORY_EXTRACTOR_SCHEMA_VERSION` lệch (compose v1, Settings v2 từ 28/08). Vì vậy worker

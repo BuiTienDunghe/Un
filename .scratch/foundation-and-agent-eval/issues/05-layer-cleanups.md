@@ -1,6 +1,6 @@
 # 05 — Dời job_*, query dashboard vào service (M1d)
 
-Status: chờ duyệt — Nhân viên của Ún 1, nhánh `wip/05-layer-cleanups`
+Status: đã gộp vào main (27/10), fable 5.1 duyệt
 Type: task
 Blocked by: 02 (02 sửa các script recover_* có import những module này)
 
