@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import os
 import shutil
+import threading
 from pathlib import Path
 from uuid import uuid4
 
@@ -19,6 +20,10 @@ from sqlalchemy.exc import IntegrityError
 from app.config.settings import get_settings
 from app.postgres.database import create_postgres_engine, create_session_factory
 from app.postgres.models import Document, DocumentChunk, DocumentVersion, IngestionRun, Job
+from app.services import postgres_document_service
+
+# Long enough for a one-page text file to parse, chunk, embed (mocked) and activate.
+INDEX_THREAD_JOIN_SECONDS = 60.0
 
 URL = os.getenv("POSTGRES_TEST_URL")
 pytestmark = pytest.mark.skipif(not URL, reason="set POSTGRES_TEST_URL")
@@ -29,10 +34,45 @@ def factory():
     return create_session_factory(create_postgres_engine(str(URL)))
 
 
+class _RecordingThreading:
+    """postgres_document_service's view of `threading`, recording every background index
+    thread it starts. Patched on that module only: TestClient and anyio start threads too,
+    and replacing threading.Thread for the whole process would touch theirs."""
+
+    def __init__(self) -> None:
+        self.index_threads: list[threading.Thread] = []
+
+    def __getattr__(self, name):
+        return getattr(threading, name)
+
+    def Thread(self, *args, **kwargs):  # noqa: N802 - stands in for the class
+        thread = threading.Thread(*args, **kwargs)
+        if getattr(kwargs.get("target"), "__name__", "") == "_run_index":
+            self.index_threads.append(thread)
+        return thread
+
+
 @pytest.fixture
-def debt_cleanup(factory):
+def debt_cleanup(factory, monkeypatch):
+    """A row prefix for the test, and a teardown that deletes what it made.
+
+    The default execution backend is "thread": an upload or a replace indexes on a
+    daemon thread of the API, which writes documents / document_versions /
+    ingestion_runs over several transactions. This fixture tears down BEFORE the
+    client fixture does, so its deletes used to run while that thread was still
+    activating the run — two transactions taking the same rows' locks in opposite
+    orders, and Postgres killed one (DeadlockDetected on "documents", ticket 18:
+    1 run in 3 to 1 in 15, alone on the database). So the teardown first waits for
+    the index threads this test started.
+    """
+    recording = _RecordingThreading()
+    monkeypatch.setattr(postgres_document_service, "threading", recording)
     prefix = f"debt-{uuid4().hex[:8]}"
     yield prefix
+    for thread in recording.index_threads:
+        thread.join(INDEX_THREAD_JOIN_SECONDS)
+    still_running = [thread for thread in recording.index_threads if thread.is_alive()]
+    assert not still_running, f"{len(still_running)} background index run(s) outlived {INDEX_THREAD_JOIN_SECONDS} s; deleting their rows now would race them"
     with factory.begin() as session:
         ids = list(session.scalars(select(Document.id).where(Document.original_filename.like(f"{prefix}%"))))
         if ids:
