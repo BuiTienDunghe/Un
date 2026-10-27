@@ -1,6 +1,6 @@
 # 07 — Agent Eval v0: ghi truy xuất thật, chạy baseline 3 lần (M2)
 
-Status: xong trên `wip/07-agent-eval-baseline` — truy xuất ghi + baseline 4 lần + chấm tay 16; doc-18 chốt (b), sửa ở v0.2; chờ fable duyệt rồi gộp
+Status: đã gộp vào main (27/10), fable 5.1 duyệt
 Type: task
 Blocked by: 06 (đã gộp); phần chạy GPU chờ 11 (11 đang đo p50 /rag/search, mà 09 dùng số đó làm ngưỡng)
 

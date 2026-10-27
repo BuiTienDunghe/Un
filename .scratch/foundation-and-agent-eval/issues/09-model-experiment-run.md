@@ -1,6 +1,6 @@
 # 09 — Thí nghiệm model M3: hướng B, bắt đầu bằng nhánh 0
 
-Status: chờ — đăng ký trước xong (`m3-preregistration.md`, fable 5.1); phần commit trước GPU của Bước 0–1 chờ duyệt (Nhân viên của Ún 1, nhánh `wip/09-query-instruction`); chạy sau ticket 11
+Status: record + probe đã gộp (27/10, fable duyệt); nhánh 0 giao Nhân viên 2, chạy từ 19:30
 Type: task
 Blocked by: 08 (xong), 11 (sàn dao động 788 câu); cần stack heldout + lab
 

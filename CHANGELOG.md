@@ -19,7 +19,15 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   tệp + trang (so sau khi bỏ dấu, có đếm riêng số khớp nguyên văn), không làm theo lệnh chèn. Mỗi lần
   chạy ghi `manifest.json` / `task_results.jsonl` / `events.jsonl` / `summary.json` vào
   `data/evaluation/results/agent_eval/<run_id>/`, gồm token từng lượt. Bộ bài và lịch sử tiêu chí ở
-  `data/benchmarks/agent_eval/v0/`. Chưa có baseline được trích dẫn.
+  `data/benchmarks/agent_eval/v0/`.
+- **Baseline đầu tiên của agent** (27/10, `agent-eval-v0.1`, thăm dò): 34/40 ở nhiệt độ 0 + seed (hai
+  lần nóng giống hệt từng byte), 29/40 ở 0.4 như ship. Lần chạy lạnh đầu tiên khác lần nóng ở 15/40
+  câu trả lời, nên mọi phép so trước/sau phải bỏ một lần khởi động ở mỗi phía. Lỗi lớn nhất: không
+  tra tài liệu khi câu hỏi nghe chung chung. 12 bài tra cứu dùng truy xuất thật ghi một lần từ lab
+  API; `--probe` khởi động registry như API. Báo cáo: `data/evaluation/results/kept/agent-eval-v0.1-baseline-20261027/`.
+- Phiên bản ứng viên `embedding-v0-qi` (cùng model embedding, thêm chỉ dẫn phía truy vấn) và
+  `scripts/probe_embedding_prefix.py`, commit **trước** khi đo, theo
+  `.scratch/foundation-and-agent-eval/m3-preregistration.md`. Chưa được phục vụ (đứng sau `active`).
 
 ### Changed
 - `seed` trong cấu hình model general được gửi tới Ollama khi được đặt. Không phiên bản nào đang ship
@@ -39,6 +47,13 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   và `job_routing.py` sang gói mới `app/jobs/` (`retry.py`, `routing.py`), nằm dưới các tầng dùng nó.
   Vì vậy tầng dữ liệu không còn import tầng nghiệp vụ; hai test khoá điều này. Truy vấn của dashboard
   chuyển từ router vào `DashboardService`. Hành vi không đổi.
+- **Hai công tắc bật bot thấy nhau** (27/10). Dashboard giờ thấy cả bot do panel bật trên máy
+  (trường `runner`: host / docker; cả hai cùng chạy thì báo động), và từ chối bật bot thứ hai
+  (`409 BOT_RUNNING_ON_HOST`). Backend tự quét tiến trình, không import code của bot. Panel gửi
+  `X-API-Key` (hết 401 khi máy có khoá) và chỉ đếm container của chính checkout này.
+  `discord-bot-control.bat` chạy `-m tools.discord_bot_control`, nên mở được cả trên venv cũ. 10 biến
+  của service `discord-bot` trong compose chuyển sang dạng chỉ tên. Bot trên máy và bot container vẫn
+  đọc hai bộ cấu hình khác nhau; việc bỏ cách nào chờ chủ dự án quyết.
 - **Đường chạy bằng Docker đổi hành vi: worker trí nhớ trong container theo schema v2 như máy chủ**
   (27/10). `docker-compose.yml` từng tự khai 16 mặc định trùng Settings, trong đó
   `DISCORD_MEMORY_EXTRACTOR_SCHEMA_VERSION` lệch (compose v1, Settings v2 từ 28/08). Vì vậy worker

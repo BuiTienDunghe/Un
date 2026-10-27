@@ -1,6 +1,6 @@
 # 04 — Một cơ chế bật bot, panel hết 401 (M1d)
 
-Status: chờ duyệt — Nhân viên của Ún 1, nhánh `wip/04-bot-control-one-mechanism`
+Status: đã gộp vào main (27/10), fable 5.1 duyệt
 Type: task
 Blocked by: 02 (cùng đụng `tools/discord_bot_control.py`)
 
