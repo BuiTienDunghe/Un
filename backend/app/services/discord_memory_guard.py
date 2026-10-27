@@ -33,24 +33,12 @@ dashboard IS the guard, and stays free to apply anything.
 from __future__ import annotations
 
 import re
-import unicodedata
 
-# Words too generic to prove a fact came from the message (mixed Vietnamese
-# folded forms and the English the extractor writes facts in).
-STOPWORDS = frozenset({
-    "user", "the", "prefers", "prefer", "wants", "want", "uses", "use",
-    "likes", "like", "la", "va", "cua", "cho", "toi", "minh", "hay", "rang",
-    "luon", "khong", "duoc", "voi", "mot",
-})
+# Shared with the core's answer self-check, so they live in the core (ticket 22);
+# importers of the old names here keep working.
+from app.utils.vi_text import STOPWORDS, fold
 
 OVERLAP_MINIMUM = 0.34
-
-
-def fold(text: str) -> str:
-    """Accent-insensitive casefold: 'Tiếng Việt' and 'tieng viet' compare equal."""
-    text = unicodedata.normalize("NFD", text or "")
-    text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn")
-    return text.replace("đ", "d").replace("Đ", "D").casefold()
 
 
 def content_words(text: str) -> set[str]:

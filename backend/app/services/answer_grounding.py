@@ -25,8 +25,8 @@ from __future__ import annotations
 import re
 from dataclasses import asdict, dataclass, field
 
-from app.services.discord_memory_guard import STOPWORDS as GUARD_STOPWORDS
-from app.services.discord_memory_guard import fold
+from app.utils.vi_text import STOPWORDS as GUARD_STOPWORDS
+from app.utils.vi_text import fold
 
 # Thresholds — all ratios of a sentence's content words found in the sources.
 # 0.34 is the memory guard's measured floor (P2-1b benchmark): below it a
