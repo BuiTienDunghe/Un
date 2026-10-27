@@ -269,3 +269,55 @@ phải ≤ 0. Điều kiện 8 so p50 của lượt qi với 2 × p50 của lư�
 số 9 170 ms của ticket 11 chỉ để tham khảo, vì đó là đường hybrid chạy trên vector 08/09.
 
 Commit này có trước khi bật stack qi.
+
+#### Bước 3, lượt treatment qi chỉ-dense (22:03–22:28) — nhánh (i) **không qua**
+
+```bash
+cd $W && $PY -m training.common.eval_stack --profile heldout --start --mode dense --no-reranker --contextual --collection-base documents_drill_heldout_r2 --model-version embedding=embedding-v0-qi
+# phien ban ghim: MODEL_VERSION_EMBEDDING=embedding-v0-qi
+curl -s http://127.0.0.1:8200/models   # embedding loaded embedding-v0-qi, fallback False, active; collections documents_drill_heldout_r2_qi / memories_qi; ctx True, mode dense
+cd $W && $PY -m training.common.eval_heldout --dataset data/evaluation/heldout_retrieval_v1/zalo-legal_subset.jsonl --base-url http://127.0.0.1:8200 --label v0qir2-dense-ctxON-rerankerOFF
+cd $W && $PY -m training.common.eval_stack --profile heldout --stop
+python -X utf8 analyze.py compare <control> <treatment>   # script so từng câu trong scratchpad; McNemar chính xác, bootstrap theo cặp 10 000 lần, seed 20261027
+```
+
+Log API của stack ghi `Qdrant collections documents_drill_heldout_r2_qi / memories_qi`, tức lượt qi tìm
+đúng trong collection mới.
+
+| Thước | v0 | qi | Δ | Δ theo câu |
+|---|---|---|---|---|
+| Acc@1 (thước chính) | 0,8223 | 0,8312 | +0,0089 | +7 |
+| Acc@3 | 0,9518 | 0,9480 | −0,0038 | −3 |
+| recall@5 | 0,9619 | 0,9581 | −0,0038 | −3 |
+| MRR | 0,8846 | 0,8893 | +0,0048 | +3,8 |
+| p50 | 1 780 ms | 1 796 ms | | |
+
+| Hạng | tìm thấy → mất | mất → tìm thấy | McNemar p |
+|---|---|---|---|
+| top-1 | 18 | 25 | 0,36 |
+| top-3 | 6 | 3 | 0,51 |
+| top-5 | 8 | 5 | 0,58 |
+
+67 câu đổi hạng. ΔMRR +0,0048, CI 95% bootstrap theo cặp [−0,0043 ; +0,0139]. Tám câu mất khỏi top-5:
+0cf099d9, 0ea914b9, 12aa2415, 19090d69, 1b590c52, 26e9e575, 9531e8d7, d6e0c0d1.
+
+| # | Điều kiện | Ngưỡng | Đo | Kết quả |
+|---|---|---|---|---|
+| 1 | ΔAcc@1 | ≥ 0,032 | +0,0089 | **không qua** |
+| 2 | Δrecall@5 | ≥ 0 (không tụt câu nào) | −3 câu | **không qua** |
+| 3 | top-5 tìm thấy → mất | ≤ 0 | 8 | **không qua** |
+| 8 | p50 | ≤ 2 × 1 780 = 3 560 ms | 1 796 ms | qua |
+
+Theo bảng quyết định của đăng ký trước, nhánh 0 đã **âm**: điều kiện 1 không qua là âm, điều kiện 3 không
+qua là âm bất kể các dòng khác. Đây là phán quyết về ứng viên, không phải lệnh ngừng đo. Đăng ký trước chỉ
+viết "dừng" ở bậc ba của Bước 2b và ở điều kiện 9 ("không đo nhánh nào"). Nó cũng ghi mỗi giả thuyết đều
+có kết quả được ghi, và Bổ sung 2 mục 5 giữ nguyên tập đo. Nên Bước 4–5 vẫn chạy như đã đăng ký, để đo
+H0-ship và H0-gate, chứ không phải để tìm một kết quả dương. Câu hỏi của (ii) giờ cụ thể hơn: tầng từ
+khoá và reranker có che được 8 câu mà tầng vector làm mất hay không.
+
+Tải GPU: League of Legends chạy trên GPU khoảng 22:07–22:19, dùng khoảng 2 650 MiB, 19–29 %. Lúc đo
+control nó không có mặt. p50 của hai lượt chỉ lệch 16 ms, nên nó không làm đổi độ trễ ở đây. Thứ hạng
+không phụ thuộc tải, vì ticket 11 cho hạng trùng nhau giữa các lần lặp. Tôi lấy mẫu `nvidia-smi` mỗi phút
+suốt các bước còn lại.
+
+File: `data/evaluation/results/kept/heldout-v0qir2-dense-ctxON-rerankerOFF-20261027-222810.json`.
