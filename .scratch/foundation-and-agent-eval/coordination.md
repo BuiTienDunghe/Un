@@ -75,7 +75,7 @@ ticket mới, chờ các ticket đang chạy xong, rồi báo chủ dự án.
 | 07 | Agent Eval v0: ghi truy xuất thật + baseline 3 lần (M2) | 06 gộp; GPU sau 11 | Nhân viên 3 | đã giao |
 | 08 | Chọn mục tiêu thí nghiệm model (M3) | — (chỉ đọc) | fable 5.1 | xong — chọn B, nhánh 0 trước |
 | 09 | Thí nghiệm B, nhánh 0 trước (M3) | 11; stack | Nhân viên 1 (commit trước GPU) | record + probe chờ fable duyệt; đo chờ 11 |
-| 10 | Nâng harness theo lỗi đo được (M4) | 07 | — | chờ |
+| 10 | Nâng harness theo lỗi đo được (M4) | 07 gộp; GPU sau 09 | Nhân viên 3 | đã chốt cách làm |
 | 11 | Đo dao động 788 câu held-out (tiền đề M3) | stack | Nhân viên 2 | **đã gộp** — sàn = 0 câu |
 | 12 | Dọn nhỏ sau 03 (được phép trượt) | — | Nhân viên 3 | **đã gộp** |
 
