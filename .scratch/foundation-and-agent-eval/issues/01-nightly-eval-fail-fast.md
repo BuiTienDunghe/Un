@@ -124,3 +124,8 @@ có trong danh sách việc, nhưng đó chính là nguyên nhân trực tiếp 
   có gì cần làm cho xong. Nên đổi sang `threading.Thread(daemon=True)`. Test khoá điều này.
 - Ngoài lề: tôi đã chạy bài outbox hai lần trên `local_ai_core_test`, khoảng 16:37–16:41, sau khi
   bộ đầy đủ của điều phối xong lúc 16:36.
+- 28/10 03:09 (opus 5.5): **nghiệm thu**. Đêm thật 03:00: `{"started": "2026-10-27T20:00:02Z", "finished": "20:01:12Z", "exit": 0}`
+  (`data/logs/nightly_eval.log:1529`), Task Scheduler "Last Result: 0". Cổng hồi quy truy xuất qua: 82 câu recall@k
+  0,988, MRR 0,936; bộ nhiều tài liệu 70 câu recall@k 0,986, trượt một câu (`br_backup_thu_cong`). Lần xanh đầu
+  tiên sau chuỗi exit 97 từ 16/09. Còn một cảnh báo: `rag_multidoc_baseline.json` có từ trước khi đóng dấu phiên
+  bản nên chưa được kiểm phiên bản — ghi lại baseline để bật kiểm (việc nhỏ, để sau).

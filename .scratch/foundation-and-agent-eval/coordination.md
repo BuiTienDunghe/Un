@@ -170,7 +170,7 @@ GPU nóng do dự án khác thì opus báo cả phiên Quản lý. Thay ngưỡn
 
 | # | Ticket | Phụ thuộc | Giao cho | Trạng thái |
 |---|---|---|---|---|
-| 01 | Eval đêm dừng sớm, báo rõ (M1a) | — | Nhân viên 1 | **đã gộp** — còn một đêm 03:00 thật |
+| 01 | Eval đêm dừng sớm, báo rõ (M1a) | — | Nhân viên 1 | **xong** — đêm 28/10 03:00 exit 0 (lần xanh đầu từ 16/09), cổng truy xuất qua |
 | 02 | Một cách cài, xoá hack sys.path (M1b) | — | Nhân viên 1 | **đã gộp** |
 | 03 | Compose chỉ chuyển tiếp, Docker sang v2 (M1c) | — | Nhân viên 2 | **đã gộp** |
 | 04 | Một cơ chế bật bot + panel 401 (M1d) | 05 đã gộp | Nhân viên 1 | **đã gộp** |
