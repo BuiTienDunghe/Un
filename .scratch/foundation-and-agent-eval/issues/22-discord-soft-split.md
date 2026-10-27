@@ -62,3 +62,37 @@ trí nhớ Discord thành một gói riêng, đăng ký công cụ của mình q
     `Settings` mà không có `DATABASE_URL`. Test giờ tự đặt một URL giả.
   - Bộ test chạy không có `POSTGRES_TEST_URL`: backend 795 bài qua, 450 bài bỏ qua; bộ test gốc 74 bài qua.
     Chưa chạy với DB test.
+- 28/10 (Nhân viên của Ún 2), rebase lên main 36a72c8 (b83c45e đã gộp riêng thành ad7a472, nên rebase tự bỏ):
+  - **C2** (de466aa): dời 26 module bằng `git mv` vào `app/discord/`, bỏ tiền tố `discord_` (ví dụ
+    `services/discord_turn_service.py` thành `discord/turn_service.py`); 5 router vào `app/discord/routers/`
+    (`bot`, `condensations`, `history`, `sessions`, `memory_review`). Một script đổi mọi đường dẫn có dấu chấm,
+    tức cả import, đích `mock.patch` và đường dẫn task RQ `app.discord.memory_tasks.discord_memory_ingest`,
+    trong `app`, `scripts` và cả hai bộ test: 48 file. Model và `discord_memory_constants` ở lại `app/postgres`
+    (`models.py` không đổi một dòng). Shim duy nhất là `services/discord_history_service.py`, chỉ xuất
+    `history_hit_payload`; `agent_service.py` không bị đụng.
+  - Ba chỗ lệch khỏi thiết kế, cần duyệt:
+    - `DiscordSessionSummary` và `DiscordAgentStats` **ở lại** `dashboard_schema.py`, vì `DashboardResponse`
+      của lõi trả về chúng; dời đi thì lõi phải import gói.
+    - Không tạo thư mục con `workers/`: `memory_tasks.py` nằm phẳng trong `app/discord/`.
+    - Git không nhận ra `history_service.py` là file đổi tên, vì shim nằm đúng đường dẫn cũ. Muốn xem lịch sử
+      thì dùng `git log --follow -C`.
+  - **C3** (ce3252a): `main.py` bỏ 60 dòng dựng dịch vụ Discord và 5 dòng `include_router`, thay bằng **hai**
+    lời gọi chứ không phải một. `register_routes(app, admin_guard=…)` chạy khi dựng app, vì route phải có sẵn
+    dù lifespan có chạy hay không, và nhiều test bỏ qua lifespan. `register_services(app, settings, sessions,
+    project_root=…)` chạy cuối lifespan, sau chat, memory và agent. Prefix của route Discord không trùng route
+    lõi nào: tài liệu OpenAPI trước và sau C3 giống nhau từng byte (90 đường dẫn). `register_services` đặt
+    `agent_service.history_service`, thứ agent đọc ở mỗi lần gọi, cho tới khi C4 làm khác.
+  - C5 cập nhật trong C2: cho phép đúng file shim; món nợ của agent, chat và rag là `{shim, app.discord,
+    app.discord.history_service}`; thêm bài "chỉ agent dùng shim".
+  - Thêm `test_discord_register.py` (3 bài, không cần DB): dựng đủ 6 dịch vụ lên một app thay thế và trao
+    backend lịch sử cho agent; 5 router đúng prefix; `register_services` đứng sau `AgentService` trong
+    lifespan, mỗi lời gọi xuất hiện đúng một lần.
+  - Kết quả test, chạy với `OLLAMA_BASE_URL=http://127.0.0.1:9 MODEL_STARTUP_PROBES=false`, không có
+    `POSTGRES_TEST_URL`:
+    - backend 812 bài qua, 452 bỏ qua; bộ gốc 74 bài qua (với `PYTHONPATH=backend` của worktree, vì bản cài
+      editable trỏ `app` về checkout chính).
+    - **Chưa chạy**: bộ test có DB test, gồm các bài chạy trọn lifespan; `alembic check`, vì cần DB, nhưng
+      `models.py` và `alembic/` không đổi.
+  - Ghi chú triển khai: job RQ nạp ký ức đã nằm trong Redis với đường dẫn cũ `app.workers.memory_tasks…` sẽ lỗi
+    import sau khi triển khai. Nên chạy hết hàng đợi `discord_memory` trước khi triển khai, hoặc để cơ chế
+    retry/recover đẩy lại bằng đường dẫn mới.
