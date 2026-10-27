@@ -1,7 +1,7 @@
 # Ticket 16 bước 5 — Agent Eval v0.2 trước và sau kiểm soát harness (27/10/2026, 22:57–23:03)
 
 **Thăm dò: mỗi điều kiện một lần chạy lạnh, 40 bài.** Cách đo và luật được đăng ký trước khi chạy
-(ticket 16, Comments 27/10 23:02, commit `95bec91`).
+(ticket 16, Comments 27/10 22:57, commit `9d92727`, tác giả 22:57:36; lần A bắt đầu 22:57:43).
 
 ## Thật ra chuyện này là gì
 
