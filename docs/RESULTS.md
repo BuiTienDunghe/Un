@@ -487,6 +487,14 @@ two cold runs, identical: 35/48. The 40 old tasks give ticket 16's answers word 
 answer), the paste is refused, the control passes. A tool that reads past the preview is
 measured against this.
 
+Every agent-eval run now prints a four-dimension scorecard (ticket 23): correctness,
+efficiency (tokens, model rounds, tool calls per solved task, latency p50/p95), robustness
+(stop reasons, coded tool errors, trimmed results) and traceability (turns whose every model
+round and tool call can be rebuilt from the trace). The 38 kept runs are backfilled into
+`results/kept/agent-eval-scorecard-history.jsonl`: traceability is 0% for every run before
+ticket 16, which did not record argument shapes, error codes or stop reasons, and 100% from
+ticket 16 on.
+
 Hand grading of 16 tasks agrees with the grader on 15; the one grader error (doc-18,
 a regex too narrow) would make the warm runs 35/40. The largest failure class is the
 agent **not calling** document search for a question that sounds generic, and

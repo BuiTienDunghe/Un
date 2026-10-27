@@ -61,3 +61,17 @@ on the three tasks whose tool error text changed. `decide.py` recomputes `analys
 or a paste longer than the API accepts), two cold runs, identical. 35/48: the 40 old tasks
 repeat ticket 16's answers word for word, the six long-reading tasks all fail, the long
 paste is refused. `analyze.py` recomputes `analysis.json`.
+
+## Agent Eval scorecard history
+
+`agent-eval-scorecard-history.jsonl` is one line per kept agent-eval run (ticket 23): commit,
+dataset version and sha256, grader, model, temperature, cold or warm, GPU shared or not, and the
+scorecard's four dimensions (correctness, efficiency, robustness, traceability), computed by
+`backend/scripts/agent_eval_scorecard.py` from the run's own artifacts. A line is added with
+`--append-history <run_dir>` when a run is kept, never for a scratch run, so every line opens.
+Compare only lines with the same dataset sha256 and grader; the script refuses otherwise, and
+does not compare latency across runs that declare different GPU sharing.
+
+`agent-eval-run-conditions.json` holds cold/warm and GPU sharing for the runs kept before the
+runner recorded them itself (28/10): Ollama's loaded models copied from the GPU logs written
+just before each run, v0.1 from its REPORT. Unknown stays empty, never guessed.

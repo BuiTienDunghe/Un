@@ -70,3 +70,27 @@ Bảng điểm của baseline v0.3 in đủ bốn chiều; lịch sử có các 
     nằm ngoài git. Cách còn lại: runner tự nối mọi lần, mỗi dòng có cờ `kept`.
   - **So:** `--compare a b` chỉ in chênh khi cùng sha256 dataset và cùng bộ chấm; khác thì in cảnh báo và không
     in chênh. Chênh theo từng bài: đánh dấu chỗ câu trả lời khác đầu tiên, các bài sau đó ghi "chỉ tham khảo".
+- 28/10 00:55 (Nhân viên 3) — **Xong, chờ fable duyệt cách tính.** Nhánh `wip/23-scorecard`.
+  - `backend/scripts/agent_eval_scorecard.py`: không import `app`; 8 test trên lần chạy giả của hai thế hệ harness.
+    Runner giờ in bảng và ghi `scorecard.json` sau mỗi lần chạy. Khi `--probe`, manifest có thêm ba trường:
+    `ollama_loaded_at_start` (/api/ps, lấy trước khi probe nạp gì), `gpu_at_start` (nvidia-smi) và `gpu_shared`
+    (khai báo bằng `--gpu-shared yes|no`, theo luật nhường GPU). Lý do khai báo: nvidia-smi không thấy được dự án
+    khác gọi chung Ollama.
+  - Lịch sử: `kept/agent-eval-scorecard-history.jsonl`, 38 dòng cho 38 lần đã lưu. Lạnh/nóng chép từ log GPU
+    (34 lần) và REPORT v0.1 (4 lần) vào `kept/agent-eval-run-conditions.json`. GPU dùng chung chỉ ghi ở 4 lần biết
+    chắc: 16-A/B có (09 chạy cùng lúc), baseline v0.3 không.
+  - Kết quả đáng chú ý:
+    - Minh bạch 0% ở mọi lần trước ticket 16 và 100% từ 16-B trở đi. Ở lần v0.1, trường thiếu là
+      `arguments_shape` và `stop_reason`.
+    - Lần v0.3 có 5 kết quả bị cắt theo mục, 3 `TOOL_UNAVAILABLE_HERE`, 0 `BAD_ARGUMENTS`.
+    - Số `max_steps` khớp số `budget_exhausted` ở mọi lần có `stop_reason`.
+  - Bằng chứng cho câu hỏi về model nhúng: lần `base-r1-cold` bắt đầu khi không có model nào nạp, lần
+    `base-r6-general-unloaded` bắt đầu khi model nhúng còn nạp. Hai lần trùng nhau từng byte. Vậy model nhúng còn
+    nạp không làm lệch lần lạnh, ít nhất ở hai lần này.
+  - Hai việc nhỏ Nhân viên 1 nêu:
+    - (1) Khoảng `n` của `read_document` trong bộ chấm: để v0.4, vì đổi bộ chấm giữa lúc đo #1 trên v0.3 thì số
+      đo #1 và baseline không cùng bộ chấm.
+    - (2) Recorder dùng `SEARCH_EXCERPT_CHARS`: hằng này mới chỉ có ở `wip/20-agent-reading`. Làm khi #1 vào main,
+      hoặc Nhân viên 1 làm luôn trong nhánh của họ.
+  - Lệch so với chữ của ticket: lịch sử không tự nối sau mỗi lần chạy mà nối bằng lệnh riêng khi giữ lần chạy
+    (xem 00:35).
