@@ -316,3 +316,36 @@ qua ngày không. Mục tiêu là hist-08..10.
   gọi search_history rồi hiểu thành trang web) — commit 1 nhắm đúng chỗ này.
 - 27/10 23:25 (fable): 4 bài mồi + `test_agent_service.py` chạy trên DB test `_35` tại main 7c708f0:
   13/13 xanh. Việc treo của 16 về DB đã đóng.
+
+- 27/10 23:02 (Nhân viên 3) — **Đăng ký trước bước 5**, viết trước khi chạy. Opus giao 22:50; GPU dùng ngay,
+  09 có thể chạy song song.
+  - Điều kiện: A = `49c696f` (main trước code của 16; backend và bộ bài giống hệt `9aaa75d`, mốc của ticket
+    10). B = `2306d07` (main sau 16; backend giống `74b9fd8`). Cả hai trên `agent-eval-v0.2`.
+  - Quy trình: worktree `16-step5`; mỗi điều kiện checkout đúng commit, gỡ `qwen3.5:9b` (không đụng model
+    nhúng), chạy một lần ở t0, seed 42, `--probe`. Thứ tự A rồi B. Run-id `v0.2-16-A-cold`, `v0.2-16-B-cold`.
+  - **Luật "không suy giảm"** (đạt khi cả hai đúng): tổng lạnh của B ≥ của A; không bài nào trong hist-08..10
+    từ đạt thành trượt (ở A lạnh 22:31 cả ba đều đạt, nên cả ba phải còn đạt). Một lần chạy mỗi điều kiện:
+    ngưỡng thăm dò, không phải phép thử thống kê.
+  - Dự đoán để kiểm, ngoài luật (sai thì báo, không đổi luật):
+    - Mã băm lời dặn, system prompt, mô tả công cụ của A và B bằng nhau (16 không đổi `AGENT_GUIDE`, `AGENT_TOOLS`).
+    - 27 bài đứng trước hist-08 (doc-04..doc-32, hist-01..07) có câu trả lời trùng từng chữ giữa A và B: ở mốc A
+      chỉ hist-08..10 gặp lỗi công cụ, nên đó là chỗ đầu tiên model đọc khác. Từ hist-08 trở đi có thể lệch dây
+      chuyền như E/F của ticket 10, nên so từng bài sau đó chỉ để tham khảo.
+    - A trùng từng chữ với A lạnh 22:31 (`kept/agent-eval-v0.2-1a-v2-20261027/v0.2-1a2-A-cold`), cùng code.
+  - Đọc tay hist-08..10 của B, ngoài luật: câu trả lời nói rõ ở đây không xem được tin nhắn Discord và không hỏi
+    lại "server nào" (đúng điều commit 1 nhắm tới).
+  - Ngân sách 90 s: đếm bước final của B có `stop_reason` là `turn_budget` hoặc `turn_budget_exhausted`; ghi
+    lượt chậm nhất theo `latency_ms` của `task_results` (bài đầu gồm cả thời gian nạp model). Kỳ vọng 0 lần chạm.
+  - Bảng trace rút gọn: Agent Eval không ghi DB (backend giả, không gọi `add_agent_traces`), nên không kiểm
+    được bằng một lần ghi thật; phần đó đã có `test_agent_trace_summaries` trên DB test. Kiểm thay thế, không
+    đụng DB: áp đúng phép ánh xạ của `add_agent_traces` lên mọi bước trong `events.jsonl` của B, rồi đếm
+    (1) bước thiếu `latency_ms`; (2) bước final thiếu `stop_reason`; (3) `tool_call` thiếu `tool_declared` hoặc
+    `arguments_shape` không phải dict; (4) tool_result của hist-08..10 không mang `error_code`
+    `TOOL_UNAVAILABLE_HERE`; (5) ô text nào của bản rút gọn nằm ngoài bộ từ vựng đóng: kind, tên công cụ đã
+    khai báo hoặc `unknown`, mã lỗi, stop_reason, web/discord, sha256 hex; trong `arguments_shape` giá trị là
+    `str:<số>` hoặc số, khoá `_undeclared` mang số; `error_type` là một tên định danh (`^[A-Za-z_][\w.]*$`).
+    Đạt khi cả năm bằng 0.
+  - **Không kiểm được qua eval: token trong bảng rút gọn.** `UsageRecordingRouter` của runner gọi
+    `consume_usage()` ngay sau lời gọi bên trong, tức trước khi `AgentService` đọc, nên trong eval mọi bước có
+    token rỗng. Đây là tạo tác của runner, không phải của 16. Token mỗi vòng đọc từ sự kiện `model_round`;
+    cột token của bảng rút gọn được bảo đảm bởi test ở `957962c`.
