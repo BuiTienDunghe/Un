@@ -159,6 +159,19 @@ def test_recording_fills_only_pending_fixtures_with_what_the_api_served(tmp_path
     assert load_dataset(dataset).retrieval["doc-r1"]["source"] == "recorded"
 
 
+def test_an_answer_past_the_agents_400_characters_counts_as_missing():
+    from scripts.agent_eval_record_retrieval import answer_in_chunks
+
+    task = {"expect": {"must_mention": [r"\b7 bản"]}}
+    early = [{"content": "Giữ 7 bản gần nhất. " + "x" * 600}]
+    late = [{"content": "x" * 600 + " Giữ 7 bản gần nhất."}]
+    assert answer_in_chunks(task, early) is True
+    assert answer_in_chunks(task, late) is False, "the agent never reads past 400 characters of a chunk"
+    # A computed answer names its evidence instead.
+    computed = {"expect": {"must_mention": [r"\b2 giờ"]}, "evidence": [r"8 giờ đến 10 giờ"]}
+    assert answer_in_chunks(computed, [{"content": "Bảo trì từ 8 giờ đến 10 giờ sáng."}]) is True
+
+
 def test_a_failed_query_writes_nothing(tmp_path):
     dataset = write_dataset(tmp_path / "ds")
     before = (dataset / "retrieval.jsonl").read_bytes()

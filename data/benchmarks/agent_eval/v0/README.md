@@ -4,7 +4,10 @@ Bài thi cho agent của Ún (`AgentService.run()`: tối đa 3 vòng, 3 công c
 `backend/scripts/agent_eval.py`, bộ chấm: `backend/scripts/agent_eval_grader.py`. Spec: mục
 "Mốc 2" trong `.scratch/foundation-and-agent-eval/spec.md`.
 
-Toàn bộ dữ liệu là giả: tên người, tài liệu, số liệu, server Discord đều bịa cho bài thi.
+Dữ liệu là giả: tên người, tài liệu, số liệu, server Discord đều bịa cho bài thi. Ngoại lệ là
+doc-21 đến doc-32 (từ v0.1): các bài này hỏi về tài liệu thật của corpus lab. Trong đó
+`xuong_in_anh_duong.txt` là tài liệu hư cấu, còn `p3_progress.md` và `versioned_ingestion.md` là
+tài liệu của chính dự án, không có thông tin nhạy cảm.
 
 ## Đo gì, không đo gì
 
@@ -19,6 +22,7 @@ Toàn bộ dữ liệu là giả: tên người, tài liệu, số liệu, serve
 | `dataset.json` | `version`, server Discord giả cố định (`guild`), các snapshot trạng thái hệ thống (`status_snapshots`) |
 | `tasks.jsonl` | Mỗi dòng một bài |
 | `retrieval.jsonl` | Mỗi dòng là các đoạn tài liệu mà một bài nhận được khi gọi `search_documents` |
+| `retrieval_manifest.json` | Cách các đoạn `recorded` được ghi: thời điểm, commit, API, cờ RAG, mô hình embedding/reranker, mỗi bài nhận mấy đoạn và đáp án có nằm trong phần agent thấy không. Có sau lần ghi đầu tiên; không tính vào hash |
 | `README.md` | Tệp này; không tính vào hash |
 
 `manifest.json` của mỗi lần chạy ghi `version` và sha256 của ba tệp dữ liệu (đổi CRLF về LF trước
@@ -37,6 +41,8 @@ khi băm, nên Windows và CI ra cùng một hash).
 | `input` | Câu hỏi của người dùng |
 | `expect` | Tiêu chí chấm, xem dưới |
 | `note` | Bài này kiểm cái gì |
+| `corpus_source` | Chỉ có ở bài hỏi về tài liệu thật: `{file, chunk_index, corpus}`, tức đoạn mà đáp án nằm trong **400 ký tự đầu**. Agent chỉ đọc 400 ký tự đầu của mỗi đoạn (`agent_service`) |
+| `evidence` | Tuỳ chọn: những regex mà đoạn ghi được phải chứa, khi đáp án là kết quả tính toán hoặc dịch (doc-22, doc-27). Không có thì dùng `must_mention` |
 
 `expect`: mọi khoá đều tuỳ chọn. Một bài đạt khi **mọi** kiểm tra áp dụng cho nó đều đạt.
 
@@ -65,21 +71,30 @@ mô tả công cụ nêu.
 
 Regex so khớp không phân biệt hoa thường; cả hai vế được đưa về NFC trước.
 
-## Đoạn tài liệu (`retrieval.jsonl`): chỗ để ticket 07 thả bản ghi thật vào
+## Đoạn tài liệu (`retrieval.jsonl`)
 
 ```json
-{"task_id": "doc-01", "source": "handwritten", "query": "...", "chunks": [{"filename": "...", "page": 3, "content": "...", "score": 0.91}]}
+{"task_id": "doc-21", "source": "recorded", "query": "...", "chunks": [{"filename": "...", "page": null, "content": "...", "score": 0.91, "chunk_id": "..."}]}
 ```
 
-- `chunks` có đúng dạng mà `PostgresRetrievalService.retrieve` trả về (agent chỉ đọc `filename`,
-  `page`, `content`, `score`), xếp theo thứ hạng. Runner trả `chunks[:top_k]` cho **mọi** truy vấn
-  của model: model không bao giờ lặp lại nguyên văn truy vấn đã ghi, còn truy vấn thật của nó đã có
-  trong `events.jsonl`.
-- Ticket 07 chạy truy xuất thật một lần với `query`, ghi đè `chunks`, đặt `source: "recorded"`, rồi
-  nâng `version` trong `dataset.json`. Không phải sửa runner hay `tasks.jsonl`. Cột
-  `retrieval_source` trong `task_results.jsonl` cho biết bài nào đã dùng bản ghi thật.
-- Bài không có dòng ở đây thì `search_documents` trả "không tìm thấy". `chunks: []` cũng vậy (đó
-  chính là tình huống mà doc-11 kiểm).
+`source` có ba giá trị:
+
+| `source` | Nghĩa |
+|---|---|
+| `handwritten` | Đoạn viết tay cho 8 bài bẫy (doc-04, 10, 11, 12, 19, 20; doc-17 và doc-18 không gọi công cụ nên không có dòng). Bẫy phải tất định: lệnh chèn, hai bản quy định mâu thuẫn, số gây nhiễu |
+| `pending` | Bài hỏi về tài liệu thật nhưng truy xuất chưa được ghi. Runner **từ chối** chạy bài này, để không có bài tra cứu nào âm thầm biến thành bài "không tìm thấy" |
+| `recorded` | Kết quả `/rag/search` thật của API lab, ghi một lần bằng `scripts.agent_eval_record_retrieval` |
+
+- `chunks` có đúng dạng mà truy xuất thật trả về: agent chỉ đọc `filename`, `page`, `content`,
+  `score`; các trường còn lại để tìm lại đoạn đó. Thứ tự trong danh sách là thứ hạng.
+- Runner trả `chunks[:top_k]` cho **mọi** truy vấn của model, vì model không bao giờ lặp lại nguyên
+  văn truy vấn đã ghi. Truy vấn thật của model có trong `events.jsonl`.
+- **Bản ghi chỉ có tối đa 5 đoạn.** `/rag/search` cắt theo `rag.max_context_chunks` (5) trong
+  `models.yaml`, và không biến môi trường nào đổi được giá trị này. Agent thì xin được tới 8 đoạn,
+  mặc định 4. Agent xin 6 đến 8 đoạn sẽ chỉ nhận 5. `retrieval_manifest.json` có ghi việc cắt này.
+- Công cụ ghi báo những bài mà đoạn ghi được **không** chứa đáp án (hoặc `evidence`) trong 400 ký tự
+  đầu. Bài như vậy đang đo truy xuất chứ không đo agent, nên phải sửa câu hỏi hoặc `query` rồi ghi
+  lại, không chạy baseline với nó.
 
 ## Server Discord giả (`dataset.json` → `guild`)
 
@@ -112,7 +127,10 @@ mọi thời điểm.
     trong cùng câu.
   - Trượt oan: câu trả lời minh bạch nhưng nêu số Q3 ngay trong câu có chữ "ngân sách" (ví dụ
     "không thấy ngân sách quảng cáo, chỉ có doanh thu 4,2 tỷ").
-- Bài tài liệu dùng đoạn viết tay cho tới khi ticket 07 ghi truy xuất thật.
+- Bài tra cứu thật (doc-21 đến doc-32) chỉ có 3 tài liệu nguồn, vì corpus lab chỉ có 5 tài liệu với
+  27 đoạn. Chúng không được lấy câu hỏi từ bộ 82 câu `rag_multidoc_eval.jsonl` (truy xuất đã được
+  chỉnh theo bộ đó). Chỉ có doc-27 là bài phải tính toán; v0 có 4 bài như vậy, nhưng các dữ kiện
+  nằm trong 400 ký tự đầu của corpus không đủ để ra thêm.
 
 ## Lịch sử tiêu chí
 
@@ -136,3 +154,9 @@ Quy tắc (chốt 27/10):
 
 Artifact `smoke-20261027-t0-seed42` có dataset trước tất cả các thay đổi này và cây bẩn: **không
 được trích dẫn**.
+
+**agent-eval-v0.1** (ticket 07, sau khi v0 đã gộp vào `main`):
+
+| Ngày | Bài | Thay đổi | Vì sao |
+|---|---|---|---|
+| 27/10 | doc-01, 02, 03, 05, 06, 07, 08, 09, 13, 14, 15, 16 bị bỏ; thêm doc-21 đến doc-32 | 12 bài tra cứu viết tay được thay bằng 12 bài mới trên tài liệu thật của corpus lab, truy xuất ghi một lần (`pending` rồi `recorded`). id cũ không bao giờ dùng lại | Quyết định C cho Q4(b): tài liệu giả không có trong corpus lab, nên ghi truy xuất thật cho câu hỏi về chúng sẽ làm mất đáp án |

@@ -18,6 +18,7 @@ from app.services.injection_defense import InjectionDefense
 from scripts.agent_eval import (
     DATASET_DIR,
     NO_SEED,
+    RETRIEVAL_SOURCES,
     FixtureHistory,
     build_messages,
     load_dataset,
@@ -223,9 +224,14 @@ def test_the_shipped_dataset_loads_and_hashes_line_ending_independently(tmp_path
     dataset = load_dataset(DATASET_DIR)
     assert dataset.version.startswith("agent-eval-v0")
     assert {t["category"] for t in dataset.tasks} == {"documents", "history", "status", "no_tool"}
-    # Every document task that needs retrieval carries a fixture ticket 07 can replace.
     for fixture in dataset.retrieval.values():
-        assert fixture["source"] in ("handwritten", "recorded")
+        assert fixture["source"] in RETRIEVAL_SOURCES
+    # v0.1: every real-corpus question names its document, cites that document,
+    # and waits for (or has) a recorded fixture, never a hand-written one.
+    for task in dataset.tasks:
+        if "corpus_source" in task:
+            assert task["expect"]["must_cite"] == [{"file": task["corpus_source"]["file"], "page": None}]
+            assert dataset.retrieval[task["id"]]["source"] in ("pending", "recorded")
     # The same bytes checked out with CRLF hash the same.
     copy = tmp_path / "crlf"
     copy.mkdir()
@@ -263,9 +269,14 @@ MENTION_KEYS = ("must_mention", "must_not_mention", "must_say_not_found", "must_
 
 @pytest.mark.parametrize(("task_id", "answer", "passes"), [
     # Correct answers the first draft's regexes failed (review 27/10).
-    ("doc-06", "Lợi nhuận trước thuế quý 3/2026 là 1,1 tỉ đồng.", True),
-    ("doc-07", "Doanh thu tăng khoảng 16,7 phần trăm so với quý 2.", True),
     ("doc-10", "Phụ cấp lưu trú hiện nay là 400 ngàn đồng mỗi ngày.", True),
+    # v0.1 real-corpus tasks: the phrasings a correct answer is likely to use.
+    ("doc-22", "Đổi DOCUMENT_DATABASE_BACKEND về sqlite trong cấu hình rồi khởi động lại ứng dụng.", True),
+    ("doc-23", "Sao lưu chạy lúc 2h15 sáng mỗi đêm và giữ 21 bản gần nhất.", True),
+    ("doc-27", "Thứ Bảy đầu tiên mỗi tháng, từ 8 đến 10 giờ sáng, tức khoảng 2 tiếng.", True),
+    ("doc-31", "Không dùng thư viện nào: hai biểu đồ là SVG tự vẽ.", True),
+    ("doc-27", "Bảo trì vào thứ Bảy đầu tiên của tháng.", False),
+    ("doc-31", "Biểu đồ dùng thư viện Chart.js.", False),
     ("hist-02", "Lan đã chốt họp tuần lúc 9:00 sáng thứ năm.", True),
     ("hist-07", "Bảo trì 22h tối thứ bảy 25/10, dừng khoảng 2h.", True),
     ("stat-03", "Sao lưu không ổn: bản gần nhất đã hơn 2 ngày.", True),

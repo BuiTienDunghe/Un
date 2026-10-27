@@ -8,6 +8,7 @@ fixture shape the runner replays: filename, page, content, score, plus the ids a
 reader needs to find the chunk again. The runner then replays them for any query
 the model asks, cut to the model's top_k.
 
+    python -m training.common.eval_stack --profile lab --start     # repo root: the lab API, port 8100
     cd backend
     PYTHONUTF8=1 python -m scripts.agent_eval_record_retrieval --env-file C:\\Users\\dungbt06\\local-ai-core\\.env
 
@@ -30,6 +31,7 @@ from typing import Any
 
 import httpx
 
+from app.services.agent_service import _clip
 from scripts.agent_eval import DATASET_DIR, PROJECT_ROOT, _read_jsonl
 from scripts.agent_eval_grader import grade
 
@@ -37,6 +39,7 @@ from scripts.agent_eval_grader import grade
 # then provenance. `excerpt` is a display preview of `content` and is dropped.
 KEPT_FIELDS = ("filename", "page", "content", "score", "document_id", "chunk_id", "chunk_index", "index_version", "heading_path")
 AGENT_MAX_TOP_K = 8  # agent_service clamps search_documents.top_k to 1-8
+AGENT_EXCERPT_CHARS = 400  # agent_service clips every chunk to this before the model reads it
 
 
 def _write_lf(path: Path, text: str) -> None:
@@ -45,14 +48,18 @@ def _write_lf(path: Path, text: str) -> None:
 
 
 def answer_in_chunks(task: dict[str, Any], chunks: list[dict[str, Any]]) -> bool | None:
-    """Do the recorded chunks hold every point the task requires? A recorded
-    miss turns a document task into a retrieval test, which the agent eval
-    does not measure, so the recorder reports it instead of hiding it."""
-    patterns = task.get("expect", {}).get("must_mention") or []
+    """Can the agent see every point the task requires in the recorded chunks?
+    A miss turns a document task into a retrieval test, which the agent eval
+    does not measure, so the recorder reports it instead of hiding it.
+
+    "See" is literal: the agent reads each chunk clipped to 400 characters
+    (agent_service._dump), so the check reads exactly that. A task whose answer
+    is computed or translated names its `evidence` instead of its answer."""
+    patterns = task.get("evidence") or task.get("expect", {}).get("must_mention") or []
     if not patterns:
         return None
-    joined = "\n".join(str(chunk.get("content") or "") for chunk in chunks)
-    return grade({"must_mention": patterns}, [], joined, {})["passed"]
+    visible = "\n".join(_clip(str(chunk.get("content") or ""), AGENT_EXCERPT_CHARS) for chunk in chunks)
+    return grade({"must_mention": patterns}, [], visible, {})["passed"]
 
 
 def record(
@@ -118,7 +125,7 @@ def main(argv: list[str] | None = None) -> int:
 
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--dataset", type=Path, default=DATASET_DIR)
-    parser.add_argument("--api", default="http://127.0.0.1:8000")
+    parser.add_argument("--api", default="http://127.0.0.1:8100", help="the lab API (training.common.eval_stack --profile lab)")
     parser.add_argument("--tasks", help="comma-separated task ids to (re-)record (default: every pending fixture)")
     parser.add_argument("--env-file", type=Path, help="the .env holding LOCAL_AI_API_KEY (default: this checkout's)")
     args = parser.parse_args(argv)
