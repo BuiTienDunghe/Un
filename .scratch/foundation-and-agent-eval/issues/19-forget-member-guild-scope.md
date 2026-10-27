@@ -1,6 +1,6 @@
 # 19 — Bước 6 của `forget_member` xoá turn của thành viên ở MỌI guild
 
-Status: chờ — sau ticket 17 (Nhân viên của Ún 1)
+Status: đã chốt (chủ dự án 27/10 23:30): chỉ server nơi yêu cầu; quên mọi nơi bằng cờ --all-guilds tường minh. Làm sau 17 (Nhân viên của Ún 1)
 Type: task
 Blocked by: 17 (cùng file `backend/scripts/forget_member.py`)
 
@@ -17,3 +17,5 @@ hai guild, quên A ở guild X, turn ở guild Y còn nguyên. Nếu chủ dự 
 thì đổi thành một cờ tường minh (`--all-guilds`) thay vì mặc định ngầm — hỏi trước khi code.
 
 ## Comments
+- 27/10 23:30 (chủ dự án): "quên tôi" chỉ xoá trong server nơi người đó yêu cầu. Muốn quên mọi nơi thì
+  dùng cờ `--all-guilds` tường minh. Cờ phải áp cho **mọi** bước, không riêng bước 6; dry-run in rõ phạm vi.
