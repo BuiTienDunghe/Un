@@ -343,6 +343,40 @@ for cannot be read back: the file records only that contextual retrieval was off
 latency was 4 388 ms on 08/09, then 4 622 and 4 548 ms on 27/10, when another session
 may have been sharing Ollama.
 
+**Telling the embedding model what kind of search it is doing did not help (27/10/2026).**
+The candidate `embedding-v0-qi` keeps the shipped model's weights and puts one line in
+front of each question, `Instruct: Retrieve text based on user query.`, the line the model
+was trained to expect. On the public VieQuAD benchmark that line was worth +0.047 nDCG@10.
+The pass rule was written before anything ran (`.scratch/foundation-and-agent-eval/m3-preregistration.md`).
+The 08/09 document vectors no longer match what today's Ollama produces from the same
+weights and text (lowest cosine 0.99912). So both sides were embedded again, side by side,
+the same evening on Ollama 0.40.8. The two new indexes agree on every document to a
+cosine of 1.00000000, which leaves the question line as the only difference.
+
+| Configuration | Acc@1 | Acc@3 | Recall@5 | MRR | Evidence |
+| --- | ---: | ---: | ---: | ---: | --- |
+| vectors only, no reranker | 0.8223 | 0.9518 | 0.9619 | 0.8846 | `results/kept/heldout-v0r2-dense-ctxON-rerankerOFF-20261027-220250.json` |
+| same, with the instruction | 0.8312 | 0.9480 | 0.9581 | 0.8893 | `results/kept/heldout-v0qir2-dense-ctxON-rerankerOFF-20261027-222810.json` |
+| **shipped path, re-embedded** | **0.7931** | **0.9683** | **0.9822** | **0.8776** | `results/kept/heldout-v0r2-hybrid-ctxON-rerankerON-20261027-225549.json` |
+| shipped path, with the instruction | 0.7931 | 0.9657 | 0.9797 | 0.8775 | `results/kept/heldout-v0qir2-hybrid-ctxON-rerankerON-20261027-232152.json` |
+
+On vectors alone, the instruction put 25 questions at rank 1 and took 18 off, a net gain
+of 7. The rule needs 25. It also pushed 8 questions that had been found out of the top 5.
+On the shipped path, keyword search and the reranker absorb nearly all of that: the same
+number of questions sit at rank 1, but 3 found questions fell out of the top 5 and only 1
+came in. On the 82-question gate, every question kept its rank
+(`results/kept/rag-multidoc-20261027-232629.json` against `results/kept/rag-multidoc-20261027-232528.json`).
+The rule forbids losing a found question, so the result is negative. The candidate stays
+in the registry, with this result in its `notes`.
+
+Embedding again with the same model changed almost nothing. Compared with repeat 1 above,
+the fresh index moved one question up to rank 1 and lost none from the top 5. p50 was
+1 886 ms against 4 622 ms earlier that day, which fits the guess that the 4.6 s figures
+came from a shared Ollama. Two limits on the latency figures: an unrelated process sent
+chat requests to Ollama during the first 6–13 minutes of each shipped-path run, and a game
+was using the GPU for part of the dense run with the instruction. Neither moves ranks: the
+search path does not call the chat model, and repeats give identical ranks.
+
 ## Chunking: numbered clauses are not headings (04/09/2026)
 
 The chunker read any line shaped `<number>. <text>` as a heading. Vietnamese legal

@@ -89,6 +89,11 @@ roles:
         provider: ollama
         collection_suffix: qi            # -> documents_qi / memories_qi (documents_lab_qi, documents_drill_heldout_qi)
         vram_mib: null                   # same tag as v0 (2870 at ctx 8192); still measured once before promotion
+        notes: >-
+          27/10/2026, ticket 09 branch 0, Ollama 0.40.8, v0 and qi re-embedded side by side
+          (documents_drill_heldout_r2, documents_lab_r2): negative. Dense only, Acc@1 +0.0089
+          against the 0.032 the rule asked, and 8 questions lost from the top 5; shipped path,
+          Acc@1 unchanged and 3 lost from the top 5; 82-question gate identical. Stays a candidate.
         eval:
           reports:
             d1_multidoc: null

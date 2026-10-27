@@ -1,6 +1,6 @@
 # 09 — Thí nghiệm model M3: hướng B, bắt đầu bằng nhánh 0
 
-Status: dừng ở Bước 2b theo luật (trôi passage 0,99912 < 0,9999); kế hoạch mới ở "Bổ sung 2" của đăng ký trước; chạy lại sáng 28/10
+Status: nhánh 0 chạy xong tối 27/10 theo Bổ sung 2: **âm** (điều kiện 1–5 không qua, 7–8 qua); chờ fable duyệt. B đầy đủ chưa bắt đầu
 Type: task
 Blocked by: 08 (xong), 11 (sàn dao động 788 câu); cần stack heldout + lab
 
@@ -321,3 +321,106 @@ không phụ thuộc tải, vì ticket 11 cho hạng trùng nhau giữa các l�
 suốt các bước còn lại.
 
 File: `data/evaluation/results/kept/heldout-v0qir2-dense-ctxON-rerankerOFF-20261027-222810.json`.
+
+#### Bước 4 — nhánh (ii) đường ship (22:30–23:22)
+
+```bash
+cd $W && $PY -m training.common.eval_stack --profile heldout --start --reranker --contextual --collection-base documents_drill_heldout_r2
+curl -s http://127.0.0.1:8200/models   # embedding-v0, reranker-v0 active, không fallback; documents_drill_heldout_r2; ctx True, mode hybrid
+cd $W && $PY -m training.common.eval_heldout --dataset data/evaluation/heldout_retrieval_v1/zalo-legal_subset.jsonl --base-url http://127.0.0.1:8200 --label v0r2-hybrid-ctxON-rerankerON
+cd $W && $PY -m training.common.eval_stack --profile heldout --stop
+cd $W && $PY -m training.common.eval_stack --profile heldout --start --reranker --contextual --collection-base documents_drill_heldout_r2 --model-version embedding=embedding-v0-qi
+curl -s http://127.0.0.1:8200/models   # embedding-v0-qi, reranker-v0 active, không fallback; documents_drill_heldout_r2_qi; ctx True, mode hybrid
+cd $W && $PY -m training.common.eval_heldout --dataset data/evaluation/heldout_retrieval_v1/zalo-legal_subset.jsonl --base-url http://127.0.0.1:8200 --label v0qir2-hybrid-ctxON-rerankerON
+cd $W && $PY -m training.common.eval_stack --profile heldout --stop
+```
+
+Mỗi lượt mất khoảng 25 phút, không phải 62 như ước tính. Log API ghi đúng collection cho từng lượt.
+
+| Thước | v0 (control mới) | qi | Δ theo câu |
+|---|---|---|---|
+| Acc@1 | 0,7931 | 0,7931 | 0 (1 mất, 1 được) |
+| Acc@3 | 0,9683 | 0,9657 | −2 |
+| recall@5 | 0,9822 | 0,9797 | −2 (3 mất: 0cf099d9, 4173e375, 45bc9045; 1 được) |
+| MRR | 0,8776 | 0,8775 | ΔMRR −0,0001, CI 95% [−0,0026 ; +0,0023] |
+| p50 / p95 | 1 886 / 2 178 ms | 1 806 / 2 061 ms | |
+
+Câu 0cf099d9 cũng mất ở nhánh (i).
+
+Tải ngoài lúc đo: Ollama nhận các lệnh `/api/chat` tới `qwen3.5:9b` (220 lệnh trong khoảng 22:31–22:44,
+145 lệnh trong khoảng 22:57–23:03), kèm nạp lại `glm-ocr`. GPU lúc đó dùng khoảng 9,8 GB, 90 %. Các lệnh
+này không đến từ stack đo: log API chỉ có 788 lượt `/rag/search` cùng `/health` và `/models`, worker
+không nhận việc nào, độ trễ từng câu đều nhau từ câu đầu tới câu cuối (trung vị theo từng khúc 100 câu
+1 788–1 992 ms). Lúc đo hai lượt chỉ-dense thì không có lệnh chat nào. Tôi chưa xác định được nguồn.
+Thứ hạng không bị ảnh hưởng, vì đường tìm không gọi model sinh. Sau Bước 4, chỉ mục heldout vẫn nguyên:
+`rebuild_qdrant --dry-run` trả 3 896 mảnh, 3 896 điểm.
+
+So riêng việc nhúng lại, cùng model (`heldout-ctxON-rerankerON-20261027-173610.json` của ticket 11 với
+lượt control mới): 1 câu lên hạng 1, không câu nào rời top-5. Tức chỉ mục production, vốn nhúng bằng
+runtime cũ, không lệch đo được trên tập này (ticket 15). p50 4 622 → 1 886 ms, khớp với giả thuyết
+rằng số 4,6 s của ticket 11 là do Ollama đang bị dùng chung.
+
+#### Bước 5 — nhánh (iii) cổng 82 câu trên lab (23:23–23:27)
+
+```bash
+cd $W/backend
+DATABASE_URL="$DB_BASE/local_ai_core_lab_20260821" QDRANT_DOCUMENTS_COLLECTION=documents_lab_r2 $PY -m scripts.rebuild_qdrant --dry-run
+DATABASE_URL="$DB_BASE/local_ai_core_lab_20260821" QDRANT_DOCUMENTS_COLLECTION=documents_lab_r2 MODEL_VERSION_EMBEDDING=embedding-v0-qi $PY -m scripts.rebuild_qdrant --dry-run
+DATABASE_URL="$DB_BASE/local_ai_core_lab_20260821" QDRANT_DOCUMENTS_COLLECTION=documents_lab_r2 $PY -m scripts.rebuild_memories --dry-run
+DATABASE_URL="$DB_BASE/local_ai_core_lab_20260821" QDRANT_DOCUMENTS_COLLECTION=documents_lab_r2 $PY -m scripts.rebuild_qdrant
+DATABASE_URL="$DB_BASE/local_ai_core_lab_20260821" QDRANT_DOCUMENTS_COLLECTION=documents_lab_r2 $PY -m scripts.rebuild_memories
+DATABASE_URL="$DB_BASE/local_ai_core_lab_20260821" QDRANT_DOCUMENTS_COLLECTION=documents_lab_r2 MODEL_VERSION_EMBEDDING=embedding-v0-qi $PY -m scripts.rebuild_qdrant
+DATABASE_URL="$DB_BASE/local_ai_core_lab_20260821" QDRANT_DOCUMENTS_COLLECTION=documents_lab_r2 MODEL_VERSION_EMBEDDING=embedding-v0-qi $PY -m scripts.rebuild_memories
+$PY -X utf8 -m scripts.passage_drift documents_lab_r2 documents_lab_r2_qi
+cd $W && $PY -m training.common.eval_stack --profile lab --start --collection-base documents_lab_r2
+cd $W/backend && $PY -m scripts.evaluate_rag --multidoc-dataset ../data/evaluation/rag_multidoc_eval.jsonl --retrieval-only --baseline ../data/evaluation/rag_multidoc_baseline.json --base-url http://127.0.0.1:8100
+cd $W && $PY -m training.common.eval_stack --profile lab --stop
+cd $W && $PY -m training.common.eval_stack --profile lab --start --collection-base documents_lab_r2 --model-version embedding=embedding-v0-qi
+cd $W/backend && $PY -m scripts.evaluate_rag --multidoc-dataset ../data/evaluation/rag_multidoc_eval.jsonl --retrieval-only --baseline ../data/evaluation/rag_multidoc_baseline.json --base-url http://127.0.0.1:8100
+cd $W && $PY -m training.common.eval_stack --profile lab --stop
+```
+
+| Kiểm | Kết quả |
+|---|---|
+| nhúng lab | v0 → `documents_lab_r2`, qi → `documents_lab_r2_qi`; mỗi bên 27 = `active_chunks` 27; memories 0 dòng, không ghi gì |
+| trôi passage lab | 27 / 27 cặp, cosine thấp nhất 1,00000000 |
+| `/models` hai lượt | embedding-v0 rồi embedding-v0-qi, reranker-v0, không fallback; log API ghi `documents_lab_r2` rồi `documents_lab_r2_qi` |
+| v0 mới | recall 0,9878 · MRR 0,9360 · doc_hit 0,9268 · p50 330 ms; "gate passed"; trượt `br_backup_thu_cong` như baseline |
+| qi mới | giống v0 tới từng chữ số; p50 349 ms; "gate passed" |
+| **so từng câu qi với v0 (phép quyết định)** | 82 câu, 0 câu từ tìm thấy sang mất, 0 câu đổi hạng |
+| so với baseline cũ (tham khảo) | cả hai lượt: 0 câu mất, 0 câu đổi hạng |
+
+Baseline không có `versions` nên script in WARNING "NOT version-guarded", đúng như đăng ký trước dự đoán.
+
+#### Bước 6 — điều kiện dừng và phán quyết
+
+F1 = F5 = 0 (ticket 11), N = 788. p50-C lấy từ control của cùng nhánh.
+
+| # | Nhánh | Điều kiện | Ngưỡng | Đo | Kết quả |
+|---|---|---|---|---|---|
+| 1 | (i) | ΔAcc@1 (thước chính) | ≥ 0,032 | +0,0089 | **không qua** |
+| 2 | (i) | Δrecall@5 | ≥ 0 | −0,0038 (−3 câu) | **không qua** |
+| 3 | (i) | top-5 tìm thấy → mất | ≤ 0 | 8 | **không qua** |
+| 4 | (ii) | ΔAcc@1 · ΔRecall@5 | ≥ 0 · ≥ 0 | 0 · −0,0025 (−2 câu) | **không qua** (vế recall) |
+| 5 | (ii) | tìm thấy → mất | ≤ 0 | 3 | **không qua** |
+| 6 | (ii) | "cải thiện" | ΔAcc@1 ≥ 0,032 | 0 | không được tuyên bố |
+| 7 | (iii) | cổng 82 câu, so từng câu với v0 mới | 0 câu mất | 0 câu mất, 0 câu đổi hạng | qua |
+| 8 | (i) · (ii) · (iii) | p50 ≤ 2 × p50-C | 3 560 · 3 772 · 660 ms | 1 796 · 1 806 · 349 ms | qua |
+
+**Phán quyết: âm.** Điều kiện 1 trượt nên âm; điều kiện 3 và 5 trượt nên âm bất kể các dòng khác.
+H0-dense bị bác. H0-ship cũng không giữ nguyên: đăng ký trước kỳ vọng "không phân biệt được", nhưng
+đường ship mất 3 câu khỏi top-5. H0-gate đứng. Bản ghi `embedding-v0-qi` giữ làm candidate,
+`eval.reports` vẫn null, thêm `notes` ghi ngày và kết quả (`model_versions.yaml`; `--check` 0 lỗi, 4 cảnh
+báo như main; `test_model_registry` cùng hai bộ test của 09 xanh 127/127). Dòng kết quả nằm trong
+`docs/RESULTS.md`, mục Held-out.
+
+File chép vào `data/evaluation/results/kept/`: bốn file heldout `v0r2-*` / `v0qir2-*`, hai file
+`rag-multidoc-20261027-232528.json` (v0) và `rag-multidoc-20261027-232629.json` (qi).
+
+Còn để nguyên trong Qdrant, không xoá: `documents_drill_heldout_r2`, `documents_drill_heldout_r2_qi`,
+`documents_lab_r2`, `documents_lab_r2_qi`, và `documents_drill_heldout_qi` từ lần chạy đầu. Chủ dự án
+quyết định sau.
+
+Ghi chú quy trình: `rebuild_memories` ở Bước 2/5 không đặt `QDRANT_MEMORIES_COLLECTION`, nên lượt v0
+trỏ vào `memories` của production. Lần này không hại gì vì bảng có 0 dòng, nhưng lần chạy B nên đặt
+biến đó, hoặc bỏ lệnh này khỏi các bước đo.
