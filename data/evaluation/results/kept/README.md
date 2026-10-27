@@ -41,5 +41,6 @@ not a statistical claim.
 before and after two prompt changes (1a: look it up first; 2b: point a Discord turn
 at the history when documents come back empty), one warm temperature-0 run and three
 runs at 0.4 per condition, judged as pre-registered in the ticket. It also holds the
-runs that narrowed the cold-first-run difference to the first time a prompt prefix
-is processed. 24 runs; `events.jsonl` only for the five that the report quotes.
+runs showing that temperature 0 is reproducible only from a cold model (unloaded
+before each run), not from warm runs separated by other work. 27 runs; `events.jsonl`
+only for the eight that the report quotes.

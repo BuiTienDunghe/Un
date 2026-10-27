@@ -92,3 +92,14 @@ Tiêu chí nghiệm thu theo `spec.md` Mốc 4.
   - Chưa làm registry, ngân sách token/thời gian, chuẩn hoá lỗi, tracing: không lỗi đo được nào đòi.
   - Nhánh hiện ở trạng thái D (`4beb9ba`: 1a + 2b). Chưa có quyết định ship thay đổi chất lượng nào;
     các phương án nằm trong REPORT.
+- 27/10 20:55 — **Đính chính báo cáo `8848e67`** (sau khi người duyệt gợi ý kiểm mã băm):
+  - A-r2 nóng và C-t0 nóng có cùng mọi mã băm prompt (2b không đổi prompt của bài web), nhưng chỉ
+    trùng 3/33 câu trả lời bài web, và 7 bài lật. Vậy các lần đo nóng ở t0 của A, B, C, D ở bốn trạng
+    thái máy chủ khác nhau, không so với nhau được. Bản đầu đọc nhầm thành tác dụng của việc đổi prompt.
+  - Lần chạy lạnh mới lặp lại được: r1 = r6; A lạnh = C lạnh trên 33/33 bài web. Bổ sung đã chạy: B,
+    C, D mỗi cái một lần lạnh, checkout đúng commit (20:47–20:55).
+  - So sánh lạnh: A 34, B 30, C 34, D 30 (D đếm tay 32). Mục tiêu 1a: 2/5 → 4/5, nhưng mất 6–7 bài
+    ngoài mục tiêu, chủ yếu do thiếu tên tệp khi trích nguồn. 2b một mình không đổi gì (C = A).
+  - Quy tắc trong README của bộ bài đã sửa: so sánh ở t0 thì **gỡ model chính trước mỗi lần đo**;
+    "khởi động bỏ đi" một mình là không đủ. Seed không có tác dụng ở t0.
+  - Đề xuất đổi từ "cân nhắc" sang (c): chưa ship 1a hay 2b, thử 1a-v2. Chi tiết trong REPORT.

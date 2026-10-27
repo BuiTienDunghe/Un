@@ -1,0 +1,129 @@
+{
+  "overall": {
+    "passed": 30,
+    "total": 40,
+    "rate": 0.75
+  },
+  "errors": 0,
+  "by_category": {
+    "documents": {
+      "passed": 13,
+      "total": 20,
+      "rate": 0.65
+    },
+    "history": {
+      "passed": 7,
+      "total": 10,
+      "rate": 0.7
+    },
+    "no_tool": {
+      "passed": 5,
+      "total": 5,
+      "rate": 1.0
+    },
+    "status": {
+      "passed": 5,
+      "total": 5,
+      "rate": 1.0
+    }
+  },
+  "by_check": {
+    "args_expected": {
+      "passed": 1,
+      "total": 2,
+      "rate": 0.5
+    },
+    "args_valid": {
+      "passed": 32,
+      "total": 32,
+      "rate": 1.0
+    },
+    "citation": {
+      "passed": 10,
+      "total": 15,
+      "rate": 0.6667
+    },
+    "completed": {
+      "passed": 40,
+      "total": 40,
+      "rate": 1.0
+    },
+    "must_mention": {
+      "passed": 30,
+      "total": 34,
+      "rate": 0.8824
+    },
+    "must_not_mention": {
+      "passed": 12,
+      "total": 12,
+      "rate": 1.0
+    },
+    "no_access": {
+      "passed": 3,
+      "total": 3,
+      "rate": 1.0
+    },
+    "not_found": {
+      "passed": 3,
+      "total": 4,
+      "rate": 0.75
+    },
+    "refusal": {
+      "passed": 2,
+      "total": 2,
+      "rate": 1.0
+    },
+    "tool_budget": {
+      "passed": 3,
+      "total": 3,
+      "rate": 1.0
+    },
+    "tools_forbidden": {
+      "passed": 34,
+      "total": 36,
+      "rate": 0.9444
+    },
+    "tools_required": {
+      "passed": 28,
+      "total": 29,
+      "rate": 0.9655
+    }
+  },
+  "by_retrieval_source": {
+    "handwritten": {
+      "passed": 5,
+      "total": 6,
+      "rate": 0.8333
+    },
+    "recorded": {
+      "passed": 7,
+      "total": 12,
+      "rate": 0.5833
+    }
+  },
+  "citation_verbatim": {
+    "verbatim": 9,
+    "of_tasks_with_citation": 15
+  },
+  "failed_tasks": [
+    "doc-17",
+    "doc-19",
+    "doc-22",
+    "doc-26",
+    "doc-27",
+    "doc-28",
+    "doc-31",
+    "hist-03",
+    "hist-05",
+    "hist-07"
+  ],
+  "latency_ms": {
+    "mean": 3101,
+    "p50": 2953,
+    "max": 7835
+  },
+  "tokens_in_total": 103079,
+  "tokens_out_total": 6034,
+  "mean_tool_calls": 0.85,
+  "budget_exhausted": 0
+}

@@ -413,19 +413,22 @@ tasks, and the 0.4 run is a single run.**
 | temperature 0.4, no seed (as shipped) | 29/40 | same |
 
 Ticket 10, on `agent-eval-v0.2` (a different task set: v0.1 numbers do not compare),
-`results/kept/agent-eval-v0.2-harness-20261027/`. Warm temperature 0 / three runs at 0.4:
+`results/kept/agent-eval-v0.2-harness-20261027/`. Temperature 0 is only reproducible
+from a cold model (unloaded before each run); warm runs separated by other work
+differed on 30 of 33 identical prompts, so only the cold column compares across rows.
 
-| Condition | t0 | 0.4 |
+| Condition | t0, cold | 0.4, three runs |
 | --- | ---: | --- |
-| baseline v0.2 (item-wise truncation included, its own effect unmeasured) | 31/40 | 31, 29, 33 |
-| + "look it up first" guide (1a) | 31/40 | 28, 31, 27 |
-| + empty-search history hint (2b) | 32/40 | 30, 32, 31 |
-| + both (supplementary) | 31/40 | 29, 30, 29 |
+| baseline v0.2 (item-wise truncation included, its own effect unmeasured) | 34/40 | 31, 29, 33 |
+| + "look it up first" guide (1a) | 30/40 | 28, 31, 27 |
+| + empty-search history hint (2b) | 34/40 | 30, 32, 31 |
+| + both (supplementary) | 30/40 | 29, 30, 29 |
 
-Both together raise the "did not search" targets from 4/15 to 11/15 at 0.4 and answer
-the two Discord-routing tasks correctly in 8/8 runs — which the grader still fails,
-because those tasks forbid searching documents first — but lose file-name citations
-on three lookups. Not shipped as of this measurement.
+The guide raises the "did not search" targets (2/5 to 4/5 cold, 4/15 to 11/15 at 0.4
+with the hint) but loses more elsewhere, mostly file-name citations; the hint alone
+changes nothing, and with the guide it routes both Discord tasks to the history, answered
+correctly but still failed by a criterion that forbids searching documents first.
+Neither prompt change is shipped as of this measurement.
 
 Hand grading of 16 tasks agrees with the grader on 15; the one grader error (doc-18,
 a regex too narrow) would make the warm runs 35/40. The largest failure class is the
