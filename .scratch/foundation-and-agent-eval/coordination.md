@@ -1,7 +1,7 @@
 # Điều phối — nền + Agent Eval
 
 Chủ dự án giao (27/10/2026): "opus 5.5 của Ún" và "fable 5.1 của Ún" tự điều phối cho tới khi xong
-`spec.md`, hoặc tới khi hạn mức tuần (tất cả model, hoặc riêng Fable) vượt 85%. Có ba phiên thực
+`spec.md` (đạt hiệu quả), hoặc tới một ngưỡng dừng ở mục "Hạn mức" (đổi 28/10 01:35). Có ba phiên thực
 hiện: "Nhân viên của Ún 1", "Nhân viên của Ún 2", "Nhân viên của Ún 3".
 
 ## Ưu tiên (chủ dự án, 28/10)
@@ -116,8 +116,18 @@ vào `main` ở checkout chính → chạy test → xoá worktree. Chỉ một p
 
 ## Hạn mức
 
-Mỗi lần giao việc, opus kiểm hạn mức tuần. Vượt 85% (tất cả model hoặc riêng Fable) thì dừng giao
-ticket mới, chờ các ticket đang chạy xong, rồi báo chủ dự án.
+Chủ dự án (28/10 01:35): "dừng khi đạt hiệu quả hoặc đạt ngưỡng: nhiệt độ gpu > 85%, limit tuần của tôi ? 90%,
+limit fable > 90%". Đọc là ba ngưỡng, chạm cái nào cũng dừng:
+
+| Ngưỡng | Đo bằng | Lúc ghi |
+|---|---|---|
+| Nhiệt độ GPU > 85 °C | `nvidia-smi` (opus chạy một bộ canh nền, báo khi vượt) | 60 °C, 41% tải (phiên Quản lý đang dùng) |
+| Hạn mức tuần, tất cả model ≥ 90% | thẻ hạn mức của app (`get_usage`) | 45%, đặt lại 10:00 28/10 |
+| Hạn mức tuần riêng Fable > 90% | như trên | 30%, đặt lại 10:00 28/10 |
+
+Mỗi lần giao việc hay gộp, opus kiểm hai hạn mức. Chạm ngưỡng thì: không giao việc mới; các phiên dừng ở ranh giới an
+toàn (commit việc dở lên nhánh `wip/`, không gộp nửa vời); `ollama stop` nếu Ún đang giữ GPU; opus báo chủ dự án.
+GPU nóng do dự án khác thì opus báo cả phiên Quản lý. Thay ngưỡng 85% hạn mức tuần cũ (27/10).
 
 ## Bảng ticket
 
