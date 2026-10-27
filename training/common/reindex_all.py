@@ -17,7 +17,7 @@ import time
 
 import httpx
 
-from app.security.api_key import api_key_headers
+from app.security.api_key_client import api_key_headers
 
 SAFE_PORTS = {8100, 8200, 8300}
 

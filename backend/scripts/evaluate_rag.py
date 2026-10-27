@@ -11,9 +11,10 @@ from time import sleep
 
 import httpx
 
-# Lives beside the rule that enforces the key; imported here under its old name so
-# redteam_rag and every caller of scripts.evaluate_rag keep working unchanged.
-from app.security.api_key import api_key_headers
+# Lives in app.security beside the rule that enforces the key, in a module that loads
+# neither FastAPI nor the auth layer; imported here under its old name so redteam_rag
+# and every caller of scripts.evaluate_rag keep working unchanged.
+from app.security.api_key_client import api_key_headers
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 

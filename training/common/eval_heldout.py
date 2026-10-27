@@ -30,7 +30,7 @@ import httpx
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-from app.security.api_key import api_key_headers  # noqa: E402
+from app.security.api_key_client import api_key_headers  # noqa: E402
 
 OUT_DIR = PROJECT_ROOT / "data" / "evaluation" / "heldout_retrieval_v1" / "results"
 

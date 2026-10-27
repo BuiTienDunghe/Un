@@ -427,7 +427,7 @@ recorded baseline exactly (recall@5 0.9878, MRR 0.9360, doc_hit 0.9268), left
 against all 82 recorded ranks, and deleted `ATTENTION_nightly_eval.txt` on its way
 out. The report is `data/evaluation/results/rag-multidoc-20260904-180426.json`.
 
-- `api_key_headers()` in `backend/app/security/api_key.py` falls back to
+- `api_key_headers()` in `backend/app/security/api_key_client.py` falls back to
   `Settings` — *the same file the server reads* — when `os.environ` has no key. An
   explicit environment variable still wins, which is what CI and one-off runs against
   another host rely on. A missing `.env` or unreachable database sends no header

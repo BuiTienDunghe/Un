@@ -21,7 +21,7 @@ from pathlib import Path
 
 import httpx
 
-from app.security.api_key import api_key_headers
+from app.security.api_key_client import api_key_headers
 
 
 def index_state(client: httpx.Client, base_url: str, document_id: str) -> tuple[str, int]:

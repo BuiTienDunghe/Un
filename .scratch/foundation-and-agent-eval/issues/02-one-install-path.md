@@ -49,10 +49,13 @@ Kết quả: gỡ 18/19 chỗ vá, giữ 1 (đã duyệt).
 | 8 file `training/` | có | 3 file lấy `api_key_headers` từ nơi mới (xem dưới) |
 | `backend/tests/test_eval_stack_model_version.py` | **giữ** | Cách b3 điều phối chọn; có comment lý do trong file |
 
-- `api_key_headers` dời sang `backend/app/security/api_key.py`, docstring giữ nguyên.
+- `api_key_headers` dời sang `backend/app/security/api_key_client.py`, docstring giữ nguyên.
   `evaluate_rag.py` import lại đúng tên cũ. `docs/FAILURE_MODES.md` đã trỏ về chỗ mới.
-  Hệ quả: import `scripts.evaluate_rag` giờ kéo theo fastapi, jwt và các model SQLAlchemy (đo
-  0,87 s). Trước đây nó chỉ cần httpx. Mọi nơi chạy nó đều có đủ requirements.
+  Bản đầu đặt hàm vào `api_key.py`. Fable chỉ ra rằng module đó import fastapi và tầng auth
+  (jwt, các model ORM), nên import `scripts.evaluate_rag` tăng từ 0,22 s lên 0,81 s. Vì vậy hàm
+  được tách sang module riêng, chỉ dùng thư viện chuẩn, còn `api_key.py` trở về y như trên `main`.
+  Đo lại: 0,18–0,22 s, không còn fastapi hay SQLAlchemy. `tests/test_eval_harness_import_weight.py`
+  khoá điều này bằng một trình thông dịch mới.
 - Launcher: kiểm `import app` bằng `python -I` (không có thư mục hiện tại trên sys.path), và phải
   trỏ đúng checkout này. Sai hoặc thiếu thì chạy `pip install -e . --no-deps`. Bỏ `pushd backend`
   quanh lệnh registry, vì đường dẫn Modelfile vốn đã là tuyệt đối. Lần cài đầu cần mạng (để tải
