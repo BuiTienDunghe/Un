@@ -110,3 +110,8 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
 - 28/10 00:55 (opus 5.5): #1-B gộp vào main bằng merge commit (2d4a830), fable duyệt GỘP ĐƯỢC (reviews/
   wip-20-agent-reading-8cc0f73.md). Luật đăng ký đạt: 38/48, đọc dài 4/5, bài cũ 33 (= ngưỡng). Còn: #2 kiểm câu trả
   lời, #3 input dài thành tài liệu tạm, #4 stream. doc-10 bịa số khi không tra → đưa vào lý do cần #2.
+- 28/10 01:10 (Nhân viên 1 thiết kế #2, opus 5.5 duyệt): kiểm **con số**: mọi số ≥ 2 chữ số trong câu trả lời phải
+  có trong câu hỏi + hội thoại + kết quả công cụ của lượt (K3). Đo trên 144 câu đã lưu: bắt 3 câu trượt (doc-10 bịa
+  phụ cấp, doc-22, doc-33 ở A), **0** báo nhầm; bộ kiểm chữ sẵn có (K1) báo nhầm 27% câu đạt nên chỉ ghi trace. Trượt
+  → thử lại một lần có công cụ, kèm lời dặn nêu các số không có nguồn (T1), chỉ khi còn ≥ 20 s. Điểm mù: số tự tính,
+  số viết bằng chữ, câu bịa không có số. Code chỉ `run()` + `answer_figures.py`; gộp trước C4 của ticket 22.
