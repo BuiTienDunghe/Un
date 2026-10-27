@@ -47,10 +47,13 @@ class BaitedRetrieval:
 
 def run_baited_turn(client, monkeypatch) -> dict:
     arguments = {"query": f"giá vé {QUESTION_BAIT}", "top_k": 3, QUESTION_BAIT: "khoá do model bịa"}
+    # A tool name is model output too (fable's review): an invented one carrying the bait.
+    invented = f"tra_cuu_{QUESTION_BAIT}"
+    calls = [{"name": "search_documents", "arguments": arguments}, {"name": invented, "arguments": {}}]
     monkeypatch.setattr(client.app.state.agent_service, "retrieval_service", BaitedRetrieval())
     monkeypatch.setattr("app.llm_clients.ollama_client.OllamaClient.chat_tools", scripted([
-        {"content": "", "tool_calls": [{"name": "search_documents", "arguments": arguments}],
-         "raw_tool_calls": [{"function": {"name": "search_documents", "arguments": arguments}}]},
+        {"content": "", "tool_calls": calls,
+         "raw_tool_calls": [{"function": call} for call in calls]},
         {"content": f"Vé 120.000 đồng {ANSWER_BAIT}", "tool_calls": [], "raw_tool_calls": []},
     ]))
     response = client.post("/chat", json={"message": f"Giá vé bao nhiêu? {QUESTION_BAIT}", "use_tools": True})
@@ -84,7 +87,7 @@ def test_the_summary_keeps_no_string_from_the_question_the_result_or_the_answer(
                     for bait in (QUESTION_BAIT, RESULT_BAIT, ANSWER_BAIT):
                         assert bait not in (value or ""), f"{column} carries {bait!r}: {value!r}"
             # The full trace really did carry them: the scan above is not vacuous.
-            stored = " ".join(str(row.arguments) + str(row.content) for row in session.scalars(
+            stored = " ".join(str(row.tool_name) + str(row.arguments) + str(row.content) for row in session.scalars(
                 select(AgentTrace).where(AgentTrace.conversation_id == conversation_id)))
             assert QUESTION_BAIT in stored and RESULT_BAIT in stored and ANSWER_BAIT in stored
     finally:
@@ -99,7 +102,9 @@ def test_deleting_the_conversation_takes_the_content_and_keeps_the_skeleton(clie
     try:
         before = summaries(factory, conversation_id)
         assert [(row.kind, row.tool_name) for row in before] == [
-            ("tool_call", "search_documents"), ("tool_result", "search_documents"), ("final", None)]
+            ("tool_call", "search_documents"), ("tool_result", "search_documents"),
+            ("tool_call", "unknown"), ("tool_result", "unknown"), ("final", None)]
+        assert before[3].error_code == "UNKNOWN_TOOL"
         assert before[0].arguments_shape == {"query": f"str:{len('giá vé ' + QUESTION_BAIT)}", "top_k": 3, "_undeclared": 1}
         assert before[1].content_sha256 and before[1].error_code is None
         assert before[-1].stop_reason == "final" and before[0].source == "web"

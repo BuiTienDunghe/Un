@@ -96,3 +96,5 @@ def test_the_loop_records_each_tool_results_code_in_its_step():
     results = [step for step in steps if step["kind"] == "tool_result"]
     assert [(step["error_code"], step["error_type"]) for step in results] == [
         (agent_module.TOOL_FAILED, "RuntimeError"), (agent_module.UNKNOWN_TOOL, None)]
+    # Only a declared name may reach the content-free trace (fable's review).
+    assert [step["tool_declared"] for step in results] == [True, False]

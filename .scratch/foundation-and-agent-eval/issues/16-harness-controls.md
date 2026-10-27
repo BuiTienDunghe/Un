@@ -59,7 +59,7 @@ adk.dev (runconfig, plugins, observability/traces); github.com/open-telemetry/se
 
 - Test tất định cho từng cơ chế: chạm ngân sách → kết quả kiểm soát được; mỗi mã lỗi; trace còn sau khi
   xoá hội thoại đúng theo phương án đã chọn.
-- Agent Eval v0.2: không suy giảm so với mốc của ticket 10 (một lần khởi động bỏ đi mỗi phía).
+- Agent Eval v0.2: không suy giảm so với mốc của ticket 10 (gỡ model chính trước mỗi lần đo, theo quy tắc của ticket 10).
 
 ## Comments
 
@@ -217,7 +217,7 @@ khác nhau giữa web và Discord.
 3. Ngân sách cả lượt: `agent_service`, `models.yaml`, `main.py`. Test bằng đồng hồ giả.
 4. Bảng rút gọn: model, migration, store ghi hai bảng, các bước mang `error_code` / tokens /
    `stop_reason`. Test Postgres: xoá hội thoại thì nội dung mất, bản rút gọn còn.
-5. Agent Eval v0.2 so với mốc của ticket 10, bỏ một lần khởi động mỗi phía.
+5. Agent Eval v0.2 so với mốc của ticket 10; gỡ model chính trước mỗi lần đo.
 
 Lý do: bước 1–3 sinh ra `error_code`, `stop_reason` và tokens mà bước 4 ghi, nên bước 4 không phải có
 cột tạm. Mỗi commit lùi lại được riêng. Bước 2 tách khỏi 3 để lỗi ở tầng client không lẫn với logic
@@ -283,3 +283,20 @@ Chưa làm: commit 5 (Agent Eval v0.2 so với mốc của ticket 10) cần GPU.
 model chính trước MỖI lần đo. Báo cáo eval phải ghi rõ: commit 1 đổi lời model đọc ở hist-08..10, nên
 lần đo sau commit 1 nhắm đúng những bài đó. Ghi chú của hist-08 trong `tasks.jsonl` vẫn trích câu từ
 chối cũ; tôi không sửa bộ dữ liệu, vì nó có hash trong manifest.
+
+### 27/10 — fable 5.1 duyệt; Nhân viên của Ún 1 sửa
+
+Commit 1–3 gộp được. Commit 4 có một chỗ phải sửa: `tool_name` của bảng rút gọn lấy thẳng tên công cụ
+mà model gọi. Với `UNKNOWN_TOOL`, đó là chữ model tự bịa, có thể chứa chữ của người dùng, và sẽ nằm
+lại sau khi xoá hội thoại. Đã sửa: bước nào mang `tool_declared` thì bảng rút gọn mới giữ tên; còn lại
+ghi `unknown`. Mặc định là không giữ, nên một bên gọi nào quên đánh dấu cũng không làm lọt tên. Bảng
+`agent_traces` vẫn giữ tên thật. Test mồi thêm một lượt gọi công cụ có tên chứa mồi, nên phép quét
+hiện có giờ bắt được chỗ này.
+
+Khoảng hở đã biết, ngoài phạm vi (t1 đã duyệt): thời gian chạy công cụ trong MỘT vòng không có hạn.
+Một vòng gọi nhiều công cụ cùng treo (Qdrant 10 s × 3 mỗi lần gọi) có thể đẩy cả lượt quá 180 s mà
+bot chờ.
+
+Commit 5: ticket này không đổi `AGENT_GUIDE` lẫn `AGENT_TOOLS`, nên hash prompt bằng của ticket 10.
+Chạy lại A lạnh làm control trước khi đo (khoảng 2,5 phút), vì chưa ai đo xem lượt lạnh có lặp lại được
+qua ngày không. Mục tiêu là hist-08..10.
