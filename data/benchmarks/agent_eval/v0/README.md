@@ -146,6 +146,10 @@ Quy tắc (chốt 27/10):
 - Một lần chạy chỉ được trích dẫn khi manifest có cây sạch và sha256 của dataset khớp với phiên bản
   đang trích.
 - Đổi tiêu chí thì phải chạy lại model, không chấm lại offline câu trả lời cũ.
+- **Mọi lần so trước/sau ở nhiệt độ 0 + seed phải có một lần khởi động bỏ đi ở mỗi phía** (chốt
+  27/10). Baseline v0.1 cho thấy lý do: hai lần chạy khi model đã nóng giống hệt nhau từng byte,
+  còn lần chạy lạnh (model vừa được nạp) khác chúng ở 15/40 câu trả lời. Nguyên nhân chưa được đo.
+  Không có lần khởi động thì phần chênh do lạnh/nóng sẽ bị đọc thành tác dụng của thay đổi đang thử.
 
 | Ngày | Bài | Thay đổi | Vì sao |
 |---|---|---|---|

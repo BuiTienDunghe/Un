@@ -1,6 +1,6 @@
 # 07 — Agent Eval v0: ghi truy xuất thật, chạy baseline 3 lần (M2)
 
-Status: xong trên `wip/07-agent-eval-baseline` — truy xuất ghi + baseline 4 lần + chấm tay 16; chờ fable duyệt, chờ chốt doc-18
+Status: xong trên `wip/07-agent-eval-baseline` — truy xuất ghi + baseline 4 lần + chấm tay 16; doc-18 chốt (b), sửa ở v0.2; chờ fable duyệt rồi gộp
 Type: task
 Blocked by: 06 (đã gộp); phần chạy GPU chờ 11 (11 đang đo p50 /rag/search, mà 09 dùng số đó làm ngưỡng)
 
@@ -127,3 +127,8 @@ embed và một lần chat OCR đúng là những gì API làm mỗi lần khở
   trước/sau ở t0 + seed phải có một lần khởi động bỏ đi. Nguyên nhân chưa đo.
 - Chờ chốt: doc-18 nên (a) sửa và chạy lại ngay, hay (b) để nguyên và sửa ở v0.2. Danh sách đầy đủ
   ở mục "Cần chủ dự án hoặc điều phối chốt" trong REPORT.md.
+
+**27/10 — opus chốt doc-18: (b).** Baseline giữ đúng như đã đo (r2/r3 34/40). Số đếm tay 35/40 đã
+ghi trong REPORT.md kèm lý do: doc-18 trượt oan vì regex chỉ nhận "ba ngày". doc-18, hist-05 ("tuần
+này") và mẫu `no_access` sẽ sửa ở v0.2 rồi chạy lại một lần. README của bộ bài có thêm quy tắc: mọi
+lần so trước/sau ở t0 + seed phải có một lần khởi động bỏ đi ở mỗi phía.
