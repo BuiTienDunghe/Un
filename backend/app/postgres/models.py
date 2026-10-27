@@ -1095,7 +1095,9 @@ class AgentTraceSummary(Base):
     telemetry outlives its subject, as RequestLog.message_id already does.
 
     `arguments_shape` keeps a declared integer as a number and a declared string as
-    "str:<length>"; undeclared keys are only counted. `content_sha256` hashes what the
+    "str:<length>"; undeclared keys are only counted. On a final or answer_check step,
+    which has no arguments, it carries the answer check's labels and counts instead
+    (ticket 20 #2: unsupported figures, grounding). `content_sha256` hashes what the
     model read or wrote — a result or an answer, long enough not to be guessed back;
     a short question would be, which is why arguments are shaped and never hashed.
     """
