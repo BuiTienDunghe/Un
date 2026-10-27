@@ -47,3 +47,18 @@ trí nhớ Discord thành một gói riêng, đăng ký công cụ của mình q
   shim duy nhất `discord_history_service` tới C4; (4) **D1** trong 22 (giữ khai báo như cũ, để C4 kiểm "Agent Eval
   trùng"), D2 đo riêng trên v0.3 sau; (5) C4 do Nhân viên 1 làm ngay sau khi ticket 20 #1 gộp. Nợ ghi lại, không
   sửa lần này: 25 trường settings Discord, chuỗi tuyến job trong `jobs/routing`, ba dịch vụ lõi đếm bảng Discord.
+- 28/10 (Nhân viên của Ún 2), nhánh `wip/22-discord-split` từ main 00fcdfb:
+  - **C1** (1806cea): `STOPWORDS` và `fold` dời sang `app/utils/vi_text.py`; `answer_grounding` import từ đó;
+    `discord_memory_guard` import lại cả hai, nên mọi chỗ đang dùng tên cũ vẫn chạy, và đó vẫn là cùng một object.
+  - **C5** (50e62b7): `tests/test_discord_boundary.py`, 8 bài.
+    - Kiểm mã nguồn: không module lõi nào import `app.discord`. Kiểm này chỉ có tác dụng từ C2, khi
+      `app/discord/` có thật.
+    - Kiểm lúc chạy, có tác dụng ngay: import một module lõi trong một interpreter mới thì không nạp module
+      Discord nào. Ngoại lệ duy nhất là `discord_memory_constants`, vì model ở lại lõi.
+    - Riêng agent, chat và rag còn nạp `discord_history_service`. Đó là món nợ `search_history`, C4 sẽ xoá.
+    - Kiểm đột biến: cho `answer_grounding` import lại từ guard, hoặc thêm một lệnh import `app.discord` nằm
+      trong hàm, thì đều đỏ.
+  - Kèm b83c45e: 3 test `--collection-base` của ticket 09 đỏ trên main khi chạy cả bộ, và cả trên CI, vì dựng
+    `Settings` mà không có `DATABASE_URL`. Test giờ tự đặt một URL giả.
+  - Bộ test chạy không có `POSTGRES_TEST_URL`: backend 795 bài qua, 450 bài bỏ qua; bộ test gốc 74 bài qua.
+    Chưa chạy với DB test.
