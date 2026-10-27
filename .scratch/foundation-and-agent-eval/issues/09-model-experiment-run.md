@@ -438,3 +438,9 @@ biến đó, hoặc bỏ lệnh này khỏi các bước đo.
   commit, vào thư mục riêng ngoài repo; chạy converter bằng `python -I` từ thư mục làm việc riêng; cài
   `sentencepiece` (ghim phiên bản) vào đúng một venv chạy converter. Tải gì khác ngoài ba thứ này phải hỏi lại.
   GPU: H-pack + đo VRAM tối nay nếu xong trước 02:45; các lượt đo heldout/lab (≈ 3 giờ) chạy sau eval đêm.
+- 28/10 00:20 (Nhân viên 2; fable duyệt đóng gói fa8771b): **H-pack qua** — e5-large đã đóng gói (Q8) cho
+  VieQuAD nDCG@10 0,6102, số công bố 0,6112, cửa sổ [0,5912 ; 0,6312]. VRAM đo từ GPU trống 514 MiB; tổng đường
+  trả lời 6 407 + 514 + 643 = 7 564 ≤ 16 311. Giới hạn đã đo: e5 đọc tối đa 512 token → 1 001/3 896 đoạn heldout
+  (25,7%) và 18/27 đoạn lab bị Ollama cắt không báo lỗi; các nhánh đo e5 kèm việc cắt (đúng như sản phẩm nếu
+  ship), báo cáo phải ghi tỉ lệ cắt. Ba nhánh (≈ 3 giờ, một mạch) chạy sáng 28/10 sau eval đêm. Nhánh
+  `wip/09-e5-full` giữ, gộp bằng merge commit khi xong.

@@ -45,7 +45,7 @@ from annotated_types import MaxLen
 from app.llm_clients.usage import consume_usage
 from app.schemas.chat_schema import ChatRequest
 from app.schemas.discord_schema import DiscordTurnEnqueueRequest
-from app.services.agent_service import AGENT_GUIDE, AGENT_TOOLS, FINAL_RESERVE_SECONDS, TURN_BUDGET_SECONDS, AgentService
+from app.services.agent_service import AGENT_GUIDE, AGENT_TOOLS, FINAL_RESERVE_SECONDS, READ_RESULT_MAX_CHARS, TURN_BUDGET_SECONDS, AgentService
 from app.services.discord_history_service import _SAFE_LEXEME, DiscordHistoryHit
 from app.services.discord_speaker_context import DISCORD_SPEAKER_SYSTEM_INSTRUCTION, attributed_user_content
 from app.services.injection_defense import InjectionDefense
@@ -183,6 +183,38 @@ class ReplayRetrieval:
 
     def retrieve(self, query: str, top_k: int, document_id: str | list[str] | None = None) -> list[dict[str, object]]:
         return [dict(chunk) for chunk in self.chunks[:top_k]]
+
+
+class FixtureDocuments:
+    """read_document over the dataset's whole documents (documents.jsonl), the way
+    ChunkInspectionService serves the active version: by chunk_index from a start, or
+    the chunks whose page range covers a page (none, for a document without pages)."""
+
+    def __init__(self, documents: dict[str, dict[str, Any]]) -> None:
+        self.documents = documents
+
+    def _slice(self, document_id: str, chunks: list[dict[str, Any]]) -> dict[str, object] | None:
+        document = self.documents.get(document_id)
+        if document is None:
+            return None
+        return {
+            "document_id": document_id,
+            "filename": document["filename"],
+            "total_chunks": len(document["chunks"]),
+            "chunks": [dict(chunk) for chunk in chunks],
+        }
+
+    def read_chunks(self, document_id: str, from_chunk: int, n: int) -> dict[str, object] | None:
+        chunks = (self.documents.get(document_id) or {}).get("chunks", [])
+        return self._slice(document_id, [chunk for chunk in chunks if chunk["chunk_index"] >= from_chunk][: max(1, n)])
+
+    def chunks_on_page(self, document_id: str, page: int, n: int) -> dict[str, object] | None:
+        def covers(chunk: dict[str, Any]) -> bool:
+            start, end = chunk.get("page_start"), chunk.get("page_end")
+            return start is not None and start <= page and (end if end is not None else start) >= page
+
+        chunks = (self.documents.get(document_id) or {}).get("chunks", [])
+        return self._slice(document_id, [chunk for chunk in chunks if covers(chunk)][: max(1, n)])
 
 
 class SnapshotStatus:
@@ -367,12 +399,14 @@ def run_eval(
     out_dir.mkdir(parents=True, exist_ok=False)
     max_steps = int(agent_config["max_steps"])
     tool_result_max_chars = int(agent_config["tool_result_max_chars"])
+    read_result_max_chars = int(agent_config.get("read_result_max_chars", READ_RESULT_MAX_CHARS))
     turn_budget_seconds = float(agent_config.get("turn_budget_seconds", TURN_BUDGET_SECONDS))
     final_reserve_seconds = float(agent_config.get("final_reserve_seconds", FINAL_RESERVE_SECONDS))
     manifest = {
         **run_meta,
         "max_steps": max_steps,
         "tool_result_max_chars": tool_result_max_chars,
+        "read_result_max_chars": read_result_max_chars,
         "input_max_chars": INPUT_MAX_CHARS,
         "turn_budget_seconds": turn_budget_seconds,
         "final_reserve_seconds": final_reserve_seconds,
@@ -396,6 +430,7 @@ def run_eval(
 
     recording = UsageRecordingRouter(router)
     history = FixtureHistory(dataset.guild)
+    documents = FixtureDocuments(dataset.documents)
     schemas = {tool["function"]["name"]: tool["function"]["parameters"] for tool in AGENT_TOOLS}
     results: list[dict[str, Any]] = []
     for task in tasks:
@@ -410,6 +445,8 @@ def run_eval(
             history_service=history,
             turn_budget_seconds=turn_budget_seconds,
             final_reserve_seconds=final_reserve_seconds,
+            document_reader=documents,
+            read_result_max_chars=read_result_max_chars,
         )
         tool_context = {"guild_id": history.guild_id} if task.get("surface") == "discord" else None
         answer: str | None = None
@@ -592,6 +629,7 @@ def main(argv: list[str] | None = None) -> int:
     agent_config = {
         "max_steps": int(agent_section.get("max_steps", 3)),
         "tool_result_max_chars": int(agent_section.get("tool_result_max_chars", 1200)),
+        "read_result_max_chars": int(agent_section.get("read_result_max_chars", READ_RESULT_MAX_CHARS)),
         "turn_budget_seconds": float(agent_section.get("turn_budget_seconds", TURN_BUDGET_SECONDS)),
         "final_reserve_seconds": float(agent_section.get("final_reserve_seconds", FINAL_RESERVE_SECONDS)),
     }

@@ -33,7 +33,7 @@ def factory():
     return create_session_factory(create_postgres_engine(str(URL)))
 
 
-def _seed_document(factory, *, indexed: bool = True, text: str = TEXT) -> tuple[str, str]:
+def _seed_document(factory, *, indexed: bool = True, text: str = TEXT, pages: list[tuple[int, str, str]] | None = None) -> tuple[str, str]:
     suffix = uuid4().hex
     doc_id, version_id = f"doc_p45_{suffix}", f"ver_p45_{suffix}"
     with factory.begin() as session:
@@ -44,7 +44,7 @@ def _seed_document(factory, *, indexed: bool = True, text: str = TEXT) -> tuple[
         session.add_all((document, version))
         session.flush()
         if indexed:
-            PostgresDocumentRepository(session).replace_chunks(doc_id, version_id, chunk_pages([(1, text, "native")], 20, 0))
+            PostgresDocumentRepository(session).replace_chunks(doc_id, version_id, chunk_pages(pages or [(1, text, "native")], 20, 0))
     return doc_id, version_id
 
 
@@ -96,6 +96,38 @@ def test_missing_and_unindexed_documents_raise_their_own_errors(factory):
         service.list_chunks("doc_p45_khong_ton_tai")
     with pytest.raises(DocumentNotIndexedError):
         service.list_chunks(unindexed)
+    _cleanup(factory)
+
+
+def test_the_agents_read_returns_whole_chunks_from_a_start_and_none_for_no_active_version(factory):
+    # read_document (ticket 20 #1) over the same rows the screen and the retriever see.
+    _cleanup(factory)
+    doc_id, _ = _seed_document(factory)
+    unindexed, _ = _seed_document(factory, indexed=False)
+    service = ChunkInspectionService(factory)
+    listed = service.list_chunks(doc_id)["chunks"]
+
+    read = service.read_chunks(doc_id, 1, 2)
+    assert read["total_chunks"] == len(listed) > 2 and read["filename"].startswith("p45-")
+    assert [c["chunk_index"] for c in read["chunks"]] == [1, 2]
+    assert [c["content"] for c in read["chunks"]] == [listed[1]["content"], listed[2]["content"]], "whole, as indexed"
+    assert set(read["chunks"][0]) == {"chunk_index", "page_start", "page_end", "content"}, "no feedback marks"
+    assert service.read_chunks(doc_id, 99, 2)["chunks"] == []
+    assert service.read_chunks("doc_p45_khong_ton_tai", 0, 2) is None and service.read_chunks(unindexed, 0, 2) is None
+    _cleanup(factory)
+
+
+def test_the_agents_read_by_page_takes_the_chunks_covering_that_page(factory):
+    _cleanup(factory)
+    pages = [(1, TEXT, "native"), (2, TEXT.replace("Guide", "Second"), "native")]
+    doc_id, _ = _seed_document(factory, pages=pages)
+    service = ChunkInspectionService(factory)
+    listed = service.list_chunks(doc_id)["chunks"]
+    on_two = [c["chunk_index"] for c in listed if c["page_start"] <= 2 <= (c["page_end"] or c["page_start"])]
+
+    read = service.chunks_on_page(doc_id, 2, 10)
+    assert on_two and [c["chunk_index"] for c in read["chunks"]] == on_two
+    assert service.chunks_on_page(doc_id, 9, 3)["chunks"] == []
     _cleanup(factory)
 
 

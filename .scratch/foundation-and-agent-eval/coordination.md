@@ -1,13 +1,17 @@
 # Điều phối — nền + Agent Eval
 
 Chủ dự án giao (27/10/2026): "opus 5.5 của Ún" và "fable 5.1 của Ún" tự điều phối cho tới khi xong
-`spec.md`, hoặc tới khi hạn mức tuần (tất cả model, hoặc riêng Fable) vượt 85%. Có ba phiên thực
+`spec.md` (đạt hiệu quả), hoặc tới một ngưỡng dừng ở mục "Hạn mức" (đổi 28/10 01:11). Có ba phiên thực
 hiện: "Nhân viên của Ún 1", "Nhân viên của Ún 2", "Nhân viên của Ún 3".
 
 ## Ưu tiên (chủ dự án, 28/10)
 
 **Harness là điểm nổi bật nhất của dự án** — xử lý tốt, hiệu quả. Khi phải chọn, việc harness (ticket 20, 22, và
 mọi khả năng agent) đi trước thí nghiệm model (M3). Mọi cải tiến harness phải có số đo trên Agent Eval.
+
+**Benchmark phải uy tín, có điểm công bố** (chủ dự án, 28/10 00:30): mọi khẳng định chất lượng dùng benchmark có
+paper/leaderboard chính thống, và tái lập một số đã công bố trước rồi mới đo thay đổi. Agent Eval tự viết chỉ là
+test hồi quy (bắt thoái lui, so trước/sau), không phải bằng chứng chất lượng. Đang khảo sát benchmark phù hợp (ticket 24).
 
 ## Vai trò
 
@@ -53,6 +57,68 @@ GPU tối 27/10 cho phần đo của **10**; 09 chạy lại trọn một mạch
 (`eval_stack --profile lab|heldout`) phải **dừng trước 02:45**: eval đêm 03:00 tự bật lab API ở
 cổng 8100 và cần GPU; đêm 27→28/10 là đêm nghiệm thu của ticket 01.
 
+## Đêm 28/10: chủ dự án đi ngủ (01:16)
+
+"tôi đi ngủ, bạn chủ động được chứ — không tự ý xoá những thứ quan trọng; không tự tải những thứ nặng về." Áp cho mọi
+phiên Ún tới khi chủ dự án nhắn lại:
+- **Không xoá**: dữ liệu, DB (thật lẫn test, trừ dọn dẹp mà bộ test tự làm), collection Qdrant, model Ollama, tệp
+  ngoài repo, nhánh `wip/*`, tag `eval-src/*`, thư mục `kept/`. Được xoá: worktree tích hợp tạm của opus sau khi gộp;
+  code trong phạm vi ticket (vd shim theo C6).
+- **Không tải nặng**: tổng một lần cài/tải trên 200 MB thì dừng, ghi số vào tệp, chờ sáng. Không `ollama pull`, không
+  tải model/dataset HF.
+- Không push, không đổi cấu hình máy; quyết định của chủ dự án (chỗ cắm BFCL, ticket 21…) để sáng.
+
+## DB test dùng chung: chỉ opus chạy (28/10 01:25)
+
+Hai lượt chạy bộ test đầy đủ của opus (01:09 và 01:13) đều đỏ 14 bài, mỗi lần một bộ khác nhau: một phiên Ún khác
+(claude.exe opus, chạy `pytest … tests` qua PowerShell lúc 01:16) cũng dùng `local_ai_core_test` cùng lúc, và các
+bài migration hạ/nâng schema giẫm lên nhau (lúc 01:19 DB đang ở revision 18, thiếu `conversations.title`). Từ giờ:
+**chỉ opus chạy test có DB** (đặt `POSTGRES_TEST_URL`). Gốc rễ (01:27): `POSTGRES_TEST_URL` nằm sẵn trong biến môi
+trường người dùng của Windows (`HKCU\Environment`), nên pytest của **mọi** phiên đều tự dùng DB test; lượt 01:21 của opus
+cũng bị giẫm (30 bài đỏ, 01:23 có thêm một cặp pytest). Phiên khác chạy test phải bỏ biến: PowerShell
+`$env:POSTGRES_TEST_URL=$null; $env:REDIS_TEST_URL=$null;`, bash `env -u POSTGRES_TEST_URL -u REDIS_TEST_URL`. Không
+xoá biến khỏi máy (luật đêm: không đổi cấu hình) — chủ dự án quyết sáng. Phiên khác cần thì ghi vào tệp duyệt hoặc ticket, opus chạy
+giúp khi gộp. Đính chính: lần nạp glm-ocr 00:54 là từ lượt test `after20` của chính opus (Ollama còn sống); lần 00:57
+chưa rõ phiên nào.
+
+## Sáng 28/10 — chờ chủ dự án
+
+| # | Việc | Ghi chú |
+|---|---|---|
+| 1 | BFCL: cắm vào vòng lặp hay bước gọi model | `ticket24-design.md` có bảng; opus nghiêng vòng lặp |
+| 2 | BFCL: nhiệt độ khi đo | NV3 đề xuất 0, chạy lạnh; Ún đang dùng 0,4 |
+| 3 | BFCL (nếu cắm vòng lặp): ba công cụ của Ún ở lại hay bị thay trong lượt BFCL | |
+| 4 | BFCL: cài venv | phiên NV3 bị bộ phân loại quyền chặn `pip install`; 119 gói, 94,5 MB; hai lệnh ở mục 1 của thiết kế. Opus không chạy thay |
+| 5 | Đợt đo GPU gom lại | #2, #3 (Agent Eval v0.3, ~7 phút mỗi lần), ba nhánh e5 (~3 giờ) |
+| 6 | Việc cũ còn treo | push, bot B1/B2, ticket 21 (tài liệu chưa có chủ), 5 collection Qdrant đo, v0.4 (L-b, L-c), 14/15 |
+
+## Giữ im Ollama đêm 28/10 (phiên Quản lý xin, 01:00)
+
+Từ khoảng 02:00 Quản lý đo độ trễ, cần GPU sạch tuyệt đối. Lúc 00:54 và 00:57 có hai lần glm-ocr được nạp, mỗi lần
+khoảng 6 giây: đó là bước kiểm tra model khi app khởi động (`model_startup_probes`), do một phiên Ún bật app hoặc
+chạy test. **Đến khi chủ dự án cho đo lại**, mọi lần chạy test hay bật app phải kèm
+`OLLAMA_BASE_URL=http://127.0.0.1:9 MODEL_STARTUP_PROBES=false CUDA_VISIBLE_DEVICES=-1` (Ollama trỏ vào cổng chết như
+CI; reranker chạy PyTorch ngay trong tiến trình python nên phải giấu GPU khỏi nó — đây là python.exe Quản lý thấy). Không chạy
+`agent_eval`, `run_mteb`, `eval_stack`, `ollama run/pull`. Eval đêm 03:00 vẫn chạy (Quản lý tránh 03:00–03:05).
+Backup 02:00 chỉ dùng đĩa và CPU (`pg_dump`).
+
+## Xây trước, đo sau (chủ dự án, 28/10 00:58)
+
+"Hôm nay chưa cần chạy GPU nhiều quá, hãy xây dựng trước đã." Từ giờ: ưu tiên code (ticket 20 #2–#4, 22, 23,
+dựng BFCL); **hoãn** các lượt đo GPU dài (ba nhánh e5 của 09 ≈ 3 giờ, chạy BFCL). Các lần đo hồi quy Agent Eval
+(~7 phút) gom lại chạy một đợt khi chủ dự án cho. Eval đêm 03:00 vẫn chạy (nghiệm thu ticket 01, ~3 phút).
+
+## Nhường GPU cho dự án khác (chủ dự án, 28/10 00:45)
+
+Một dự án khác của chủ dự án cũng dùng GPU này. Quy tắc:
+- Phiên của dự án đó xin GPU thì **nhường**; họ báo xong thì dùng tiếp.
+- Yêu cầu nhường gửi tới **opus** (điều phối), không tới từng nhân viên. Opus báo nhân viên đang giữ GPU dừng ở
+  ranh giới an toàn (hết một lần đo, không bỏ dở giữa lần), gỡ model (`ollama stop`) để trả VRAM.
+- Opus **được từ chối** khi đang có một lần đo mà dừng giữa chừng sẽ làm hỏng kết quả, hoặc việc thật sự cần
+  thiết; khi đó trả lời rõ còn bao lâu xong.
+- Khi không có GPU, các phiên làm việc không cần GPU (code, test không model, thiết kế, tài liệu).
+- Mọi số độ trễ đo trong lúc dự án kia dùng GPU phải ghi là "GPU dùng chung", không so với mốc đo lúc GPU rỗi.
+
 ## Đóng băng main
 
 **Gỡ lúc 22:35** (chủ dự án hỏi lại, đo lại): lý do 2 sai — Nhân viên 1 kiểm, API boot được trên schema cũ và
@@ -71,6 +137,13 @@ dự án gõ** (fable 5.1 đếm được, 27/10). Ban đêm không có người
 lần khi xong việc, không báo tiến độ. Lần đầu bị giữ (fable 5.1 sau khoảng 10
 tin, 27/10; chủ dự án phải mở lại). Gom kết luận: mỗi nhánh một tin, đủ để không cần hỏi lại.
 
+## Duyệt qua tệp thay vì tin nhắn (28/10 00:55)
+
+Giới hạn khoảng 10 tin của mỗi phiên không chỉnh được từ đây (không có trong cài đặt của app; nó đặt lại khi chủ
+dự án gõ vào chính phiên đó). Để fable không cạn lượt: fable ghi mỗi kết luận duyệt vào
+`reviews/<nhánh>-<sha ngắn>.md` (trong checkout chính, chỉ thư mục này), dòng đầu là **GỘP ĐƯỢC** hoặc **CẦN SỬA**.
+Nhân viên tự đọc tệp đó; điều phối đọc trước khi gộp. Fable chỉ nhắn khi có điều chặn hoặc cần quyết định.
+
 ## Gộp
 
 Nhánh → fable 5.1 duyệt diff (đúng ticket? có hồi quy? test có kiểm đúng điều cần kiểm?) → opus gộp
@@ -78,8 +151,18 @@ vào `main` ở checkout chính → chạy test → xoá worktree. Chỉ một p
 
 ## Hạn mức
 
-Mỗi lần giao việc, opus kiểm hạn mức tuần. Vượt 85% (tất cả model hoặc riêng Fable) thì dừng giao
-ticket mới, chờ các ticket đang chạy xong, rồi báo chủ dự án.
+Chủ dự án (28/10 01:11): "dừng khi đạt hiệu quả hoặc đạt ngưỡng: nhiệt độ gpu > 85%, limit tuần của tôi ? 90%,
+limit fable > 90%". Đọc là ba ngưỡng, chạm cái nào cũng dừng:
+
+| Ngưỡng | Đo bằng | Lúc ghi |
+|---|---|---|
+| Nhiệt độ GPU > 85 °C | `nvidia-smi` (opus chạy một bộ canh nền, báo khi vượt) | 60 °C, 41% tải lúc 01:11 (phiên Quản lý đang dùng) |
+| Hạn mức tuần, tất cả model ≥ 90% | thẻ hạn mức của app (`get_usage`) | 45%, đặt lại 10:00 28/10 |
+| Hạn mức tuần riêng Fable > 90% | như trên | 30%, đặt lại 10:00 28/10 |
+
+Mỗi lần giao việc hay gộp, opus kiểm hai hạn mức. Chạm ngưỡng thì: không giao việc mới; các phiên dừng ở ranh giới an
+toàn (commit việc dở lên nhánh `wip/`, không gộp nửa vời); `ollama stop` nếu Ún đang giữ GPU; opus báo chủ dự án.
+GPU nóng do dự án khác thì opus báo cả phiên Quản lý. Thay ngưỡng 85% hạn mức tuần cũ (27/10).
 
 ## Bảng ticket
 
@@ -108,6 +191,7 @@ ticket mới, chờ các ticket đang chạy xong, rồi báo chủ dự án.
 | 21 | Tài liệu không có chủ: agent đọc mọi tài liệu, kể cả PDF Nghiên cứu của người khác | — | — | chờ chủ dự án |
 | 22 | Tách mềm Discord: lõi không import Discord; Discord tự cắm qua registry | 20 #1 (1) | fable thiết kế | chờ thiết kế |
 | 23 | Bảng điểm harness: đúng, hiệu quả, bền, minh bạch + lịch sử | — | Nhân viên 3 | đã giao |
+| 24 | Đo harness bằng benchmark uy tín có điểm công bố | — | — | khảo sát xong; chờ chủ dự án chọn |
 
 ## Mốc so sánh của bộ test
 
@@ -159,3 +243,9 @@ manifest ở `kept/` và `heldout_retrieval_v1/results/`: 7 commit không thuộ
 xoá; các lần đo của ticket 10 trên `wip/10-harness`, `wip/10-1a-v2`). Đã gắn tag `eval-src/<sha>` cho cả 7 để không
 mất khi dọn nhánh. **Từ nay: nhánh nào có lần đo được trích dẫn thì gộp bằng merge commit (`--no-ff`), không
 cherry-pick** (v0.3 đã gộp như vậy).
+
+## Nhật ký nhường GPU
+
+| Lúc | Ai xin | Khung | Ghi chú |
+|---|---|---|---|
+| 28/10 00:35 | phiên "Quản lý" (dự án decision model, `C:\Users\dungbt06\Fine-tune`) | ~00:40 → 02:55 (≈ 2 giờ) | chấm Qwen3.5-4B, đo độ trễ batch 1. Ún: Nhân viên 1 chạy xong `v0.3-read-B-r1-cold` rồi gỡ model; r2 chạy sau. Eval đêm 03:00 vẫn chạy (đã báo bên kia) |

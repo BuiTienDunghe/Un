@@ -70,6 +70,9 @@ def test_a_base_outside_the_profiles_namespace_is_refused_before_anything_starts
 
 
 def _collections_seen_by_the_stack(monkeypatch, env):
+    # Settings refuses to build without a PostgreSQL URL; nothing here connects to it,
+    # and without this line the test only passed on a machine whose shell carried one.
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://test:test@127.0.0.1:1/none")
     for key in ("QDRANT_DOCUMENTS_COLLECTION", "QDRANT_MEMORIES_COLLECTION", "MODEL_VERSION_EMBEDDING"):
         monkeypatch.delenv(key, raising=False)
     for key in ("QDRANT_DOCUMENTS_COLLECTION", "MODEL_VERSION_EMBEDDING"):

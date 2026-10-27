@@ -81,6 +81,10 @@ agent:
   # 4 excerpt x ~400 ky tu + metadata JSON ~ 2000+ ky tu; tran thap hon se cat
   # giua chung JSON (model van doc duoc nhung mat doan cuoi).
   tool_result_max_chars: 2400
+  # Ticket 20 #1: read_document returns chunks whole (up to 2400 each), so its own cap.
+  # Lab chunks run 1680 characters at the median, 2429 at most; at ~2.9 characters a
+  # token, three reads of 6000 plus the prompt stay near half of the 16k window.
+  read_result_max_chars: 6000
   # Ticket 16: the whole turn's wall clock, every model call and retry included.
   # Measured 27/10 (Agent Eval v0.2, GPU): 3.2-3.6 s median, 9.2 s worst. 90 s is
   # ~10x that and half the Discord bot's 180 s wait. A tool round starts only while

@@ -90,3 +90,35 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
     hist-11 bịa, ghép giờ họp và phòng B203 thành phương án dã ngoại.
   - Model nhúng 0.6B còn nạp lúc bắt đầu cả hai lần (giống lần 22:57); điều kiện "không có model nhúng" chưa đo.
   - Chờ v0.4: bài L-b, bài L-c, hist-11 cấm dữ kiện bịa, hist-03 cho tra tài liệu trước.
+  - Chờ v0.4 (chủ dự án chốt 28/10, qua fable): tiêu chí "trả lời có số liệu mà không tra" — bài có `tools_required`
+    mà agent không gọi công cụ và câu trả lời chứa con số hoặc đơn vị tiền. Định nghĩa ở
+    `reviews/wip-20-agent-reading-8cc0f73.md`; hai lỗi regex (doc-12, doc-19) ở review cd99811. Cũng là cột "bịa" cho 23.
+- 28/10 (Nhân viên của Ún 1): #1 phần tài liệu xong — wip/20-agent-reading 3d5927a (registry b, fable duyệt),
+  3515226 (search_documents trả document_id/chunk_index/chars; read_document theo đoạn hoặc theo trang, chỉ mở tài
+  liệu đã tra trong lượt, xếp đoạn nguyên vẹn vào trần 6 000 kèm next_from_chunk; DocumentReader =
+  ChunkInspectionService.read_chunks/chunks_on_page; eval dùng FixtureDocuments trên documents.jsonl). 164 test xanh,
+  kiểm ngược đỏ đúng chỗ. Chưa đo bằng eval (cần GPU). L-b, L-c, P2 chưa đo được vì v0.3 không có bài. Phần Discord
+  (read_messages_around, message_id) tạm giữ chờ quyết định tách bot.
+- 28/10 00:25 (opus 5.5): chủ dự án đã chọn tách mềm Discord (ticket 22) → `read_messages_around` và `message_id`
+  sẽ do gói Discord đăng ký qua registry sau ticket 22, không vào lõi. Đo #1 bằng v0.3 tối nay (≈ 6 phút GPU,
+  đăng ký trước theo đề xuất của Nhân viên 1, nêu rõ rủi ro doc-38 đọc thừa); kết quả là test hồi quy nội bộ, không
+  phải khẳng định chất lượng (quy tắc benchmark của chủ dự án, ticket 24).
+- 28/10 00:30 (Nhân viên 1, đo v0.3 sau #1, hai lần lạnh trùng 48/48; test hồi quy nội bộ): tổng 35 → 34. Bài đọc
+  dài 0/5 → 4/5 (đúng việc của công cụ; 0/5 lần chép sai document_id; đối chứng doc-38 không đọc thừa). Nhưng 40
+  bài cũ 34 → 29: 37/40 câu trả lời đổi chữ vì lời dặn và mô tả công cụ đổi; 7 tụt (3 thiếu tên tệp/trang, 2 viết
+  "không thể tìm thấy" không khớp mẫu chấm — nghi lỗi bộ chấm, xét ở v0.4, hist-05, hist-08 lại hỏi "server nào"),
+  2 lên. Không bài cũ nào gọi công cụ mới. doc-36 trượt: model đọc từ đoạn 0 thay vì đoạn 9.
+- 28/10 00:35 (opus 5.5): chọn (B) — bỏ câu mới trong lời dặn, để mô tả công cụ tự nói, đo lại; quyết định đăng ký
+  trước: #1-B giữ ≥ 4/5 bài đọc dài và 40 bài cũ ≥ 33 → đề xuất ship #1-B, không thì (C) nhiều seed.
+- 28/10 00:55 (opus 5.5): #1-B gộp vào main bằng merge commit (2d4a830), fable duyệt GỘP ĐƯỢC (reviews/
+  wip-20-agent-reading-8cc0f73.md). Luật đăng ký đạt: 38/48, đọc dài 4/5, bài cũ 33 (= ngưỡng). Còn: #2 kiểm câu trả
+  lời, #3 input dài thành tài liệu tạm, #4 stream. doc-10 bịa số khi không tra → đưa vào lý do cần #2.
+- 28/10 01:10 (Nhân viên 1 thiết kế #2, opus 5.5 duyệt): kiểm **con số**: mọi số ≥ 2 chữ số trong câu trả lời phải
+  có trong câu hỏi + hội thoại + kết quả công cụ của lượt (K3). Đo trên 144 câu đã lưu: bắt 3 câu trượt (doc-10 bịa
+  phụ cấp, doc-22, doc-33 ở A), **0** báo nhầm; bộ kiểm chữ sẵn có (K1) báo nhầm 7/28 câu đạt có tra (25%) nên chỉ ghi trace. Trượt
+  → thử lại một lần có công cụ, kèm lời dặn nêu các số không có nguồn (T1), chỉ khi còn ≥ 20 s. Điểm mù: số tự tính,
+  số viết bằng chữ, câu bịa không có số. Code chỉ `run()` + `answer_figures.py`; gộp trước C4 của ticket 22.
+- 28/10 01:10 (opus 5.5): #2 gộp --no-ff 86c419c (fable GỘP ĐƯỢC ebf2686; đo hoãn), CHANGELOG 36e4766. #3 thiết kế của
+  Nhân viên 1 duyệt: S1 (đoạn dán ở lại trong tin nhắn, chia đoạn lúc đọc, id `paste_`+sha256[:12], không migration,
+  không lập chỉ mục), trần 100 000 ký tự ở chế độ công cụ (chat thường giữ 10 000, 422 INPUT_TOO_LONG), phiếu đầu-cuối
+  ~600+600 ký tự. Chi tiết kỹ thuật do opus chốt; chủ dự án đổi được.
