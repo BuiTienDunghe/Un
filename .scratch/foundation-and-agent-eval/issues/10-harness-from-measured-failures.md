@@ -111,3 +111,27 @@ Tiêu chí nghiệm thu theo `spec.md` Mốc 4.
   **Đính chính quy tắc đo:** "bỏ một lần khởi động" là SAI — lần nóng không lặp lại được (cùng mọi
   hash prompt mà chỉ trùng 3/33 câu trả lời), lần lạnh thì lặp lại được (r1 = r6). Quy tắc đúng: gỡ model
   chính trước MỖI lần đo; seed không có tác dụng ở t0. Áp dụng cho bước 5 của ticket 16.
+- 27/10 21:15 — **Đăng ký trước phép đo 1a-v2**, viết trước khi chạy. GPU: sáng 28/10, khi opus báo.
+  Nhánh `wip/10-1a-v2` tạo từ `wip/10-keep`; code ở đó chính là mốc A nên không cần revert.
+  - Điều kiện:
+    - A = `9aaa75d` (mốc v0.2).
+    - E = `5ed9d5a` (A + 1a-v2: chỉ đổi đúng một câu "chỉ gọi công cụ khi thật sự cần" thành "câu hỏi
+      về tài liệu, quy định hay hệ thống của chính người dùng thì gọi công cụ phù hợp trước khi trả
+      lời; đừng hỏi người dùng có muốn tra không, cứ tra", và "luôn nêu tên tệp (và số trang nếu có)").
+    - F = `1434c6c` (E + 2b).
+  - Quy trình (quy tắc mới): mỗi điều kiện checkout đúng commit, gỡ model chính, chạy một lần t0. Ba
+    lần, khoảng 8 phút. A chạy lại làm đối chứng; lần lạnh của A ở tối 27/10 là 34/40.
+  - Mục tiêu (như 1a): doc-10, doc-22, doc-25, doc-30, stat-02. Danh sách theo dõi (những bài 1a đã
+    làm mất): doc-17, doc-19, doc-26, doc-27, doc-28, hist-03, hist-05. Mục tiêu 2b: hist-03, hist-07.
+  - **Luật quyết định:**
+    - Đề xuất ship E nếu cả ba điều cùng đúng: tổng lạnh của E ≥ tổng lạnh của A; mục tiêu 1a của E ≥
+      mục tiêu của A + 1; và số bài trong danh sách theo dõi bị mất ≤ 1.
+    - Đề xuất ship F thay E chỉ khi tổng của F ≥ tổng của E, hoặc F hơn E ở mục tiêu 2b khi đếm tay mà
+      không mất bài nào khác.
+    - Ngoài ba trường hợp đó: không ship, báo lại số đo.
+    - Mỗi điều kiện chỉ có một lần chạy ở một trạng thái: đây là ngưỡng cho một quyết định thăm dò,
+      không phải phép thử thống kê.
+  - Lệnh (từ `C:\Users\dungbt06\local-ai-core-wt\10-harness`, mỗi commit một lần):
+    `git checkout -q <commit>` rồi
+    `bash <scratchpad>/gpu10.sh 1a-v2 "v0.2-<X>-cold-0328|general|--temperature 0 --seed 42"`, cuối cùng
+    `git checkout -q wip/10-1a-v2`.
