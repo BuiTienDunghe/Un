@@ -1,6 +1,6 @@
 # 02 — Một cách cài, xoá hack sys.path (M1b)
 
-Status: chờ duyệt — Nhân viên của Ún 1, nhánh `wip/02-one-install-path`
+Status: đã gộp vào main (27/10), fable 5.1 duyệt
 Type: task
 Blocked by: — (kiểm 27/10: 01 không đụng file nào của 02)
 

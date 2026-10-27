@@ -40,6 +40,11 @@ Chủ dự án cho phép (27/10): khi cần bật stack của Ún, **opus** đư
 (không xoá), xong việc thì `docker start edu-postgres-1`. Chỉ opus làm việc này; nhân viên và fable
 không bật/tắt container. Stack chưa bật cho tới khi ticket 01 tái hiện xong cảnh "stack tắt".
 
+## Tin nhắn
+
+Ứng dụng giữ lại tin của một phiên khi nó gửi quá nhiều tin liên tiếp (fable 5.1 bị giữ sau khoảng 10
+tin, 27/10; chủ dự án phải mở lại). Gom kết luận: mỗi nhánh một tin, đủ để không cần hỏi lại.
+
 ## Gộp
 
 Nhánh → fable 5.1 duyệt diff (đúng ticket? có hồi quy? test có kiểm đúng điều cần kiểm?) → opus gộp
@@ -55,7 +60,7 @@ ticket mới, chờ các ticket đang chạy xong, rồi báo chủ dự án.
 | # | Ticket | Phụ thuộc | Giao cho | Trạng thái |
 |---|---|---|---|---|
 | 01 | Eval đêm dừng sớm, báo rõ (M1a) | — | Nhân viên 1 | **đã gộp** — còn một đêm 03:00 thật |
-| 02 | Một cách cài, xoá hack sys.path (M1b) | — | Nhân viên 1 | xong, chờ fable duyệt (wip/02, 73c8c76) |
+| 02 | Một cách cài, xoá hack sys.path (M1b) | — | Nhân viên 1 | **đã gộp** |
 | 03 | Compose chỉ chuyển tiếp, Docker sang v2 (M1c) | — | Nhân viên 2 | **đã gộp** |
 | 04 | Một cơ chế bật bot + panel 401 (M1d) | 02 đã gộp | Nhân viên 1 (sau 05) | chờ |
 | 05 | Dời job_*, query dashboard vào service (M1d) | 02 đã gộp | Nhân viên 1 (sau 02) | đã giao |
@@ -81,3 +86,7 @@ cần, vì DB test sẽ lại có rác khi một test bị ngắt giữa chừng
 Sau khi gộp 01 (main 4844878): backend 1060 xanh / 0 đỏ / 1 skip (3 phút 10 giây); root 65 xanh.
 
 Sau khi gộp 06 (main 7c645ec): backend 1104 xanh / 0 đỏ / 1 skip (3 phút 16 giây); root 65 xanh.
+
+Sau khi gộp 12 (main 1c78054): backend 1106 xanh / 1 lỗi teardown / 1 skip. Lỗi là deadlock khi
+DELETE documents trong `test_debt_t1_t2_t3.py`: lúc 17:59 Nhân viên 1 chạy chen một bài redteam trên
+cùng DB test. Chạy lại riêng hai file đó (debt + redteam) trên main: 18 xanh. Không phải hồi quy.

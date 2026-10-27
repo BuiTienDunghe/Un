@@ -29,6 +29,12 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   mẫu, 40 ở Settings). Worker và adapter trích trí nhớ không còn tự giữ mặc định schema `"v1"`;
   phiên bản luôn do nơi gọi truyền từ Settings.
 - Eval đêm hỏi thêm `/api/version` của Ollama trước khi bật lab API (không gọi model).
+- **Một cách cài** (27/10): `run-local-ai-core.bat` tự cài checkout này dạng editable một lần (kiểm
+  bằng `python -I -c "import app"`; lần sau bỏ qua trong 0,1 s), nên script, tools và module
+  training import được `app` từ bất kỳ thư mục nào. Gỡ 18/19 chỗ vá `sys.path`; chỗ còn lại nằm trong
+  một test, có ghi lý do. `api_key_headers()` dời sang `app/security/api_key_client.py`, chỉ dùng thư
+  viện chuẩn, nên import harness eval không kéo fastapi hay tầng xác thực (0,2 s).
+  `scripts.evaluate_rag` vẫn xuất tên cũ. `training/README.md` ghi venv nào chạy module nào.
 - **Đường chạy bằng Docker đổi hành vi: worker trí nhớ trong container theo schema v2 như máy chủ**
   (27/10). `docker-compose.yml` từng tự khai 16 mặc định trùng Settings, trong đó
   `DISCORD_MEMORY_EXTRACTOR_SCHEMA_VERSION` lệch (compose v1, Settings v2 từ 28/08). Vì vậy worker
