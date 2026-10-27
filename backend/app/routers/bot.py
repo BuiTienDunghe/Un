@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.security.api_key import require_api_key
-from app.services.bot_control_service import BotControlError, BotTokenMissingError
+from app.services.bot_control_service import BotControlError, BotRunningOnHostError, BotTokenMissingError
 
 router = APIRouter(prefix="/api/bot", tags=["bot"])
 
@@ -20,6 +20,8 @@ def bot_start(request: Request) -> dict[str, object]:
         return request.app.state.bot_control_service.start()
     except BotTokenMissingError as error:
         raise HTTPException(status_code=409, detail={"error_code": "DISCORD_TOKEN_MISSING", "message": str(error)}) from error
+    except BotRunningOnHostError as error:
+        raise HTTPException(status_code=409, detail={"error_code": "BOT_RUNNING_ON_HOST", "message": str(error)}) from error
     except BotControlError as error:
         raise HTTPException(status_code=502, detail={"error_code": "BOT_CONTROL_FAILED", "message": str(error)}) from error
 
@@ -28,5 +30,7 @@ def bot_start(request: Request) -> dict[str, object]:
 def bot_stop(request: Request) -> dict[str, object]:
     try:
         return request.app.state.bot_control_service.stop()
+    except BotRunningOnHostError as error:
+        raise HTTPException(status_code=409, detail={"error_code": "BOT_RUNNING_ON_HOST", "message": str(error)}) from error
     except BotControlError as error:
         raise HTTPException(status_code=502, detail={"error_code": "BOT_CONTROL_FAILED", "message": str(error)}) from error

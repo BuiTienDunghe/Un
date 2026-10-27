@@ -16,6 +16,8 @@ from discord_bot.control import (
     STOP_MESSAGE,
     UPDATE_FINISHED_MESSAGE,
     UPDATE_STARTED_MESSAGE,
+    compose_project_name,
+    docker_bot_container_running,
     read_env_file,
 )
 
@@ -543,3 +545,81 @@ def test_window_close_always_requests_end_even_when_panel_was_busy(monkeypatch):
     assert ("stop", "123") in events
     assert panel.events.get_nowait() == ("closed", None)
     assert ("watchdog", 45_000) in events
+
+
+def capture_cancel_posts(monkeypatch) -> list[dict]:
+    """Record what cancel_open_backend_turns sends; the backend answers 200 with no turns."""
+    calls: list[dict] = []
+
+    def post(url, **kwargs):
+        calls.append({"url": url, **kwargs})
+        return SimpleNamespace(status_code=200, json=lambda: {"cancelled_turns": 0})
+
+    monkeypatch.setattr("discord_bot.control.httpx.post", post)
+    return calls
+
+
+def test_cancel_open_sends_the_api_key_from_dotenv(tmp_path, monkeypatch):
+    # The route sits behind require_api_key: without the header every Start, End and
+    # Update 401'd on a machine with a key set. The other tests replace this method
+    # whole, which is how the missing header went unnoticed.
+    instance = controller(tmp_path)
+    (tmp_path / ".env").write_text("LOCAL_AI_API_KEY=from-dotenv\n", encoding="utf-8")
+    monkeypatch.delenv("LOCAL_AI_API_KEY", raising=False)
+    calls = capture_cancel_posts(monkeypatch)
+
+    assert instance.cancel_open_backend_turns() == 0
+    assert calls[0]["headers"] == {"X-API-Key": "from-dotenv"}
+    assert calls[0]["url"].endswith("/api/discord/sessions/turns/cancel-open")
+
+
+def test_cancel_open_sends_no_key_header_when_none_is_configured(tmp_path, monkeypatch):
+    instance = controller(tmp_path)
+    (tmp_path / ".env").write_text("DISCORD_TOKEN=test-only\n", encoding="utf-8")
+    monkeypatch.delenv("LOCAL_AI_API_KEY", raising=False)
+    calls = capture_cancel_posts(monkeypatch)
+
+    instance.cancel_open_backend_turns()
+    assert calls[0]["headers"] == {}
+
+
+def test_the_environment_beats_dotenv_for_the_key_as_it_does_for_the_server(tmp_path, monkeypatch):
+    # pydantic-settings' order, not _backend_base_url's: a variable that is present
+    # wins even when empty — that is the key the server is checking.
+    instance = controller(tmp_path)
+    (tmp_path / ".env").write_text("LOCAL_AI_API_KEY=from-dotenv\n", encoding="utf-8")
+    calls = capture_cancel_posts(monkeypatch)
+
+    monkeypatch.setenv("LOCAL_AI_API_KEY", "from-env")
+    instance.cancel_open_backend_turns()
+    monkeypatch.setenv("LOCAL_AI_API_KEY", "")
+    instance.cancel_open_backend_turns()
+
+    assert [call["headers"] for call in calls] == [{"X-API-Key": "from-env"}, {}]
+
+
+def test_the_docker_check_counts_only_this_checkouts_container(monkeypatch):
+    seen: list[list[str]] = []
+
+    def run(args, **kwargs):
+        seen.append(list(args))
+        return SimpleNamespace(returncode=0, stdout="0123abcd\n")
+
+    monkeypatch.setattr("discord_bot.control.subprocess.run", run)
+    assert docker_bot_container_running("local-ai-core") is True
+    assert "label=com.docker.compose.service=discord-bot" in seen[0]
+    assert "label=com.docker.compose.project=local-ai-core" in seen[0]
+
+
+def test_the_compose_project_name_is_the_one_compose_uses(tmp_path, monkeypatch):
+    # Checked against `docker compose config` on this directory name: localaicore_2.
+    repo = tmp_path / "_-Local AI.Core_2"
+    repo.mkdir()
+    monkeypatch.delenv("COMPOSE_PROJECT_NAME", raising=False)
+    assert compose_project_name(repo) == "localaicore_2"
+
+    (repo / ".env").write_text("COMPOSE_PROJECT_NAME=from-dotenv\n", encoding="utf-8")
+    assert compose_project_name(repo) == "from-dotenv"
+
+    monkeypatch.setenv("COMPOSE_PROJECT_NAME", "from-env")
+    assert compose_project_name(repo) == "from-env"

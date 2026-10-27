@@ -16,5 +16,9 @@ if not exist ".env" (
     exit /b 1
 )
 
-start "Discord Bot Control" ".venv\Scripts\pythonw.exe" "tools\discord_bot_control.py"
+REM -m from the repository root (the cd above), not the file path: run as a file,
+REM Python puts tools\ on sys.path instead of the root, so `import discord_bot`
+REM then needs the editable install, and on a .venv that predates it pythonw
+REM exits without a window or a word. From the root it imports regardless.
+start "Discord Bot Control" ".venv\Scripts\pythonw.exe" -m tools.discord_bot_control
 endlocal

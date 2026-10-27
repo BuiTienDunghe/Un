@@ -11,14 +11,24 @@ from sqlalchemy import delete
 
 from app.postgres.database import create_postgres_engine, create_session_factory
 from app.postgres.models import RequestLog
+from app.services import bot_control_service
 from app.services.bot_control_service import (
     BotControlService,
     BotControlError,
+    BotRunningOnHostError,
     BotTokenMissingError,
 )
 
 URL = os.getenv("POSTGRES_TEST_URL")
 pytestmark = pytest.mark.skipif(not URL, reason="set POSTGRES_TEST_URL")
+
+
+@pytest.fixture(autouse=True)
+def no_host_bot(monkeypatch):
+    """No panel-started bot unless a test says so: the real scan would read this machine's processes."""
+    host: list[int] = []
+    monkeypatch.setattr(bot_control_service, "host_bot_pids", lambda repo_root: list(host))
+    return host
 
 
 class FakeRun:
@@ -41,7 +51,7 @@ def test_status_maps_compose_states(tmp_path, monkeypatch):
         return FakeRun(stdout='{"State": "running", "Name": "un-discord-bot-1"}\n')
 
     monkeypatch.setattr(subprocess, "run", fake_run)
-    assert service.status() == {"state": "running", "detail": "running"}
+    assert service.status() == {"state": "running", "runner": "docker", "detail": "running (docker)"}
     assert calls[0][:4] == ["docker", "compose", "--profile", "discord"]
 
     monkeypatch.setattr(subprocess, "run", lambda *a, **k: FakeRun(stdout=""))
@@ -81,6 +91,60 @@ def test_start_requires_a_token_and_uses_compose_up(tmp_path, monkeypatch):
     monkeypatch.setattr(subprocess, "run", lambda *a, **k: FakeRun(returncode=1, stderr="build failed"))
     with pytest.raises(BotControlError):
         service.start()
+
+
+def test_status_sees_the_panels_host_bot_and_flags_two_bots(tmp_path, monkeypatch, no_host_bot):
+    service = make_service(tmp_path)
+    no_host_bot.append(4242)
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: FakeRun(stdout=""))
+    assert service.status() == {"state": "running", "runner": "host", "detail": "running (host)"}
+
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: FakeRun(stdout='{"State": "running"}'))
+    both = service.status()
+    assert both["state"] == "running" and both["runner"] == "host+docker"
+
+
+def test_start_refuses_a_second_bot_while_the_host_one_runs(tmp_path, monkeypatch, no_host_bot):
+    service = make_service(tmp_path)
+    no_host_bot.append(4242)
+    calls: list[list[str]] = []
+    monkeypatch.setattr(subprocess, "run", lambda args, **k: calls.append(list(args)) or FakeRun(stdout=""))
+
+    with pytest.raises(BotRunningOnHostError):
+        service.start()
+    assert not any("up" in call for call in calls), "compose up ran although a host bot was running"
+
+
+def test_stop_refuses_when_only_the_host_bot_runs_but_stops_the_container_beside_it(tmp_path, monkeypatch, no_host_bot):
+    service = make_service(tmp_path)
+    no_host_bot.append(4242)
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: FakeRun(stdout=""))
+    with pytest.raises(BotRunningOnHostError):
+        service.stop()
+
+    calls: list[list[str]] = []
+
+    def fake_run(args, **kwargs):
+        calls.append(list(args))
+        return FakeRun(stdout='{"State": "running"}') if "ps" in args else FakeRun()
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    service.stop()
+    assert ["docker", "compose", "--profile", "discord", "stop", "discord-bot"] in calls
+
+
+def test_bot_endpoints_map_a_host_bot_to_409(client, mock_ollama, monkeypatch):
+    class HostBotRunning:
+        def start(self):
+            raise BotRunningOnHostError("Bot đang chạy trên máy")
+
+        def stop(self):
+            raise BotRunningOnHostError("Bot đang chạy trên máy")
+
+    monkeypatch.setattr(client.app.state, "bot_control_service", HostBotRunning())
+    for path in ("/api/bot/start", "/api/bot/stop"):
+        response = client.post(path)
+        assert response.status_code == 409 and response.json()["error_code"] == "BOT_RUNNING_ON_HOST", path
 
 
 def test_bot_endpoints_map_errors(client, mock_ollama, monkeypatch):

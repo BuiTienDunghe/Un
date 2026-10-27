@@ -158,7 +158,14 @@
 
   function stateLine(st, statusAt) {
     if (st.state === "running") {
+      // runner: bot nào đang chạy — "host" (bảng điều khiển bật thẳng trên máy) hay "docker".
+      // Cả hai cùng lúc là đúng cái lỗi trả lời hai lần mà backend từ chối tạo ra: hiện như lỗi, không như nhãn.
+      if (st.runner === "host+docker") {
+        return { dot: "error", text: "HAI bot cùng chạy (trên máy + docker) · mỗi tin nhắn bị trả lời hai lần — tắt một bên", title: st.detail || null };
+      }
       const parts = ["đang chạy"];
+      if (st.runner === "host") parts.push("trên máy, bật từ bảng điều khiển");
+      else if (st.runner === "docker") parts.push("docker");
       const up = uptimeMs(st, statusAt);
       // Dưới một phút: fmtDuration ra "0ms"/"8.0s" — vô nghĩa cho uptime, nói "vừa bật".
       if (up !== null) parts.push(up < 60000 ? "vừa bật" : fmtDuration(up));
@@ -223,7 +230,8 @@
     const kind = S.action ? S.action.kind : null;
     // Lỗi đọc trạng thái chỉ là ghi chú khi đã từng đọc được: trạng thái (và bộ nút) vẫn là cái cũ.
     const state = v.status ? v.status.state : v.statusError ? "error" : "loading";
-    const key = `${kind}|${state}|${S.restart}|${v.checking}`;
+    const runner = v.status ? v.status.runner : null;
+    const key = `${kind}|${state}|${runner}|${S.restart}|${v.checking}`;
     if (key === v.actionsKey) return;   // giữ nguyên nút (focus, dialog đang mở từ nút) khi không có gì đổi
     v.actionsKey = key;
     const restartBtn = (busy, disabled) => {
@@ -249,6 +257,8 @@
     let nodes = [];
     if (kind === "start") nodes = [startBtn(true)];
     else if (kind === "stop" || kind === "restart") nodes = [restartBtn(kind === "restart", true), stopBtn(kind === "stop", true)];
+    // Bot trên máy do bảng điều khiển quản: Tắt/Khởi động lại ở đây chỉ nhận 409 BOT_RUNNING_ON_HOST.
+    else if (state === "running" && runner === "host") nodes = [checkBtn("Kiểm tra lại")];
     else if (state === "running") nodes = [restartBtn(false, false), stopBtn(false, false)];
     else if (state === "stopped") nodes = [startBtn(false)];
     else if (state === "unknown") nodes = [checkBtn("Kiểm tra lại"), startBtn(false)];

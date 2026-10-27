@@ -1,6 +1,6 @@
 # 04 — Một cơ chế bật bot, panel hết 401 (M1d)
 
-Status: chờ
+Status: chờ duyệt — Nhân viên của Ún 1, nhánh `wip/04-bot-control-one-mechanism`
 Type: task
 Blocked by: 02 (cùng đụng `tools/discord_bot_control.py`)
 
@@ -33,3 +33,38 @@ các lựa chọn vào Comments trước khi code. Sửa lỗi 401.
   PERSISTENT giữ `:-true` có comment (d1). `.bat`: e2 (`-m tools.discord_bot_control`). Lệch cấu
   hình giữa bot trên máy (đọc cả `.env`) và bot container (13 biến): để chủ dự án quyết (B1 chỉ
   compose / B2 chỉ tiến trình trên máy).
+
+### 27/10 — Nhân viên của Ún 1: đã làm
+
+Bản chất: trước đây bảng điều khiển trên máy và dashboard web giống hai người gác cửa không nhìn
+thấy nhau. Một người có thể báo "không có ai" trong khi người kia vừa cho bot vào, và thế là hai
+bot cùng trả lời mỗi tin nhắn. Giờ cả hai cùng nhìn thấy cả hai loại bot, và không bên nào chịu bật
+thêm một con thứ hai. Bảng điều khiển cũng gửi đúng khoá mà server đòi, nên hết bị từ chối.
+
+| Phần | Đã làm |
+|---|---|
+| Dashboard thấy bot trên máy | `bot_control_service.py`: `host_bot_pids()` tự quét psutil, không import bot. `status()` giữ nguyên giá trị `state`, thêm `runner` = host / docker / host+docker |
+| Không chạy trùng | `start()` từ chối khi đã có bot trên máy; `stop()` từ chối khi chỉ có bot trên máy. Router trả 409 `BOT_RUNNING_ON_HOST` |
+| Giao diện | `bot.js` (điều phối cho phép): ghi "trên máy" / "docker"; hai bot cùng chạy thì chấm đỏ kèm câu cảnh báo; bot trên máy thì chỉ còn nút "Kiểm tra lại" |
+| Panel lọc docker theo project | `compose_project_name()` theo đúng thứ tự của compose (env, rồi `.env`, rồi tên thư mục đã chuẩn hoá), đối chiếu với `docker compose config` |
+| 401 | `_backend_headers()`: biến môi trường có mặt thì thắng `.env`, kể cả khi rỗng, đúng như pydantic-settings (đã đo). Comment ghi rõ thứ tự này cố ý khác `_backend_base_url` |
+| Compose | 10 biến chuyển sang dạng chỉ tên; PERSISTENT giữ `:-true` kèm comment. Bài test mới ghi tên ngoại lệ tường minh. Test của 03 chỉ quét các trường `Settings`, nên trước đây không thấy service bot |
+| `.bat` | `pythonw -m tools.discord_bot_control` từ gốc repo |
+
+| Kiểm | Kết quả |
+|---|---|
+| Bộ test ở gốc (bot + tools, cùng bài chống lệch mới và 5 bài mới) | 71 xanh |
+| Bài chống lệch, khi cố tình bỏ cách xử lý dễ dãi với cwd ở phía backend | đỏ ở PID 12, 13 |
+| Bài 401, khi bỏ `headers=` | 3 bài đỏ |
+| Test compose của bot, chạy trên khối cũ | đỏ, liệt kê đủ 10 biến |
+| `docker compose --profile discord config discord-bot` | dựng được; biến chuyển tiếp lấy từ `.env`, thiếu thì `null` |
+| `.venv` cũ (bản cài editable trỏ vào chỗ đã xoá) | chạy dạng file thì `No module named 'discord_bot'`; `-m` từ gốc thì import được |
+| `node --check bot.js` | qua |
+| DB test: `test_bot_control_and_timeseries` (4 bài mới, cùng assert trạng thái đã đổi), `test_dashboard_api`, `test_api_key_auth`, `test_compose_defaults`, 18:24 | 79 xanh |
+
+Chưa kiểm: mở panel thật bằng `.bat` (cần màn hình); bật hay tắt bot thật (cần token và Discord);
+giao diện trên trình duyệt.
+
+Để chủ dự án quyết sau: hai kiểu bot vẫn chạy hai bộ cấu hình khác nhau. Bot trên máy đọc toàn bộ
+`.env`; bot container chỉ nhận 13 biến trong `docker-compose.yml`. Hai hướng gộp là B1 (chỉ dùng
+compose) hoặc B2 (chỉ dùng tiến trình trên máy); ưu và nhược ghi ở tin nhắn phân tích ngày 27/10.

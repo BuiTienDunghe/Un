@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -143,7 +144,21 @@ def matching_backend_processes(repo_root: Path) -> list[psutil.Process]:
     return matches
 
 
-def docker_bot_container_running() -> bool:
+def compose_project_name(repo_root: Path) -> str:
+    """The project name `docker compose` gives containers started from repo_root.
+
+    Compose's own order: COMPOSE_PROJECT_NAME from the environment, then from .env,
+    else the directory name, lowercased and stripped of what compose drops. The
+    compose file sets no top-level `name:`.
+    """
+    explicit = os.environ.get("COMPOSE_PROJECT_NAME") or read_env_file(repo_root / ".env").get("COMPOSE_PROJECT_NAME", "")
+    name = explicit or repo_root.resolve().name
+    return re.sub(r"[^a-z0-9_-]", "", name.lower()).lstrip("_-")
+
+
+def docker_bot_container_running(project: str) -> bool:
+    # The project label matters: filtering on the service label alone counted a
+    # discord-bot container of any other checkout (a worktree, a copy) as this one's.
     try:
         result = subprocess.run(
             [
@@ -151,6 +166,8 @@ def docker_bot_container_running() -> bool:
                 "ps",
                 "--filter",
                 "label=com.docker.compose.service=discord-bot",
+                "--filter",
+                f"label=com.docker.compose.project={project}",
                 "--format",
                 "{{.ID}}",
             ],
@@ -204,7 +221,7 @@ def bot_process_status(repo_root: Path) -> BotProcessStatus:
         process_pids=tuple(sorted(by_pid)),
         gateway_connected=gateway_connected,
         persistent_sessions_enabled=persistent,
-        docker_container_running=docker_bot_container_running(),
+        docker_container_running=docker_bot_container_running(compose_project_name(repo_root)),
     )
 
 
@@ -279,6 +296,21 @@ class DiscordBotController:
             "DISCORD_CONTROL_BACKEND_URL",
             "http://127.0.0.1:8000",
         ).strip() or "http://127.0.0.1:8000"
+
+    def _backend_headers(self) -> dict[str, str]:
+        """The X-API-Key the backend enforces, if any.
+
+        Read in the server's order, not _backend_base_url's: pydantic-settings takes
+        an environment variable over .env whenever the variable is PRESENT, even
+        empty, and the point is to send the key the server is actually checking.
+        Without it, every cancel-open call 401'd on a machine with a key set.
+        """
+        if "LOCAL_AI_API_KEY" in os.environ:
+            key = os.environ["LOCAL_AI_API_KEY"]
+        else:
+            key = read_env_file(self.env_path).get("LOCAL_AI_API_KEY", "")
+        key = key.strip()
+        return {"X-API-Key": key} if key else {}
 
     def configured_channel_id(self) -> str:
         local = self.load_local_settings().get("status_channel_id", "")
@@ -391,6 +423,7 @@ class DiscordBotController:
             response = httpx.post(
                 f"{target}/api/discord/sessions/turns/cancel-open",
                 json={},
+                headers=self._backend_headers(),
                 timeout=10,
             )
         except httpx.HTTPError as error:

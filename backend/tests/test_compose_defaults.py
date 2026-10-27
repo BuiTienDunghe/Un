@@ -109,6 +109,26 @@ def test_every_settings_field_passes_through_bare():
     assert offenders == [], "compose sets a Settings field itself; pass it through bare: " + ", ".join(offenders)
 
 
+# The discord-bot service carries the BOT's variables (discord_bot/main.py reads them,
+# not Settings), so the Settings-field checks above never see them. Same rule, its own
+# exceptions: a fixed container path is not a default, and persistent sessions are on
+# in the container on purpose while main.py defaults them off (ticket 04).
+BOT_FIXED = frozenset({"DISCORD_SYSTEM_PROMPT_PATH"})
+BOT_DELIBERATE_DEFAULTS = {"DISCORD_PERSISTENT_SESSIONS_ENABLED": "true"}
+
+
+def test_the_discord_bot_passes_its_variables_through_bare_but_the_one_deliberate_default():
+    env = environment(services()["discord-bot"])
+    offenders = [
+        f"{key}={value}"
+        for key, value in env.items()
+        if value is not None and key not in BOT_FIXED and key not in BOT_DELIBERATE_DEFAULTS
+    ]
+    assert offenders == [], "discord-bot sets a variable main.py already defaults; pass it through bare: " + ", ".join(offenders)
+    for key, default in BOT_DELIBERATE_DEFAULTS.items():
+        assert compose_default(env[key], key) == default, f"{key} no longer defaults to {default!r}; update the comment in docker-compose.yml too"
+
+
 def test_no_settings_field_gets_a_compose_default_but_the_rq_queue_names():
     offenders = []
     for name, service in services().items():

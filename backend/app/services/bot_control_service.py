@@ -1,16 +1,22 @@
 """Start/stop/status for the Discord bot from the dashboard (P3-2).
 
-The bot has always run as the `discord-bot` service under
-`docker compose --profile discord` (see run-discord-bot.bat). This service
-drives that same mechanism, so the dashboard button and the .bat are two doors
-to one process — status can never disagree with reality because reality IS
-`docker compose ps`.
+The dashboard drives the `discord-bot` service under `docker compose --profile
+discord`, the same container run-discord-bot.bat starts. The tkinter control
+panel (tools/discord_bot_control.py) starts a different kind of bot: a
+`python -m discord_bot.main` process straight on the host. Both are real, so the
+status reports either, and start refuses while the host one runs — two bots on
+one token answer every message twice.
 """
 from __future__ import annotations
 
 import json
 import subprocess
 from pathlib import Path
+
+import psutil
+
+BOT_MODULE = "discord_bot.main"
+PYTHON_NAMES = frozenset({"python.exe", "pythonw.exe", "python", "pythonw"})
 
 
 class BotControlError(RuntimeError):
@@ -19,6 +25,38 @@ class BotControlError(RuntimeError):
 
 class BotTokenMissingError(BotControlError):
     pass
+
+
+class BotRunningOnHostError(BotControlError):
+    pass
+
+
+def host_bot_pids(repo_root: Path) -> list[int]:
+    """PIDs of `python -m discord_bot.main` processes started from repo_root: the panel's bot.
+
+    The same verdict as matching_bot_processes in discord_bot/control.py, written here
+    rather than imported because the backend and the bot only ever talk over HTTP.
+    tests/test_bot_detection_parity.py holds the two to the same answer on the same
+    processes, including the panel's leniency: a process whose cwd cannot be read counts.
+    """
+    expected = repo_root.resolve()
+    pids: list[int] = []
+    for process in psutil.process_iter(["pid", "name", "cmdline"]):
+        try:
+            if (process.info.get("name") or "").lower() not in PYTHON_NAMES:
+                continue
+            cmdline = process.info.get("cmdline") or []
+            if not any(value == "-m" and following == BOT_MODULE for value, following in zip(cmdline, cmdline[1:])):
+                continue
+            try:
+                root = Path(process.cwd()).resolve()
+            except (psutil.AccessDenied, psutil.NoSuchProcess, OSError):
+                root = expected
+            if root == expected:
+                pids.append(process.pid)
+        except (psutil.AccessDenied, psutil.NoSuchProcess, OSError):
+            continue
+    return pids
 
 
 class BotControlService:
@@ -36,7 +74,7 @@ class BotControlService:
             timeout=timeout,
         )
 
-    def status(self) -> dict[str, object]:
+    def _container_status(self) -> dict[str, object]:
         try:
             result = self._compose("ps", self.service, "--format", "json")
         except FileNotFoundError:
@@ -56,6 +94,19 @@ class BotControlService:
         state = str(first.get("State", "")).lower()
         return {"state": "running" if state == "running" else "stopped", "detail": state or None}
 
+    def status(self) -> dict[str, object]:
+        """`state` keeps its three values (the web UI compares them); `runner` says
+        which kind is up when it is: "host", "docker", or "host+docker" — the
+        duplicate this service exists to prevent."""
+        container = self._container_status()
+        if not host_bot_pids(self.compose_dir):
+            if container["state"] == "running":
+                return {**container, "runner": "docker", "detail": "running (docker)"}
+            return container
+        if container["state"] == "running":
+            return {"state": "running", "runner": "host+docker", "detail": "running (host + docker): hai bot cùng chạy"}
+        return {"state": "running", "runner": "host", "detail": "running (host)"}
+
     def has_token(self) -> bool:
         """Same precheck run-discord-bot.bat does: a non-empty DISCORD_TOKEN."""
         try:
@@ -71,6 +122,8 @@ class BotControlService:
     def start(self) -> dict[str, object]:
         if not self.has_token():
             raise BotTokenMissingError("DISCORD_TOKEN trống hoặc thiếu trong .env")
+        if host_bot_pids(self.compose_dir):
+            raise BotRunningOnHostError("Bot đang chạy trên máy (bật từ bảng điều khiển); tắt nó ở đó trước khi bật bản Docker")
         try:
             result = self._compose("up", "-d", self.service, timeout=180.0)
         except FileNotFoundError as error:
@@ -82,6 +135,10 @@ class BotControlService:
         return self.status()
 
     def stop(self) -> dict[str, object]:
+        # The panel refuses to stop the Docker bot; this refuses the mirror case. With
+        # only the host bot up there is nothing here to stop, and "stopped" would lie.
+        if host_bot_pids(self.compose_dir) and self._container_status()["state"] != "running":
+            raise BotRunningOnHostError("Bot đang chạy trên máy (bật từ bảng điều khiển); tắt nó ở đó")
         try:
             result = self._compose("stop", self.service, timeout=60.0)
         except FileNotFoundError as error:
