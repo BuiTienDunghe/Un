@@ -44,3 +44,7 @@ Bằng chứng đã có (kiểm code 27/10):
 - Agent Eval v0.2: không suy giảm so với mốc của ticket 10 (một lần khởi động bỏ đi mỗi phía).
 
 ## Comments
+
+- 27/10 (chủ dự án): câu 3 chốt **(b)** — giữ bản rút gọn không có nội dung (tên công cụ, số bước, độ
+  trễ, mã lỗi, token, hash) sống lâu hơn hội thoại; nội dung (tham số công cụ, kết quả, câu trả lời) vẫn
+  xoá theo hội thoại.
