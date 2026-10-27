@@ -180,7 +180,7 @@ def test_web_turns_get_no_guild_and_discord_turns_get_the_fixed_one(tmp_path):
     events = _jsonl(out_dir / "events.jsonl")
     web_result = next(e for e in events if e["task_id"] == "hist-web" and e["kind"] == "tool_result")
     dc_result = next(e for e in events if e["task_id"] == "hist-dc" and e["kind"] == "tool_result")
-    assert "chỉ dùng được trong kênh Discord" in web_result["content"]
+    assert "TOOL_UNAVAILABLE_HERE" in web_result["content"]
     assert "Deadline báo cáo là thứ sáu" in dc_result["content"] and "Minh" in dc_result["content"]
 
     messages = build_messages(discord, "SYS")

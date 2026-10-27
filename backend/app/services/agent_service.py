@@ -111,6 +111,19 @@ AGENT_TOOLS: list[dict[str, Any]] = [
 ]
 
 
+# A failed tool call reaches the model as {"error": <what to do next>, "code": <CODE>}:
+# the sentence is for the model (actionable, per Anthropic's "Writing tools for
+# agents"), the code for the trace (a low-cardinality error.type, per OTel GenAI).
+# An empty result is a result, not an error. TOOL_TIMEOUT is reserved: tools run
+# synchronously and are bounded by their own clients' timeouts (ticket 16, t1).
+TOOL_UNAVAILABLE_HERE = "TOOL_UNAVAILABLE_HERE"
+BAD_ARGUMENTS = "BAD_ARGUMENTS"
+UNKNOWN_TOOL = "UNKNOWN_TOOL"
+TOOL_FAILED = "TOOL_FAILED"
+TOOL_TIMEOUT = "TOOL_TIMEOUT"
+TOOL_NAMES = tuple(tool["function"]["name"] for tool in AGENT_TOOLS)
+
+
 def _clip(text: str, limit: int) -> str:
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
@@ -177,14 +190,14 @@ class AgentService:
                     "arguments": call["arguments"], "content": None, "latency_ms": round_latency,
                 })
                 tool_started = perf_counter()
+                text, error_code, error_type = self._run_tool(call["name"], call["arguments"], tool_context)
                 # D5: tool output is untrusted data (document chunks, memory
                 # text); the defense marks it so before the model reads it.
-                output = self.defense.wrap_tool_result(
-                    self._execute_tool(call["name"], call["arguments"], tool_context)
-                )
+                output = self.defense.wrap_tool_result(text)
                 steps.append({
                     "kind": "tool_result", "tool_name": call["name"], "arguments": None,
                     "content": output, "latency_ms": int((perf_counter() - tool_started) * 1000),
+                    "error_code": error_code, "error_type": error_type,
                 })
                 working.append({"role": "tool", "tool_name": call["name"], "content": output})
 
@@ -207,8 +220,23 @@ class AgentService:
         arguments: dict[str, Any],
         tool_context: dict[str, Any] | None = None,
     ) -> str:
-        """Dispatch one call; errors become data the model can react to —
-        a broken tool must never kill the whole answer."""
+        """The text the model reads for one call (see _run_tool)."""
+        return self._run_tool(name, arguments, tool_context)[0]
+
+    def _error(self, code: str, message: str, error_type: str | None = None) -> tuple[str, str, str | None]:
+        return self._dump({"error": message, "code": code}), code, error_type
+
+    def _run_tool(
+        self,
+        name: str,
+        arguments: dict[str, Any],
+        tool_context: dict[str, Any] | None = None,
+    ) -> tuple[str, str | None, str | None]:
+        """Dispatch one call -> (text for the model, error code, exception type).
+
+        Errors become data the model can react to — a broken tool must never
+        kill the whole answer. The exception's class goes to the trace only: the
+        model gets a sentence saying what to do next, not "TypeError: ..."."""
         try:
             if name == "search_history":
                 # The guild comes from the CALLER (the turn service knows the
@@ -216,8 +244,13 @@ class AgentService:
                 # lesson as the ledger read (memory_design.md §3.1).
                 guild_id = str((tool_context or {}).get("guild_id") or "")
                 if self.history_service is None or not guild_id:
-                    return self._dump(
-                        {"error": "search_history chỉ dùng được trong kênh Discord của server"}
+                    # Asked on the web, the model used to ask back "which server?"
+                    # (Agent Eval hist-10): say plainly there is no history here.
+                    return self._error(
+                        TOOL_UNAVAILABLE_HERE,
+                        "search_history chỉ đọc được lịch sử của server Discord đang trò chuyện; "
+                        "cuộc trò chuyện này không ở Discord. Đừng hỏi người dùng server nào: nói rõ "
+                        "ở đây không xem được tin nhắn Discord, rồi trả lời phần còn lại.",
                     )
                 query = str(arguments.get("query") or "").strip()
                 author_id = str(arguments.get("author_id") or "").strip() or None
@@ -236,10 +269,10 @@ class AgentService:
                     if not hits:
                         return self._dump(
                             {"result": "sổ gốc chưa có tin nhắn nào của server này"}
-                        )
+                        ), None, None
                     # Chronological, so an overflow must give up the OLDEST
                     # messages: they are the ones a "latest N" read cares least about.
-                    return self._dump([_history_item(hit) for hit in hits], drop="first")
+                    return self._dump([_history_item(hit) for hit in hits], drop="first"), None, None
                 try:
                     limit = int(arguments.get("limit", 5))
                 except (TypeError, ValueError):
@@ -259,19 +292,23 @@ class AgentService:
                 if not hits:
                     return self._dump(
                         {"result": "không tìm thấy tin nhắn cũ nào khớp"}
-                    )
-                return self._dump([_history_item(hit) for hit in hits])
+                    ), None, None
+                return self._dump([_history_item(hit) for hit in hits]), None, None
             if name == "search_documents":
                 query = str(arguments.get("query") or "").strip()
                 if not query:
-                    return self._dump({"error": "query trống"})
+                    return self._error(
+                        BAD_ARGUMENTS,
+                        "search_documents cần `query` là một câu không rỗng. Gọi lại một lần, "
+                        "viết câu hỏi thành câu độc lập.",
+                    )
                 try:
                     top_k = int(arguments.get("top_k", 4))
                 except (TypeError, ValueError):
                     top_k = 4
                 chunks = self.retrieval_service.retrieve(query, min(max(top_k, 1), 8), None)
                 if not chunks:
-                    return self._dump({"result": "không tìm thấy đoạn tài liệu nào phù hợp"})
+                    return self._dump({"result": "không tìm thấy đoạn tài liệu nào phù hợp"}), None, None
                 return self._dump([
                     {
                         "filename": chunk.get("filename"),
@@ -280,12 +317,16 @@ class AgentService:
                         "score": round(float(chunk.get("score") or 0.0), 3),
                     }
                     for chunk in chunks
-                ])
+                ]), None, None
             if name == "system_status":
-                return self._dump(self.operational_service.health())
-            return self._dump({"error": f"công cụ không tồn tại: {name}"})
+                return self._dump(self.operational_service.health()), None, None
+            return self._error(UNKNOWN_TOOL, f"Không có công cụ {name}. Chỉ có {', '.join(TOOL_NAMES)}.")
         except Exception as error:
-            return self._dump({"error": f"{type(error).__name__}: {error}"})
+            return self._error(
+                TOOL_FAILED,
+                f"{name} đang lỗi nên chưa tra được. Đừng gọi lại trong lượt này; nói với người dùng là chưa tra được.",
+                type(error).__name__,
+            )
 
     def _dump(self, payload: object, *, drop: str = "last") -> str:
         """JSON for the model, at most tool_result_max_chars.

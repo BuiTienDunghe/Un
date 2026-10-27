@@ -141,8 +141,9 @@ def test_tool_failures_become_data_instead_of_errors(client, mock_ollama, monkey
     body = response.json()
     assert response.status_code == 200
     results = [step for step in body["agent_steps"] if step["kind"] == "tool_result"]
-    assert "RuntimeError" in results[0]["content"]
-    assert "không tồn tại" in results[1]["content"]
+    # The model reads a code and what to do next; the exception's class stays in the trace (ticket 16).
+    assert "TOOL_FAILED" in results[0]["content"] and "RuntimeError" not in results[0]["content"]
+    assert "UNKNOWN_TOOL" in results[1]["content"]
     assert body["answer"].startswith("Xin lỗi")
     client.delete(f"/conversations/{body['conversation_id']}")
 
