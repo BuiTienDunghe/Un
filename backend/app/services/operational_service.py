@@ -80,7 +80,7 @@ class OperationalService:
         on, so it is probed through the API's own sessions.
         """
         if self._postgres_probe is None:
-            url = getattr(self.sessions.kw.get("bind"), "url", None)
+            url = getattr(getattr(self.sessions, "kw", {}).get("bind"), "url", None)
             if url is not None and url.get_backend_name() == "postgresql":
                 # libpq takes whole seconds and treats anything under 2 as 2.
                 timeout = max(2, math.ceil(self.probe_timeout_seconds))
