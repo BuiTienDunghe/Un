@@ -106,3 +106,5 @@ Sau khi gộp 02 (main 73e3faa): backend 1107 xanh / 0 đỏ / 1 skip; root 65 x
 Sau khi gộp 05 (main 9d3fbe8): backend 1109 passed, 1 skipped, 5 warnings; root 65 xanh.
 
 Sau khi gộp 09-prep + 04 + 07 (main 457c7c1): backend 1140 xanh / 0 đỏ / 1 skip; root 71 xanh.
+
+Sau khi gộp phần không-GPU của 10 (main d825aed): backend 1148 xanh / 0 đỏ / 1 skip; root 71 xanh. Ghi chú: test_agent_service.py CÓ dùng Postgres (skipif theo POSTGRES_TEST_URL) — fable đính chính.
