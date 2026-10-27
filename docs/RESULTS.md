@@ -372,8 +372,9 @@ in the registry, with this result in its `notes`.
 Embedding again with the same model changed almost nothing. Compared with repeat 1 above,
 the fresh index moved one question up to rank 1 and lost none from the top 5. p50 was
 1 886 ms against 4 622 ms earlier that day, which fits the guess that the 4.6 s figures
-came from a shared Ollama. Two limits on the latency figures: an unrelated process sent
-chat requests to Ollama during the first 6–13 minutes of each shipped-path run, and a game
+came from a shared Ollama. Two limits on the latency figures: during the first 6–13 minutes
+of each shipped-path run, chat requests reached Ollama from a caller that was not the
+measuring stack and was not identified, and a game
 was using the GPU for part of the dense run with the instruction. Neither moves ranks: the
 search path does not call the chat model, and repeats give identical ranks.
 

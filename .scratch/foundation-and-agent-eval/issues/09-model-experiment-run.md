@@ -351,7 +351,10 @@ Tải ngoài lúc đo: Ollama nhận các lệnh `/api/chat` tới `qwen3.5:9b` 
 145 lệnh trong khoảng 22:57–23:03), kèm nạp lại `glm-ocr`. GPU lúc đó dùng khoảng 9,8 GB, 90 %. Các lệnh
 này không đến từ stack đo: log API chỉ có 788 lượt `/rag/search` cùng `/health` và `/models`, worker
 không nhận việc nào, độ trễ từng câu đều nhau từ câu đầu tới câu cuối (trung vị theo từng khúc 100 câu
-1 788–1 992 ms). Lúc đo hai lượt chỉ-dense thì không có lệnh chat nào. Tôi chưa xác định được nguồn.
+1 788–1 992 ms). Lúc đo hai lượt chỉ-dense thì không có lệnh chat nào. Cả hai đợt đều bắt đầu chưa
+tới 2 phút sau khi stack hybrid sẵn sàng (sẵn sàng 22:30:20, đợt bắt đầu khoảng 22:31:51; sẵn sàng
+22:57:17, đợt bắt đầu khoảng 22:57:52). Không tính lệnh chat lúc stack khởi động: đó là probe dừng của
+OCR. Tôi chưa xác định được nguồn.
 Thứ hạng không bị ảnh hưởng, vì đường tìm không gọi model sinh. Sau Bước 4, chỉ mục heldout vẫn nguyên:
 `rebuild_qdrant --dry-run` trả 3 896 mảnh, 3 896 điểm.
 
