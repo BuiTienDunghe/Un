@@ -182,3 +182,9 @@ manifest ở `kept/` và `heldout_retrieval_v1/results/`: 7 commit không thuộ
 xoá; các lần đo của ticket 10 trên `wip/10-harness`, `wip/10-1a-v2`). Đã gắn tag `eval-src/<sha>` cho cả 7 để không
 mất khi dọn nhánh. **Từ nay: nhánh nào có lần đo được trích dẫn thì gộp bằng merge commit (`--no-ff`), không
 cherry-pick** (v0.3 đã gộp như vậy).
+
+## Nhật ký nhường GPU
+
+| Lúc | Ai xin | Khung | Ghi chú |
+|---|---|---|---|
+| 28/10 00:35 | phiên "Quản lý" (dự án decision model, `C:\Users\dungbt06\Fine-tune`) | ~00:40 → 02:55 (≈ 2 giờ) | chấm Qwen3.5-4B, đo độ trễ batch 1. Ún: Nhân viên 1 chạy xong `v0.3-read-B-r1-cold` rồi gỡ model; r2 chạy sau. Eval đêm 03:00 vẫn chạy (đã báo bên kia) |
