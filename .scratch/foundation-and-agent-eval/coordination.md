@@ -78,6 +78,7 @@ ticket mới, chờ các ticket đang chạy xong, rồi báo chủ dự án.
 | 10 | Nâng harness theo lỗi đo được (M4) | 07 gộp; GPU sau 09 | Nhân viên 3 | đã chốt cách làm |
 | 11 | Đo dao động 788 câu held-out (tiền đề M3) | stack | Nhân viên 2 | **đã gộp** — sàn = 0 câu |
 | 12 | Dọn nhỏ sau 03 (được phép trượt) | — | Nhân viên 3 | **đã gộp** |
+| 13 | Chuẩn bị đóng gói e5-large (chỉ code) | — | Nhân viên 1 | đã giao |
 
 ## Mốc so sánh của bộ test
 
