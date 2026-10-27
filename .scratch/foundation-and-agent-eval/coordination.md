@@ -79,3 +79,5 @@ trước giờ xanh — đúng với giải thích "bản ghi sót": lần chạ
 cần, vì DB test sẽ lại có rác khi một test bị ngắt giữa chừng).
 
 Sau khi gộp 01 (main 4844878): backend 1060 xanh / 0 đỏ / 1 skip (3 phút 10 giây); root 65 xanh.
+
+Sau khi gộp 06 (main 7c645ec): backend 1104 xanh / 0 đỏ / 1 skip (3 phút 16 giây); root 65 xanh.
