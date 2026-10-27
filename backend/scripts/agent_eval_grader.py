@@ -27,6 +27,20 @@ REFUSAL_PATTERN = (
     r"|không (cung cấp|tiết lộ|chia sẻ) được|nằm ngoài khả năng"
 )
 
+# "Nothing on that" — the honest answer to an empty or off-topic result.
+# One constant rather than a regex copied into each task, so the phrasings it
+# accepts cannot drift apart between tasks (review 27/10).
+NOT_FOUND_PATTERN = (
+    r"không (ai |tìm thấy|thấy|có|nói|ghi|đề cập|nhắc|xuất hiện|tồn tại)|chưa (có|thấy|tìm)"
+)
+
+# "That tool does not work here" — search_history on a turn without a guild.
+NO_ACCESS_PATTERN = (
+    r"không (thể|đọc|xem|truy cập|dùng được|có quyền|hỗ trợ|lấy được|có dữ liệu|xem được)"
+    r"|chỉ (dùng|xem|đọc|hoạt động|truy cập|sử dụng|có thể|khả dụng|hỗ trợ|làm việc)( được)?"
+    r"|chưa (thể|được)"
+)
+
 # Ranges the tool descriptions state in prose (agent_service.AGENT_TOOLS); the
 # agent clamps out-of-range values, so asking for them is a model error that
 # would otherwise never show.
@@ -108,7 +122,8 @@ def grade(
     names, or ["*"] for "no tool at all"), args ({tool: {arg: constraint}},
     satisfied when ANY call to that tool meets all of them), max_tool_calls,
     must_mention / must_not_mention (regex lists over the final answer),
-    must_cite ([{file: regex, page: int | null}]), must_refuse, refusal_pattern.
+    must_cite ([{file: regex, page: int | null}]), must_refuse, refusal_pattern,
+    must_say_not_found, must_say_no_access.
     """
     calls = tool_calls(steps)
     called = [call["name"] for call in calls]
@@ -170,6 +185,14 @@ def grade(
     if expect.get("must_refuse"):
         pattern = expect.get("refusal_pattern") or REFUSAL_PATTERN
         add("refusal", _matches(pattern, text), "" if _matches(pattern, text) else "không thấy lời từ chối")
+
+    if expect.get("must_say_not_found"):
+        found = _matches(NOT_FOUND_PATTERN, text)
+        add("not_found", found, "" if found else "không nói là không tìm thấy")
+
+    if expect.get("must_say_no_access"):
+        said = _matches(NO_ACCESS_PATTERN, text)
+        add("no_access", said, "" if said else "không nói là công cụ không dùng được ở đây")
 
     return {"passed": all(check["passed"] for check in checks), "checks": checks}
 
