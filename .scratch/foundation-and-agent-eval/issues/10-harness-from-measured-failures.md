@@ -52,3 +52,30 @@ Tiêu chí nghiệm thu theo `spec.md` Mốc 4.
   800 ký tự)", con số lấy từ `HISTORY_MESSAGE_MAX_CHARS`, có test giữ hai thứ khớp nhau.
   `tools_sha256` đổi (`872acc92…`), nên thay đổi này thuộc mốc v0.2: **mốc v0.2 = bộ bài v0.2 + 3a +
   mô tả này.**
+- 27/10 20:07 — **Đăng ký trước cách đo 1a và 2b**, viết TRƯỚC khi chạy 1a hay 2b. Mốc v0.2 (A =
+  `d434c82`) đã chạy xong:
+  - r1 lạnh (gỡ mọi model): 34/40.
+  - r2, r3 nóng: 31/40, giống hệt nhau từng byte.
+  - r4 (chỉ gỡ OCR và embedding): 31/40, giống hệt r2.
+  
+  Lỗi bộ chấm đã biết, sửa ở v0.3, không sửa giữa chừng: câu "kết quả tìm kiếm không trả về thông tin
+  về ngân sách…" của doc-19 là câu đúng nhưng `NOT_FOUND_PATTERN` chưa nhận.
+  - Điều kiện: A = mốc v0.2; B = A + 1a; C = B + 2b. **Luật chồng:** nếu B làm mất nhiều bài ngoài
+    mục tiêu hơn số bài mục tiêu nó cứu được, thì 2b đo trên A chứ không trên B.
+  - Giao thức đã duyệt: mỗi điều kiện 1 lần khởi động bỏ đi + 1 lần đo nóng, t0, seed 42. Commit trước
+    khi đo, để `worktree_dirty` = false.
+  - Hai phép kiểm, chạy trước khi đăng ký:
+    - **Seed không có tác dụng ở t0**: r5 (seed 43) giống hệt r2 (seed 42), 40/40 câu trả lời. Đo nhiều
+      seed ở t0 không cho thêm thông tin.
+    - **Chỉ gỡ model chính** (r6) cho kết quả giống hệt r1 lạnh, 40/40. Nguyên nhân lạnh/nóng đã khoanh
+      vào lần nạp đầu tiên của model chính; cơ chế chưa được chỉ ra. Quy tắc "khởi động bỏ đi" vì vậy
+      có bằng chứng.
+  - Phần bổ sung, ghi rõ là bổ sung: 3 lần ở nhiệt độ 0.4 (như ship, không seed) cho mỗi điều kiện A,
+    B, C, để có độ dao động thật của từng điều kiện.
+  - Mục tiêu của 1a: các bài ở mốc A nóng trượt vì KHÔNG gọi công cụ khi cần, gồm doc-10, doc-22,
+    doc-25, doc-30 (`search_documents`) và stat-02 (`system_status`), tổng 5 bài. Mục tiêu của 2b:
+    hist-07 (và hist-03 nếu chạy ở 0.4).
+  - Báo cáo mỗi điều kiện theo thứ tự: (1) số bài mục tiêu đạt, trước và sau; (2) số bài NGOÀI mục
+    tiêu được thêm hoặc bị mất (đây là sàn nhiễu do đổi prompt; ở mốc A, chỉ đổi mô tả công cụ và
+    hình dạng kết quả khi tràn mà đã lật 5 bài không liên quan); (3) tổng điểm, sau cùng.
+  - Mốc A ở 0.4 (bổ sung, đã chạy trước khi đăng ký): 31, 29, 33/40, tức dao động khoảng ±2 bài chỉ do lấy mẫu.
