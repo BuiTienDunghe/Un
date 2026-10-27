@@ -56,11 +56,12 @@ ticket mới, chờ các ticket đang chạy xong, rồi báo chủ dự án.
 |---|---|---|---|---|
 | 01 | Eval đêm dừng sớm, báo rõ (M1a) | — | Nhân viên 1 | đã giao |
 | 02 | Một cách cài, xoá hack sys.path (M1b) | 01 đã gộp | — | chờ |
-| 03 | Compose chỉ chuyển tiếp, Docker sang v2 (M1c) | — | Nhân viên 2 | đã giao |
+| 03 | Compose chỉ chuyển tiếp, Docker sang v2 (M1c) | — | Nhân viên 2 | xong, chờ fable duyệt (wip/03, 4b4e767) |
 | 04 | Một cơ chế bật bot + panel 401 (M1d) | 02 đã gộp | — | chờ |
 | 05 | Dời job_*, query dashboard vào service (M1d) | 02 đã gộp | — | chờ |
 | 06 | Agent Eval v0: khung chạy + bộ bài (M2) | — | Nhân viên 3 | đã giao |
 | 07 | Agent Eval v0: ghi truy xuất thật + baseline 3 lần (M2) | 06; cần stack | — | chờ |
-| 08 | Chọn mục tiêu thí nghiệm model (M3) | — (chỉ đọc) | fable 5.1 | đã giao |
-| 09 | Chạy thí nghiệm model (M3) | 08; cần GPU + stack | — | chờ |
+| 08 | Chọn mục tiêu thí nghiệm model (M3) | — (chỉ đọc) | fable 5.1 | xong — chọn B, nhánh 0 trước |
+| 09 | Thí nghiệm B, nhánh 0 trước (M3) | 11; stack | fable 5.1 viết đăng ký trước | đang chuẩn bị |
 | 10 | Nâng harness theo lỗi đo được (M4) | 07 | — | chờ |
+| 11 | Đo dao động 788 câu held-out (tiền đề M3) | stack | Nhân viên 2 | đã giao |

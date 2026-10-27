@@ -1,6 +1,6 @@
 # 08 — Chọn mục tiêu cho thí nghiệm model (M3)
 
-Status: xong — chờ chủ dự án chọn A/B/C (27/10)
+Status: xong — chủ dự án chọn B, nhánh 0 trước (27/10)
 Type: research
 Blocked by: —
 

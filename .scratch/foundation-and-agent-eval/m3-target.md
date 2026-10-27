@@ -1,6 +1,6 @@
 # M3 — Chọn mục tiêu cho một thí nghiệm model
 
-Status: đề xuất, chờ chủ dự án chọn (27/10/2026) — ticket 08, chỉ đọc, không GPU
+Status: chủ dự án chọn B, bắt đầu bằng nhánh 0 (27/10/2026); duyệt tải e5-large + llama.cpp khi tới bước cần — xem issues/09
 Viết bởi: fable 5.1 của Ún. Mọi số đều đọc lại từ file trong repo, không đo mới trừ hai lệnh kiểm
 ở cuối.
 
