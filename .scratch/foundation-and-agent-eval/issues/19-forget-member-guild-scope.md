@@ -71,3 +71,9 @@ Thử ngoài lề, không commit: nếu ký ức về B có GỐC là candidate 
 (`fk_discord_memories_origin_candidate`). Phần Postgres rollback, nhưng bước 1 và 3 đã chạy ngoài
 transaction. Đường trích ký ức hiện không sinh ra được trường hợp này, vì chủ thể duy nhất được tin là
 chính người viết (`discord_memory_extractor.py:319-326`); chỉ cơ sở dữ liệu là không chặn.
+- 28/10 00:15 (opus 5.5): gộp test bổ sung 66aba69 (lọc quá hẹp ở bước 2). Rủi ro Nhân viên 1 tìm thêm:
+  ký ức về B có GỐC là candidate của A thì "quên A" hỏng ở bước 5 (`fk_discord_memories_origin_candidate`);
+  Postgres rollback nhưng bước 1 (Qdrant) và bước 3 (condensation) đã chạy ngoài transaction → trạng thái
+  làm dở. Hiện không xảy ra qua đường thường (extractor chỉ tin chủ thể là chính người viết,
+  `discord_memory_extractor.py:319-326`). Chọn (a): để nguyên, ghi thành rủi ro; mở lại nếu có đường ghi
+  ký ức mới (vd admin).
