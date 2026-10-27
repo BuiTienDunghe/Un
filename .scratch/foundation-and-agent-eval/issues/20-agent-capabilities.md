@@ -118,7 +118,7 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
   phụ cấp, doc-22, doc-33 ở A), **0** báo nhầm; bộ kiểm chữ sẵn có (K1) báo nhầm 7/28 câu đạt có tra (25%) nên chỉ ghi trace. Trượt
   → thử lại một lần có công cụ, kèm lời dặn nêu các số không có nguồn (T1), chỉ khi còn ≥ 20 s. Điểm mù: số tự tính,
   số viết bằng chữ, câu bịa không có số. Code chỉ `run()` + `answer_figures.py`; gộp trước C4 của ticket 22.
-- 28/10 01:30 (opus 5.5): #2 gộp --no-ff 86c419c (fable GỘP ĐƯỢC ebf2686; đo hoãn), CHANGELOG 36e4766. #3 thiết kế của
+- 28/10 01:10 (opus 5.5): #2 gộp --no-ff 86c419c (fable GỘP ĐƯỢC ebf2686; đo hoãn), CHANGELOG 36e4766. #3 thiết kế của
   Nhân viên 1 duyệt: S1 (đoạn dán ở lại trong tin nhắn, chia đoạn lúc đọc, id `paste_`+sha256[:12], không migration,
   không lập chỉ mục), trần 100 000 ký tự ở chế độ công cụ (chat thường giữ 10 000, 422 INPUT_TOO_LONG), phiếu đầu-cuối
   ~600+600 ký tự. Chi tiết kỹ thuật do opus chốt; chủ dự án đổi được.
