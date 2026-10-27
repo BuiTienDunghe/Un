@@ -30,7 +30,9 @@ chủ dự án quyết.
 
 ## Đợt B — mốc v0.4 (khoảng 8 phút, khi Nhân viên 3 xong bộ chấm v0.4)
 
-Hai lần lạnh trên main có bộ chấm v0.4, theo bản đăng ký Nhân viên 3 sẽ viết. Chưa có bài L-b, L-c (chủ dự án chọn).
+Hai lần lạnh (`v0.4-base-r1-cold`, `v0.4-base-r2-cold`) trên main có bộ chấm v0.4 (gộp 96f86a8), theo đăng ký trước
+trong `issues/20-agent-capabilities.md` (Nhân viên 3, 02:00). Không có luật ship; dự đoán r1 trùng r2 và doc-39 lần đầu
+đi qua phần dán dài của #3. Chưa có bài L-b, L-c (chủ dự án chọn).
 
 ## Đợt C — thí nghiệm model e5-large (khoảng 3 giờ GPU)
 

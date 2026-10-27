@@ -192,7 +192,7 @@ GPU nóng do dự án khác thì opus báo cả phiên Quản lý. Thay ngưỡn
 | 20 | Khả năng cơ bản cho agent: đọc dài, kiểm câu trả lời, báo tiến độ | — | NV3 (v0.3), NV1 (#1–#4) | **xong phần code**: #1 2d4a830, #2 86c419c, #3 80cd369, #4 7a2d71b; bộ test có DB 1 315 xanh; đo #2/#3 hoãn; bot hiển thị tiến độ chờ chủ dự án |
 | 21 | Tài liệu không có chủ: agent đọc mọi tài liệu, kể cả PDF Nghiên cứu của người khác | — | — | chờ chủ dự án |
 | 22 | Tách mềm Discord: lõi không import Discord; Discord tự cắm qua registry | 20 #1 (1) | NV2 (C1–C3, C5–C6), NV1 (C4) | **xong**: C1–C3 + tài liệu gộp d1711e7, C4 gộp 79065d7 (shim đã xoá); bộ test có DB 1 300 xanh; lần Agent Eval "trùng câu trả lời" hoãn; nợ còn lại ở ticket 25 |
-| 23 | Bảng điểm harness: đúng, hiệu quả, bền, minh bạch + lịch sử | — | Nhân viên 3 | gộp 2818573 (tới 059edf3); 2eec41f (cột số liệu không tra) chờ fable |
+| 23 | Bảng điểm harness: đúng, hiệu quả, bền, minh bạch + lịch sử | — | Nhân viên 3 | **xong** — gộp 2818573 + cột số liệu không tra 8bfaf46 |
 | 24 | Đo harness bằng benchmark uy tín có điểm công bố | — | Nhân viên 3 | BFCL cách A; thiết kế gộp 2f362cd; chờ chủ dự án: chỗ cắm, nhiệt độ, cài venv |
 
 ## Mốc so sánh của bộ test
