@@ -350,10 +350,15 @@ Kế hoạch mới, cố định trước khi đo:
 |---|---|
 | 1 | `eval_stack` thêm cờ đặt gốc tên collection (ví dụ `--collection-base`), commit + duyệt **trước** khi nhúng. Chỉ mục 08/09 và kết quả ticket 11 giữ nguyên, không ghi đè |
 | 2 | Nhúng mới **cả hai** phía dưới cùng một gốc mới, trên cùng runtime, cùng buổi: v0 (suffix rỗng) và qi (suffix `qi`). `documents_drill_heldout_qi` nhúng 27/10 không dùng nữa |
-| 3 | Chạy lại Bước 2b giữa hai collection mới: passage phải ≥ 0,999999 (cùng runtime). Không đạt → dừng |
+| 3 | Chạy lại Bước 2b giữa hai collection mới, **giữ đúng ba bậc** của Bổ sung 1: ≥ 0,999999 sạch; [0,9999 ; 0,999999) đi tiếp, ghi giới hạn (hai nhánh chia cùng nhiễu số học); < 0,9999 dừng (khi đó không phải chuyện runtime). Kỳ vọng ~1,0 như Bước 1, vì `rebuild_qdrant` nhúng từng đoạn một (`rebuild_qdrant.py:108`) — sửa theo fable 5.1 |
+| 3b | Nhánh (iii) cổng 82 câu dính cùng confound (`documents_lab` nhúng runtime cũ). Áp mục 2 cho lab: gốc mới `documents_lab_r2`, nhúng cả v0 lẫn qi dưới gốc đó (27 đoạn, vài phút). **Phép quyết định** của (iii) là so từng câu qi-mới với v0-mới; `evaluate_rag --baseline` với baseline ghi sẵn chỉ để tham khảo — sửa theo fable 5.1 |
+| 3c | Tên gốc mới **không được** kết thúc bằng `_<suffix>` của phiên bản nào trong registry (`qi`, `e5l`; `docs/model_registry.md:75` — registry từ chối boot). Dùng `documents_drill_heldout_r2` và `documents_lab_r2` |
 | 4 | Control nhánh (ii) = **một lượt mới** v0 hybrid ctx ON reranker ON trên collection v0 mới (không dùng các lần lặp của ticket 11, vì chúng chạy trên vector 08/09). Sàn dao động lặp lại vẫn lấy từ ticket 11 (F1 = F5 = 0), vì đó là tính chất của đường truy vấn khi vector cố định |
 | 5 | Mọi điều kiện dừng, luật chọn thước, tập đo giữ nguyên |
 | 6 | Thời gian ~4 giờ GPU (2 lần nhúng ~18 phút + control ~62 phút + Bước 3–5). Không kịp trước 02:45 tối 27/10 → chạy trọn một mạch từ sáng 28/10 |
 
 Hệ quả rộng hơn 09: mọi phép so A/B về embedding (kể cả B đầy đủ với e5) phải nhúng lại **cả hai** phía
-trên cùng runtime; registry và manifest eval hiện không ghi phiên bản Ollama.
+trên cùng runtime; registry và manifest eval hiện không ghi phiên bản Ollama. Với B đầy đủ: control v0
+phải là bản nhúng **cùng runtime** với e5 — ghi thẳng vào phần B khi tới lúc. Nếu dư ~62 phút sáng 28/10,
+lặp control v0-mới một lần để sàn dao động thuộc đúng bộ vector đang so (không bắt buộc). Production
+cũng đang ở trạng thái "passage nhúng runtime cũ, truy vấn nhúng runtime mới" — ticket 15.
