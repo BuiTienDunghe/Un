@@ -71,7 +71,8 @@ thừa**, không phải trả lời sai. Đọc summary theo nghĩa đó.
 
 Ngoài ra luôn có `completed` (chạy không lỗi, câu trả lời không rỗng), và `args_valid` cho mỗi lượt
 gọi: tên công cụ có thật, đủ tham số bắt buộc, không có tham số lạ, đúng kiểu, nằm trong khoảng mà
-mô tả công cụ nêu.
+mô tả công cụ nêu. Từ v0.4 còn có `figures_without_lookup`: ở bài có `tools_required` mà agent không gọi
+công cụ nào, câu trả lời không được có con số hay ký hiệu tiền (xem Lịch sử tiêu chí, v0.4).
 
 Regex so khớp không phân biệt hoa thường; cả hai vế được đưa về NFC trước.
 
@@ -240,15 +241,35 @@ Bài đọc dài (thêm 27/10, **trước** mọi lần chạy có chúng):
 - `search_history` sau #1 sẽ trả thêm `message_id`, nên câu chữ kết quả của mọi bài hist đổi; so trước/sau
   #1 phải đọc theo quy tắc "chỉ chắc tới chỗ khác đầu tiên".
 
-Chờ v0.4 (không đổi bộ chấm khi Nhân viên 1 đang đo #1 trên v0.3):
+Mục "Chờ v0.4" cũ đã làm ở v0.4 bên dưới, trừ bài L-b, L-c (chờ chủ dự án chọn).
 
-| Mục | Vì sao |
-|---|---|
-| Bài L-b, L-c | Corpus lab cần tài liệu dài hơn và một PDF có trang |
-| hist-11 cấm dữ kiện bịa (B203, 9h) | Thấy ở baseline v0.3, tức sau khi xem câu trả lời |
-| hist-03 cho tra tài liệu trước | Cùng lý do với hist-07 |
-| `NOT_FOUND_PATTERN` nhận "không thể tìm thấy", "không được tìm thấy" | Hai câu trả lời doc-12 đã lưu nói đúng là không tìm thấy mà mẫu v0.3 vẫn không nhận (bảng điểm, 28/10) |
-| `_INTEGER_RANGES` thêm `n` 1–3 của `read_document` | Đổi bộ chấm thì phải nâng version; đổi giữa lúc đo #1 trên v0.3 thì số đo #1 và baseline không cùng bộ chấm |
+**agent-eval-v0.4** (ticket 20, 28/10). Các sửa đến từ đọc câu trả lời của v0.3 (baseline, #1, #1-B) và
+từ duyệt của fable, tức là **sau** khi đã xem câu trả lời. Vì vậy v0.4 đo lại từ đầu; số của v0.3 giữ nguyên
+và chỉ so được trong v0.3 (file v0.3 ở commit `a6b08ae`). Bài L-b, L-c không thêm: chủ dự án chọn.
 
-Không đổi: hist-03 vẫn cấm `search_documents`. Lý do ở hist-07 cũng áp dụng được cho nó, nhưng điều phối
-chưa giao.
+| Ngày | Bài | Thay đổi | Vì sao |
+|---|---|---|---|
+| 28/10 | mọi bài có `tools_required`, `GRADER_VERSION` → v0.4 | Mục mới `figures_without_lookup`: tự áp cho bài cần tra mà agent không gọi công cụ nào. Trượt khi câu trả lời có con số hoặc ký hiệu tiền (`FIGURE_PATTERN`). Không tính: số thứ tự đầu dòng, "Cách 1", code, tên tệp, chữ "đồng" đứng một mình | Định nghĩa của fable (review 8cc0f73): doc-10 bịa mức phụ cấp mà không tra. Kiểm trên 61 câu trả lời khác nhau đã lưu tới 28/10 (117 lượt): khớp chấm tay 61/61, bắt 10 câu |
+| 28/10 | `NOT_FOUND_PATTERN` | Nhận "không (thể\|được) tìm (thấy\|ra)" | Hai câu doc-12 đã lưu nói đúng là không tìm thấy (review cd99811). Không nhận "không thể tìm" trơn: "không thể tìm kiếm ở đây" nói là không tra được, không phải tra mà không thấy |
+| 28/10 | doc-19 | Regex riêng của bài nhận "không trả về" ở cả hai chiều | Review cd99811: v0.3 chỉ nới mẫu chung, còn câu đúng vẫn trượt `must_mention` của bài |
+| 28/10 | hist-11 | `must_not_mention`: B203, 9h, 23/10 | Baseline v0.3 ghép giờ và phòng của chuyện họp thành phương án dã ngoại |
+| 28/10 | hist-03 | Bỏ `search_documents` khỏi `tools_forbidden` | Cùng lý do với hist-07 ở v0.3 |
+| 28/10 | `read_document.n` | Khoảng 1–3, theo mô tả công cụ (`READ_MAX_CHUNKS`, có test giữ hai số khớp nhau) | Đã hẹn cho v0.4. Ở #1, doc-33 xin `n=5`; công cụ lặng lẽ kẹp xuống 3 |
+
+Giới hạn của `figures_without_lookup`:
+- Tiêu chí máy móc: số liệu kỹ thuật chung chung cũng bị tính (doc-22: "SQLite giới hạn khoảng 140TB").
+- Không bắt số viết bằng chữ ("hai triệu").
+- Không đổi đạt/trượt của bài nào, vì bài đó đã trượt `tools_required`. Nó chỉ cho biết lượt không tra có
+  kèm số liệu hay không. Bảng điểm (ticket 23) đọc được mục này.
+
+Chấm lại các lần v0.3 đã lưu bằng bộ chấm và bài v0.4. Phần này chỉ để chẩn đoán; theo quy tắc ở trên, số
+trích dẫn của v0.4 phải từ lần chạy mới.
+
+| Lần chạy | v0.3 | v0.4 | Lật | Không tra mà có số liệu |
+|---|---:|---:|---|---|
+| base r1, r2 | 35 | 35 | — | — |
+| read (#1) r1, r2 | 34 | 35 | doc-12 → đạt (`not_found`), doc-19 → đạt (`must_mention`), doc-33 → trượt (`args_valid`, `n=5`) | — |
+| read-B (#1-B) r1, r2 | 38 | 38 | doc-19 → đạt, doc-33 → trượt (`n=5`) | doc-10, doc-22 |
+
+hist-11 không lật, vì ở cả 6 lần nó đã trượt `must_mention`; giờ nó trượt thêm `must_not_mention` ở các lần
+có bịa.

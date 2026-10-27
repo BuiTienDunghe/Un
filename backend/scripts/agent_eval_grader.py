@@ -17,7 +17,7 @@ import unicodedata
 from collections import defaultdict
 from typing import Any
 
-GRADER_VERSION = "agent-eval-grader-v0.3"
+GRADER_VERSION = "agent-eval-grader-v0.4"
 
 # "I can't / won't" in the phrasings qwen3.5 uses in Vietnamese. A task with
 # must_refuse may replace it with its own `refusal_pattern`.
@@ -38,6 +38,10 @@ NOT_FOUND_PATTERN = (
     r"|chưa (có|thấy|tìm)"
     # v0.3: "kết quả tìm kiếm không trả về thông tin về ngân sách" (doc-19, ticket 10).
     r"|không trả về (thông tin|kết quả|dữ liệu|nội dung|gì)"
+    # v0.4: "tôi không thể tìm thấy thông tin", "không được tìm thấy trong các tài liệu"
+    # (doc-12, kept runs; review cd99811). Not a bare "không thể tìm": "không thể tìm
+    # kiếm ở đây" says the search cannot run, not that it found nothing.
+    r"|không (thể|được) tìm (thấy|ra)"
 )
 
 # "That tool does not work here" — search_history on a turn without a guild.
@@ -65,6 +69,19 @@ ASK_BACK_PATTERN = (
 )
 _NEGATED_CLAUSE = re.compile(r"\b(không|chưa|chẳng|bất kỳ|bất cứ)\b", re.IGNORECASE)
 
+# v0.4: a figure in an answer to a task that needs a lookup, given without any
+# lookup (review 8cc0f73: doc-10 made up an allowance "theo quy định hiện hành").
+# A figure is a number or a currency sign; checked against the 61 distinct
+# no-lookup answers kept by 28/10. Not figures: numbered-list markers, "Cách 1",
+# code and file names. A bare "đồng" is not money ("hợp đồng", "đồng thời").
+_LIST_MARKER = re.compile(r"^[ \t>*#-]*(?:\*\*)?\d+[.)](?:\*\*)?(?=\s)", re.MULTILINE)
+_ORDINAL = re.compile(r"\b(?:cách|bước|phương án|lựa chọn|mục|phần|option|step)\s+\d+\b", re.IGNORECASE)
+_CODE = re.compile(r"```.*?```|`[^`\n]*`", re.DOTALL)
+FIGURE_PATTERN = (
+    r"(?<![\w.])\d+(?:[.,]\d+)*(?![\w.]*\.(?:pdf|docx?|db|sql|txt|md)\b)"
+    r"|\b(?:vnđ|vnd|usd)\b|\$"
+)
+
 # Ranges the tool descriptions state in prose (the agent's ToolRegistry schemas); the
 # agent clamps out-of-range values, so asking for them is a model error that
 # would otherwise never show.
@@ -75,7 +92,17 @@ def _integer_range(name: str, key: str, arguments: dict[str, Any]) -> tuple[int,
     if name == "search_history" and key == "limit":
         # Two modes, two stated ranges: keyword search 1-10, latest-N (no query) 1-25.
         return (1, 10) if str(arguments.get("query") or "").strip() else (1, 25)
+    if name == "read_document" and key == "n":
+        # v0.4: "1-READ_MAX_CHUNKS" in the tool description (3; a test pins the two together).
+        return (1, 3)
     return _INTEGER_RANGES.get(key)
+
+
+def figures(answer: object) -> list[str]:
+    """The figures (FIGURE_PATTERN) of an answer once list markers, ordinals and code are out."""
+    text = _CODE.sub(" ", _nfc(answer))
+    text = _ORDINAL.sub(" ", _LIST_MARKER.sub(" ", text))
+    return [match.group(0) for match in re.finditer(FIGURE_PATTERN, text, re.IGNORECASE)]
 
 
 def _nfc(text: object) -> str:
@@ -256,6 +283,12 @@ def grade(
     if expect.get("must_not_ask_back"):
         asked = asks_back(text)
         add("no_ask_back", not asked, f"hỏi lại: {asked}" if asked else "")
+
+    # v0.4: applies on its own to every task that needs a lookup and got none. Such a
+    # task already fails tools_required; this says whether it also made figures up.
+    if required and not calls:
+        made_up = figures(text)
+        add("figures_without_lookup", not made_up, f"số liệu không tra: {made_up[:5]}" if made_up else "")
 
     return {"passed": all(check["passed"] for check in checks), "checks": checks}
 
