@@ -48,24 +48,14 @@ class HistoryBackend(Protocol):
     ) -> list[object]: ...
 
 
-# Ticket 10 (1a): the guide used to say "only call a tool when the question truly
-# needs it; general knowledge, answer directly", and the model answered questions
-# about the user's own system from general knowledge instead (Agent Eval v0.1 and
-# v0.2: doc-22, doc-25, doc-30 at every temperature-0 run, plus doc-10 and stat-02
-# in v0.2). Looking it up is now the default; answering directly is the exception.
 AGENT_GUIDE = (
     "Bạn có thể dùng công cụ khi cần dữ liệu thật: `search_documents` tìm trong "
     "tài liệu người dùng đã tải lên, `search_history` đọc tin nhắn cũ của "
     "server (có query = tìm từ khóa; bỏ trống query = N tin mới nhất, dùng "
     "khi cần tóm tắt gần đây), `system_status` xem sức khỏe hệ "
-    "thống. Câu hỏi về quy định, quy trình, cấu hình, con số hay cách làm "
-    "của một tổ chức, hệ thống hoặc dự án cụ thể (\"của xưởng\", \"của công "
-    "ty\", \"của nhóm\", \"hệ thống này\") thì tra `search_documents` trước "
-    "khi trả lời, kể cả khi bạn nghĩ mình đã biết; câu hỏi về tình trạng hệ "
-    "thống thì gọi `system_status`. Đừng hỏi người dùng có muốn tra không: "
-    "cứ tra. Chỉ trả lời thẳng, không gọi gì, với câu chào hỏi, kiến thức "
-    "phổ thông, hoặc khi thông tin đã có sẵn trong câu hỏi hay các lượt "
-    "trước. Khi dùng nội dung tài liệu, nêu tên tệp và số trang. Khi dùng "
+    "thống. Chỉ gọi công cụ khi câu hỏi thật sự "
+    "cần dữ liệu đó; câu chào hỏi hay kiến thức chung thì trả lời thẳng, không "
+    "gọi gì. Khi dùng nội dung tài liệu, nêu tên tệp và số trang. Khi dùng "
     "tin nhắn cũ, nêu ai nói và lúc nào. Khi đã đủ "
     "thông tin, trả lời trọn vẹn bằng tiếng Việt."
 )
