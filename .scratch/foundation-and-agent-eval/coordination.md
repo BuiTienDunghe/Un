@@ -81,6 +81,7 @@ ticket mới, chờ các ticket đang chạy xong, rồi báo chủ dự án.
 | 11 | Đo dao động 788 câu held-out (tiền đề M3) | stack | Nhân viên 2 | **đã gộp** — sàn = 0 câu |
 | 12 | Dọn nhỏ sau 03 (được phép trượt) | — | Nhân viên 3 | **đã gộp** |
 | 13 | Chuẩn bị đóng gói e5-large (chỉ code) | — | Nhân viên 1 | **đã gộp** |
+| 14 | Cắm model decided làm cổng trí nhớ | I/O của decided | — | để sau (ngoài kế hoạch này) |
 
 ## Mốc so sánh của bộ test
 
