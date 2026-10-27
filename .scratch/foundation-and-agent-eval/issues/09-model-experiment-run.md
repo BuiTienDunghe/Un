@@ -1,6 +1,6 @@
 # 09 — Thí nghiệm model M3: hướng B, bắt đầu bằng nhánh 0
 
-Status: nhánh 0 chạy xong tối 27/10 theo Bổ sung 2: **âm** (điều kiện 1–5 không qua, 7–8 qua); chờ fable duyệt. B đầy đủ chưa bắt đầu
+Status: **xong — âm** (28/10, fable 5.1 duyệt): điều kiện 1–5 không qua, 7–8 qua. B đầy đủ (e5-large) chờ chủ dự án duyệt tải
 Type: task
 Blocked by: 08 (xong), 11 (sàn dao động 788 câu); cần stack heldout + lab
 
