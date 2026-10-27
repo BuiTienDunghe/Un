@@ -1,6 +1,6 @@
 # 22 — Tách mềm Discord: lõi không import gì của Discord; Discord là một gói tự cắm vào
 
-Status: chờ thiết kế (fable 5.1) — code sau ticket 20 #1 (registry)
+Status: thiết kế xong (fable, `ticket22-design.md`); 5 lựa chọn điều phối chốt; C1 giao Nhân viên 2, C2–C3 sau khi gộp ticket 20 #1, C4 Nhân viên 1
 Type: task
 Blocked by: 20 #1 bước (1) registry (Discord đăng ký công cụ qua đó)
 
@@ -42,3 +42,8 @@ trí nhớ Discord thành một gói riêng, đăng ký công cụ của mình q
 - Trí nhớ web (`memory_service`, Qdrant `memories`) ở lại lõi — ghi rõ ranh giới với trí nhớ Discord (R7 cũ).
 
 ## Comments
+- 28/10 00:40 (opus 5.5, theo ý fable; chủ dự án uỷ quyền chọn các chi tiết kỹ thuật): (1) `routers/bot.py` +
+  `bot_control_service` sang gói; (2) model Discord **ở lại** `models.py` (một metadata, không chạm Alembic); (3) một
+  shim duy nhất `discord_history_service` tới C4; (4) **D1** trong 22 (giữ khai báo như cũ, để C4 kiểm "Agent Eval
+  trùng"), D2 đo riêng trên v0.3 sau; (5) C4 do Nhân viên 1 làm ngay sau khi ticket 20 #1 gộp. Nợ ghi lại, không
+  sửa lần này: 25 trường settings Discord, chuỗi tuyến job trong `jobs/routing`, ba dịch vụ lõi đếm bảng Discord.

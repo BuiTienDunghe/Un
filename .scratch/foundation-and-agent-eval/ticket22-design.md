@@ -24,7 +24,7 @@ sách router, một hàm khởi động), Discord tự cắm vào lúc bật má
 | **Lõi import Discord** (cạnh thật) | 4 file: `main.py` (7 dòng import, ~60 dòng nối dây), `postgres/models.py:12` (hằng số), `services/agent_service.py:21` (`history_hit_payload`), `services/answer_grounding.py:28-29` (`STOPWORDS`, `fold`) | `grep "from app\.\S*discord"` trừ file Discord |
 | Lõi nhắc Discord mà không import | `settings.py` 25 trường `discord_*`; `jobs/routing.py` 1 tuyến job (chuỗi đường dẫn); `dashboard_service.py` 3 model; `operational_service.py` 2 model + 1 mã job; `stores/postgres_auxiliary_store.py:195` 1 model; `chat_service.py` chuỗi `"discord"`; `model_registry.py` tên biến env | `grep -i discord` |
 | Discord import lõi (chiều cho phép) | `postgres.models` ×9, `security.api_key` ×2, `utils.vi_tokenizer`, `services.memory_service`, `services.chat_service`, `jobs.routing`, `jobs.retry` | |
-| `postgres/models.py` | 1 310 dòng; model Discord ở dòng 309–971 = 663 dòng (51%), 10 bảng; import `discord_memory_constants` (138 dòng) ở đầu file | |
+| `postgres/models.py` | 1 310 dòng; model Discord ở dòng 322–1011 (từ `class DiscordConversationSession` tới trước `class Message`) = 690 dòng (53%), 10 bảng; import `discord_memory_constants` (138 dòng) ở đầu file | |
 | Migration | 12 / 36 file đụng bảng `discord_*`; Alembic `env.py:8` lấy `Base.metadata` từ `app.postgres.models` | |
 | Importer ngoài `app/` | `backend/tests` 21 file / 50 dòng import; `backend/scripts` 6 file / 15 dòng; `tools/`, `training/`, `tests/` gốc: 0; `discord_bot/` không import `app` | |
 | Registry công cụ (ticket 20 #1 (1), 3d5927a) | `REGISTRY` là dict cấp module trong `agent_service.py`; `AGENT_TOOLS`/`TOOL_NAMES`/`_DECLARED` tính một lần lúc import; handler là method của `AgentService` | đọc diff |
@@ -126,7 +126,7 @@ D2 đo cùng v0.3 của ticket 20.
 | Alembic | không đổi; `env.py` giữ `Base.metadata` | `env.py` phải `import app.discord.models` để metadata đủ; quên là `alembic check`/autogenerate thấy 10 bảng "thừa" |
 | Luật "lõi không import Discord" | giữ được tuyệt đối (hằng số 138 dòng ở lại lõi) | `env.py` cần một ngoại lệ ghi tên; `dashboard_service`, `operational_service`, `postgres_auxiliary_store:195` phải thôi import model Discord → cần 3 hook (stats provider, health provider, bộ lọc hội thoại) |
 | Khoá ngoại chéo (`discord_sessions.backend_conversation_id` → `conversations`, …) | như nay | vẫn chạy nếu cùng `Base` và import trước khi dùng; thêm một test khẳng định `Base.metadata.tables` đủ 10 bảng |
-| Dòng còn lại trong `models.py` | 1 310 | 647 |
+| Dòng còn lại trong `models.py` | 1 310 | 620 |
 | Rủi ro | 0 | trung bình: lỗi import thứ tự chỉ lộ khi chạy migration/dashboard |
 | Công | 0 | ~1 ngày: dời 663 dòng + 3 hook + test |
 | Khớp phạm vi ticket ("không đổi bảng, không migration — chỉ dời code") | có | có về bảng, nhưng vượt "chỉ dời code" vì phải thêm hook |
@@ -173,7 +173,7 @@ AST test) và một test hợp đồng: `upsert_with_id` với id tuỳ ý rồi
 | AST: không module lõi nào import `app.discord` (trừ `main.py` và shim có hạn) | C5, mỗi lần CI |
 | Lõi import được khi `app.discord` bị chặn (`__import__` guard) cho `agent_service`, `chat_service`, `rag_service`, `memory_service`, `answer_grounding` | C5 |
 | Bộ test backend + gốc xanh, `alembic check` không lệch | mỗi commit |
-| Agent Eval v0.2 lạnh trùng 40/40 với mốc, `tools_sha256 = 872acc92…` | sau C4 (gỡ model trước mỗi lần đo, so từng bài tới chỗ khác đầu tiên) |
+| Agent Eval lạnh trùng từng bài với mốc đo cùng buổi trên `main` ngay trước C4; `tools_sha256` của hai manifest bằng nhau | sau C4 (gỡ model trước mỗi lần đo, so từng bài tới chỗ khác đầu tiên; bộ bài là v0.3 nếu 20 đã gộp) |
 | Eval đêm xanh | đêm sau C3 và sau C4 |
 
 ## Chỗ có lựa chọn thật (để opus hỏi chủ dự án)
