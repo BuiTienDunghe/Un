@@ -146,13 +146,16 @@ class PostgresAuxiliaryStore:
                 # Nothing below may carry an argument, a result or an answer
                 # (test_agent_trace_summaries scans every text column for a bait).
                 shape = step.get("arguments_shape")
+                # A tool name is model output: kept only when the step marks it as one of
+                # the declared tools, "unknown" otherwise (an invented name can carry words).
+                summary_tool = tool_name if step.get("tool_declared") else ("unknown" if tool_name else None)
                 session.add(
                     AgentTraceSummary(
                         conversation_id=conversation_id,
                         message_id=message_id,
                         step_index=index,
                         kind=kind,
-                        tool_name=tool_name,
+                        tool_name=summary_tool,
                         latency_ms=number(step.get("latency_ms")),
                         error_code=text(step.get("error_code"), 64),
                         error_type=text(step.get("error_type"), 128),

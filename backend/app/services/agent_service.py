@@ -261,8 +261,11 @@ class AgentService:
             # The model must see its own calls on the next round, verbatim.
             working.append({"role": "assistant", "content": result["content"], "tool_calls": result["raw_tool_calls"]})
             for index, call in enumerate(calls):
+                # A name the model invented can carry the user's words: the content-free
+                # trace keeps a tool's name only when the step says it is a declared one.
+                declared = call["name"] in TOOL_NAMES
                 steps.append({
-                    "kind": "tool_call", "tool_name": call["name"],
+                    "kind": "tool_call", "tool_name": call["name"], "tool_declared": declared,
                     "arguments": call["arguments"], "content": None, "latency_ms": round_latency,
                     "arguments_shape": arguments_shape(call["name"], call["arguments"]),
                     # One model round, however many calls it made: counted once.
@@ -274,7 +277,7 @@ class AgentService:
                 # text); the defense marks it so before the model reads it.
                 output = self.defense.wrap_tool_result(text)
                 steps.append({
-                    "kind": "tool_result", "tool_name": call["name"], "arguments": None,
+                    "kind": "tool_result", "tool_name": call["name"], "tool_declared": declared, "arguments": None,
                     "content": output, "latency_ms": int((perf_counter() - tool_started) * 1000),
                     "error_code": error_code, "error_type": error_type,
                 })
