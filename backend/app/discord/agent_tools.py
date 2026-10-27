@@ -136,4 +136,4 @@ class SearchHistory:
 
 def register(registry: ToolRegistry, history_service: HistoryBackend | None) -> None:
     """Plug search_history into an agent's registry, reading `history_service`."""
-    registry.register(AgentTool(SEARCH_HISTORY_SCHEMA, SearchHistory(history_service)), ORDER)
+    registry.register(AgentTool(SEARCH_HISTORY_SCHEMA, SearchHistory(history_service), "Đang xem lịch sử tin nhắn của server…"), ORDER)

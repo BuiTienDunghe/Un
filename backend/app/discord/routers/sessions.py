@@ -13,6 +13,7 @@ from app.discord.schema import (
     DiscordTurnCompleteRequest,
     DiscordTurnFailRequest,
     DiscordTurnOperatorStopResponse,
+    DiscordTurnProgressResponse,
     DiscordTurnStateResponse,
 )
 from app.discord.session_service import (
@@ -114,6 +115,17 @@ def execute_discord_turn(turn_id: UUID, request: Request) -> DiscordTurnExecuteR
         execution_token=turn.execution_token,
         replacement_turn_id=turn.replacement_turn_id,
     )
+
+
+@router.get("/turns/{turn_id}/progress", response_model=DiscordTurnProgressResponse)
+def discord_turn_progress(turn_id: UUID, request: Request) -> DiscordTurnProgressResponse:
+    """Polled by the bot while its execute call blocks (ticket 20 #4). Reads the in-process
+    store only: no database, so asking often costs nothing."""
+    store = getattr(request.app.state, "discord_turn_progress", None)
+    entry = store.get(str(turn_id)) if store is not None else None
+    if entry is None:
+        return DiscordTurnProgressResponse(turn_id=turn_id, running=False)
+    return DiscordTurnProgressResponse(turn_id=turn_id, running=True, **entry)
 
 
 @router.post("/turns/{turn_id}/complete", response_model=DiscordTurnStateResponse)

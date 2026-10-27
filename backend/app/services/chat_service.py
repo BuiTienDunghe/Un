@@ -4,7 +4,7 @@ from pathlib import Path
 from hashlib import sha256
 from time import perf_counter
 from uuid import uuid4
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 
 from app.llm_clients.usage import consume_usage
 from app.services.agent_service import STOP_TURN_BUDGET_EXHAUSTED
@@ -47,6 +47,7 @@ class ChatService:
         system_prompt: str | None = None,
         use_tools: bool = False,
         user_id: str | None = None,
+        on_step: Callable[[dict[str, object]], None] | None = None,
     ) -> tuple[str, str, str, int, list[dict[str, object]] | None]:
         return self._respond(
             message,
@@ -55,6 +56,7 @@ class ChatService:
             system_prompt,
             use_tools=use_tools,
             user_id=user_id,
+            on_step=on_step,
         )
 
     def respond_with_context(
@@ -68,6 +70,7 @@ class ChatService:
         system_prompt: str | None = None,
         use_tools: bool = False,
         tool_context: dict[str, object] | None = None,
+        on_step: Callable[[dict[str, object]], None] | None = None,
     ) -> tuple[str, str, str, int]:
         """Run chat with caller-built trusted context while persisting raw text.
 
@@ -85,6 +88,7 @@ class ChatService:
             context_system_prompt=context_system_prompt,
             use_tools=use_tools,
             tool_context=tool_context,
+            on_step=on_step,
         )
         return answer, model_used, returned_id, latency_ms
 
@@ -101,6 +105,7 @@ class ChatService:
         use_tools: bool = False,
         tool_context: dict[str, object] | None = None,
         user_id: str | None = None,
+        on_step: Callable[[dict[str, object]], None] | None = None,
     ) -> tuple[str, str, str, int, list[dict[str, object]] | None]:
         is_new = conversation_id is None
         request_started = perf_counter()
@@ -138,8 +143,9 @@ class ChatService:
             started = perf_counter()
             agent_steps: list[dict[str, object]] | None = None
             if agent_mode:
+                # on_step: the agent's progress, for a caller that shows it (ticket 20 #4).
                 answer, model_used, agent_steps = self.agent_service.run(
-                    messages, tool_context=tool_context
+                    messages, tool_context=tool_context, on_step=on_step
                 )
             else:
                 answer, model_used = self.router.chat("general", messages)

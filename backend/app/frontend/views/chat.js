@@ -880,8 +880,10 @@
   /* Một câu trả lời của trợ lý → handle; live = đang stream (có khối "đang trả lời"). */
   function addAssistantMessage({ live = true, pendingText = "" } = {}) {
     const avatar = h("div", { class: ["avatar-bot", live && "is-thinking"], "aria-hidden": "true" }, icon("spark", { size: 15, sw: 1.9 }));
+    // Dòng chờ: lượt agent thay nó bằng việc đang làm (sự kiện `progress`, ticket 20 #4).
+    const pendingLabel = h("span", null, pendingText);
     const pending = live ? h("div", { class: "msg-pending" },
-      h("div", { class: "typing-row" }, h("span", { class: "typing-dots", "aria-hidden": "true" }, h("i"), h("i"), h("i")), h("span", null, pendingText)),
+      h("div", { class: "typing-row" }, h("span", { class: "typing-dots", "aria-hidden": "true" }, h("i"), h("i"), h("i")), pendingLabel),
       skeleton({ w: "70%", h: 12 }), skeleton({ w: "45%", h: 12 })) : null;
     const md = h("div", { class: "msg-md", hidden: live });
     const err = h("p", { class: "msg-error", hidden: true });
@@ -944,6 +946,10 @@
         raw += String(token ?? "");
         dirty = true;
         if (!frame) frame = requestAnimationFrame(paint);
+      },
+      setProgress(label) {
+        // Chỉ chữ, không HTML: nhãn do máy chủ đặt, nhưng không có lý do gì để tin nó là markup.
+        if (pending && label) pendingLabel.textContent = String(label);
       },
       setSteps(steps) {
         const panel = stepsPanel(steps);
@@ -1124,6 +1130,7 @@
       hints: CHAT_HINTS,
       on: (type, data) => {
         if (type === "meta") on.meta(data);
+        else if (type === "progress") { if (on.progress) on.progress(data); }
         else if (type === "steps") on.steps(Array.isArray(data.steps) ? data.steps : []);
         else if (type === "token") on.token(data.content);
         else if (type === "done") on.done(data);
@@ -1195,6 +1202,7 @@
           }
           if (mode === "rag") handle.setSources(data.sources || []);
         },
+        progress(data) { handle.setProgress(data && data.label); },
         steps(steps) { handle.setSteps(steps); },
         token(text) {
           if (!firstToken) { firstToken = true; handle.start(); }

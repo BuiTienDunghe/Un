@@ -39,6 +39,7 @@ def register_services(app: Any, settings: Any, postgres_sessions: Any, *, projec
     from app.discord.memory_completion_service import DiscordMemoryCompletionService
     from app.discord.memory_review_service import DiscordMemoryReviewService
     from app.discord.session_service import DiscordSessionService
+    from app.discord.turn_progress import TurnProgress
     from app.discord.turn_service import DiscordTurnService
 
     state = app.state
@@ -54,10 +55,13 @@ def register_services(app: Any, settings: Any, postgres_sessions: Any, *, projec
         max_batch=settings.discord_condensation_max_batch,
         silence_gap_minutes=settings.discord_condensation_silence_gap_minutes,
     )
+    # Ticket 20 #4: what a running turn is doing, for GET .../turns/{id}/progress.
+    state.discord_turn_progress = TurnProgress()
     state.discord_turn_service = DiscordTurnService(
         postgres_sessions,
         state.discord_session_service,
         state.chat_service,
+        progress=state.discord_turn_progress,
         memory_completion_service=DiscordMemoryCompletionService(
             enabled=settings.discord_memory_ingestion_enabled,
             extractor_schema_version=(
