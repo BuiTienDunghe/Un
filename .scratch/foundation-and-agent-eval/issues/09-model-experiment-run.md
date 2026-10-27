@@ -1,6 +1,6 @@
 # 09 — Thí nghiệm model M3: hướng B, bắt đầu bằng nhánh 0
 
-Status: **xong — âm** (28/10, fable 5.1 duyệt): điều kiện 1–5 không qua, 7–8 qua. B đầy đủ (e5-large) chờ chủ dự án duyệt tải
+Status: nhánh 0 xong — âm; **B đầy đủ đang làm** (chủ dự án duyệt tải + cài 28/10 01:00) — Nhân viên của Ún 2
 Type: task
 Blocked by: 08 (xong), 11 (sàn dao động 788 câu); cần stack heldout + lab
 
@@ -431,3 +431,10 @@ quyết định sau.
 Ghi chú quy trình: `rebuild_memories` ở Bước 2/5 không đặt `QDRANT_MEMORIES_COLLECTION`, nên lượt v0
 trỏ vào `memories` của production. Lần này không hại gì vì bảng có 0 dòng, nhưng lần chạy B nên đặt
 biến đó, hoặc bỏ lệnh này khỏi các bước đo.
+- 28/10 01:00 (chủ dự án, trong phiên opus 5.5): "M3: đi tiếp B đầy đủ. Duyệt tải multilingual-e5-large
+  (Hugging Face), llama.cpp (convert_hf_to_gguf.py) và cài sentencepiece." (cùng nội dung đã gõ ở phiên fable).
+  Giao Nhân viên 2. Ràng buộc an toàn: chỉ tải các tệp trong `SOURCE_FILES` của `build_embedding_model.py`
+  (safetensors + cấu hình + tokenizer), không tải trọng số dạng pickle (`.bin`); llama.cpp clone nông, ghim
+  commit, vào thư mục riêng ngoài repo; chạy converter bằng `python -I` từ thư mục làm việc riêng; cài
+  `sentencepiece` (ghim phiên bản) vào đúng một venv chạy converter. Tải gì khác ngoài ba thứ này phải hỏi lại.
+  GPU: H-pack + đo VRAM tối nay nếu xong trước 02:45; các lượt đo heldout/lab (≈ 3 giờ) chạy sau eval đêm.
