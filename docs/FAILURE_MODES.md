@@ -312,7 +312,7 @@ because the model returns the identical wrong answer every time.
 Drop confidence as a signal entirely and replace it with a deterministic,
 evidence-based guard: the proposal's `evidence_text` must be a verbatim quote of the
 source message, and the fact's content words must actually appear in that message
-(`backend/app/services/discord_memory_guard.py`). `τ` survives only as a policy
+(`backend/app/discord/memory_guard.py`). `τ` survives only as a policy
 switch (`off` = review everything), and the docs say so explicitly.
 
 Simulated over the same 75 cases (`docs/p2_progress.md:89-92`):

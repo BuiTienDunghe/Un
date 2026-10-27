@@ -39,6 +39,19 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   đọc dài từ 0/5; mô tả công cụ mới làm 39/40 câu trả lời cũ đổi chữ, một bài (doc-10) trả lời bằng số bịa.
 
 ### Changed
+- **Discord thành một gói riêng** (28/10, ticket 22): 26 module Discord dời vào `backend/app/discord/`
+  (phiên, lượt, lịch sử kênh, rút gọn, pipeline trí nhớ, xoá theo người, bật/tắt bot, 5 router admin).
+  Lõi (agent, RAG, tài liệu, trí nhớ web, dashboard) không import gì từ gói; `main.py` cắm gói bằng
+  `discord.register_routes()` và `discord.register_services()`. `STOPWORDS`/`fold` dời sang
+  `app/utils/vi_text.py`. Bảng, migration và đường API không đổi (tài liệu OpenAPI giống từng byte);
+  `tests/test_discord_boundary.py` giữ luật. Còn một shim tạm `app/services/discord_history_service.py`
+  cho công cụ `search_history` của agent. Xem `docs/current_architecture.md`.
+  - **Nâng cấp:** job RQ nạp trí nhớ đã nằm trong Redis trước khi nâng mang đường dẫn task cũ
+    `app.workers.memory_tasks.discord_memory_ingest` và sẽ lỗi import ở worker mới. Hãy chạy hết hàng đợi
+    trí nhớ trước khi nâng. `scripts/recover_discord_memory_jobs.py` **không** cứu được các job này: nó chỉ
+    đẩy lại job `running` đã hết lease (`memory_job_repository.stale_jobs`), còn job lỗi import thì chưa
+    bao giờ tới `running`. Kiểm hàng đợi rỗng (từ `backend/`, cả hai số phải là 0):
+    `python -c "from redis import Redis; from rq import Queue; from app.config.settings import get_settings; s = get_settings(); q = Queue(f'{s.rq_queue_prefix}:{s.discord_memory_queue_name}', connection=Redis.from_url(s.redis_url)); print(len(q), q.started_job_registry.count)"`
 - `seed` trong cấu hình model general được gửi tới Ollama khi được đặt. Không phiên bản nào đang ship
   đặt nó, nên request hiện tại không đổi.
 - `.env.example` để comment mọi giá trị trùng mặc định của Settings, nên một `.env` chép từ đó không
