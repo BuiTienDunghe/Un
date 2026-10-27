@@ -142,3 +142,11 @@ Tiêu chí nghiệm thu theo `spec.md` Mốc 4.
     không chấm thời điểm đăng, ghi cho v0.3.
   - "0/748" ghi rõ là đếm ở máy chạy, còn `kept/` giữ 253 kết quả, cũng 0.
   - Câu hỏi 2 thêm phân tích "mục tiêu 2b bất khả thi từ lúc đăng ký" và hai cách (a)/(b).
+- 27/10 21:45 — **Bổ sung đăng ký trước 1a-v2**, vẫn TRƯỚC mọi lần chạy, theo bằng chứng fable nêu khi
+  duyệt (trích nguồn ở doc-26/27/28 mất ở 32/36 lượt có 1a, so với 5/45 không có):
+  - Chỉ số chính cho cái giá của 1a-v2: số bài trong doc-26/27/28 trượt mục `citation` ở lần lạnh.
+    Đối chứng tối 27/10: A lạnh 0/3, C lạnh 0/3, B lạnh 3/3, D lạnh 3/3.
+  - Luật ship của E thêm một điều kiện: E mất trích dẫn ở ≤ 1/3 bài này.
+  - A chạy lại lạnh làm đối chứng, đồng thời kiểm xem lần lạnh có lặp lại qua ngày và qua khởi động lại
+    Ollama không (tối 27/10: A lạnh = 34/40). Ticket 16 sẽ dựa vào điều này.
+  - Sáng 28/10 có hai việc GPU (09 nhúng lại, và 1a-v2): chạy nối tiếp, không xen kẽ.
