@@ -321,6 +321,28 @@ Acc@1 0.4179 against 0.5373 untrained and 0.6194 for the first attempt
 ship. The checkpoint stays a registry candidate; the full record is
 `.scratch/reranker-finetune/spec.md`.
 
+**Running the shipped configuration again (27/10/2026) changed nothing at rank 1.**
+Contextual retrieval and reranker-v0 are both on, and the index is the one the 08/09 run
+measured, with nothing written to it since. The two new runs, an hour apart, gave every
+one of the 788 questions the same rank. Against 08/09, two questions moved (rank 4 → 3
+and 2 → 3), neither at rank 1. Ollama is 0.40.8 now; the 08/09 file does not record its
+version.
+
+| Configuration | Acc@1 | Acc@3 | Recall@5 | MRR | Evidence |
+| --- | ---: | ---: | ---: | ---: | --- |
+| reranker-v0, contextual retrieval off, index labelled `heading-ctx` (08/09) | 0.7906 | 0.9645 | 0.9835 | 0.8771 | `heldout_retrieval_v1/results/heldout-heading-ctx-rerankerON-20260908-010012.json` |
+| **reranker-v0, contextual retrieval on (shipped), 08/09** | **0.7919** | **0.9670** | **0.9822** | **0.8769** | `heldout_retrieval_v1/results/heldout-ctxON-rerankerON-20260908-055318.json` |
+| same, repeat 1 (27/10) | 0.7919 | 0.9683 | 0.9822 | 0.8768 | `heldout_retrieval_v1/results/heldout-ctxON-rerankerON-20261027-173610.json` |
+| same, repeat 2 (27/10) | 0.7919 | 0.9683 | 0.9822 | 0.8768 | `heldout_retrieval_v1/results/heldout-ctxON-rerankerON-20261027-183624.json` |
+
+So the measurement has no run-to-run noise to speak of. What limits it is the size of
+the sample. One question is 0.0013, and as in the reranker rule above, a paired test
+needs a gain of about 0.032 at rank 1 before a change counts. The `heading-ctx` index
+was overwritten at 04:54 that morning by the contextual re-ingest. What that label stood
+for cannot be read back: the file records only that contextual retrieval was off. p50
+latency was 4 388 ms on 08/09, then 4 622 and 4 548 ms on 27/10, when another session
+may have been sharing Ollama.
+
 ## Chunking: numbered clauses are not headings (04/09/2026)
 
 The chunker read any line shaped `<number>. <text>` as a heading. Vietnamese legal
