@@ -64,3 +64,5 @@ trong docstring và một test tĩnh. Q2 = (1), service trả dữ liệu thô, 
 |---|---|
 | Import `app.main`, `app.workers.tasks`, `memory_tasks`, router dashboard | được |
 | Test không cần DB (tầng, job routing, worker hardening, model router, compose defaults, health, nightly) | 36 xanh |
+| 17 file test DB (dashboard, timeseries, outbox, rq_*, stale recovery, reconciliation, auth, …), 18:08 | 154 xanh, 0 skip |
+| Chỗ vá bằng chuỗi còn tác dụng: bỏ dòng `"app.jobs.retry.retry_delay"` trong `test_stale_worker_job_is_recovered_and_completed` | đỏ ở `reconcile_queued() == 1` (ra 0, vì job phải chờ 10 s); trả lại thì xanh |
