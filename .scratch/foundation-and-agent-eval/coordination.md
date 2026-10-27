@@ -90,7 +90,8 @@ chưa rõ phiên nào.
 | 3 | BFCL (nếu cắm vòng lặp): ba công cụ của Ún ở lại hay bị thay trong lượt BFCL | |
 | 4 | BFCL: cài venv | phiên NV3 bị bộ phân loại quyền chặn `pip install`; 119 gói, 94,5 MB; hai lệnh ở mục 1 của thiết kế. Opus không chạy thay |
 | 5 | Đợt đo GPU gom lại | #2, #3 (Agent Eval v0.3, ~7 phút mỗi lần), ba nhánh e5 (~3 giờ) |
-| 6 | Việc cũ còn treo | push, bot B1/B2, ticket 21 (tài liệu chưa có chủ), 5 collection Qdrant đo, v0.4 (L-b, L-c), 14/15 |
+| 6 | Ticket 25 — nợ Discord sau 22 (3 món, mỗi món 2–3 cách) | `issues/25-discord-debt.md`; NV2 nghiêng 1B (test chặn lõi đọc thêm `discord_*`), 2A, 3A (để nguyên) |
+| 7 | Việc cũ còn treo | push, bot B1/B2, ticket 21 (tài liệu chưa có chủ), 5 collection Qdrant đo, v0.4 (L-b, L-c), 14/15 |
 
 ## Giữ im Ollama đêm 28/10 (phiên Quản lý xin, 01:00)
 
