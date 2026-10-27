@@ -48,3 +48,11 @@ Tiêu chí nghiệm thu theo `spec.md` Mốc 4.
   (3a-bis: nội dung mỗi tin Discord tối đa 800 ký tự, để luôn có đơn vị vừa). Ba commit chỉ đụng
   `agent_service.py` và `tests/test_agent_tool_results.py`. Test 3a-bis được kiểm là TRƯỢT khi bỏ
   trần (JSON gãy) và đạt khi có trần. Cả cụm phải gộp trước lần đo mốc v0.2.
+- 27/10 21:00 (opus 5.5, chốt theo báo cáo 59aed01 của Nhân viên 3): **không ship 1a hay 2b**. 1a cứu
+  bài "không tra" (lạnh 2/5 → 4/5) nhưng mất 6–7 bài khác, chủ yếu vì thiếu tên tệp khi trích nguồn
+  (lạnh 34 → 30); 2b một mình không đổi gì (model đọc gợi ý rồi hỏi xin phép). Chỉ gộp d434c82 (mô tả
+  800 ký tự) và 59aed01 (báo cáo + quy tắc README); code 1a/2b ở lại trên nhánh làm hồ sơ. Thử tiếp
+  1a-v2 (giữ "đừng hỏi xin phép, cứ tra", bỏ liệt kê dài, giữ câu trích nguồn) — đo sáng 28/10.
+  **Đính chính quy tắc đo:** "bỏ một lần khởi động" là SAI — lần nóng không lặp lại được (cùng mọi
+  hash prompt mà chỉ trùng 3/33 câu trả lời), lần lạnh thì lặp lại được (r1 = r6). Quy tắc đúng: gỡ model
+  chính trước MỖI lần đo; seed không có tác dụng ở t0. Áp dụng cho bước 5 của ticket 16.
