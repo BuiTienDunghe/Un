@@ -110,3 +110,7 @@ từng câu, như đã ghi trong `m3-target.md` (+3,2–5,5 điểm Acc@1). Ch�
 **Ghi chú phụ.**
 - Lỗi in: `eval_stack --contextual` vẫn in "contextual=OFF". Nó in spec, không in giá trị ghi đè. `/models` xác nhận `contextual_retrieval: true`.
 - Độ trễ 27/10 có thể chịu ảnh hưởng vì Ollama dùng chung với Nhân viên 3.
+
+- 27/10 (Nhân viên 2, sau khi gộp): giới hạn "281 mảnh không có ngữ cảnh" không ảnh hưởng — cả 281
+  đều thuộc phiên bản đã bị thay; phiên bản đang dùng có 3 896/3 896 mảnh có ngữ cảnh, và tìm kiếm
+  lọc theo phiên bản đang dùng.

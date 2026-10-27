@@ -323,3 +323,14 @@ là candidate, thêm `notes` ghi ngày và kết quả.
 - Trạng thái ctx của chỉ mục heldout — chờ ticket 11.
 - `rebuild_memories` trên DB heldout: bảng `memories` có thể rỗng; nếu script từ chối vì rỗng thì ghi lại,
   không coi là lỗi của nhánh.
+
+## Bổ sung trước khi đo (27/10, opus 5.5, theo rà soát của Nhân viên 2 — chưa lệnh đo nào chạy)
+
+| # | Điểm | Quyết định |
+|---|---|---|
+| 1 | Chạy ở đâu | Worktree riêng `wip/09-model-experiment-run`, tạo từ `main` **ngay sau** khi gộp record + probe (vì editable trỏ về main: worktree phải trùng main thì hai nửa mới chạy cùng code). Không sửa code trong worktree đó. File kết quả commit trên nhánh này |
+| 2 | Shell | Git Bash, đặt env theo từng lệnh (`VAR=... cmd`). **Không** dùng `set` trong PowerShell — ở đó `set` không đặt biến môi trường, rebuild sẽ ghi vào DB/collection production |
+| 3 | Bước 2, số điểm | Điều kiện vẫn là `points_after == active_chunks`; với chỉ mục heldout con số kỳ vọng là **3 896** (phiên bản đang dùng), không phải 7 792 (collection v0 chứa cả 3 896 điểm của phiên bản đã bị thay; tìm kiếm lọc theo phiên bản đang dùng) |
+| 4 | Trôi vector passage | **Bước 2b mới**, chỉ đọc: so cosine từng điểm giữa `documents_drill_heldout` (v0, nhúng 08/09) và `documents_drill_heldout_qi` (nhúng 27/10, Ollama 0.40.8) theo cùng id. Luật bậc, cố định trước khi đo: min ≥ 0,999999 → không nhiễu, đi tiếp; 0,9999 ≤ min < 0,999999 → đi tiếp, ghi là giới hạn (Δ gồm cả tiền tố lẫn nhúng lại; quyết định ship vẫn đúng vì ship cũng phải nhúng lại); min < 0,9999 → **dừng**, mở ticket dựng collection v0 nhúng mới làm control |
+| 5 | Thời gian | Nhánh 0 ước 2,5–3 giờ (Bước 4 ≈ 62 phút, đo ở ticket 11). Chạy trọn một mạch khi GPU rảnh, nếu bắt đầu được trước 23:30 (để mọi stack dừng trước 02:45); không thì dời trọn sang 05:00. **Không** tách Bước 2–3 và 4–5 sang hai buổi (p50 đo khác giờ với p50-C). Cửa sổ 05:00–21:00 ở mục Ước lượng là vì bot Discord dùng GPU 22:00–04:00; tối 27/10 bot không chạy |
+| 6 | Ghi chú | `memories` của heldout và lab đều 0 dòng → `rebuild_memories` không tạo `memories_qi`, là bình thường. `eval_stack` in sai "contextual=OFF" — đọc `/models` |
