@@ -13,8 +13,12 @@ the model asks, cut to the model's top_k.
     PYTHONUTF8=1 python -m scripts.agent_eval_record_retrieval --env-file C:\\Users\\dungbt06\\local-ai-core\\.env
 
 Writes retrieval.jsonl (the fixtures) and retrieval_manifest.json (how they were
-recorded) in the dataset directory. Nothing is written unless every query
-answered: a half-recorded dataset is worse than a pending one.
+recorded) in the dataset directory. Nothing is written unless every request got
+an HTTP answer: a half-recorded dataset is worse than a pending one. An answer
+is not yet a usable fixture, though: when the agent could not see the task's
+answer in the chunks, or none of them comes from the document the task cites,
+the fixture STAYS pending and the runner refuses the task, so a retrieval miss
+can never pass for an agent mistake. The manifest says which and what came back.
 
 /rag/search clips to models.yaml rag.max_context_chunks (5), which no env var
 overrides; the agent may ask for up to 8. The manifest records the clip.
@@ -62,6 +66,16 @@ def answer_in_chunks(task: dict[str, Any], chunks: list[dict[str, Any]]) -> bool
     return grade({"must_mention": patterns}, [], visible, {})["passed"]
 
 
+def source_in_chunks(task: dict[str, Any], chunks: list[dict[str, Any]]) -> bool | None:
+    """Did any chunk come from the document the task is about? An answer that is
+    visible but came from another file would fail `must_cite` for reasons that
+    are retrieval's, not the agent's. None when the task names no source."""
+    source = (task.get("corpus_source") or {}).get("file")
+    if not source:
+        return None
+    return any(str(chunk.get("filename") or "").casefold() == source.casefold() for chunk in chunks)
+
+
 def record(
     dataset_dir: Path,
     client: httpx.Client,
@@ -103,15 +117,25 @@ def record(
         response.raise_for_status()
         body = response.json()
         chunks = [{key: source.get(key) for key in KEPT_FIELDS} for source in body["sources"]]
-        found = answer_in_chunks(tasks.get(fixture["task_id"], {}), chunks)
-        recorded[fixture["task_id"]] = {"chunks": chunks, "latency_ms": body.get("latency_ms"), "answer_in_chunks": found}
-        progress(f"{fixture['task_id']:<8} {len(chunks)} chunks {body.get('latency_ms')}ms" + ("  ANSWER NOT IN CHUNKS" if found is False else ""))
+        task = tasks.get(fixture["task_id"], {})
+        found, from_source = answer_in_chunks(task, chunks), source_in_chunks(task, chunks)
+        usable = found is not False and from_source is not False
+        recorded[fixture["task_id"]] = {
+            "chunks": chunks, "latency_ms": body.get("latency_ms"),
+            "answer_in_chunks": found, "source_in_chunks": from_source, "usable": usable,
+        }
+        progress(
+            f"{fixture['task_id']:<8} {len(chunks)} chunks {body.get('latency_ms')}ms"
+            + ("" if usable else f"  KEPT PENDING (answer visible: {found}, cited file present: {from_source})")
+        )
 
-    # Every query answered: only now does anything reach disk.
+    # Every request answered: only now does anything reach disk, and only the
+    # fixtures the agent can actually be graded on leave `pending`.
     for fixture in fixtures:
-        if fixture["task_id"] in recorded:
+        item = recorded.get(fixture["task_id"])
+        if item and item["usable"]:
             fixture["source"] = "recorded"
-            fixture["chunks"] = recorded[fixture["task_id"]]["chunks"]
+            fixture["chunks"] = item["chunks"]
     _write_lf(dataset_dir / "retrieval.jsonl", "".join(json.dumps(f, ensure_ascii=False) + "\n" for f in fixtures))
     manifest = {
         "recorded_at": datetime.now(UTC).isoformat(),
@@ -124,7 +148,17 @@ def record(
         "rag": served.get("rag"),
         "models": {role: served.get("models", {}).get(role) for role in ("embedding", "reranker")},
         "tasks": {
-            task_id: {"chunks": len(item["chunks"]), "latency_ms": item["latency_ms"], "answer_in_chunks": item["answer_in_chunks"]}
+            task_id: {
+                "status": "recorded" if item["usable"] else "kept pending",
+                "chunks": len(item["chunks"]),
+                "latency_ms": item["latency_ms"],
+                "answer_in_chunks": item["answer_in_chunks"],
+                "source_in_chunks": item["source_in_chunks"],
+                # For a fixture left pending, what did come back: enough to fix the query.
+                **({} if item["usable"] else {"retrieved": [
+                    {"filename": c.get("filename"), "chunk_index": c.get("chunk_index"), "score": c.get("score")} for c in item["chunks"]
+                ]}),
+            }
             for task_id, item in recorded.items()
         },
     }
@@ -155,9 +189,12 @@ def main(argv: list[str] | None = None) -> int:
             max_context_chunks=int(settings.load_config().get("rag", {}).get("max_context_chunks", 5)),
             commit=commit,
         )
-    misses = [task_id for task_id, item in manifest["tasks"].items() if item["answer_in_chunks"] is False]
-    print(f"recorded {len(manifest['tasks'])} fixtures" + (f"; answer missing from the chunks of: {', '.join(misses)}" if misses else ""))
-    return 1 if misses else 0
+    pending = [task_id for task_id, item in manifest["tasks"].items() if item["status"] != "recorded"]
+    print(
+        f"recorded {len(manifest['tasks']) - len(pending)} of {len(manifest['tasks'])} fixtures"
+        + (f"; kept pending (fix the query or the task, see retrieval_manifest.json): {', '.join(pending)}" if pending else "")
+    )
+    return 1 if pending else 0
 
 
 if __name__ == "__main__":

@@ -92,3 +92,15 @@ embed và một lần chat OCR đúng là những gì API làm mỗi lần khở
 để không ghi dữ liệu eval vào đó. Điều kiện: chỉ chạy sau khi 11 xong. Manifest giờ có
 `probe_read_database`, ví dụ `"local_ai_core (read-only: 2 COUNTs)"`; chỉ ghi tên DB, không ghi URL
 (test `test_the_manifest_names_the_database_a_probe_reads_but_never_its_url`). 65 passed.
+
+**27/10 — fable duyệt 12 bài: dùng được.** Đã sửa theo góp ý:
+- A: nới 7 regex (doc-22, 24, 27, 28, 29, 31, 32), kèm test cho từng cách nói đúng mà fable nêu.
+- B: công cụ ghi giữ `pending` cho bài mà đoạn ghi được không chứa đáp án trong 400 ký tự đầu.
+  Mình thêm một điều kiện nữa: cũng giữ `pending` khi không đoạn nào đến từ `corpus_source.file`.
+  Phép kiểm "đúng tệp nguồn" vốn được dự định chạy tay sau khi ghi, giờ chạy tự động. Manifest ghi
+  `status`, `source_in_chunks`, và với bài giữ `pending` thì ghi thêm `retrieved`.
+- C3: doc-31 có `must_not_mention` tên thư viện. Rủi ro trượt oan khi câu đúng nhắc tên theo kiểu
+  phủ định đã ghi trong README.
+- C4: README ghi rằng v0.1 đo "dùng kết quả để tính" bằng một bài, chỉ có tính chỉ báo.
+- Dataset sha256 `6d3db491…`, vẫn là `agent-eval-v0.1` vì chưa gộp. Test: 74 passed. Đã kiểm lại
+  `evidence` của 12 bài trên nội dung DB lab: đạt cả 12.

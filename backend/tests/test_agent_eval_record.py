@@ -109,11 +109,11 @@ FIXTURES = [
 ]
 
 
-def write_dataset(directory: Path, fixtures=FIXTURES) -> Path:
+def write_dataset(directory: Path, fixtures=FIXTURES, tasks=TASKS) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
     meta = {"version": "t", "guild": {"guild_id": "1", "now": "2026-10-20T12:00:00+07:00", "messages": []}, "status_snapshots": {"healthy": {}}}
     (directory / "dataset.json").write_text(json.dumps(meta), encoding="utf-8")
-    (directory / "tasks.jsonl").write_text("".join(json.dumps(t, ensure_ascii=False) + "\n" for t in TASKS), encoding="utf-8")
+    (directory / "tasks.jsonl").write_text("".join(json.dumps(t, ensure_ascii=False) + "\n" for t in tasks), encoding="utf-8")
     (directory / "retrieval.jsonl").write_text("".join(json.dumps(f, ensure_ascii=False) + "\n" for f in fixtures), encoding="utf-8")
     return directory
 
@@ -162,12 +162,43 @@ def test_recording_fills_only_pending_fixtures_with_what_the_api_served(tmp_path
 
     assert manifest["max_context_chunks"] == 5 and manifest["top_k_requested"] == 8
     assert manifest["rag"]["reranker"] is True and manifest["models"]["embedding"]["name"] == "qwen3-embedding:0.6b"
-    # The second query's chunks miss the answer: reported, not hidden.
-    assert manifest["tasks"]["doc-r1"]["answer_in_chunks"] is True
-    assert manifest["tasks"]["doc-r2"]["answer_in_chunks"] is False
+    assert manifest["tasks"]["doc-r1"]["status"] == "recorded" and manifest["tasks"]["doc-r1"]["answer_in_chunks"] is True
+    # The second query answered, but not with the answer: the fixture stays
+    # pending (review 27/10), so the runner refuses the task instead of a
+    # reader having to notice; the manifest keeps what came back.
+    assert fixtures["doc-r2"] == FIXTURES[1]
+    assert manifest["tasks"]["doc-r2"]["status"] == "kept pending" and manifest["tasks"]["doc-r2"]["answer_in_chunks"] is False
+    assert manifest["tasks"]["doc-r2"]["retrieved"] == [{"filename": "backup_restore.md", "chunk_index": 2, "score": 0.51}]
     assert json.loads((dataset / "retrieval_manifest.json").read_text(encoding="utf-8")) == manifest
     # The recorded dataset loads and hashes like any other.
-    assert load_dataset(dataset).retrieval["doc-r1"]["source"] == "recorded"
+    dataset_after = load_dataset(dataset)
+    assert dataset_after.retrieval["doc-r1"]["source"] == "recorded"
+    assert dataset_after.retrieval["doc-r2"]["source"] == "pending"
+
+
+def test_a_visible_answer_from_another_document_stays_pending(tmp_path):
+    from scripts.agent_eval_record_retrieval import source_in_chunks
+
+    task = {"corpus_source": {"file": "xuong_in_anh_duong.txt", "chunk_index": 2}, "expect": {"must_mention": [r"\b21\b"]}}
+    assert source_in_chunks(task, [{"filename": "backup_restore.md", "content": "giữ 21 bản"}]) is False
+    assert source_in_chunks(task, [{"filename": "backup_restore.md"}, {"filename": "xuong_in_anh_duong.txt"}]) is True
+    assert source_in_chunks({"expect": {}}, [{"filename": "x"}]) is None, "a trap names no source"
+
+    # doc-r1's answer is visible, but in backup_restore.md while the task cites
+    # the print-shop file: must_cite would fail for retrieval's reasons.
+    tasks = [{**TASKS[0], "corpus_source": {"file": "xuong_in_anh_duong.txt", "chunk_index": 2}}, *TASKS[1:]]
+    dataset = write_dataset(tmp_path / "ds", tasks=tasks)
+    client, _ = fake_api({
+        "giờ chạy backup tự động": [source("Backup chạy lúc 2 giờ sáng.", "c1", 0.9)],
+        "số bản backup được giữ lại": [source("Giữ 7 bản gần nhất.", "c2", 0.8)],
+    })
+
+    manifest = record(dataset, client, progress=lambda line: None)
+
+    first = manifest["tasks"]["doc-r1"]
+    assert (first["status"], first["answer_in_chunks"], first["source_in_chunks"]) == ("kept pending", True, False)
+    assert manifest["tasks"]["doc-r2"]["status"] == "recorded"
+    assert load_dataset(dataset).retrieval["doc-r1"]["source"] == "pending"
 
 
 def test_an_answer_past_the_agents_400_characters_counts_as_missing():

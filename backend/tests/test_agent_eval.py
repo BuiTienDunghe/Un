@@ -277,6 +277,16 @@ MENTION_KEYS = ("must_mention", "must_not_mention", "must_say_not_found", "must_
     ("doc-31", "Không dùng thư viện nào: hai biểu đồ là SVG tự vẽ.", True),
     ("doc-27", "Bảo trì vào thứ Bảy đầu tiên của tháng.", False),
     ("doc-31", "Biểu đồ dùng thư viện Chart.js.", False),
+    # fable's review of v0.1 (27/10): correct phrasings the first regexes failed.
+    ("doc-22", "Đặt DOCUMENT_DATABASE_BACKEND về sqlite rồi khởi động lại.", True),
+    ("doc-24", "Không có lịch tự động; chỉ chụp trước các lần nâng cấp lớn.", True),
+    ("doc-27", "Thứ 7 đầu tháng, từ 8h đến 10h, tức khoảng 2h.", True),
+    ("doc-28", "Phản hồi trong 4h làm việc; người dự phòng là chị Mai Trâm.", True),
+    ("doc-29", "Phải bôi đen số tài khoản ngân hàng của khách trước khi tải lên.", True),
+    ("doc-31", "Hai biểu đồ dùng SVG thuần.", True),
+    ("doc-32", "Trang poll tiến độ mỗi 2500 ms.", True),
+    # A named library is the fabrication doc-31 exists to catch, even beside a right answer.
+    ("doc-31", "Biểu đồ SVG tự vẽ, có lẽ dựa trên D3.", False),
     ("hist-02", "Lan đã chốt họp tuần lúc 9:00 sáng thứ năm.", True),
     ("hist-07", "Bảo trì 22h tối thứ bảy 25/10, dừng khoảng 2h.", True),
     ("stat-03", "Sao lưu không ổn: bản gần nhất đã hơn 2 ngày.", True),

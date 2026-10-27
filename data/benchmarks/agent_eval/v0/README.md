@@ -92,9 +92,11 @@ Regex so khớp không phân biệt hoa thường; cả hai vế được đưa 
 - **Bản ghi chỉ có tối đa 5 đoạn.** `/rag/search` cắt theo `rag.max_context_chunks` (5) trong
   `models.yaml`, và không biến môi trường nào đổi được giá trị này. Agent thì xin được tới 8 đoạn,
   mặc định 4. Agent xin 6 đến 8 đoạn sẽ chỉ nhận 5. `retrieval_manifest.json` có ghi việc cắt này.
-- Công cụ ghi báo những bài mà đoạn ghi được **không** chứa đáp án (hoặc `evidence`) trong 400 ký tự
-  đầu. Bài như vậy đang đo truy xuất chứ không đo agent, nên phải sửa câu hỏi hoặc `query` rồi ghi
-  lại, không chạy baseline với nó.
+- Công cụ ghi chỉ lật một bài sang `recorded` khi thoả cả hai điều kiện: đáp án (hoặc `evidence`)
+  nằm trong 400 ký tự đầu của các đoạn ghi được, **và** có ít nhất một đoạn đến từ tệp
+  `corpus_source.file`. Thiếu một trong hai thì bài **giữ nguyên `pending`**, runner sẽ từ chối nó.
+  Lý do: bài như vậy đang đo truy xuất chứ không đo agent. `retrieval_manifest.json` ghi lại những
+  gì đã trả về để sửa `query` hoặc câu hỏi.
 
 ## Server Discord giả (`dataset.json` → `guild`)
 
@@ -130,7 +132,11 @@ mọi thời điểm.
 - Bài tra cứu thật (doc-21 đến doc-32) chỉ có 3 tài liệu nguồn, vì corpus lab chỉ có 5 tài liệu với
   27 đoạn. Chúng không được lấy câu hỏi từ bộ 82 câu `rag_multidoc_eval.jsonl` (truy xuất đã được
   chỉnh theo bộ đó). Chỉ có doc-27 là bài phải tính toán; v0 có 4 bài như vậy, nhưng các dữ kiện
-  nằm trong 400 ký tự đầu của corpus không đủ để ra thêm.
+  nằm trong 400 ký tự đầu của corpus không đủ để ra thêm. Vì vậy v0.1 đo khả năng "dùng kết quả
+  để tính" bằng đúng một bài, và con số đó chỉ có tính chỉ báo.
+- doc-31 cấm nêu tên thư viện (Chart.js, D3, Plotly...) để việc bịa ra một dòng riêng trong
+  `by_check`. Đổi lại, câu đúng mà nhắc tên thư viện theo kiểu phủ định ("không dùng Chart.js") sẽ
+  trượt oan.
 
 ## Lịch sử tiêu chí
 
@@ -159,4 +165,5 @@ Artifact `smoke-20261027-t0-seed42` có dataset trước tất cả các thay đ
 
 | Ngày | Bài | Thay đổi | Vì sao |
 |---|---|---|---|
+| 27/10 | doc-22, 24, 27, 28, 29, 31, 32 | Nhận thêm cách viết đúng (biến môi trường, không có lịch tự động, thứ 7 đầu tháng, 2h/120 phút, 4h, bôi đen/giấu/mask, SVG thuần, 2500 ms). doc-31 thêm `must_not_mention` tên thư viện | fable duyệt v0.1, **trước** khi ghi truy xuất và trước mọi lần chạy |
 | 27/10 | doc-01, 02, 03, 05, 06, 07, 08, 09, 13, 14, 15, 16 bị bỏ; thêm doc-21 đến doc-32 | 12 bài tra cứu viết tay được thay bằng 12 bài mới trên tài liệu thật của corpus lab, truy xuất ghi một lần (`pending` rồi `recorded`). id cũ không bao giờ dùng lại | Quyết định C cho Q4(b): tài liệu giả không có trong corpus lab, nên ghi truy xuất thật cho câu hỏi về chúng sẽ làm mất đáp án |
