@@ -43,3 +43,8 @@ Tiêu chí nghiệm thu theo `spec.md` Mốc 4.
   v0.2 + 3a; tác dụng của 3a lên điểm chưa đo"**. Lý do thật: lợi ích của 3a đã được kiểm tất định,
   còn GPU tối nay dành cho 1a và 2b. Lý do mình nêu trước đó ("3a không đổi hành vi model") là sai:
   3a CÓ đổi những gì model thấy ở 6–7 lượt mỗi lần chạy (JSON không còn gãy, giữ tin mới nhất).
+- 27/10 — Cụm 3a hoàn chỉnh theo fable và opus: `2d6c247` (cắt theo phần tử) + `57d9535` (khi tràn
+  trả `{"omitted", "note", "items"}`, khi vừa vẫn là danh sách, giữ nguyên từng byte) + `e904dd8`
+  (3a-bis: nội dung mỗi tin Discord tối đa 800 ký tự, để luôn có đơn vị vừa). Ba commit chỉ đụng
+  `agent_service.py` và `tests/test_agent_tool_results.py`. Test 3a-bis được kiểm là TRƯỢT khi bỏ
+  trần (JSON gãy) và đạt khi có trần. Cả cụm phải gộp trước lần đo mốc v0.2.
