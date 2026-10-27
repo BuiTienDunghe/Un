@@ -94,3 +94,18 @@ Bảng điểm của baseline v0.3 in đủ bốn chiều; lịch sử có các 
       hoặc Nhân viên 1 làm luôn trong nhánh của họ.
   - Lệch so với chữ của ticket: lịch sử không tự nối sau mỗi lần chạy mà nối bằng lệnh riêng khi giữ lần chạy
     (xem 00:35).
+- 28/10 01:10 (Nhân viên 3) — **Sửa theo duyệt của fable** (`reviews/wip-23-scorecard-b50982c.md`); opus chọn (a).
+  - `fabricated` giờ chỉ đếm bài trượt `must_not_mention`, tức model nói ra điều bộ bài cấm. Thêm cột
+    `not_found_missed`: bài trượt `not_found` mà không trượt `must_not_mention`. Lịch sử và `--compare` có cả hai.
+  - Bằng chứng, đếm lại trên 38 lần đã lưu. Theo định nghĩa cũ, 18 lần có "bịa". 15 lần trong số đó chỉ trượt
+    `not_found` (doc-19 ở 13 lần, doc-12 ở 3 lần), và cả 15 đều là câu "không tìm thấy" trung thực mà mẫu của bộ
+    chấm không nhận: mẫu v0.3 nhận 14 câu, còn 2 câu doc-12 ("không thể tìm thấy", "không được tìm thấy") đến
+    v0.3 vẫn sót, đã ghi vào danh sách v0.4. 3 lần còn lại là doc-31 nêu tên thư viện bị cấm. Định nghĩa mới
+    cho: `fabricated` > 0 ở 3 lần, `not_found_missed` > 0 ở 15 lần.
+  - Đã chạy lại backfill 38 dòng.
+  - `docs/RESULTS.md` chưa từng có dòng "fabricated" theo từng lần v0.2. Mình thêm một câu định nghĩa vào đoạn
+    nói về bảng điểm.
+  - GPU dùng chung của 1a-v2 A/E/F: ghi **có**, không phải **không** như fable gợi ý. Ticket 09 bước 4 ghi lượt
+    đo v0r2-hybrid chạy 22:30–22:55 (kết quả lúc 22:55:49) và chính nó thấy tải chat của 1a-v2 lúc 22:31–22:39.
+    Mốc 22:28:10 là lượt chỉ-dense trước đó. Vì vậy dòng ở ticket 10 ("lệch lan không do 09, lượt cuối của 09 xong
+    22:28:10") cũng sai: 09 có chạy song song lúc 1a-v2.

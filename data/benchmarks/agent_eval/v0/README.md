@@ -247,6 +247,7 @@ Chờ v0.4 (không đổi bộ chấm khi Nhân viên 1 đang đo #1 trên v0.3)
 | Bài L-b, L-c | Corpus lab cần tài liệu dài hơn và một PDF có trang |
 | hist-11 cấm dữ kiện bịa (B203, 9h) | Thấy ở baseline v0.3, tức sau khi xem câu trả lời |
 | hist-03 cho tra tài liệu trước | Cùng lý do với hist-07 |
+| `NOT_FOUND_PATTERN` nhận "không thể tìm thấy", "không được tìm thấy" | Hai câu trả lời doc-12 đã lưu nói đúng là không tìm thấy mà mẫu v0.3 vẫn không nhận (bảng điểm, 28/10) |
 | `_INTEGER_RANGES` thêm `n` 1–3 của `read_document` | Đổi bộ chấm thì phải nâng version; đổi giữa lúc đo #1 trên v0.3 thì số đo #1 và baseline không cùng bộ chấm |
 
 Không đổi: hist-03 vẫn cấm `search_documents`. Lý do ở hist-07 cũng áp dụng được cho nó, nhưng điều phối

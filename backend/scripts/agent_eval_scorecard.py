@@ -36,10 +36,13 @@ HISTORY_PATH = KEPT_DIR / "agent-eval-scorecard-history.jsonl"
 # the GPU logs written while they ran; see the file's own note.
 CONDITIONS_PATH = KEPT_DIR / "agent-eval-run-conditions.json"
 
-# A failed check that means the answer asserted something it should not have.
-# Only tasks with such a criterion can show it (hist-11 of v0.3 fabricates and
-# has none).
-FABRICATION_CHECKS = ("not_found", "must_not_mention")
+# Fabricated = the answer stated what a task forbids (must_not_mention): only
+# tasks with such a criterion can show it (hist-11 of v0.3 fabricates and has
+# none). Not saying "not found" is counted apart: 15 of the 18 kept runs the
+# first definition flagged were honest "not found" answers the grader's
+# pattern missed (doc-19, doc-12), not claims (review 28/10).
+FABRICATION_CHECK = "must_not_mention"
+NOT_FOUND_CHECK = "not_found"
 STOP_REASONS = ("final", "max_steps", "turn_budget", "turn_budget_exhausted")
 _OMITTED = re.compile(r'"omitted":\s*\d+')
 _UNCODED_ERROR = re.compile(r'"error":')
@@ -84,7 +87,8 @@ def correctness(results: list[dict[str, Any]]) -> dict[str, Any]:
         counts[1] += 1
     checks = [(r["task_id"], c) for r in results for c in r["grade"]["checks"]]
     citations = [c for _, c in checks if c["check"] == "citation"]
-    fabricated = sorted({task_id for task_id, c in checks if c["check"] in FABRICATION_CHECKS and not c["passed"]})
+    fabricated = sorted({task_id for task_id, c in checks if c["check"] == FABRICATION_CHECK and not c["passed"]})
+    not_found_missed = sorted({task_id for task_id, c in checks if c["check"] == NOT_FOUND_CHECK and not c["passed"]} - set(fabricated))
     return {
         "passed": len(passed),
         "tasks": len(results),
@@ -92,6 +96,8 @@ def correctness(results: list[dict[str, Any]]) -> dict[str, Any]:
         "by_category": {name: {"passed": p, "tasks": n, "pass_rate": _rate(p, n)} for name, (p, n) in sorted(by_category.items())},
         "fabricated": len(fabricated),
         "fabricated_tasks": fabricated,
+        "not_found_missed": len(not_found_missed),
+        "not_found_missed_tasks": not_found_missed,
         "citation_passed": sum(c["passed"] for c in citations),
         "citation_tasks": len(citations),
         "citation_rate": _rate(sum(c["passed"] for c in citations), len(citations)),
@@ -272,7 +278,8 @@ def render(card: dict[str, Any]) -> str:
         "|---|---|---|",
         f"| Đúng | đạt | {c['passed']}/{c['tasks']} ({_fmt(c['pass_rate'])}) |",
         f"| Đúng | theo loại | {_fmt(per_category)} |",
-        f"| Đúng | bịa (trượt not_found / must_not_mention) | {c['fabricated']} {_fmt(c['fabricated_tasks']) if c['fabricated_tasks'] else ''} |",
+        f"| Đúng | bịa (nói ra điều bị cấm: trượt must_not_mention) | {c['fabricated']} {_fmt(c['fabricated_tasks']) if c['fabricated_tasks'] else ''} |",
+        f"| Đúng | chưa nói rõ \"không tìm thấy\" (trượt not_found, có thể do mẫu của bộ chấm) | {c['not_found_missed']} {_fmt(c['not_found_missed_tasks']) if c['not_found_missed_tasks'] else ''} |",
         f"| Đúng | trích nguồn đúng / nguyên văn | {c['citation_passed']}/{c['citation_tasks']} / {c['citation_verbatim']} |",
         f"| Hiệu quả | token vào mỗi bài (TB / trung vị) | {_fmt(e['tokens_in_mean'])} / {_fmt(e['tokens_in_median'])} |",
         f"| Hiệu quả | token ra mỗi bài (TB / trung vị) | {_fmt(e['tokens_out_mean'])} / {_fmt(e['tokens_out_median'])} |",
@@ -305,7 +312,7 @@ class Incomparable(ValueError):
 
 
 SCALARS = (
-    ("correctness", "pass_rate"), ("correctness", "fabricated"), ("correctness", "citation_rate"),
+    ("correctness", "pass_rate"), ("correctness", "fabricated"), ("correctness", "not_found_missed"), ("correctness", "citation_rate"),
     ("efficiency", "tokens_in_mean"), ("efficiency", "tokens_out_mean"), ("efficiency", "model_rounds_mean"),
     ("efficiency", "tool_calls_per_solved"), ("efficiency", "latency_p50_ms"), ("efficiency", "latency_p95_ms"),
     ("robustness", "bad_arguments_rate"), ("robustness", "results_trimmed_by_item"), ("traceability", "complete_rate"),

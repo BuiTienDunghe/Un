@@ -493,7 +493,10 @@ efficiency (tokens, model rounds, tool calls per solved task, latency p50/p95), 
 round and tool call can be rebuilt from the trace). The 38 kept runs are backfilled into
 `results/kept/agent-eval-scorecard-history.jsonl`: traceability is 0% for every run before
 ticket 16, which did not record argument shapes, error codes or stop reasons, and 100% from
-ticket 16 on.
+ticket 16 on. "Fabricated" counts only an answer that states a fact the task forbids: 3 of the
+38 runs (doc-31, a chart library named). Not saying "not found" is a separate column, because
+all 15 runs that showed it were honest "not found" answers the grader's pattern missed (doc-19,
+doc-12), not claims.
 
 Hand grading of 16 tasks agrees with the grader on 15; the one grader error (doc-18,
 a regex too narrow) would make the warm runs 35/40. The largest failure class is the

@@ -17,6 +17,7 @@ from scripts.agent_eval_scorecard import (
 
 PASS_CITED = {"check": "citation", "passed": True, "detail": "", "verbatim": True}
 FAIL_NOT_FOUND = {"check": "not_found", "passed": False, "detail": ""}
+FAIL_FORBIDDEN = {"check": "must_not_mention", "passed": False, "detail": "có: ['B203']"}
 
 
 def result(task_id: str, passed: bool, *, calls: int = 1, rounds: int = 2, latency: int = 1000, checks=(), error=None, category="documents", answer=None):
@@ -67,13 +68,22 @@ def after_16_run(tmp_path, name="after", **manifest):
     return write_run(tmp_path / name, results, events, **manifest)
 
 
-def test_correctness_counts_fabrication_only_where_a_negative_criterion_exists(tmp_path):
-    card = scorecard(after_16_run(tmp_path))
-    c = card["correctness"]
+def test_correctness_counts_passes_by_category_and_citations(tmp_path):
+    c = scorecard(after_16_run(tmp_path))["correctness"]
     assert (c["passed"], c["tasks"], c["pass_rate"]) == (2, 4, 0.5)
     assert c["by_category"]["history"] == {"passed": 1, "tasks": 1, "pass_rate": 1.0}
-    assert c["fabricated_tasks"] == ["doc-2"]
     assert (c["citation_passed"], c["citation_tasks"], c["citation_verbatim"]) == (1, 1, 1)
+
+
+def test_fabrication_is_a_forbidden_claim_and_a_missed_not_found_is_counted_apart(tmp_path):
+    results = [
+        result("hist-2", False, category="history", checks=[FAIL_FORBIDDEN, FAIL_NOT_FOUND]),
+        result("doc-19", False, checks=[FAIL_NOT_FOUND]),
+    ]
+    c = scorecard(write_run(tmp_path / "claims", results, None))["correctness"]
+    # hist-2 said a forbidden fact: fabricated, whatever else it failed. doc-19 only
+    # did not say "not found", which the grader's pattern can also miss (review 28/10).
+    assert c["fabricated_tasks"] == ["hist-2"] and c["not_found_missed_tasks"] == ["doc-19"]
 
 
 def test_efficiency_leaves_out_the_refused_turn_and_prices_calls_per_solved_task(tmp_path):

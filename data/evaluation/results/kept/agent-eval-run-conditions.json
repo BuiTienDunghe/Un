@@ -44,21 +44,27 @@
     "qwen3-embedding:0.6b"
    ],
    "unload": "general",
-   "source": "log GPU lúc chạy (gpu10.log, 22:31:47)"
+   "source": "log GPU lúc chạy (gpu10.log, 22:31:47)",
+   "gpu_shared": true,
+   "gpu_shared_source": "ticket 09 bước 4: lượt đo v0r2-hybrid chạy 22:30–22:55 và ghi nhận tải chat của 1a-v2 lúc 22:31–22:39"
   },
   "v0.2-1a2-E-cold": {
    "loaded_at_start": [
     "qwen3-embedding:0.6b"
    ],
    "unload": "general",
-   "source": "log GPU lúc chạy (gpu10.log, 22:34:30)"
+   "source": "log GPU lúc chạy (gpu10.log, 22:34:30)",
+   "gpu_shared": true,
+   "gpu_shared_source": "ticket 09 bước 4: lượt đo v0r2-hybrid chạy 22:30–22:55 và ghi nhận tải chat của 1a-v2 lúc 22:31–22:39"
   },
   "v0.2-1a2-F-cold": {
    "loaded_at_start": [
     "qwen3-embedding:0.6b"
    ],
    "unload": "general",
-   "source": "log GPU lúc chạy (gpu10.log, 22:36:59)"
+   "source": "log GPU lúc chạy (gpu10.log, 22:36:59)",
+   "gpu_shared": true,
+   "gpu_shared_source": "ticket 09 bước 4: lượt đo v0r2-hybrid chạy 22:30–22:55 và ghi nhận tải chat của 1a-v2 lúc 22:31–22:39"
   },
   "v0.2-A-t04-r1": {
    "loaded_at_start": [
