@@ -37,3 +37,36 @@ Chủ dự án (28/10): "harness là điểm nổi bật nhất — xử lý t�
 Bảng điểm của baseline v0.3 in đủ bốn chiều; lịch sử có các lần cũ; fable duyệt cách tính.
 
 ## Comments
+- 28/10 00:35 (Nhân viên 3) — **Cách tính, viết trước khi code.** Chỉ đọc artifact của một lần chạy (`manifest`,
+  `task_results`, `events`), không import `app`, để chạy được trên lần cũ và trong CI.
+  - **Đúng** (`task_results`): tỉ lệ đạt, tổng và theo `category`. Bịa = số bài trượt mục `not_found` hoặc
+    `must_not_mention`; chỉ đếm được ở bài có tiêu chí phủ định (hist-11 của baseline v0.3 bịa mà lọt). Trích
+    nguồn = số mục `citation` đạt / số bài có mục đó. Nguyên văn = số mục `citation` có `verbatim` đúng.
+  - **Hiệu quả** (`task_results`, trừ bài API từ chối, tức 0 vòng model):
+    - token vào/ra mỗi bài: trung bình và trung vị (runner đã cộng theo vòng).
+    - vòng model mỗi bài: trung bình.
+    - lượt gọi công cụ cho mỗi bài giải được = tổng lượt gọi của mọi bài ÷ số bài đạt, tức chi phí cho một
+      thành công. Kèm số phụ: trung bình lượt gọi của riêng bài đạt.
+    - độ trễ: p50 và p95 theo hạng gần nhất. Bài đầu của lần lạnh mang cả thời gian nạp model.
+  - **Bền** (`events`; thiếu tệp thì n/a):
+    - đếm `stop_reason` ở bước final; trước ticket 16 không có trường này, nên n/a. Kiểm chéo: số `max_steps`
+      = số `budget_exhausted`.
+    - mã lỗi công cụ: đếm `error_code` ở bước tool_result. Trước 16 thì đếm "lỗi không mã", tức kết quả có khoá
+      "error".
+    - tỉ lệ `BAD_ARGUMENTS` = số `BAD_ARGUMENTS` / số lượt gọi.
+    - cắt theo mục = số kết quả công cụ có `"omitted"`.
+    - lỗi của bài: đếm `error` theo phần trước dấu ":".
+  - **Minh bạch** (`events`; thiếu thì n/a): một lượt agent đã chạy được tính là tái dựng trọn khi đủ bốn điều.
+    (1) Mọi vòng `model_round` có token vào, ra và độ trễ. (2) Mọi `tool_call` có tên và `arguments_shape`.
+    (3) Mọi `tool_call` có `tool_result` đi kèm, mang khoá `error_code` hoặc nội dung. (4) Bước final có
+    `stop_reason`. Token lấy theo vòng model, vì eval không quan sát được token theo bước (bước 5 ticket 16).
+    In từng thành phần. Trước 16 tỉ lệ gộp sẽ là 0%: đúng là harness khi đó không ghi các trường này.
+  - **Lạnh/nóng:** lần mới thì runner ghi `ollama_loaded_at_start` khi `--probe` (một lệnh /api/ps); lạnh =
+    model chính không có trong danh sách. Lần cũ tra từ log GPU lúc chạy (34/38 lần) và REPORT v0.1 (4 lần),
+    không đoán theo tên.
+  - **Lịch sử:** `kept/agent-eval-scorecard-history.jsonl`. Lệch chữ của ticket: runner in bảng và ghi
+    `scorecard.json` mỗi lần, còn nối lịch sử là một lệnh riêng khi đưa lần chạy vào `kept/`, khoá trùng theo
+    (run_id, commit). Lý do: dòng lịch sử phải mở lại được artifact (quy tắc của `kept/README`), mà lần nháp
+    nằm ngoài git. Cách còn lại: runner tự nối mọi lần, mỗi dòng có cờ `kept`.
+  - **So:** `--compare a b` chỉ in chênh khi cùng sha256 dataset và cùng bộ chấm; khác thì in cảnh báo và không
+    in chênh. Chênh theo từng bài: đánh dấu chỗ câu trả lời khác đầu tiên, các bài sau đó ghi "chỉ tham khảo".
