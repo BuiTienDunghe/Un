@@ -1,6 +1,6 @@
 # 06 — Agent Eval v0: khung chạy và bộ bài (M2)
 
-Status: khung chạy + bộ bài xong trên `wip/06-agent-eval-v0`; nhóm A + B đã sửa, chờ fable 5.1 soát diff cuối rồi opus gộp
+Status: đã gộp vào main (27/10), fable 5.1 duyệt — **chưa chạy lại với model thật sau khi đổi tiêu chí** (ticket 07 chạy)
 Type: task
 Blocked by: —
 

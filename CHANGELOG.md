@@ -11,7 +11,19 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+### Added
+- **Agent Eval v0** (27/10): `backend/scripts/agent_eval.py` chạy agent thật (cùng model, cùng
+  vòng lặp) trên 40 bài tiếng Việt với dữ liệu giả hoàn toàn (20 tài liệu, 10 lịch sử Discord kể cả
+  khi chat web không có guild, 5 trạng thái hệ thống, 5 không cần công cụ hoặc phải từ chối). Bộ chấm
+  tất định (`agent_eval_grader.py`): gọi đúng/thừa công cụ, tham số hợp lệ, ý bắt buộc, trích dẫn
+  tệp + trang (so sau khi bỏ dấu, có đếm riêng số khớp nguyên văn), không làm theo lệnh chèn. Mỗi lần
+  chạy ghi `manifest.json` / `task_results.jsonl` / `events.jsonl` / `summary.json` vào
+  `data/evaluation/results/agent_eval/<run_id>/`, gồm token từng lượt. Bộ bài và lịch sử tiêu chí ở
+  `data/benchmarks/agent_eval/v0/`. Chưa có baseline được trích dẫn.
+
 ### Changed
+- `seed` trong cấu hình model general được gửi tới Ollama khi được đặt. Không phiên bản nào đang ship
+  đặt nó, nên request hiện tại không đổi.
 - **Đường chạy bằng Docker đổi hành vi: worker trí nhớ trong container theo schema v2 như máy chủ**
   (27/10). `docker-compose.yml` từng tự khai 16 mặc định trùng Settings, trong đó
   `DISCORD_MEMORY_EXTRACTOR_SCHEMA_VERSION` lệch (compose v1, Settings v2 từ 28/08). Vì vậy worker
