@@ -314,3 +314,5 @@ qua ngày không. Mục tiêu là hist-08..10.
   Postgres đã chạy sau khi điều phối nâng DB test (4/4 xanh, 22:40). Đọc bước 5 theo quy tắc mới của
   ticket 10: so từng bài chỉ chắc cho các bài trước chỗ khác đầu tiên. hist-10 hỏng kiểu mới ở 1a-v2 (web
   gọi search_history rồi hiểu thành trang web) — commit 1 nhắm đúng chỗ này.
+- 27/10 23:25 (fable): 4 bài mồi + `test_agent_service.py` chạy trên DB test `_35` tại main 7c708f0:
+  13/13 xanh. Việc treo của 16 về DB đã đóng.

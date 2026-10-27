@@ -98,6 +98,7 @@ ticket mới, chờ các ticket đang chạy xong, rồi báo chủ dự án.
 | 16 | Kiểm soát harness: ngân sách cả lượt, lỗi có mã, trace bền (M4 cách B) | 10 gộp | Nhân viên 1 | **đã gộp** commit 1–4; còn bước 5 (Agent Eval) |
 | 17 | forget_member xoá cả trích đoạn thành viên trong agent_traces | 16 gộp | Nhân viên 1 | đã giao (sau 18) |
 | 18 | test_debt_t1_t2_t3 tự deadlock lúc teardown | — | Nhân viên 1 | **đã gộp** |
+| 19 | forget_member bước 6 xoá turn ở mọi guild | 17 | Nhân viên 1 | chờ (hỏi chủ dự án hành vi mong muốn) |
 
 ## Mốc so sánh của bộ test
 
