@@ -103,6 +103,13 @@ class OperationalService:
         the previous /health is itself the answer "Qdrant is not answering".
         A daemon thread, because an abandoned probe has nothing to finish, and an
         executor's thread would hold the process's exit for up to those 32 s.
+
+        The cost of that bound: a Qdrant that is up but slower than
+        probe_timeout_seconds (3 s) reads as `unavailable`, and `status` turns
+        `degraded` for that call — typically once, on the first /health after
+        Qdrant starts cold. Readers that gate on `status` see it as an outage:
+        discord_bot/control.py's backend_healthy and smoke-test-local.ps1.
+        check_operational_alerts does not read /health and never sees it.
         """
         probe = self._qdrant_probe
         if probe is None or not probe[0].is_alive():
