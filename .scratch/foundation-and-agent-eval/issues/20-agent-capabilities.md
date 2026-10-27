@@ -90,6 +90,9 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
     hist-11 bịa, ghép giờ họp và phòng B203 thành phương án dã ngoại.
   - Model nhúng 0.6B còn nạp lúc bắt đầu cả hai lần (giống lần 22:57); điều kiện "không có model nhúng" chưa đo.
   - Chờ v0.4: bài L-b, bài L-c, hist-11 cấm dữ kiện bịa, hist-03 cho tra tài liệu trước.
+  - Chờ v0.4 (chủ dự án chốt 28/10, qua fable): tiêu chí "trả lời có số liệu mà không tra" — bài có `tools_required`
+    mà agent không gọi công cụ và câu trả lời chứa con số hoặc đơn vị tiền. Định nghĩa ở
+    `reviews/wip-20-agent-reading-8cc0f73.md`; hai lỗi regex (doc-12, doc-19) ở review cd99811. Cũng là cột "bịa" cho 23.
 - 28/10 (Nhân viên của Ún 1): #1 phần tài liệu xong — wip/20-agent-reading 3d5927a (registry b, fable duyệt),
   3515226 (search_documents trả document_id/chunk_index/chars; read_document theo đoạn hoặc theo trang, chỉ mở tài
   liệu đã tra trong lượt, xếp đoạn nguyên vẹn vào trần 6 000 kèm next_from_chunk; DocumentReader =
