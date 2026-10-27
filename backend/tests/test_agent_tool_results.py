@@ -105,3 +105,11 @@ def test_what_cannot_be_split_into_items_keeps_the_character_cut():
     # One item alone longer than the limit: nothing whole fits, so the old cut applies.
     lonely = agent(History(1), limit=200)._execute_tool("search_history", {"limit": 1}, {"guild_id": "g"})
     assert len(lonely) == 200 and lonely.endswith("…")
+
+
+def test_the_history_tool_tells_the_model_messages_are_capped():
+    # Without it the model may quote a clipped message as if it were complete (review 27/10).
+    from app.services.agent_service import AGENT_TOOLS, HISTORY_MESSAGE_MAX_CHARS
+
+    history = next(tool["function"] for tool in AGENT_TOOLS if tool["function"]["name"] == "search_history")
+    assert f"mỗi tin tối đa {HISTORY_MESSAGE_MAX_CHARS} ký tự" in history["description"]

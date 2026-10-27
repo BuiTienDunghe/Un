@@ -60,6 +60,13 @@ AGENT_GUIDE = (
     "thông tin, trả lời trọn vẹn bằng tiếng Việt."
 )
 
+# A Discord message may run to 2000 characters (4000 with Nitro). Capped the way a
+# document excerpt is capped at 400, so the whole-item truncation in _dump always
+# has an item that fits instead of falling back to cutting the JSON mid-string.
+# The search_history description states the cap, so the model does not quote a
+# clipped message as if it were the whole of it.
+HISTORY_MESSAGE_MAX_CHARS = 800
+
 AGENT_TOOLS: list[dict[str, Any]] = [
     {
         "type": "function",
@@ -80,7 +87,7 @@ AGENT_TOOLS: list[dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "search_history",
-            "description": "Đọc lịch sử tin nhắn của server Discord hiện tại (sổ gốc). Có query: tìm theo từ khóa, xếp theo độ khớp. KHÔNG có query: trả về các tin MỚI NHẤT theo thời gian (dùng khi cần tóm tắt N tin gần đây). Trả về đúng câu chữ, ai nói, lúc nào và link tới tin nhắn.",
+            "description": f"Đọc lịch sử tin nhắn của server Discord hiện tại (sổ gốc). Có query: tìm theo từ khóa, xếp theo độ khớp. KHÔNG có query: trả về các tin MỚI NHẤT theo thời gian (dùng khi cần tóm tắt N tin gần đây). Trả về đúng câu chữ (mỗi tin tối đa {HISTORY_MESSAGE_MAX_CHARS} ký tự), ai nói, lúc nào và link tới tin nhắn.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -106,12 +113,6 @@ AGENT_TOOLS: list[dict[str, Any]] = [
 
 def _clip(text: str, limit: int) -> str:
     return text if len(text) <= limit else text[: limit - 1] + "…"
-
-
-# A Discord message may run to 2000 characters (4000 with Nitro). Capped the way a
-# document excerpt is capped at 400, so the whole-item truncation in _dump always
-# has an item that fits instead of falling back to cutting the JSON mid-string.
-HISTORY_MESSAGE_MAX_CHARS = 800
 
 
 def _history_item(hit: object) -> dict[str, object]:

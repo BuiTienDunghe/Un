@@ -48,3 +48,7 @@ Tiêu chí nghiệm thu theo `spec.md` Mốc 4.
   (3a-bis: nội dung mỗi tin Discord tối đa 800 ký tự, để luôn có đơn vị vừa). Ba commit chỉ đụng
   `agent_service.py` và `tests/test_agent_tool_results.py`. Test 3a-bis được kiểm là TRƯỢT khi bỏ
   trần (JSON gãy) và đạt khi có trần. Cả cụm phải gộp trước lần đo mốc v0.2.
+- 27/10 — Theo fable và opus, trước lần đo mốc v0.2: mô tả `search_history` thêm "(mỗi tin tối đa
+  800 ký tự)", con số lấy từ `HISTORY_MESSAGE_MAX_CHARS`, có test giữ hai thứ khớp nhau.
+  `tools_sha256` đổi (`872acc92…`), nên thay đổi này thuộc mốc v0.2: **mốc v0.2 = bộ bài v0.2 + 3a +
+  mô tả này.**
