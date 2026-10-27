@@ -55,3 +55,19 @@ người đó yêu cầu. Cách khác là cho hai cờ loại trừ nhau. Đổi
   luôn ghi nơi người đó yêu cầu (fable đồng ý). Test bổ sung theo fable: nguồn do A viết trích turn của A
   ở X nhưng ký ức VỀ B; quên A ở X → nguồn mất ở bước 2, turn của A xoá được ở bước 6, ký ức về B còn —
   bắt lọc QUÁ HẸP mà các kiểm ngược hiện có không bắt.
+
+### 27/10 — Nhân viên của Ún 1: test bổ sung theo fable (sau khi gộp)
+
+Các kiểm ngược trước chỉ bắt bộ lọc nguồn QUÁ RỘNG. Test mới bắt bộ lọc QUÁ HẸP. Dữ liệu: ký ức về B ở X,
+gốc từ turn của chính B, và có thêm một nguồn phụ do A viết, trích turn của A ở X. Quên A ở X thì nguồn
+của A mất ở bước 2, candidate và turn của A xoá được ở bước 5–6, còn ký ức về B và nguồn của B ở lại.
+
+| Kiểm | Kết quả |
+|---|---|
+| `test_forget_member_guild_scope.py` (6) + 17 + condensation + `test_discord_memory_foundation` | 69 xanh |
+| Kiểm ngược: lệnh xoá ở bước 2 không khớp nguồn nào (phần đếm giữ nguyên) | chỉ test mới đỏ, `IntegrityError` ở bước 5 (`fk_discord_memory_sources_candidate`); 5 test cũ xanh |
+
+Thử ngoài lề, không commit: nếu ký ức về B có GỐC là candidate của A, thì quên A sẽ hỏng ở bước 5
+(`fk_discord_memories_origin_candidate`). Phần Postgres rollback, nhưng bước 1 và 3 đã chạy ngoài
+transaction. Đường trích ký ức hiện không sinh ra được trường hợp này, vì chủ thể duy nhất được tin là
+chính người viết (`discord_memory_extractor.py:319-326`); chỉ cơ sở dữ liệu là không chặn.

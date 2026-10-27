@@ -3,8 +3,10 @@
 Member A spoke in two guilds, X and Y: a turn and a channel message in each. Forgetting
 A in X leaves Y exactly as it was, and the dry-run names what it leaves there; running
 again with --all-guilds takes Y too. A memory about A in Y, with the source citing A's
-turn there, checks step 2's scope — memory sources carry no guild of their own. Real
-PostgreSQL; no Qdrant (forgetting in X finds no memory there, so no vector is deleted).
+turn there, checks step 2's scope — memory sources carry no guild of their own — from
+the wide side; a memory about B in X that A's turn there supports checks it from the
+narrow side. Real PostgreSQL; no Qdrant (forgetting in X finds no memory ABOUT A there,
+so no vector is deleted).
 """
 from __future__ import annotations
 
@@ -85,6 +87,43 @@ def remembered(factory, world):
         database.execute(delete(DiscordMemoryCandidate).where(DiscordMemoryCandidate.id == candidate_id))
 
 
+@pytest.fixture
+def about_b(factory, world):
+    """A memory about B in X, from B's own turn, that A's turn in X also supports."""
+    x, b_id = world["x"], f"b-{uuid4().hex[:8]}"
+    with factory.begin() as database:
+        a_turn = database.scalar(select(DiscordSessionTurn).where(DiscordSessionTurn.session_id == world["sessions"][x]))
+        b_turn = DiscordSessionTurn(id=uuid4(), session_id=a_turn.session_id, discord_message_id=f"t-{b_id}", sequence_number=2,
+                                    request_text="Ún ghi giúp: mình thích trà sữa", response_text="Đã ghi.",
+                                    author_id=b_id, author_display_name="Minh", status="completed")
+        database.add(b_turn)
+        database.flush()
+        repository = DiscordMemoryRepository(database)
+
+        def candidate(turn, author, name):
+            row, _ = repository.create_or_get_candidate(
+                source_turn_id=turn.id, session_id=turn.session_id, source_discord_message_id=turn.discord_message_id,
+                source_author_id=author, source_author_display_name=name, guild_id=x, channel_id="c1", thread_id=None,
+                extractor_schema_version="discord-memory-v1", filter_decision="candidate", filter_reason_code="explicit_remember")
+            database.flush()
+            return row
+
+        from_b, from_a = candidate(b_turn, b_id, "Minh"), candidate(a_turn, world["a"], "Lan")
+        memory, _ = repository.create_active_version(
+            candidate_id=from_b.id,
+            identity=DiscordMemoryIdentity(guild_id=x, scope="member_in_guild", subject_type="discord_member",
+                                           subject_id=b_id, fact_key="preference.drink", channel_id=None, thread_id=None),
+            canonical_fact="Thích trà sữa", memory_type="preference", extractor_model="test-extractor",
+            extractor_schema_version="discord-memory-v1", evidence_hash=f"sha256:{uuid4().hex}")
+        repository.attach_source(memory=memory, candidate=from_a, source_role="supporting", evidence_hash=f"sha256:{uuid4().hex}")
+        memory_id, candidate_ids = memory.id, [from_b.id, from_a.id]
+    yield {"b": b_id, "memory": memory_id}
+    with factory.begin() as database:
+        database.execute(delete(DiscordMemorySource).where(DiscordMemorySource.memory_id == memory_id))
+        database.execute(delete(DiscordMemory).where(DiscordMemory.id == memory_id))
+        database.execute(delete(DiscordMemoryCandidate).where(DiscordMemoryCandidate.id.in_(candidate_ids)))
+
+
 def left(factory, world, guild: str) -> tuple[int, int]:
     """(A's turns, A's channel messages) still in `guild`."""
     with factory() as database:
@@ -147,3 +186,17 @@ def test_a_memory_source_in_y_stays_when_forgetting_in_x(factory, world, remembe
     with factory() as database:
         sources = database.scalar(select(func.count()).select_from(DiscordMemorySource).where(DiscordMemorySource.memory_id == remembered))
     assert sources == 1 and left(factory, world, world["y"]) == (1, 1)
+
+
+def test_a_source_of_a_on_a_memory_about_b_goes_first_and_the_memory_stays(factory, world, about_b):
+    # The source cites A's turn and A's candidate, both RESTRICT: a filter that
+    # matched too little here would stop step 5 or 6 with an IntegrityError.
+    assert forget(world["x"], world["a"], apply=False)["planned"]["memory_sources"] == 1
+
+    report = forget(world["x"], world["a"], apply=True)
+    assert not any(report["remaining"].values()), report["remaining"]
+    assert left(factory, world, world["x"]) == (0, 0)
+    with factory() as database:
+        assert database.get(DiscordMemory, about_b["memory"]) is not None, "the memory is about B"
+        authors = list(database.scalars(select(DiscordMemorySource.source_author_id).where(DiscordMemorySource.memory_id == about_b["memory"])))
+    assert authors == [about_b["b"]], "B's own source stays; A's supporting one went in step 2"
