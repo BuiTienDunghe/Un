@@ -176,3 +176,34 @@ def test_the_request_log_counts_an_out_of_time_reply_as_an_error(final, logged):
 
     chat.respond("giá vé?", "c1", use_tools=True)
     assert logging.calls == [logged]
+
+
+class CountingRouter(Router):
+    """Reports usage the way OllamaClient does: one record_usage per call."""
+
+    def __init__(self, clock: Clock, rounds: list) -> None:
+        super().__init__(clock, rounds)
+        self.calls = 0
+
+    def chat_tools(self, mode, messages, tools):
+        from app.llm_clients.usage import record_usage
+
+        self.calls += 1
+        record_usage(100 * self.calls, 10 * self.calls)
+        return super().chat_tools(mode, messages, tools)
+
+
+def test_each_model_round_records_its_tokens_once_and_the_request_log_still_reads_the_last():
+    from app.llm_clients.usage import consume_usage
+
+    clock = Clock()
+    two_calls = {"content": "", "tool_calls": [{"name": "search_documents", "arguments": {"query": "a"}},
+                                               {"name": "search_documents", "arguments": {"query": "b"}}],
+                 "raw_tool_calls": []}
+    _, _, steps = agent(CountingRouter(clock, [two_calls, answer("xong")]), clock).run([{"role": "user", "content": "?"}])
+
+    calls = [step for step in steps if step["kind"] == "tool_call"]
+    assert [(step["tokens_in"], step["tokens_out"]) for step in calls] == [(100, 10), (None, None)]
+    assert (steps[-1]["tokens_in"], steps[-1]["tokens_out"]) == (200, 20)
+    # Ticket 16 (k2): what ChatService logs is the last call's usage, as before.
+    assert consume_usage() == {"tokens_in": 200, "tokens_out": 20}
