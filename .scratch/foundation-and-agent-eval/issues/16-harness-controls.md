@@ -317,7 +317,7 @@ qua ngày không. Mục tiêu là hist-08..10.
 - 27/10 23:25 (fable): 4 bài mồi + `test_agent_service.py` chạy trên DB test `_35` tại main 7c708f0:
   13/13 xanh. Việc treo của 16 về DB đã đóng.
 
-- 27/10 23:02 (Nhân viên 3) — **Đăng ký trước bước 5**, viết trước khi chạy. Opus giao 22:50; GPU dùng ngay,
+- 27/10 22:57 (Nhân viên 3; nhãn ban đầu ghi nhầm 23:02) — **Đăng ký trước bước 5**, viết trước khi chạy. Opus giao 22:50; GPU dùng ngay,
   09 có thể chạy song song.
   - Điều kiện: A = `49c696f` (main trước code của 16; backend và bộ bài giống hệt `9aaa75d`, mốc của ticket
     10). B = `2306d07` (main sau 16; backend giống `74b9fd8`). Cả hai trên `agent-eval-v0.2`.
@@ -349,7 +349,7 @@ qua ngày không. Mục tiêu là hist-08..10.
     `consume_usage()` ngay sau lời gọi bên trong, tức trước khi `AgentService` đọc, nên trong eval mọi bước có
     token rỗng. Đây là tạo tác của runner, không phải của 16. Token mỗi vòng đọc từ sự kiện `model_round`;
     cột token của bảng rút gọn được bảo đảm bởi test ở `957962c`.
-- 27/10 23:15 (Nhân viên 3) — **Kết quả bước 5**: đo 22:57–23:03, có 09 chạy song song (stack heldout khởi
+- 27/10 23:05 (Nhân viên 3) — **Kết quả bước 5**: đo 22:57–23:03, có 09 chạy song song (stack heldout khởi
   động lại 22:57). Báo cáo: `data/evaluation/results/kept/agent-eval-v0.2-harness-controls-20261027/REPORT.md`.
   - Lạnh: A (`49c696f`) 34/40, B (`2306d07`) 34/40; hist-08..10 đạt cả ở A lẫn B → **không suy giảm** theo luật.
   - Dự đoán đúng cả ba: bốn mã băm prompt bằng nhau; 27/27 bài trước hist-08 trùng từng chữ; A trùng A lạnh
