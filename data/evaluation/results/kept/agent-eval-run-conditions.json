@@ -1,0 +1,294 @@
+{
+ "note": "Lạnh/nóng của các lần chạy đã lưu trước khi runner tự ghi ollama_loaded_at_start (28/10). loaded_at_start chép từ log GPU của Nhân viên 3, ghi ngay trước mỗi lần chạy (ollama /api/ps); log đó không nằm trong git, nên chép vào đây. Lạnh = qwen3.5:9b không có trong danh sách. v0.1 không có log: theo REPORT của thư mục đó. gpu_shared chỉ ghi khi biết chắc từ ticket hay điều phối; còn lại để trống (không rõ).",
+ "runs": {
+  "baseline-v0.1-t0-seed42-r1": {
+   "loaded_at_start": null,
+   "cold": true,
+   "source": "REPORT v0.1: r1 là lần nạp lạnh; probe nạp general cạnh embedding và OCR suốt 4 lần, nên ba lần sau nóng"
+  },
+  "baseline-v0.1-t0-seed42-r2": {
+   "loaded_at_start": null,
+   "cold": false,
+   "source": "REPORT v0.1: r1 là lần nạp lạnh; probe nạp general cạnh embedding và OCR suốt 4 lần, nên ba lần sau nóng"
+  },
+  "baseline-v0.1-t0-seed42-r3": {
+   "loaded_at_start": null,
+   "cold": false,
+   "source": "REPORT v0.1: r1 là lần nạp lạnh; probe nạp general cạnh embedding và OCR suốt 4 lần, nên ba lần sau nóng"
+  },
+  "baseline-v0.1-t0.4-noseed-r1": {
+   "loaded_at_start": null,
+   "cold": false,
+   "source": "REPORT v0.1: r1 là lần nạp lạnh; probe nạp general cạnh embedding và OCR suốt 4 lần, nên ba lần sau nóng"
+  },
+  "v0.2-16-A-cold": {
+   "loaded_at_start": [
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "general",
+   "source": "log GPU lúc chạy (gpu16.log, 22:57:46)",
+   "gpu_shared": true,
+   "gpu_shared_source": "ticket 09 (ce12803): lượt đo heldout của 09 chạy cùng lúc"
+  },
+  "v0.2-16-B-cold": {
+   "loaded_at_start": [
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "general",
+   "source": "log GPU lúc chạy (gpu16.log, 23:00:25)",
+   "gpu_shared": true,
+   "gpu_shared_source": "ticket 09 (ce12803): lượt đo heldout của 09 chạy cùng lúc"
+  },
+  "v0.2-1a2-A-cold": {
+   "loaded_at_start": [
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "general",
+   "source": "log GPU lúc chạy (gpu10.log, 22:31:47)",
+   "gpu_shared": true,
+   "gpu_shared_source": "ticket 09 bước 4: lượt đo v0r2-hybrid chạy 22:30–22:55 và ghi nhận tải chat của 1a-v2 lúc 22:31–22:39"
+  },
+  "v0.2-1a2-E-cold": {
+   "loaded_at_start": [
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "general",
+   "source": "log GPU lúc chạy (gpu10.log, 22:34:30)",
+   "gpu_shared": true,
+   "gpu_shared_source": "ticket 09 bước 4: lượt đo v0r2-hybrid chạy 22:30–22:55 và ghi nhận tải chat của 1a-v2 lúc 22:31–22:39"
+  },
+  "v0.2-1a2-F-cold": {
+   "loaded_at_start": [
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "general",
+   "source": "log GPU lúc chạy (gpu10.log, 22:36:59)",
+   "gpu_shared": true,
+   "gpu_shared_source": "ticket 09 bước 4: lượt đo v0r2-hybrid chạy 22:30–22:55 và ghi nhận tải chat của 1a-v2 lúc 22:31–22:39"
+  },
+  "v0.2-A-t04-r1": {
+   "loaded_at_start": [
+    "qwen3.5:9b",
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "none",
+   "source": "log GPU lúc chạy (gpu10.log, 20:00:00)"
+  },
+  "v0.2-A-t04-r2": {
+   "loaded_at_start": [
+    "qwen3.5:9b",
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "none",
+   "source": "log GPU lúc chạy (gpu10.log, 20:02:20)"
+  },
+  "v0.2-A-t04-r3": {
+   "loaded_at_start": [
+    "qwen3.5:9b",
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "none",
+   "source": "log GPU lúc chạy (gpu10.log, 20:04:41)"
+  },
+  "v0.2-B-cold": {
+   "loaded_at_start": [],
+   "unload": "general",
+   "source": "log GPU lúc chạy (gpu10.log, 20:47:40)"
+  },
+  "v0.2-B-t0": {
+   "loaded_at_start": [
+    "qwen3.5:9b",
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "none",
+   "source": "log GPU lúc chạy (gpu10.log, 20:09:35)"
+  },
+  "v0.2-B-t04-r1": {
+   "loaded_at_start": [
+    "qwen3.5:9b",
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "none",
+   "source": "log GPU lúc chạy (gpu10.log, 20:11:26)"
+  },
+  "v0.2-B-t04-r2": {
+   "loaded_at_start": [
+    "qwen3.5:9b",
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "none",
+   "source": "log GPU lúc chạy (gpu10.log, 20:13:25)"
+  },
+  "v0.2-B-t04-r3": {
+   "loaded_at_start": [
+    "qwen3.5:9b",
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "none",
+   "source": "log GPU lúc chạy (gpu10.log, 20:15:26)"
+  },
+  "v0.2-B-warmup-discard": {
+   "loaded_at_start": [
+    "qwen3.5:9b",
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "none",
+   "source": "log GPU lúc chạy (gpu10.log, 20:07:40)"
+  },
+  "v0.2-C-cold": {
+   "loaded_at_start": [
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "general",
+   "source": "log GPU lúc chạy (gpu10.log, 20:49:51)"
+  },
+  "v0.2-C-t0": {
+   "loaded_at_start": [
+    "qwen3.5:9b",
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "none",
+   "source": "log GPU lúc chạy (gpu10.log, 20:20:55)"
+  },
+  "v0.2-C-t04-r1": {
+   "loaded_at_start": [
+    "qwen3.5:9b",
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "none",
+   "source": "log GPU lúc chạy (gpu10.log, 20:23:15)"
+  },
+  "v0.2-C-t04-r2": {
+   "loaded_at_start": [
+    "qwen3.5:9b",
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "none",
+   "source": "log GPU lúc chạy (gpu10.log, 20:25:30)"
+  },
+  "v0.2-C-t04-r3": {
+   "loaded_at_start": [
+    "qwen3.5:9b",
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "none",
+   "source": "log GPU lúc chạy (gpu10.log, 20:27:44)"
+  },
+  "v0.2-C-warmup-discard": {
+   "loaded_at_start": [
+    "qwen3.5:9b",
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "none",
+   "source": "log GPU lúc chạy (gpu10.log, 20:18:34)"
+  },
+  "v0.2-D-cold": {
+   "loaded_at_start": [
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "general",
+   "source": "log GPU lúc chạy (gpu10.log, 20:52:19)"
+  },
+  "v0.2-D-t0": {
+   "loaded_at_start": [
+    "qwen3.5:9b",
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "none",
+   "source": "log GPU lúc chạy (gpu10.log, 20:32:56)"
+  },
+  "v0.2-D-t04-r1": {
+   "loaded_at_start": [
+    "qwen3.5:9b",
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "none",
+   "source": "log GPU lúc chạy (gpu10.log, 20:34:52)"
+  },
+  "v0.2-D-t04-r2": {
+   "loaded_at_start": [
+    "qwen3.5:9b",
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "none",
+   "source": "log GPU lúc chạy (gpu10.log, 20:36:54)"
+  },
+  "v0.2-D-t04-r3": {
+   "loaded_at_start": [
+    "qwen3.5:9b",
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "none",
+   "source": "log GPU lúc chạy (gpu10.log, 20:38:57)"
+  },
+  "v0.2-D-warmup-discard": {
+   "loaded_at_start": [
+    "qwen3.5:9b",
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "none",
+   "source": "log GPU lúc chạy (gpu10.log, 20:31:00)"
+  },
+  "v0.2-base-r1-cold": {
+   "loaded_at_start": [],
+   "unload": "all",
+   "source": "log GPU lúc chạy (gpu10.log, 19:43:07)"
+  },
+  "v0.2-base-r2-warm": {
+   "loaded_at_start": [
+    "qwen3.5:9b",
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "none",
+   "source": "log GPU lúc chạy (gpu10.log, 19:45:34)"
+  },
+  "v0.2-base-r3-warm": {
+   "loaded_at_start": [
+    "qwen3.5:9b",
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "none",
+   "source": "log GPU lúc chạy (gpu10.log, 19:47:50)"
+  },
+  "v0.2-base-r4-others-unloaded": {
+   "loaded_at_start": [
+    "qwen3.5:9b"
+   ],
+   "unload": "others",
+   "source": "log GPU lúc chạy (gpu10.log, 19:50:08)"
+  },
+  "v0.2-base-r5-seed43-warm": {
+   "loaded_at_start": [
+    "qwen3.5:9b",
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "none",
+   "source": "log GPU lúc chạy (gpu10.log, 19:54:46)"
+  },
+  "v0.2-base-r6-general-unloaded": {
+   "loaded_at_start": [
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "general",
+   "source": "log GPU lúc chạy (gpu10.log, 19:57:04)"
+  },
+  "v0.3-base-r1-cold": {
+   "loaded_at_start": [
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "general",
+   "source": "log GPU lúc chạy (gpu20.log, 00:04:42)",
+   "gpu_shared": false,
+   "gpu_shared_source": "điều phối 28/10 00:03: GPU 0%, 1,8 GB; Nhân viên 2 đóng gói e5 bằng CPU"
+  },
+  "v0.3-base-r2-cold": {
+   "loaded_at_start": [
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "general",
+   "source": "log GPU lúc chạy (gpu20.log, 00:07:55)",
+   "gpu_shared": false,
+   "gpu_shared_source": "điều phối 28/10 00:03: GPU 0%, 1,8 GB; Nhân viên 2 đóng gói e5 bằng CPU"
+  }
+ }
+}

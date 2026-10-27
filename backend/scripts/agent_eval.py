@@ -51,6 +51,7 @@ from app.discord.speaker_context import DISCORD_SPEAKER_SYSTEM_INSTRUCTION, attr
 from app.services.injection_defense import InjectionDefense
 from app.utils.vi_tokenizer import tokenize_vietnamese
 from scripts.agent_eval_grader import GRADER_VERSION, grade, summarize, tool_calls
+from scripts.agent_eval_scorecard import render, scorecard
 
 BACKEND = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = BACKEND.parent
@@ -523,6 +524,10 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         "--env-file", type=Path,
         help="the .env Settings reads (default: this checkout's); a worktree has none, so point it at the main checkout's",
     )
+    parser.add_argument(
+        "--gpu-shared", choices=("yes", "no"),
+        help="declare whether another job (another project included) uses the GPU during this run; recorded, never guessed",
+    )
     return parser.parse_args(argv)
 
 
@@ -554,6 +559,39 @@ def probe_database(settings: Any) -> str:
     return f"{make_url(str(settings.database_url)).database} (read-only: 2 COUNTs)"
 
 
+def ollama_loaded(base_url: str) -> list[str] | None:
+    """The models Ollama holds in memory now (/api/ps). Taken before the probe
+    loads anything: with the general model among them the run is warm, without
+    it cold (ticket 10's rule, read by the scorecard, ticket 23). None when
+    Ollama does not answer."""
+    import httpx
+
+    try:
+        response = httpx.get(f"{base_url.rstrip('/')}/api/ps", timeout=5.0)
+        response.raise_for_status()
+        return sorted(str(model["name"]) for model in response.json().get("models", []))
+    except (httpx.HTTPError, ValueError, KeyError, TypeError):
+        return None
+
+
+def gpu_snapshot() -> dict[str, Any] | None:
+    """GPU load, memory and compute processes as nvidia-smi sees them now: the
+    measured half of "was the GPU shared" (the declared half is --gpu-shared).
+    It cannot tell another project's requests to the same Ollama apart. None
+    without nvidia-smi."""
+    def query(*fields: str) -> list[str]:
+        out = subprocess.run(["nvidia-smi", *fields, "--format=csv,noheader,nounits"], capture_output=True, text=True, timeout=10)
+        out.check_returncode()
+        return [line.strip() for line in out.stdout.splitlines() if line.strip()]
+
+    try:
+        utilization, memory = query("--query-gpu=utilization.gpu,memory.used")[0].split(", ")
+        processes = [Path(name).name for name in query("--query-compute-apps=process_name")]
+        return {"utilization_percent": int(utilization), "memory_used_mib": int(memory), "processes": processes}
+    except (OSError, subprocess.SubprocessError, ValueError, IndexError):
+        return None
+
+
 def probe_refusal(general_role: Any, *, probed: bool) -> str | None:
     """Why a probed run must not start: the general role is not the verified
     pointer (fallback, missing, Ollama silent...). None = go. Only `general`
@@ -571,6 +609,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     dataset = load_dataset(args.dataset)
     settings = build_settings(args.env_file, probe=args.probe)
+    loaded_at_start = ollama_loaded(settings.ollama_base_url) if args.probe else None
+    gpu_at_start = gpu_snapshot() if args.probe else None
     resolved = resolve_registry(settings, ProductionProbes(settings) if args.probe else None)
     general_role = resolved.roles["general"]
     refusal = probe_refusal(general_role, probed=args.probe)
@@ -609,6 +649,11 @@ def main(argv: list[str] | None = None) -> int:
             "verified": general_role.verified,
         },
         "probed": args.probe,
+        "ollama_loaded_at_start": loaded_at_start,
+        # Another job on the same card moves latency, so the scorecard does not
+        # compare latency across runs that differ here (coordination, 28/10).
+        "gpu_shared": {"yes": True, "no": False}.get(args.gpu_shared),
+        "gpu_at_start": gpu_at_start,
         # The probe's only database touch, named so a reader of a baseline knows
         # which real data it read: two COUNTs, read-only, as every API boot does.
         "probe_read_database": probe_database(settings) if args.probe else None,
@@ -637,6 +682,9 @@ def main(argv: list[str] | None = None) -> int:
         task_ids=[task_id.strip() for task_id in args.tasks.split(",") if task_id.strip()] if args.tasks else None,
     )
     overall = summary["overall"]
+    card = scorecard(out_dir)
+    (out_dir / "scorecard.json").write_text(json.dumps(card, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    print(render(card))
     print(f"{overall['passed']}/{overall['total']} passed, {summary['errors']} errors -> {out_dir}")
     return 1 if summary["errors"] else 0
 
