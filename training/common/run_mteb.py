@@ -98,9 +98,13 @@ def use_pooled_connections() -> None:
     openai_wrappers.requests = PooledRequests()
 
 
-def build_model(model_name: str, endpoint: str, instruction: bool):
+def build_model(model_name: str, endpoint: str, instruction: bool,
+                query_prefix: str | None = None, passage_prefix: str | None = None):
     from mteb.models import OpenAIAPIEncodeWrapper
 
+    prefixes = query_prefix is not None or passage_prefix is not None
+    if prefixes and instruction:
+        raise ValueError("--instruction (Qwen, query side only) and --query-prefix/--passage-prefix (both sides) are two different conventions; pick one")
     kwargs = dict(
         endpoint_url=endpoint,   # the wrapper appends /v1/embeddings itself
         model_name=model_name,
@@ -131,7 +135,17 @@ def build_model(model_name: str, endpoint: str, instruction: bool):
         # configuration. An empty dict is enough; the instruction itself comes
         # from each task's metadata.
         kwargs["prompt_dict"] = {}
+    if prefixes:
+        # e5 is trained with a literal prefix on EACH side ("query: " / "passage: ").
+        # The wrapper's non-instruction path prepends prompts_dict[name], but finds
+        # `name` through self.model_prompts, which it never sets: prompt_dict alone
+        # sent both sides bare (measured 27/10 against mteb 2.20.5 with a fake
+        # endpoint) — the 05/09 trap again. model_prompts is assigned below.
+        side_prompts = {"query": query_prefix or "", "document": passage_prefix or ""}
+        kwargs["prompt_dict"] = dict(side_prompts)
     model = OpenAIAPIEncodeWrapper(**kwargs)
+    if prefixes:
+        model.model_prompts = dict(side_prompts)
     # mteb writes results to `.../results/<meta.name>/...`, and an Ollama tag
     # carries a colon, which Windows cannot put in a path. Rename only the
     # metadata; `model_name` stays exactly what Ollama is asked for, so the
@@ -150,6 +164,10 @@ def main() -> int:
                         help="Task names; default is the four native Vietnamese retrieval tasks.")
     parser.add_argument("--instruction", action="store_true",
                         help="Send a query-side instruction (Qwen3-Embedding is trained for it).")
+    parser.add_argument("--query-prefix", default=None,
+                        help='Literal prefix on every query, e.g. "query: " for e5. Not with --instruction.')
+    parser.add_argument("--passage-prefix", default=None,
+                        help='Literal prefix on every document, e.g. "passage: " for e5. Not with --instruction.')
     parser.add_argument("--version-id", default=None,
                         help="model_versions.yaml roles.embedding id whose weights --model serves; stamped into "
                              "summary.json as versions.embedding (mteb talks to Ollama directly, so the id is declared, "
@@ -174,7 +192,8 @@ def main() -> int:
     print(f"tasks    : {', '.join(t.metadata.name for t in tasks)}")
     print(f"ket qua  : {output}\n")
 
-    model = build_model(arguments.model, arguments.endpoint, arguments.instruction)
+    model = build_model(arguments.model, arguments.endpoint, arguments.instruction,
+                        arguments.query_prefix, arguments.passage_prefix)
     started = time.monotonic()
     # mteb 2.x caches into ~/.cache/mteb and returns a ModelResult; there is no
     # output_folder any more. Point the cache at this repo so a result belongs
@@ -206,11 +225,18 @@ def main() -> int:
     print(f"\nxong sau {elapsed/60:.1f} phut")
 
     summary = output / "summary.json"
-    summary.write_text(json.dumps({
+    record = {
         "model": arguments.model,
         "versions": {"embedding": arguments.version_id},
         "endpoint": arguments.endpoint,
         "instruction": arguments.instruction,
+    }
+    # Only when used, so a default run's summary keeps exactly its old keys.
+    if arguments.query_prefix is not None or arguments.passage_prefix is not None:
+        record["query_prefix"] = arguments.query_prefix
+        record["passage_prefix"] = arguments.passage_prefix
+    summary.write_text(json.dumps({
+        **record,
         "elapsed_minutes": round(elapsed / 60, 2),
         "rows": rows,
     }, ensure_ascii=False, indent=2), encoding="utf-8")
