@@ -76,6 +76,17 @@ def test_main_refuses_before_any_model_call_when_the_probe_finds_no_general_mode
     assert not (tmp_path / "runs").exists()
 
 
+def test_the_manifest_names_the_database_a_probe_reads_but_never_its_url():
+    from types import SimpleNamespace
+
+    from scripts.agent_eval import probe_database
+
+    settings = SimpleNamespace(database_url="postgresql+psycopg://local_ai:s3cret@db.host:5432/local_ai_core")
+    named = probe_database(settings)
+    assert named == "local_ai_core (read-only: 2 COUNTs)"
+    assert "s3cret" not in named and "db.host" not in named
+
+
 def test_settings_read_the_env_file_a_worktree_points_at(tmp_path, monkeypatch):
     monkeypatch.delenv("OLLAMA_BASE_URL", raising=False)
     env = tmp_path / ".env"

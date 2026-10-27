@@ -86,3 +86,9 @@ Blocked by: 06 (đã gộp); phần chạy GPU chờ 11 (11 đang đo p50 /rag/s
   - Số `tool_result` bị cắt bởi `tool_result_max_chars` 2400. Giới hạn này được tính cho 4 trích
     đoạn, trong khi bản ghi có 5. Mục đích là tách "model trả lời sai" khỏi "model nhìn thấy JSON bị
     cắt".
+
+**27/10 — opus xác nhận:** baseline chạy `--probe` với `.env` thật. Hai câu COUNT chỉ đọc, một lần
+embed và một lần chat OCR đúng là những gì API làm mỗi lần khởi động. Lệnh cấm DB thật ở ticket 11 là
+để không ghi dữ liệu eval vào đó. Điều kiện: chỉ chạy sau khi 11 xong. Manifest giờ có
+`probe_read_database`, ví dụ `"local_ai_core (read-only: 2 COUNTs)"`; chỉ ghi tên DB, không ghi URL
+(test `test_the_manifest_names_the_database_a_probe_reads_but_never_its_url`). 65 passed.

@@ -462,6 +462,14 @@ def resolve_registry(settings: Any, probes: Any) -> Any:
     return resolve(settings.registry(), overrides_from_settings(settings), probes)
 
 
+def probe_database(settings: Any) -> str:
+    """The database name and what is read from it, never the URL: host and
+    credentials stay out of the manifest."""
+    from sqlalchemy.engine import make_url
+
+    return f"{make_url(str(settings.database_url)).database} (read-only: 2 COUNTs)"
+
+
 def probe_refusal(general_role: Any, *, probed: bool) -> str | None:
     """Why a probed run must not start: the general role is not the verified
     pointer (fallback, missing, Ollama silent...). None = go. Only `general`
@@ -514,6 +522,9 @@ def main(argv: list[str] | None = None) -> int:
             "verified": general_role.verified,
         },
         "probed": args.probe,
+        # The probe's only database touch, named so a reader of a baseline knows
+        # which real data it read: two COUNTs, read-only, as every API boot does.
+        "probe_read_database": probe_database(settings) if args.probe else None,
         # Every role's verdict, not just general's: context for a reader, never a gate.
         "registry_fallback": resolved.fallback_flag() if args.probe else None,
         "env_file": str(args.env_file) if args.env_file else "default",
