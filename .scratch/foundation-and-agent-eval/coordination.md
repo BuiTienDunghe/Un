@@ -73,7 +73,11 @@ phiên Ún tới khi chủ dự án nhắn lại:
 Hai lượt chạy bộ test đầy đủ của opus (01:09 và 01:13) đều đỏ 14 bài, mỗi lần một bộ khác nhau: một phiên Ún khác
 (claude.exe opus, chạy `pytest … tests` qua PowerShell lúc 01:16) cũng dùng `local_ai_core_test` cùng lúc, và các
 bài migration hạ/nâng schema giẫm lên nhau (lúc 01:19 DB đang ở revision 18, thiếu `conversations.title`). Từ giờ:
-**chỉ opus chạy test có DB** (đặt `POSTGRES_TEST_URL`). Phiên khác cần thì ghi vào tệp duyệt hoặc ticket, opus chạy
+**chỉ opus chạy test có DB** (đặt `POSTGRES_TEST_URL`). Gốc rễ (01:27): `POSTGRES_TEST_URL` nằm sẵn trong biến môi
+trường người dùng của Windows (`HKCU\Environment`), nên pytest của **mọi** phiên đều tự dùng DB test; lượt 01:21 của opus
+cũng bị giẫm (30 bài đỏ, 01:23 có thêm một cặp pytest). Phiên khác chạy test phải bỏ biến: PowerShell
+`$env:POSTGRES_TEST_URL=$null; $env:REDIS_TEST_URL=$null;`, bash `env -u POSTGRES_TEST_URL -u REDIS_TEST_URL`. Không
+xoá biến khỏi máy (luật đêm: không đổi cấu hình) — chủ dự án quyết sáng. Phiên khác cần thì ghi vào tệp duyệt hoặc ticket, opus chạy
 giúp khi gộp. Đính chính: lần nạp glm-ocr 00:54 là từ lượt test `after20` của chính opus (Ollama còn sống); lần 00:57
 chưa rõ phiên nào.
 
