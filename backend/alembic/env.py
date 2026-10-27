@@ -1,18 +1,11 @@
 from __future__ import annotations
 
 import os
-import sys
-from pathlib import Path
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-ROOT = Path(__file__).resolve().parents[2]
-BACKEND = ROOT / "backend"
-if str(BACKEND) not in sys.path:
-    sys.path.insert(0, str(BACKEND))
-
-from app.postgres.models import Base  # noqa: E402
+from app.postgres.models import Base
 
 config = context.config
 database_url = os.getenv("DATABASE_URL")

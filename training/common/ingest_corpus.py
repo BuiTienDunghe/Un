@@ -16,16 +16,12 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 import time
 from pathlib import Path
 
 import httpx
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "backend"))
-
-from scripts.evaluate_rag import api_key_headers  # noqa: E402
+from app.security.api_key import api_key_headers
 
 
 def index_state(client: httpx.Client, base_url: str, document_id: str) -> tuple[str, int]:

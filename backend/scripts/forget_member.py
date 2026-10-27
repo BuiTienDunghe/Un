@@ -24,21 +24,15 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
-from pathlib import Path
 
-BACKEND = Path(__file__).resolve().parents[1]
-if str(BACKEND) not in sys.path:
-    sys.path.insert(0, str(BACKEND))
+from sqlalchemy import delete, func, select, update
 
-from sqlalchemy import delete, func, select, update  # noqa: E402
-
-from app.config.settings import get_settings  # noqa: E402
-from app.postgres.database import (  # noqa: E402
+from app.config.settings import get_settings
+from app.postgres.database import (
     create_postgres_engine,
     create_session_factory,
 )
-from app.postgres.models import (  # noqa: E402
+from app.postgres.models import (
     DiscordChannelMessage,
     DiscordCondensationProposition,
     DiscordMemory,
@@ -46,10 +40,10 @@ from app.postgres.models import (  # noqa: E402
     DiscordMemorySource,
     DiscordSessionTurn,
 )
-from app.services.discord_condensation_service import (  # noqa: E402
+from app.services.discord_condensation_service import (
     DiscordCondensationService,
 )
-from app.stores.qdrant_store import QdrantStore  # noqa: E402
+from app.stores.qdrant_store import QdrantStore
 
 
 def _counts(database, guild_id: str, author_id: str) -> dict[str, int]:

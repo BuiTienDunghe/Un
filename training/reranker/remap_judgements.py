@@ -35,11 +35,9 @@ from __future__ import annotations
 import collections
 import json
 import re
-import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "backend"))
 
 from app.utils.chunking import _SENTENCE_PATTERN, chunk_pages, count_tokens  # noqa: E402
 

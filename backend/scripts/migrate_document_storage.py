@@ -8,14 +8,10 @@ files represented in the archived SQLite documents table.
 """
 from __future__ import annotations
 
-import sys
 import hashlib
 import sqlite3
 import argparse
 from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "backend"))
 
 from app.config.settings import get_settings
 from app.stores.qdrant_store import QdrantStore

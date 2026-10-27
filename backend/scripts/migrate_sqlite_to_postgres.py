@@ -17,9 +17,6 @@ from pathlib import Path
 from urllib.parse import quote
 
 ROOT = Path(__file__).resolve().parents[2]
-BACKEND = ROOT / "backend"
-if str(BACKEND) not in sys.path:
-    sys.path.insert(0, str(BACKEND))
 
 from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert

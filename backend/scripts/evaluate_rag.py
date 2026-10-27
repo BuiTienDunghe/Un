@@ -5,41 +5,17 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import os
 from datetime import UTC, datetime
 from pathlib import Path
 from time import sleep
 
 import httpx
 
+# Lives beside the rule that enforces the key; imported here under its old name so
+# redteam_rag and every caller of scripts.evaluate_rag keep working unchanged.
+from app.security.api_key import api_key_headers
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-
-
-def api_key_headers() -> dict[str, str]:
-    """The X-API-Key header the server will actually enforce, if any.
-
-    Reading only os.environ was a silent outage. On 27/08 the operator put
-    LOCAL_AI_API_KEY in .env; the server (pydantic-settings, which loads .env)
-    began enforcing it, while this harness kept looking at a variable that no
-    Scheduled Task exports. Every nightly run from 27/08 to 04/09 died 401 on
-    the first upload — a red gate that said nothing at all about retrieval.
-
-    Falling back to Settings reads the same file the server reads, so the two
-    cannot drift apart again. An explicit env var still wins, which is what CI
-    and one-off runs against another host rely on.
-    """
-    key = os.environ.get("LOCAL_AI_API_KEY", "").strip()
-    if not key:
-        try:
-            from app.config.settings import get_settings
-
-            key = (get_settings().local_ai_api_key or "").strip()
-        except Exception:
-            # A run pointed at a remote base URL need not have a local .env or
-            # a reachable database. Send no header rather than refuse to start.
-            key = ""
-    return {"X-API-Key": key} if key else {}
 
 
 def bootstrap_document(client: httpx.Client, base_url: str, file_path: Path) -> str:

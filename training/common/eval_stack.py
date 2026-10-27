@@ -90,7 +90,6 @@ def version_pins(model_versions: list[str] | None) -> dict[str, str]:
 def stack_env(profile: str, reranker: bool | None, mode: str | None = None,
               contextual: bool | None = None, model_versions: list[str] | None = None) -> dict[str, str]:
     spec = PROFILES[profile]
-    sys.path.insert(0, str(BACKEND))
     from app.config.settings import get_settings
 
     base, _, _ = str(get_settings().database_url).rpartition("/")

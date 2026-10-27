@@ -11,10 +11,6 @@ a fixed corpus once, not to survive a poisoned job in production.
 from __future__ import annotations
 
 import sys
-from pathlib import Path
-
-BACKEND = Path(__file__).resolve().parents[2] / "backend"
-sys.path.insert(0, str(BACKEND))
 
 
 def main() -> int:

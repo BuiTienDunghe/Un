@@ -50,6 +50,20 @@ if errorlevel 1 (
     echo [SETUP] Python dependencies are up to date.
 )
 
+REM One install path: this checkout as an editable package, so `app` (under
+REM backend/), discord_bot and tools import from any directory -- the scripts,
+REM tools and training modules no longer patch sys.path. Checked, not
+REM re-run: -I keeps the current directory off sys.path so only the install can
+REM answer, and it must answer with THIS checkout (a .venv copied from another
+REM folder would otherwise run that folder's code). --no-deps: requirements.txt
+REM stays the one dependency list. Building needs network once (setuptools).
+.venv\Scripts\python.exe -I -c "import app, os, sys; here = os.path.normcase(os.path.realpath(os.path.dirname(app.__file__))); sys.exit(here != os.path.normcase(os.path.realpath(sys.argv[1])))" "%~dp0backend\app" >nul 2>&1
+if errorlevel 1 (
+    echo [SETUP] Installing this checkout as an editable package...
+    .venv\Scripts\python.exe -m pip install -e . --no-deps
+    if errorlevel 1 goto :error
+)
+
 if not exist ".env" (
     copy /y ".env.example" ".env" >nul
 )
@@ -115,16 +129,12 @@ REM only work on a clean machine if its tag is already here). Pulled BEFORE the
 REM workers start so none of them meets an absent tag. The extractor's tag is in
 REM the list exactly when DISCORD_MEMORY_EXTRACTOR_ENABLED=true (off roles are
 REM omitted), which replaces the flag-conditional pull that used to live below.
-REM pushd backend: the launcher never runs `pip install -e .`, so the module is
-REM only importable from there. The second list is "tag<TAB>Modelfile" and the
-REM delimiter below is a literal tab.
-pushd backend
-for /f "usebackq delims=" %%T in (`..\.venv\Scripts\python.exe -m app.config.model_registry --ollama-pull-list`) do (
+REM The second list is "tag<TAB>Modelfile" and the delimiter below is a literal tab.
+for /f "usebackq delims=" %%T in (`.venv\Scripts\python.exe -m app.config.model_registry --ollama-pull-list`) do (
     call :ensure_model "%%T"
-    if errorlevel 1 ( popd & goto :error )
+    if errorlevel 1 goto :error
 )
-for /f "usebackq tokens=1,2 delims=	" %%T in (`..\.venv\Scripts\python.exe -m app.config.model_registry --ollama-create-list`) do call :ensure_created "%%T" "%%U"
-popd
+for /f "usebackq tokens=1,2 delims=	" %%T in (`.venv\Scripts\python.exe -m app.config.model_registry --ollama-create-list`) do call :ensure_created "%%T" "%%U"
 
 REM Periodic PostgreSQL backup. It runs on the host because the dump is taken by
 REM the PostgreSQL container's own pg_dump, so no image needs a database client.

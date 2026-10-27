@@ -41,8 +41,6 @@ from sqlalchemy import delete, select
 
 BACKEND = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = BACKEND.parent
-if str(BACKEND) not in sys.path:
-    sys.path.insert(0, str(BACKEND))
 
 from app.postgres.database import create_postgres_engine, create_session_factory  # noqa: E402
 from app.postgres.discord_memory_repositories import DiscordMemoryRepository  # noqa: E402

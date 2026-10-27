@@ -11,6 +11,7 @@ installation shared over a LAN.
 """
 from __future__ import annotations
 
+import os
 from hmac import compare_digest
 
 from fastapi import Header, HTTPException, Request, status
@@ -67,3 +68,29 @@ def require_api_key_for_read(request: Request, x_api_key: str | None = Header(de
     if not getattr(settings, "local_ai_protect_reads", False):
         return
     _check(request, x_api_key)
+
+
+def api_key_headers() -> dict[str, str]:
+    """The X-API-Key header the server will actually enforce, if any.
+
+    Reading only os.environ was a silent outage. On 27/08 the operator put
+    LOCAL_AI_API_KEY in .env; the server (pydantic-settings, which loads .env)
+    began enforcing it, while this harness kept looking at a variable that no
+    Scheduled Task exports. Every nightly run from 27/08 to 04/09 died 401 on
+    the first upload — a red gate that said nothing at all about retrieval.
+
+    Falling back to Settings reads the same file the server reads, so the two
+    cannot drift apart again. An explicit env var still wins, which is what CI
+    and one-off runs against another host rely on.
+    """
+    key = os.environ.get("LOCAL_AI_API_KEY", "").strip()
+    if not key:
+        try:
+            from app.config.settings import get_settings
+
+            key = (get_settings().local_ai_api_key or "").strip()
+        except Exception:
+            # A run pointed at a remote base URL need not have a local .env or
+            # a reachable database. Send no header rather than refuse to start.
+            key = ""
+    return {"X-API-Key": key} if key else {}

@@ -22,7 +22,6 @@ import argparse
 import json
 import math
 import statistics
-import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -30,9 +29,8 @@ from pathlib import Path
 import httpx
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT / "backend"))
 
-from scripts.evaluate_rag import api_key_headers  # noqa: E402
+from app.security.api_key import api_key_headers  # noqa: E402
 
 OUT_DIR = PROJECT_ROOT / "data" / "evaluation" / "heldout_retrieval_v1" / "results"
 

@@ -427,12 +427,13 @@ recorded baseline exactly (recall@5 0.9878, MRR 0.9360, doc_hit 0.9268), left
 against all 82 recorded ranks, and deleted `ATTENTION_nightly_eval.txt` on its way
 out. The report is `data/evaluation/results/rag-multidoc-20260904-180426.json`.
 
-- `api_key_headers()` in `backend/scripts/evaluate_rag.py:19-42` falls back to
+- `api_key_headers()` in `backend/app/security/api_key.py` falls back to
   `Settings` — *the same file the server reads* — when `os.environ` has no key. An
   explicit environment variable still wins, which is what CI and one-off runs against
   another host rely on. A missing `.env` or unreachable database sends no header
-  rather than refusing to start. `backend/scripts/redteam_rag.py:34` imports the same
-  function instead of reimplementing it, so the two harnesses cannot diverge.
+  rather than refusing to start. `backend/scripts/evaluate_rag.py` and
+  `backend/scripts/redteam_rag.py:34` import that one function instead of reimplementing
+  it, so the harnesses cannot diverge.
 - `diagnose()` in `backend/scripts/nightly_eval.py:54-79` replaces the guess with
   evidence: `ollama ps`, `docker compose ps`, and the last 15 lines of the lab
   uvicorn's own output, which now goes to `data/logs/nightly_eval_lab_api.log`

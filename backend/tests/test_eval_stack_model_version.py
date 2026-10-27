@@ -8,6 +8,11 @@ import pytest
 
 from app.config.model_registry import PROJECT_ROOT
 
+# The one sys.path patch kept on purpose. This suite runs from backend/, and
+# `training` is deliberately not part of the installed package: the product never
+# imports it, and from the repository root, where training runs, it already
+# imports. Mapping it into pyproject.toml would put training/ into the product's
+# install to save this one test a line.
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 

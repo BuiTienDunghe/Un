@@ -19,9 +19,6 @@ from urllib.parse import quote
 from uuid import NAMESPACE_URL, uuid5
 
 ROOT = Path(__file__).resolve().parents[2]
-BACKEND = ROOT / "backend"
-if str(BACKEND) not in sys.path:
-    sys.path.insert(0, str(BACKEND))
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct

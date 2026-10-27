@@ -18,6 +18,27 @@ training/
 └── vi_nli/                  H3 — NLI encoder for verifier + grounding (conditional)
 ```
 
+## Which Python runs what
+
+Every module here runs from the repository root as `python -m training.<dir>.<name>`, so
+`training` itself imports from the current directory. The modules that import `app`
+(`common/eval_heldout`, `eval_stack`, `eval_worker`, `ingest_corpus`, `reindex_all`;
+`reranker/build_judgement_tasks`, `mine_negatives`, `remap_judgements`) find it through the
+editable install that `run-local-ai-core.bat` puts into `.venv`. Run them with
+`.venv\Scripts\python`.
+
+`.venv-eval` and `.venv-train` do not have that install (checked 27/10/2026). They also lack
+the API's own dependencies (pydantic-settings, SQLAlchemy), so most of the modules above cannot
+run there in any case. The two that need only `app.utils.chunking` (`build_judgement_tasks`,
+`remap_judgements`) can, once that environment gets the package mapping:
+
+```bat
+.venv-train\Scripts\python -m pip install -e . --no-deps
+```
+
+The same command works for `.venv-eval`. Keep `--no-deps`: without it, pip installs the whole
+of `requirements.txt` into the training environment.
+
 ## Before any training run
 
 ```bash
