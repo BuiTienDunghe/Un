@@ -207,3 +207,28 @@ def test_each_model_round_records_its_tokens_once_and_the_request_log_still_read
     assert (steps[-1]["tokens_in"], steps[-1]["tokens_out"]) == (200, 20)
     # Ticket 16 (k2): what ChatService logs is the last call's usage, as before.
     assert consume_usage() == {"tokens_in": 200, "tokens_out": 20}
+
+
+class SlowRetrieval(Retrieval):
+    """A tool that takes `cost` seconds of the agent's clock: time spent outside any model call."""
+
+    def __init__(self, clock: Clock, cost: float) -> None:
+        self.clock, self.cost = clock, cost
+
+    def retrieve(self, query, top_k, document_id=None):
+        self.clock.now += self.cost
+        return super().retrieve(query, top_k, document_id)
+
+
+def test_time_eaten_by_slow_tools_ends_in_the_fixed_reply_not_a_crash():
+    # 35 s model + 30 s tool per round: after two rounds 130 s are gone, so the final
+    # answer has nothing left — the reserve rule only guards rounds it can see start.
+    clock = Clock()
+    router = Router(clock, [tool_round(), tool_round(), tool_round()], cost=35.0)
+    service = AgentService(router, SlowRetrieval(clock, 30.0), operational_service=None, max_steps=3, clock=clock)
+    text, _, steps = service.run([{"role": "user", "content": "giá vé?"}])
+
+    assert text == "Mình chưa trả lời kịp trong 90 giây. Bạn hỏi lại, hoặc hỏi hẹp hơn nhé."
+    assert final_step(steps)["stop_reason"] == agent_module.STOP_TURN_BUDGET_EXHAUSTED
+    assert len([step for step in steps if step["kind"] == "tool_result"]) == 2
+    assert len(router.deadlines) == 2, "no final model call was even attempted with no time left"
