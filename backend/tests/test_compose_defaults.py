@@ -49,6 +49,30 @@ COMMAND_DEFAULTS = frozenset({"RQ_QUEUE_PREFIX", "DISCORD_MEMORY_QUEUE_NAME"})
 DEFAULTED = re.compile(r"\$\{(\w+):?-")
 
 
+def compose_default(text: str, var: str) -> str:
+    """The default after `${VAR:-` (or `${VAR-`), up to ITS closing brace.
+
+    A `[^}]*` regex stops at the first `}`, so `${A:-${B}}` read as `${B`:
+    harmless today (only CONTAINER_DATABASE_URL nests, and it is not a Settings
+    field) but wrong the day a Settings field's default nests."""
+    start = re.search(rf"\$\{{{var}:?-", text).end()
+    depth = 1
+    for index in range(start, len(text)):
+        if text.startswith("${", index):
+            depth += 1
+        elif text[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start:index]
+    raise ValueError(f"unbalanced braces after ${{{var}: {text!r}")
+
+
+def test_a_nested_default_is_read_to_its_own_closing_brace():
+    assert compose_default("${CONTAINER_DATABASE_URL:-${DATABASE_URL}}", "CONTAINER_DATABASE_URL") == "${DATABASE_URL}"
+    assert compose_default("${A:-${B:-x}}/tail", "B") == "x"
+    assert compose_default("rq worker ${RQ_QUEUE_PREFIX:-local-ai:dev}:ocr", "RQ_QUEUE_PREFIX") == "local-ai:dev"
+
+
 def services() -> dict[str, dict]:
     return yaml.safe_load(COMPOSE.read_text(encoding="utf-8"))["services"]
 
@@ -93,7 +117,7 @@ def test_no_settings_field_gets_a_compose_default_but_the_rq_queue_names():
                 for var in DEFAULTED.findall(text):
                     if var not in FIELDS:
                         continue
-                    default = re.search(rf"\$\{{{var}:?-([^}}]*)\}}", text).group(1)
+                    default = compose_default(text, var)
                     shipped = str(Settings.model_fields[var.lower()].default)
                     if not (part == "command" and var in COMMAND_DEFAULTS and default == shipped):
                         offenders.append(f"{name}.{part}: {var} defaults to {default!r}, Settings ships {shipped!r}")
