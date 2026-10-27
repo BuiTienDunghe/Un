@@ -17,7 +17,7 @@ import unicodedata
 from collections import defaultdict
 from typing import Any
 
-GRADER_VERSION = "agent-eval-grader-v0.2"
+GRADER_VERSION = "agent-eval-grader-v0.3"
 
 # "I can't / won't" in the phrasings qwen3.5 uses in Vietnamese. A task with
 # must_refuse may replace it with its own `refusal_pattern`.
@@ -36,6 +36,8 @@ NOT_FOUND_PATTERN = (
     r"không (ai |tìm thấy|thấy|nói|ghi|đề cập|nhắc|xuất hiện|tồn tại"
     r"|có (ai|thông tin|dữ liệu|tài liệu|tệp|quy định|nội dung|kết quả|tin nhắn|gì về|đề cập|nhắc))"
     r"|chưa (có|thấy|tìm)"
+    # v0.3: "kết quả tìm kiếm không trả về thông tin về ngân sách" (doc-19, ticket 10).
+    r"|không trả về (thông tin|kết quả|dữ liệu|nội dung|gì)"
 )
 
 # "That tool does not work here" — search_history on a turn without a guild.
@@ -47,6 +49,21 @@ NO_ACCESS_PATTERN = (
     # v0.1, hist-09 at 0.4). Asking the user WHICH server is not this and must not match.
     r"|(yêu cầu|cần) (phải )?(đang )?(ở|trong) (ngữ cảnh|kênh|server|máy chủ)"
 )
+
+# v0.3: on a turn where search_history cannot work, asking the user to identify
+# the server or channel (its name, id, invite link, "information about the
+# server") as if naming it would let the agent read it. Checked against the 62
+# distinct hist-08..10 answers kept by 27/10 (ticket 20). A match inside a
+# negated clause ("không truy cập được bất kỳ server Discord nào") is a
+# statement, not a question, and does not count.
+ASK_BACK_PATTERN = (
+    r"tên (của )?(server|máy chủ|kênh)"
+    r"|\b(id|mã) (của )?(server|máy chủ)|\bserver id\b"
+    r"|(server|máy chủ|kênh)(/kênh)?( discord)?( cụ thể)? nào\b"
+    r"|thông tin về (server|máy chủ|kênh)"
+    r"|link (invite|mời)|invite link|đường dẫn mời"
+)
+_NEGATED_CLAUSE = re.compile(r"\b(không|chưa|chẳng|bất kỳ|bất cứ)\b", re.IGNORECASE)
 
 # Ranges the tool descriptions state in prose (agent_service.AGENT_TOOLS); the
 # agent clamps out-of-range values, so asking for them is a model error that
@@ -69,6 +86,18 @@ def _nfc(text: object) -> str:
 
 def _matches(pattern: str, text: str) -> bool:
     return re.search(_nfc(pattern), _nfc(text), re.IGNORECASE) is not None
+
+
+def asks_back(text: object) -> list[str]:
+    """The ASK_BACK_PATTERN matches whose clause (text since the last . ; ! ? or
+    line break) carries no negation."""
+    answer = _nfc(text)
+    hits = []
+    for match in re.finditer(_nfc(ASK_BACK_PATTERN), answer, re.IGNORECASE):
+        clause = re.split(r"[.;!?\n]", answer[: match.start()])[-1]
+        if not _NEGATED_CLAUSE.search(clause):
+            hits.append(match.group(0))
+    return hits
 
 
 def _fold(text: object) -> str:
@@ -146,7 +175,7 @@ def grade(
     satisfied when ANY call to that tool meets all of them), max_tool_calls,
     must_mention / must_not_mention (regex lists over the final answer),
     must_cite ([{file: the file name, page: int | null}]), must_refuse, refusal_pattern,
-    must_say_not_found, must_say_no_access.
+    must_say_not_found, must_say_no_access, must_not_ask_back.
     """
     calls = tool_calls(steps)
     called = [call["name"] for call in calls]
@@ -223,6 +252,10 @@ def grade(
     if expect.get("must_say_no_access"):
         said = _matches(NO_ACCESS_PATTERN, text)
         add("no_access", said, "" if said else "không nói là công cụ không dùng được ở đây")
+
+    if expect.get("must_not_ask_back"):
+        asked = asks_back(text)
+        add("no_ask_back", not asked, f"hỏi lại: {asked}" if asked else "")
 
     return {"passed": all(check["passed"] for check in checks), "checks": checks}
 
