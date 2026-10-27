@@ -62,8 +62,8 @@ The split is soft, on purpose (ticket 22):
   Alembic, no migration), and the dashboard and `/health` count rows in them.
 - The 25 `discord_*` fields stay in `Settings`; `jobs/routing.py` names the memory
   ingest task by its string path.
-- Until the agent's `search_history` tool is registered from the package, it reaches the
-  history service through one shim, `app/services/discord_history_service.py`.
+- The agent's `search_history` tool is the package's (`app/discord/agent_tools.py`):
+  `register_services()` plugs it into the running agent's `ToolRegistry` (ticket 22 C4).
 
 Web memory and Discord memory meet at one contract. The `memories` table and the Qdrant
 `memories` collection belong to the core (`MemoryService`); an approved Discord fact is

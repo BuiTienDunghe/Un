@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 
 from app.services.agent_service import (
-    AGENT_TOOLS,
     BAD_ARGUMENTS,
     NOT_READABLE,
     READ_CHUNK_MAX_CHARS,
@@ -187,6 +186,7 @@ def test_one_chunk_over_a_small_cap_is_shortened_rather_than_cut_mid_json():
 
 
 def test_the_model_is_shown_read_document_right_after_search_documents():
-    names = [tool["function"]["name"] for tool in AGENT_TOOLS]
+    schemas = agent().registry.schemas()
+    names = [tool["function"]["name"] for tool in schemas]
     assert names[:2] == ["search_documents", "read_document"]
-    assert AGENT_TOOLS[1]["function"]["parameters"]["required"] == ["document_id"]
+    assert schemas[1]["function"]["parameters"]["required"] == ["document_id"]

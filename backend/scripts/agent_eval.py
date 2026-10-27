@@ -45,7 +45,8 @@ from annotated_types import MaxLen
 from app.llm_clients.usage import consume_usage
 from app.schemas.chat_schema import ChatRequest
 from app.discord.schema import DiscordTurnEnqueueRequest
-from app.services.agent_service import AGENT_GUIDE, AGENT_TOOLS, FINAL_RESERVE_SECONDS, READ_RESULT_MAX_CHARS, TURN_BUDGET_SECONDS, AgentService
+from app.discord import agent_tools
+from app.services.agent_service import AGENT_GUIDE, FINAL_RESERVE_SECONDS, READ_RESULT_MAX_CHARS, TURN_BUDGET_SECONDS, AgentService, core_tools
 from app.discord.history_service import _SAFE_LEXEME, DiscordHistoryHit
 from app.discord.speaker_context import DISCORD_SPEAKER_SYSTEM_INSTRUCTION, attributed_user_content
 from app.services.injection_defense import InjectionDefense
@@ -402,6 +403,12 @@ def run_eval(
     read_result_max_chars = int(agent_config.get("read_result_max_chars", READ_RESULT_MAX_CHARS))
     turn_budget_seconds = float(agent_config.get("turn_budget_seconds", TURN_BUDGET_SECONDS))
     final_reserve_seconds = float(agent_config.get("final_reserve_seconds", FINAL_RESERVE_SECONDS))
+    history = FixtureHistory(dataset.guild)
+    # The tools as the API offers them: the core's, plus app.discord's search_history
+    # plugged in with the fixture guild (ticket 22, C4). The manifest's hash and the
+    # grader's schemas are read off the very registry the agents run with.
+    registry = core_tools()
+    agent_tools.register(registry, history)
     manifest = {
         **run_meta,
         "max_steps": max_steps,
@@ -415,7 +422,7 @@ def run_eval(
         "agent_guide_sha256": _sha256(defense.agent_guide(AGENT_GUIDE)),
         "system_prompt_sha256": _sha256(system_prompt),
         "discord_context_sha256": _sha256(DISCORD_SPEAKER_SYSTEM_INSTRUCTION),
-        "tools_sha256": _sha256(json.dumps(AGENT_TOOLS, ensure_ascii=False, sort_keys=True)),
+        "tools_sha256": _sha256(json.dumps(registry.schemas(), ensure_ascii=False, sort_keys=True)),
         "dataset": {
             "version": dataset.version,
             "sha256": dataset.sha256,
@@ -429,9 +436,8 @@ def run_eval(
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
 
     recording = UsageRecordingRouter(router)
-    history = FixtureHistory(dataset.guild)
     documents = FixtureDocuments(dataset.documents)
-    schemas = {tool["function"]["name"]: tool["function"]["parameters"] for tool in AGENT_TOOLS}
+    schemas = {tool["function"]["name"]: tool["function"]["parameters"] for tool in registry.schemas()}
     results: list[dict[str, Any]] = []
     for task in tasks:
         retrieval = dataset.retrieval.get(task["id"], {})
@@ -442,11 +448,11 @@ def run_eval(
             max_steps=max_steps,
             tool_result_max_chars=tool_result_max_chars,
             defense=defense,
-            history_service=history,
             turn_budget_seconds=turn_budget_seconds,
             final_reserve_seconds=final_reserve_seconds,
             document_reader=documents,
             read_result_max_chars=read_result_max_chars,
+            registry=registry,
         )
         tool_context = {"guild_id": history.guild_id} if task.get("surface") == "discord" else None
         answer: str | None = None

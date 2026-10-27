@@ -15,6 +15,7 @@ from fastapi import FastAPI
 from app import discord
 from app.config.settings import PROJECT_ROOT, Settings
 from app.postgres.database import create_postgres_engine, create_session_factory
+from app.services.agent_service import core_tools
 
 MAIN = Path(__file__).resolve().parents[1] / "app" / "main.py"
 DISCORD_STATE = (
@@ -23,17 +24,19 @@ DISCORD_STATE = (
 )
 
 
-def test_register_services_builds_every_discord_service_and_gives_the_agent_its_history_backend():
+def test_register_services_builds_every_discord_service_and_plugs_search_history_into_the_agent():
     settings = Settings(_env_file=None, database_url="postgresql+psycopg://test:test@127.0.0.1:1/none")
     sessions = create_session_factory(create_postgres_engine(str(settings.database_url)))  # never connects here
-    agent = SimpleNamespace(history_service=None)
+    agent = SimpleNamespace(registry=core_tools())
     chat = object()
     app = SimpleNamespace(state=SimpleNamespace(memory_service=object(), chat_service=chat, agent_service=agent))
 
     discord.register_services(app, settings, sessions, project_root=PROJECT_ROOT)
 
     assert [name for name in DISCORD_STATE if not hasattr(app.state, name)] == []
-    assert agent.history_service is app.state.discord_history_service
+    # The agent's Discord tool, in the place it always had (ticket 22, C4), reading this guild history.
+    assert agent.registry.names() == ("search_documents", "read_document", "search_history", "system_status")
+    assert agent.registry.get("search_history").run.history_service is app.state.discord_history_service
     assert app.state.discord_turn_service.chat_service is chat
 
 

@@ -32,9 +32,9 @@ Both import lazily, so importing one module of the package does not load the res
 ## Rules
 
 - The core never imports `app.discord`. `backend/tests/test_discord_boundary.py` enforces it,
-  from the source and at runtime. The one exception, until the agent's `search_history`
-  tool is registered from here (ticket 22 C4), is the shim
-  `app/services/discord_history_service.py`.
+  from the source and at runtime. The agent's `search_history` tool lives here
+  (`agent_tools.py`) and `register_services()` plugs it into the running agent's
+  `ToolRegistry` at the place it always had in the tool list (ticket 22 C4).
 - Models, `discord_memory_constants` and the `discord_*` settings stay in the core: one
   metadata for Alembic, no migration. Moving them is a separate decision.
 - Web memory is the core's. An approved Discord fact is projected into it under a
