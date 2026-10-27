@@ -166,3 +166,9 @@ Tiêu chí nghiệm thu theo `spec.md` Mốc 4.
   ký (`ccc6136`). Đóng hướng 1a: đổi một câu lời dặn làm 38/40 câu trả lời đổi chữ, nên 40 bài không tách
   được tác dụng nhỏ của prompt. Sửa bộ chấm (doc-27 "2 tiếng", hist-07 cho phép tài liệu trước rồi lịch
   sử, NOT_FOUND "không trả về thông tin", ghi chú hist-08) gom vào v0.3, làm sau. Ticket 10 xong.
+- 27/10 23:15 (opus 5.5, theo duyệt của fable): **đính chính** dòng đóng ticket: doc-27 không phải lỗi bộ
+  chấm — ghi chú bài nói "phải tự tính ra 2 giờ", tức bài cố ý thử phép tính. v0.3 phải chọn có ý thức:
+  giữ phép tính, hoặc bỏ và sửa ghi chú. Thêm vào README quy tắc đo: trong một lần chạy lạnh, so từng bài
+  giữa hai điều kiện chỉ chắc cho các bài đứng **trước** chỗ khác đầu tiên (E/F: 0 lệch trước hist-07,
+  12/13 lệch sau, dù prompt giống hệt). Lệch lan không do 09 (lượt cuối của 09 xong 22:28:10, 1a-v2 chạy
+  22:31–22:39); khác biệt còn lại là model nhúng còn nạp cùng Ollama — chưa tách.

@@ -310,3 +310,7 @@ bot chờ.
 Commit 5: ticket này không đổi `AGENT_GUIDE` lẫn `AGENT_TOOLS`, nên hash prompt bằng của ticket 10.
 Chạy lại A lạnh làm control trước khi đo (khoảng 2,5 phút), vì chưa ai đo xem lượt lạnh có lặp lại được
 qua ngày không. Mục tiêu là hist-08..10.
+- 27/10 23:15: fable (gửi muộn vì nhầm địa chỉ) xác nhận commit 1–4 + dceaaab gộp được; hai bài mồi trên
+  Postgres đã chạy sau khi điều phối nâng DB test (4/4 xanh, 22:40). Đọc bước 5 theo quy tắc mới của
+  ticket 10: so từng bài chỉ chắc cho các bài trước chỗ khác đầu tiên. hist-10 hỏng kiểu mới ở 1a-v2 (web
+  gọi search_history rồi hiểu thành trang web) — commit 1 nhắm đúng chỗ này.
