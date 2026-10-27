@@ -22,10 +22,11 @@ tài liệu của chính dự án, không có thông tin nhạy cảm.
 | `dataset.json` | `version`, server Discord giả cố định (`guild`), các snapshot trạng thái hệ thống (`status_snapshots`) |
 | `tasks.jsonl` | Mỗi dòng một bài |
 | `retrieval.jsonl` | Mỗi dòng là các đoạn tài liệu mà một bài nhận được khi gọi `search_documents` |
-| `retrieval_manifest.json` | Cách các đoạn `recorded` được ghi: thời điểm, commit, API, cờ RAG, mô hình embedding/reranker, mỗi bài nhận mấy đoạn và đáp án có nằm trong phần agent thấy không. Có sau lần ghi đầu tiên; không tính vào hash |
+| `documents.jsonl` | Từ v0.3: mỗi dòng là một tài liệu của corpus lab, **đủ mọi đoạn** `{document_id, filename, chunks: [{chunk_index, page_start, page_end, content}]}`. Là cái mà một lần đọc quá 400 ký tự đầu (công cụ #1 của ticket 20) sẽ trả. Mọi đoạn trong `retrieval.jsonl` có `document_id` phải trùng từng chữ đoạn cùng chỉ số ở đây, `load_dataset` từ chối nếu lệch. Tệp txt/md không có trang nên `page_start`/`page_end` là null |
+| `retrieval_manifest.json` | Cách các đoạn `recorded` được ghi: thời điểm, commit, API, cờ RAG, mô hình embedding/reranker, mỗi bài nhận mấy đoạn và đáp án có nằm trong phần agent thấy không. Các lần ghi trước nằm trong `earlier`. Có sau lần ghi đầu tiên; không tính vào hash |
 | `README.md` | Tệp này; không tính vào hash |
 
-`manifest.json` của mỗi lần chạy ghi `version` và sha256 của ba tệp dữ liệu (đổi CRLF về LF trước
+`manifest.json` của mỗi lần chạy ghi `version` và sha256 của bốn tệp dữ liệu (đổi CRLF về LF trước
 khi băm, nên Windows và CI ra cùng một hash).
 
 ## Một bài (`tasks.jsonl`)
@@ -43,6 +44,8 @@ khi băm, nên Windows và CI ra cùng một hash).
 | `note` | Bài này kiểm cái gì |
 | `corpus_source` | Chỉ có ở bài hỏi về tài liệu thật: `{file, chunk_index, corpus}`, tức đoạn mà đáp án nằm trong **400 ký tự đầu**. Agent chỉ đọc 400 ký tự đầu của mỗi đoạn (`agent_service`) |
 | `evidence` | Tuỳ chọn: những regex mà đoạn ghi được phải chứa, khi đáp án là kết quả tính toán hoặc dịch (doc-22, doc-27). Không có thì dùng `must_mention` |
+| `long_read` | Từ v0.3: đáp án **không** nằm trong 400 ký tự đầu của bất kỳ đoạn nào; phải đọc tiếp mới thấy (doc-33..37, hist-11). Với bài tài liệu, `corpus_source` khi đó trỏ tới đoạn có đáp án và thêm `char_offset` |
+| `long_input` | Từ v0.3: câu hỏi dài hơn giới hạn của API (doc-39) |
 
 `expect`: mọi khoá đều tuỳ chọn. Một bài đạt khi **mọi** kiểm tra áp dụng cho nó đều đạt.
 
@@ -102,7 +105,8 @@ Regex so khớp không phân biệt hoa thường; cả hai vế được đưa 
 ## Server Discord giả (`dataset.json` → `guild`)
 
 18 tin, 4 thành viên (Lan 1001, Minh 1002, Hùng 1003, Trang 1004) và bot (1999), từ 12/10 đến
-20/10/2026. Tìm kiếm mô phỏng `DiscordHistoryService`: so theo từ tiếng Việt (cùng bộ tách từ), tin
+20/10/2026. Từ v0.3 có thêm kênh 60: 12 tin (7101–7112) ngày 1–2/10, cũ hơn mọi tin khác, không tin nào
+của Lan, cho bài hist-11. Tìm kiếm mô phỏng `DiscordHistoryService`: so theo từ tiếng Việt (cùng bộ tách từ), tin
 nào khớp nhiều từ hơn thì lên trước. Không có truy vấn thì trả N tin mới nhất theo thứ tự thời gian.
 Tham số `days` tính lùi từ `guild.now`, không tính từ đồng hồ máy, để một bài mang cùng một nghĩa ở
 mọi thời điểm.
@@ -196,8 +200,10 @@ xem câu trả lời. Vì vậy theo quy tắc ở trên, v0.2 phải đo lại 
 | 27/10 | `NO_ACCESS_PATTERN` (hist-08..10), `GRADER_VERSION` → v0.2 | Nhận "yêu cầu phải đang trong ngữ cảnh/kênh/server"; câu hỏi lại "server nào?" vẫn trượt | Chấm tay: hist-09 ở 0.4 nói đúng ý nhưng mẫu không nhận |
 
 **agent-eval-v0.3** (ticket 20). Các sửa dưới đây đến từ việc đọc câu trả lời của ticket 10 và 16, tức là
-**sau** khi đã xem câu trả lời. Vì vậy v0.3 đo lại từ đầu. Bài đọc dài sẽ thêm khi có giao diện công cụ
-đọc theo handle (#1 của ticket 20).
+**sau** khi đã xem câu trả lời. Vì vậy v0.3 đo lại từ đầu. Bài đọc dài viết theo giao diện công cụ #1
+của Nhân viên 1 (27/10), nhưng tiêu chí của chúng không đòi gọi công cụ đọc nào và không ghi `args`: lựa
+chọn còn chờ chủ dự án (bí danh H, số trang P…) không đổi bộ bài, nên mốc hiện tại và mốc sau #1 chấm
+trên cùng một hash.
 
 | Ngày | Bài | Thay đổi | Vì sao |
 |---|---|---|---|
@@ -210,6 +216,29 @@ xem câu trả lời. Vì vậy theo quy tắc ở trên, v0.2 phải đo lại 
 Runner (27/10): bài có `input` dài hơn giới hạn của API (`max_length` của `ChatRequest.message` cho web, của
 `DiscordTurnEnqueueRequest.message` cho Discord, đọc từ schema) bị từ chối trước khi agent chạy, ghi lỗi
 `INPUT_TOO_LONG` và trượt mục `completed`, giống hệt API trả 422. Manifest ghi `input_max_chars`.
+
+Bài đọc dài (thêm 27/10, **trước** mọi lần chạy có chúng):
+
+| Bài | Loại | Kiểm gì |
+|---|---|---|
+| doc-33, 34, 35, 37 | L-a | Đáp án là hai dữ kiện trong một đoạn mà truy xuất trả về, sau ký tự 400 |
+| doc-36 | L-a, trải hai đoạn | Hai dữ kiện ở đoạn 8 và đoạn 9, cả hai sau ký tự 400 |
+| doc-38 | Đối chứng | Đáp án trong 400 ký tự đầu; `max_tool_calls: 1` bắt việc đọc thừa |
+| doc-39 | Đoạn dán dài | 10 164 ký tự, vượt giới hạn 10 000 của API; nội dung hư cấu, không có trong corpus |
+| hist-11 | Tin quanh một tin | Tìm theo từ khoá thấy tin 7103; đáp án ở tin 7102 ngay trước nó |
+
+- Dữ kiện được chọn bằng code: regex đáp án không khớp 400 ký tự đầu của **bất kỳ** đoạn nào trong 27
+  đoạn của corpus, và mỗi bài ghép hai dữ kiện để không đoán bừa được.
+- Truy xuất ghi ngày 28/10 lúc 00:00 (API lab, commit `745810b`, contextual và reranker bật): 5/5 bài L-a,
+  đoạn có đáp án luôn ở hạng 1; đối chứng thấy đáp án ngay trong 400 ký tự đầu.
+- **Chưa có bài L-b** (đáp án ở đoạn kề mà truy xuất không trả về). Với mọi câu hỏi tự nhiên, 5 đoạn trả
+  về trên một tài liệu 10 đoạn đã chứa luôn đoạn có đáp án. Muốn có L-b cần một tài liệu dài hơn.
+- Kênh 60 được kiểm ba điều trước khi thêm. (1) Câu hỏi và tin đáp án có 0 từ chung. (2) Tin đáp án nằm
+  ngoài 25 tin mới nhất. (3) Chạy lại 102 lệnh `search_history` của các bài Discord đã lưu trong `kept/`:
+  96 lệnh ra kết quả như cũ, gồm mọi lệnh tìm theo từ khoá. 6 lệnh khác đều là "tin mới nhất" với limit 25,
+  nay thấy thêm tin của kênh 60; các tin này không thuộc Lan, nên không đổi đáp án đúng của bài cũ nào.
+- `search_history` sau #1 sẽ trả thêm `message_id`, nên câu chữ kết quả của mọi bài hist đổi; so trước/sau
+  #1 phải đọc theo quy tắc "chỉ chắc tới chỗ khác đầu tiên".
 
 Không đổi: hist-03 vẫn cấm `search_documents`. Lý do ở hist-07 cũng áp dụng được cho nó, nhưng điều phối
 chưa giao.

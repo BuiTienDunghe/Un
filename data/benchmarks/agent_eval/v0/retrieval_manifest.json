@@ -1,6 +1,6 @@
 {
-  "recorded_at": "2026-10-27T11:43:56.732046+00:00",
-  "commit": "6896cf13e747ab23c46bc64429ed95392812f78f",
+  "recorded_at": "2026-10-27T17:00:43.203995+00:00",
+  "commit": "745810b6bb94ab071ef63f52c5be6e7b749057cd",
   "api": "http://127.0.0.1:8100",
   "top_k_requested": 8,
   "max_context_chunks": 5,
@@ -21,89 +21,163 @@
     "reranker": null
   },
   "tasks": {
-    "doc-21": {
+    "doc-33": {
       "status": "recorded",
       "chunks": 5,
-      "latency_ms": 528,
-      "answer_in_chunks": true,
+      "latency_ms": 559,
+      "answer_in_chunks": null,
+      "reading": "L-a",
       "source_in_chunks": true
     },
-    "doc-22": {
+    "doc-34": {
       "status": "recorded",
       "chunks": 5,
-      "latency_ms": 350,
-      "answer_in_chunks": true,
+      "latency_ms": 335,
+      "answer_in_chunks": null,
+      "reading": "L-a",
       "source_in_chunks": true
     },
-    "doc-23": {
+    "doc-35": {
       "status": "recorded",
       "chunks": 5,
-      "latency_ms": 336,
-      "answer_in_chunks": true,
+      "latency_ms": 307,
+      "answer_in_chunks": null,
+      "reading": "L-a",
       "source_in_chunks": true
     },
-    "doc-24": {
+    "doc-36": {
       "status": "recorded",
       "chunks": 5,
-      "latency_ms": 304,
-      "answer_in_chunks": true,
+      "latency_ms": 335,
+      "answer_in_chunks": null,
+      "reading": "L-a",
       "source_in_chunks": true
     },
-    "doc-25": {
+    "doc-37": {
       "status": "recorded",
       "chunks": 5,
-      "latency_ms": 339,
-      "answer_in_chunks": true,
+      "latency_ms": 318,
+      "answer_in_chunks": null,
+      "reading": "L-a",
       "source_in_chunks": true
     },
-    "doc-26": {
+    "doc-38": {
       "status": "recorded",
       "chunks": 5,
-      "latency_ms": 327,
-      "answer_in_chunks": true,
-      "source_in_chunks": true
-    },
-    "doc-27": {
-      "status": "recorded",
-      "chunks": 5,
-      "latency_ms": 325,
-      "answer_in_chunks": true,
-      "source_in_chunks": true
-    },
-    "doc-28": {
-      "status": "recorded",
-      "chunks": 5,
-      "latency_ms": 315,
-      "answer_in_chunks": true,
-      "source_in_chunks": true
-    },
-    "doc-29": {
-      "status": "recorded",
-      "chunks": 5,
-      "latency_ms": 333,
-      "answer_in_chunks": true,
-      "source_in_chunks": true
-    },
-    "doc-30": {
-      "status": "recorded",
-      "chunks": 5,
-      "latency_ms": 317,
-      "answer_in_chunks": true,
-      "source_in_chunks": true
-    },
-    "doc-31": {
-      "status": "recorded",
-      "chunks": 5,
-      "latency_ms": 332,
-      "answer_in_chunks": true,
-      "source_in_chunks": true
-    },
-    "doc-32": {
-      "status": "recorded",
-      "chunks": 5,
-      "latency_ms": 325,
+      "latency_ms": 326,
       "answer_in_chunks": true,
       "source_in_chunks": true
     }
-  }
+  },
+  "earlier": [
+    {
+      "recorded_at": "2026-10-27T11:43:56.732046+00:00",
+      "commit": "6896cf13e747ab23c46bc64429ed95392812f78f",
+      "api": "http://127.0.0.1:8100",
+      "top_k_requested": 8,
+      "max_context_chunks": 5,
+      "rag": {
+        "contextual_retrieval": true,
+        "reranker": true,
+        "retrieval_mode": "hybrid"
+      },
+      "models": {
+        "embedding": {
+          "provider": "ollama",
+          "name": "qwen3-embedding:0.6b",
+          "context": 32768,
+          "revision": "qwen3-embedding-0.6b-r1",
+          "normalization": "raw",
+          "dimensions": 1024
+        },
+        "reranker": null
+      },
+      "tasks": {
+        "doc-21": {
+          "status": "recorded",
+          "chunks": 5,
+          "latency_ms": 528,
+          "answer_in_chunks": true,
+          "source_in_chunks": true
+        },
+        "doc-22": {
+          "status": "recorded",
+          "chunks": 5,
+          "latency_ms": 350,
+          "answer_in_chunks": true,
+          "source_in_chunks": true
+        },
+        "doc-23": {
+          "status": "recorded",
+          "chunks": 5,
+          "latency_ms": 336,
+          "answer_in_chunks": true,
+          "source_in_chunks": true
+        },
+        "doc-24": {
+          "status": "recorded",
+          "chunks": 5,
+          "latency_ms": 304,
+          "answer_in_chunks": true,
+          "source_in_chunks": true
+        },
+        "doc-25": {
+          "status": "recorded",
+          "chunks": 5,
+          "latency_ms": 339,
+          "answer_in_chunks": true,
+          "source_in_chunks": true
+        },
+        "doc-26": {
+          "status": "recorded",
+          "chunks": 5,
+          "latency_ms": 327,
+          "answer_in_chunks": true,
+          "source_in_chunks": true
+        },
+        "doc-27": {
+          "status": "recorded",
+          "chunks": 5,
+          "latency_ms": 325,
+          "answer_in_chunks": true,
+          "source_in_chunks": true
+        },
+        "doc-28": {
+          "status": "recorded",
+          "chunks": 5,
+          "latency_ms": 315,
+          "answer_in_chunks": true,
+          "source_in_chunks": true
+        },
+        "doc-29": {
+          "status": "recorded",
+          "chunks": 5,
+          "latency_ms": 333,
+          "answer_in_chunks": true,
+          "source_in_chunks": true
+        },
+        "doc-30": {
+          "status": "recorded",
+          "chunks": 5,
+          "latency_ms": 317,
+          "answer_in_chunks": true,
+          "source_in_chunks": true
+        },
+        "doc-31": {
+          "status": "recorded",
+          "chunks": 5,
+          "latency_ms": 332,
+          "answer_in_chunks": true,
+          "source_in_chunks": true
+        },
+        "doc-32": {
+          "status": "recorded",
+          "chunks": 5,
+          "latency_ms": 325,
+          "answer_in_chunks": true,
+          "source_in_chunks": true
+        }
+      }
+    }
+  ]
 }
