@@ -1,6 +1,6 @@
 # 18 — `test_debt_t1_t2_t3` tự kẹt (deadlock) lúc dọn dẹp
 
-Status: chờ duyệt — Nhân viên của Ún 1, nhánh `wip/18-flaky-debt-teardown`
+Status: đã gộp vào main (27/10 23:10), fable 5.1 duyệt; chạy lại 5/5 xanh trên main
 Type: task
 Blocked by: —
 

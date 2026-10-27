@@ -97,7 +97,7 @@ ticket mới, chờ các ticket đang chạy xong, rồi báo chủ dự án.
 | 15 | Ghi phiên bản runtime embedding, nhúng lại sau khi nâng Ollama | — | — | để sau M3 |
 | 16 | Kiểm soát harness: ngân sách cả lượt, lỗi có mã, trace bền (M4 cách B) | 10 gộp | Nhân viên 1 | **đã gộp** commit 1–4; còn bước 5 (Agent Eval) |
 | 17 | forget_member xoá cả trích đoạn thành viên trong agent_traces | 16 gộp | Nhân viên 1 | đã giao (sau 18) |
-| 18 | test_debt_t1_t2_t3 tự deadlock lúc teardown | — | Nhân viên 1 | đã giao |
+| 18 | test_debt_t1_t2_t3 tự deadlock lúc teardown | — | Nhân viên 1 | **đã gộp** |
 
 ## Mốc so sánh của bộ test
 
