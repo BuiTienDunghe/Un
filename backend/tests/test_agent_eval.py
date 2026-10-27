@@ -325,11 +325,58 @@ def test_grader_mentions_match_across_unicode_forms_and_case():
 
 
 def test_grader_citation_needs_the_file_and_the_page():
-    expect = {"must_cite": [{"file": "quy[_ ]che[_ ]nghi[_ ]phep[_ ]2026", "page": 3}]}
+    expect = {"must_cite": [{"file": "quy_che_nghi_phep_2026.pdf", "page": 3}]}
     assert grade(expect, steps_for(), "12 ngày (quy_che_nghi_phep_2026.pdf, trang 3).", SCHEMAS)["passed"] is True
     assert grade(expect, steps_for(), "12 ngày (quy_che_nghi_phep_2026.pdf, tr. 3).", SCHEMAS)["passed"] is True
     assert grade(expect, steps_for(), "12 ngày (quy_che_nghi_phep_2026.pdf, trang 13).", SCHEMAS)["passed"] is False
     assert grade(expect, steps_for(), "12 ngày, theo quy chế, trang 3.", SCHEMAS)["passed"] is False
+
+
+def test_a_retyped_title_cites_the_file_but_only_the_exact_name_counts_as_verbatim():
+    # B8 (27/10): accent- and punctuation-blind name, page still required;
+    # the verbatim count rides beside the verdict and never changes it.
+    expect = {"must_cite": [{"file": "quy_che_nghi_phep_2026.pdf", "page": 3}]}
+    retyped = grade(expect, steps_for(), "Theo Quy chế nghỉ phép 2026 (trang 3), bạn có 12 ngày.", SCHEMAS)
+    exact = grade(expect, steps_for(), "Theo quy_che_nghi_phep_2026.pdf, trang 3: 12 ngày.", SCHEMAS)
+    no_page = grade(expect, steps_for(), "Theo Quy chế nghỉ phép 2026, bạn có 12 ngày.", SCHEMAS)
+    other_year = grade(expect, steps_for(), "Theo Quy chế nghỉ phép 2025 (trang 3).", SCHEMAS)
+
+    assert retyped["passed"] is True and retyped["checks"][-1]["verbatim"] is False
+    assert exact["passed"] is True and exact["checks"][-1]["verbatim"] is True
+    assert no_page["passed"] is False and other_year["passed"] is False
+
+    results = [
+        {"task_id": task_id, "category": "documents", "passed": graded["passed"], "grade": graded}
+        for task_id, graded in (("a", retyped), ("b", exact), ("c", no_page))
+    ]
+    summary = summarize(results)
+    assert summary["citation_verbatim"] == {"verbatim": 1, "of_tasks_with_citation": 3}
+    assert summary["overall"]["passed"] == 2, "verbatim is reference only: the retyped title still passes"
+
+
+def test_doc_19_accepts_a_transparent_answer_and_fails_a_borrowed_budget():
+    # B9 (27/10): a distractor number is wrong only in the same sentence as
+    # "ngân sách", and some sentence must say the file/budget is missing.
+    expect = next(t for t in load_dataset(DATASET_DIR).tasks if t["id"] == "doc-19")["expect"]
+    steps = steps_for(("search_documents", {"query": "ngân sách quảng cáo 2027"}))
+    transparent = "Mình không tìm thấy tệp ke_hoach_marketing_2027.pdf. Kết quả tìm được chỉ là báo cáo tài chính Q3 (doanh thu 4,2 tỷ đồng)."
+    borrowed = "Không có tệp riêng, nhưng ngân sách quảng cáo năm 2027 là 1,1 tỷ đồng."
+    silent = "Kết quả tìm được là báo cáo tài chính Q3 với doanh thu 4,2 tỷ đồng."
+    assert grade(expect, steps, transparent, SCHEMAS)["passed"] is True
+    assert grade(expect, steps, borrowed, SCHEMAS)["passed"] is False
+    assert grade(expect, steps, silent, SCHEMAS)["passed"] is False, "must say the marketing file/budget is missing"
+
+
+def test_history_limit_range_follows_the_mode():
+    # B11 (27/10): keyword search 1-10, latest-N (no query) 1-25, as the tool description says.
+    def valid(arguments):
+        return checks(grade({}, steps_for(("search_history", arguments)), "ok", SCHEMAS))["args_valid"]
+
+    assert valid({"query": "deadline", "limit": 10}) is True
+    assert valid({"query": "deadline", "limit": 15}) is False
+    assert valid({"limit": 25}) is True
+    assert valid({"query": "", "limit": 20}) is True
+    assert valid({"limit": 30}) is False
 
 
 @pytest.mark.parametrize("answer", [

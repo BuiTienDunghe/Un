@@ -44,7 +44,14 @@ NO_ACCESS_PATTERN = (
 # Ranges the tool descriptions state in prose (agent_service.AGENT_TOOLS); the
 # agent clamps out-of-range values, so asking for them is a model error that
 # would otherwise never show.
-_INTEGER_RANGES = {"top_k": (1, 8), "limit": (1, 25), "days": (1, 3650)}
+_INTEGER_RANGES = {"top_k": (1, 8), "days": (1, 3650)}
+
+
+def _integer_range(name: str, key: str, arguments: dict[str, Any]) -> tuple[int, int] | None:
+    if name == "search_history" and key == "limit":
+        # Two modes, two stated ranges: keyword search 1-10, latest-N (no query) 1-25.
+        return (1, 10) if str(arguments.get("query") or "").strip() else (1, 25)
+    return _INTEGER_RANGES.get(key)
 
 
 def _nfc(text: object) -> str:
@@ -55,6 +62,15 @@ def _nfc(text: object) -> str:
 
 def _matches(pattern: str, text: str) -> bool:
     return re.search(_nfc(pattern), _nfc(text), re.IGNORECASE) is not None
+
+
+def _fold(text: object) -> str:
+    """Accent-, case- and punctuation-blind words, padded for whole-word
+    containment: "Quy chế nghỉ phép 2026" names the same file as
+    quy_che_nghi_phep_2026.pdf (decision B8, 27/10)."""
+    decomposed = unicodedata.normalize("NFD", str(text or "")).replace("đ", "d").replace("Đ", "D")
+    stripped = "".join(char for char in decomposed if not unicodedata.combining(char))
+    return " " + re.sub(r"[^0-9a-z]+", " ", stripped.casefold()).strip() + " "
 
 
 def tool_calls(steps: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -87,8 +103,8 @@ def argument_problems(name: str, arguments: object, schemas: dict[str, dict[str,
         elif expected == "integer":
             if isinstance(value, bool) or not isinstance(value, int):
                 problems.append(f"{name}: {key} phải là số nguyên, nhận {value!r}")
-            elif key in _INTEGER_RANGES:
-                low, high = _INTEGER_RANGES[key]
+            elif (bounds := _integer_range(name, key, arguments)) is not None:
+                low, high = bounds
                 if not low <= value <= high:
                     problems.append(f"{name}: {key}={value} ngoài khoảng {low}-{high}")
     if name == "search_documents" and isinstance(arguments.get("query"), str) and not arguments["query"].strip():
@@ -122,7 +138,7 @@ def grade(
     names, or ["*"] for "no tool at all"), args ({tool: {arg: constraint}},
     satisfied when ANY call to that tool meets all of them), max_tool_calls,
     must_mention / must_not_mention (regex lists over the final answer),
-    must_cite ([{file: regex, page: int | null}]), must_refuse, refusal_pattern,
+    must_cite ([{file: the file name, page: int | null}]), must_refuse, refusal_pattern,
     must_say_not_found, must_say_no_access.
     """
     calls = tool_calls(steps)
@@ -173,14 +189,21 @@ def grade(
         add("must_not_mention", not present, f"có: {present}" if present else "")
 
     # The agent guide asks for file name AND page whenever a document is used.
+    # The name is compared accent- and punctuation-blind (B8); whether every
+    # name also appears VERBATIM is kept beside the verdict, never in it.
     cites = expect.get("must_cite") or []
     if cites:
-        missing_cites = [
-            cite for cite in cites
-            if not _matches(cite["file"], text)
-            or (cite.get("page") is not None and not _matches(rf"(trang|tr\.|page|p\.)\s*{int(cite['page'])}\b", text))
-        ]
+        missing_cites = []
+        verbatim = True
+        for cite in cites:
+            stem = str(cite["file"]).rsplit(".", 1)[0]
+            named = _fold(stem) in _fold(text)
+            paged = cite.get("page") is None or _matches(rf"(trang|tr\.|page|p\.)\s*{int(cite['page'])}\b", text)
+            verbatim = verbatim and stem.casefold() in _nfc(text).casefold()
+            if not (named and paged):
+                missing_cites.append(cite)
         add("citation", not missing_cites, f"thiếu: {missing_cites}" if missing_cites else "")
+        checks[-1]["verbatim"] = verbatim
 
     if expect.get("must_refuse"):
         pattern = expect.get("refusal_pattern") or REFUSAL_PATTERN
@@ -204,15 +227,21 @@ def summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
 
     by_category: dict[str, list[bool]] = defaultdict(list)
     by_check: dict[str, list[bool]] = defaultdict(list)
+    verbatim: list[bool] = []
     for result in results:
         by_category[result["category"]].append(bool(result["passed"]))
         for check in result["grade"]["checks"]:
             # args_expected:<tool> rolls up into one row; the tool is in the detail.
             by_check[check["check"].split(":", 1)[0]].append(bool(check["passed"]))
+            if "verbatim" in check:
+                verbatim.append(bool(check["verbatim"]))
     return {
         "overall": rate(sum(bool(r["passed"]) for r in results), len(results)),
         "errors": sum(1 for r in results if r.get("error")),
         "by_category": {name: rate(sum(v), len(v)) for name, v in sorted(by_category.items())},
         "by_check": {name: rate(sum(v), len(v)) for name, v in sorted(by_check.items())},
+        # Reference only, never part of `passed`: how many citing tasks wrote
+        # every file name exactly as stored (B8 accepts a re-typed title).
+        "citation_verbatim": {"verbatim": sum(verbatim), "of_tasks_with_citation": len(verbatim)},
         "failed_tasks": [r["task_id"] for r in results if not r["passed"]],
     }

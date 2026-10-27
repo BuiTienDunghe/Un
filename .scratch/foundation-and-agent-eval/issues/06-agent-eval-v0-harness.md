@@ -1,6 +1,6 @@
 # 06 — Agent Eval v0: khung chạy và bộ bài (M2)
 
-Status: khung chạy + bộ bài nháp xong trên `wip/06-agent-eval-v0`; chờ fable 5.1 duyệt bộ bài
+Status: khung chạy + bộ bài xong trên `wip/06-agent-eval-v0`; nhóm A + B đã sửa, chờ fable 5.1 soát diff cuối rồi opus gộp
 Type: task
 Blocked by: —
 
@@ -129,3 +129,31 @@ test của nó.
   (test_agent_eval + test_model_router). Không chạy test dùng Postgres, vì opus đang chạy bộ đầy đủ.
 - Dataset sha256 sau khi sửa: `7b0f119b…`; `version` vẫn là `agent-eval-v0`, có nâng hay không là
   điểm B10. Chấm lại offline 3 câu trả lời chạy thử: vẫn 3/3.
+
+**27/10 — nhóm B, theo quyết định của opus 5.5.**
+
+- B8 (a): `must_cite` giờ ghi tên tệp thật. Bộ chấm so tên sau khi bỏ dấu (NFD, bỏ dấu kết hợp,
+  đ→d), bỏ hoa thường và bỏ dấu câu. Số trang vẫn bắt buộc. `summary.json` → `citation_verbatim`
+  (`verbatim` / `of_tasks_with_citation`) đếm số bài viết nguyên văn tên tệp; con số này chỉ để tham
+  khảo, không tính vào `passed`. Test: `test_a_retyped_title_cites_the_file_but_only_the_exact_name_counts_as_verbatim`.
+  Đính chính: có **15** bài dùng `must_cite`, không phải 14 như đã báo trước đó.
+- B9 (a) kèm điều kiện: số gây nhiễu chỉ sai khi đứng cùng câu với "ngân sách". Phải có một câu nói
+  không thấy tệp marketing hoặc ngân sách. Ranh giới câu là `.`, `;` hoặc xuống dòng, trừ phần đuôi
+  `.pdf`. Chỗ còn hở:
+  - Đạt oan: câu trả lời vừa thừa nhận không thấy tệp, vừa gán số mà không dùng chữ "ngân sách"
+    trong cùng câu.
+  - Trượt oan: câu trả lời minh bạch nhưng nêu số Q3 ngay trong câu có chữ "ngân sách" (ví dụ
+    "không thấy ngân sách quảng cáo, chỉ có doanh thu 4,2 tỷ").
+  - Test: `test_doc_19_accepts_a_transparent_answer_and_fails_a_borrowed_budget`.
+- B10 (b): `version` giữ `agent-eval-v0` tới khi gộp. README có mục "Lịch sử tiêu chí", ghi mọi
+  thay đổi ngày 27/10 và ba quy tắc:
+  - Từ khi gộp, mọi lần đổi tiêu chí đều nâng version.
+  - Chỉ trích dẫn lần chạy có cây sạch và sha256 khớp.
+  - Đổi tiêu chí thì chạy lại model, không chấm lại offline.
+  
+  Artifact `smoke-20261027-t0-seed42` không được trích dẫn. **Ticket 07 phải chạy lại**, không chấm
+  lại offline.
+- B11 (a): `search_history.limit` có query thì 1–10, bỏ trống query thì 1–25. Test:
+  `test_history_limit_range_follows_the_mode`.
+- Test: 47 passed (test_agent_eval + test_model_router). Không chạy test dùng Postgres. Dataset
+  sha256 `cfb724b2…`.
