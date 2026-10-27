@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from dataclasses import dataclass
 from time import monotonic, perf_counter
 from typing import Any, Protocol
 
@@ -70,48 +71,46 @@ AGENT_GUIDE = (
 # clipped message as if it were the whole of it.
 HISTORY_MESSAGE_MAX_CHARS = 800
 
-AGENT_TOOLS: list[dict[str, Any]] = [
-    {
-        "type": "function",
-        "function": {
-            "name": "search_documents",
-            "description": "Tìm các đoạn liên quan trong tài liệu đã index (PDF, DOCX, ...). Trả về tên tệp, trang và trích đoạn.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string", "description": "Câu truy vấn, viết thành câu độc lập đủ ngữ cảnh"},
-                    "top_k": {"type": "integer", "description": "Số đoạn muốn lấy (1-8), mặc định 4"},
-                },
-                "required": ["query"],
+SEARCH_DOCUMENTS_SCHEMA: dict[str, Any] = {
+    "type": "function",
+    "function": {
+        "name": "search_documents",
+        "description": "Tìm các đoạn liên quan trong tài liệu đã index (PDF, DOCX, ...). Trả về tên tệp, trang và trích đoạn.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Câu truy vấn, viết thành câu độc lập đủ ngữ cảnh"},
+                "top_k": {"type": "integer", "description": "Số đoạn muốn lấy (1-8), mặc định 4"},
             },
+            "required": ["query"],
         },
     },
-    {
-        "type": "function",
-        "function": {
-            "name": "search_history",
-            "description": f"Đọc lịch sử tin nhắn của server Discord hiện tại (sổ gốc). Có query: tìm theo từ khóa, xếp theo độ khớp. KHÔNG có query: trả về các tin MỚI NHẤT theo thời gian (dùng khi cần tóm tắt N tin gần đây). Trả về đúng câu chữ (mỗi tin tối đa {HISTORY_MESSAGE_MAX_CHARS} ký tự), ai nói, lúc nào và link tới tin nhắn.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string", "description": "Từ khóa cần tìm. BỎ TRỐNG để lấy các tin mới nhất theo thời gian"},
-                    "author_id": {"type": "string", "description": "Chỉ lấy tin của một người nói (author_id Discord, có trong nhãn ngữ cảnh)"},
-                    "days": {"type": "integer", "description": "Chỉ tìm trong N ngày gần nhất (tùy chọn, chỉ áp dụng khi có query)"},
-                    "limit": {"type": "integer", "description": "Số tin muốn lấy (tìm kiếm: 1-10, mặc định 5; tin mới nhất: 1-25, mặc định 20)"},
-                },
-                "required": [],
+}
+SEARCH_HISTORY_SCHEMA: dict[str, Any] = {
+    "type": "function",
+    "function": {
+        "name": "search_history",
+        "description": f"Đọc lịch sử tin nhắn của server Discord hiện tại (sổ gốc). Có query: tìm theo từ khóa, xếp theo độ khớp. KHÔNG có query: trả về các tin MỚI NHẤT theo thời gian (dùng khi cần tóm tắt N tin gần đây). Trả về đúng câu chữ (mỗi tin tối đa {HISTORY_MESSAGE_MAX_CHARS} ký tự), ai nói, lúc nào và link tới tin nhắn.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Từ khóa cần tìm. BỎ TRỐNG để lấy các tin mới nhất theo thời gian"},
+                "author_id": {"type": "string", "description": "Chỉ lấy tin của một người nói (author_id Discord, có trong nhãn ngữ cảnh)"},
+                "days": {"type": "integer", "description": "Chỉ tìm trong N ngày gần nhất (tùy chọn, chỉ áp dụng khi có query)"},
+                "limit": {"type": "integer", "description": "Số tin muốn lấy (tìm kiếm: 1-10, mặc định 5; tin mới nhất: 1-25, mặc định 20)"},
             },
+            "required": [],
         },
     },
-    {
-        "type": "function",
-        "function": {
-            "name": "system_status",
-            "description": "Đọc trạng thái sức khỏe hiện tại của hệ thống (PostgreSQL, Redis, Qdrant, Ollama, các worker, backup).",
-            "parameters": {"type": "object", "properties": {}, "required": []},
-        },
+}
+SYSTEM_STATUS_SCHEMA: dict[str, Any] = {
+    "type": "function",
+    "function": {
+        "name": "system_status",
+        "description": "Đọc trạng thái sức khỏe hiện tại của hệ thống (PostgreSQL, Redis, Qdrant, Ollama, các worker, backup).",
+        "parameters": {"type": "object", "properties": {}, "required": []},
     },
-]
+}
 
 
 # A failed tool call reaches the model as {"error": <what to do next>, "code": <CODE>}:
@@ -124,7 +123,6 @@ BAD_ARGUMENTS = "BAD_ARGUMENTS"
 UNKNOWN_TOOL = "UNKNOWN_TOOL"
 TOOL_FAILED = "TOOL_FAILED"
 TOOL_TIMEOUT = "TOOL_TIMEOUT"
-TOOL_NAMES = tuple(tool["function"]["name"] for tool in AGENT_TOOLS)
 
 # The whole turn's wall clock (ticket 16). Agent Eval v0.2 measured 3.2-3.6 s median and
 # 9.2 s at worst per answer, warm or cold; the Discord bot waits 180 s for a turn. 90 s is
@@ -141,7 +139,20 @@ STOP_TURN_BUDGET = "turn_budget"
 STOP_TURN_BUDGET_EXHAUSTED = "turn_budget_exhausted"
 
 
-_DECLARED = {tool["function"]["name"]: tool["function"]["parameters"].get("properties", {}) for tool in AGENT_TOOLS}
+# What a handler returns: (text for the model, error code, exception type).
+ToolOutput = tuple[str, str | None, str | None]
+
+
+@dataclass(frozen=True)
+class AgentTool:
+    """One tool in the registry: what the model is shown and what runs when it calls it."""
+
+    schema: dict[str, Any]
+    run: Callable[["AgentService", dict[str, Any], dict[str, Any] | None], ToolOutput]
+
+    @property
+    def name(self) -> str:
+        return str(self.schema["function"]["name"])
 
 
 def arguments_shape(tool_name: object, arguments: object) -> dict[str, object] | None:
@@ -333,102 +344,108 @@ class AgentService:
         name: str,
         arguments: dict[str, Any],
         tool_context: dict[str, Any] | None = None,
-    ) -> tuple[str, str | None, str | None]:
+    ) -> ToolOutput:
         """Dispatch one call -> (text for the model, error code, exception type).
 
         Errors become data the model can react to — a broken tool must never
         kill the whole answer. The exception's class goes to the trace only: the
         model gets a sentence saying what to do next, not "TypeError: ..."."""
         try:
-            if name == "search_history":
-                # The guild comes from the CALLER (the turn service knows the
-                # session's guild), never from the model — the same isolation
-                # lesson as the ledger read (memory_design.md §3.1).
-                guild_id = str((tool_context or {}).get("guild_id") or "")
-                if self.history_service is None or not guild_id:
-                    # Asked on the web, the model used to ask back "which server?"
-                    # (Agent Eval hist-10): say plainly there is no history here.
-                    return self._error(
-                        TOOL_UNAVAILABLE_HERE,
-                        "search_history chỉ đọc được lịch sử của server Discord đang trò chuyện; "
-                        "cuộc trò chuyện này không ở Discord. Đừng hỏi người dùng server nào: nói rõ "
-                        "ở đây không xem được tin nhắn Discord, rồi trả lời phần còn lại.",
-                    )
-                query = str(arguments.get("query") or "").strip()
-                author_id = str(arguments.get("author_id") or "").strip() or None
-                if not query:
-                    # No query = the latest messages in time order — the
-                    # "tóm tắt N tin gần nhất" read over the raw ledger.
-                    try:
-                        limit = int(arguments.get("limit", 20))
-                    except (TypeError, ValueError):
-                        limit = 20
-                    hits = self.history_service.recent(
-                        guild_id=guild_id,
-                        limit=min(max(limit, 1), 25),
-                        author_id=author_id,
-                    )
-                    if not hits:
-                        return self._dump(
-                            {"result": "sổ gốc chưa có tin nhắn nào của server này"}
-                        ), None, None
-                    # Chronological, so an overflow must give up the OLDEST
-                    # messages: they are the ones a "latest N" read cares least about.
-                    return self._dump([_history_item(hit) for hit in hits], drop="first"), None, None
-                try:
-                    limit = int(arguments.get("limit", 5))
-                except (TypeError, ValueError):
-                    limit = 5
-                days = arguments.get("days")
-                try:
-                    days = min(int(days), 3650) if days is not None else None
-                except (TypeError, ValueError):
-                    days = None
-                hits = self.history_service.search(
-                    guild_id=guild_id,
-                    query=query,
-                    author_id=author_id,
-                    days=days,
-                    limit=min(max(limit, 1), 10),
-                )
-                if not hits:
-                    return self._dump(
-                        {"result": "không tìm thấy tin nhắn cũ nào khớp"}
-                    ), None, None
-                return self._dump([_history_item(hit) for hit in hits]), None, None
-            if name == "search_documents":
-                query = str(arguments.get("query") or "").strip()
-                if not query:
-                    return self._error(
-                        BAD_ARGUMENTS,
-                        "search_documents cần `query` là một câu không rỗng. Gọi lại một lần, "
-                        "viết câu hỏi thành câu độc lập.",
-                    )
-                try:
-                    top_k = int(arguments.get("top_k", 4))
-                except (TypeError, ValueError):
-                    top_k = 4
-                chunks = self.retrieval_service.retrieve(query, min(max(top_k, 1), 8), None)
-                if not chunks:
-                    return self._dump({"result": "không tìm thấy đoạn tài liệu nào phù hợp"}), None, None
-                return self._dump([
-                    {
-                        "filename": chunk.get("filename"),
-                        "page": chunk.get("page"),
-                        "excerpt": _clip(str(chunk.get("content") or ""), 400),
-                        "score": round(float(chunk.get("score") or 0.0), 3),
-                    }
-                    for chunk in chunks
-                ]), None, None
-            if name == "system_status":
-                return self._dump(self.operational_service.health()), None, None
-            return self._error(UNKNOWN_TOOL, f"Không có công cụ {name}. Chỉ có {', '.join(TOOL_NAMES)}.")
+            tool = REGISTRY.get(name) if isinstance(name, str) else None
+            if tool is None:
+                return self._error(UNKNOWN_TOOL, f"Không có công cụ {name}. Chỉ có {', '.join(TOOL_NAMES)}.")
+            return tool.run(self, arguments, tool_context)
         except Exception as error:
             return self._error(
                 TOOL_FAILED,
                 f"{name} đang lỗi nên chưa tra được. Đừng gọi lại trong lượt này; nói với người dùng là chưa tra được.",
                 type(error).__name__,
             )
+
+    def _search_history(self, arguments: dict[str, Any], tool_context: dict[str, Any] | None) -> ToolOutput:
+        # The guild comes from the CALLER (the turn service knows the
+        # session's guild), never from the model — the same isolation
+        # lesson as the ledger read (memory_design.md §3.1).
+        guild_id = str((tool_context or {}).get("guild_id") or "")
+        if self.history_service is None or not guild_id:
+            # Asked on the web, the model used to ask back "which server?"
+            # (Agent Eval hist-10): say plainly there is no history here.
+            return self._error(
+                TOOL_UNAVAILABLE_HERE,
+                "search_history chỉ đọc được lịch sử của server Discord đang trò chuyện; "
+                "cuộc trò chuyện này không ở Discord. Đừng hỏi người dùng server nào: nói rõ "
+                "ở đây không xem được tin nhắn Discord, rồi trả lời phần còn lại.",
+            )
+        query = str(arguments.get("query") or "").strip()
+        author_id = str(arguments.get("author_id") or "").strip() or None
+        if not query:
+            # No query = the latest messages in time order — the
+            # "tóm tắt N tin gần nhất" read over the raw ledger.
+            try:
+                limit = int(arguments.get("limit", 20))
+            except (TypeError, ValueError):
+                limit = 20
+            hits = self.history_service.recent(
+                guild_id=guild_id,
+                limit=min(max(limit, 1), 25),
+                author_id=author_id,
+            )
+            if not hits:
+                return self._dump(
+                    {"result": "sổ gốc chưa có tin nhắn nào của server này"}
+                ), None, None
+            # Chronological, so an overflow must give up the OLDEST
+            # messages: they are the ones a "latest N" read cares least about.
+            return self._dump([_history_item(hit) for hit in hits], drop="first"), None, None
+        try:
+            limit = int(arguments.get("limit", 5))
+        except (TypeError, ValueError):
+            limit = 5
+        days = arguments.get("days")
+        try:
+            days = min(int(days), 3650) if days is not None else None
+        except (TypeError, ValueError):
+            days = None
+        hits = self.history_service.search(
+            guild_id=guild_id,
+            query=query,
+            author_id=author_id,
+            days=days,
+            limit=min(max(limit, 1), 10),
+        )
+        if not hits:
+            return self._dump(
+                {"result": "không tìm thấy tin nhắn cũ nào khớp"}
+            ), None, None
+        return self._dump([_history_item(hit) for hit in hits]), None, None
+
+    def _search_documents(self, arguments: dict[str, Any], tool_context: dict[str, Any] | None) -> ToolOutput:
+        query = str(arguments.get("query") or "").strip()
+        if not query:
+            return self._error(
+                BAD_ARGUMENTS,
+                "search_documents cần `query` là một câu không rỗng. Gọi lại một lần, "
+                "viết câu hỏi thành câu độc lập.",
+            )
+        try:
+            top_k = int(arguments.get("top_k", 4))
+        except (TypeError, ValueError):
+            top_k = 4
+        chunks = self.retrieval_service.retrieve(query, min(max(top_k, 1), 8), None)
+        if not chunks:
+            return self._dump({"result": "không tìm thấy đoạn tài liệu nào phù hợp"}), None, None
+        return self._dump([
+            {
+                "filename": chunk.get("filename"),
+                "page": chunk.get("page"),
+                "excerpt": _clip(str(chunk.get("content") or ""), 400),
+                "score": round(float(chunk.get("score") or 0.0), 3),
+            }
+            for chunk in chunks
+        ]), None, None
+
+    def _system_status(self, arguments: dict[str, Any], tool_context: dict[str, Any] | None) -> ToolOutput:
+        return self._dump(self.operational_service.health()), None, None
 
     def _dump(self, payload: object, *, drop: str = "last") -> str:
         """JSON for the model, at most tool_result_max_chars.
@@ -464,3 +481,16 @@ class AgentService:
             if len(fitted) <= limit:
                 return fitted
         return _clip(text, limit)
+
+
+# The registry (ticket 20, option b): one entry per tool, in the order the model is shown
+# them. AGENT_TOOLS, TOOL_NAMES and _DECLARED are read off it, so a tool cannot be declared
+# without a handler, nor run without being declared.
+REGISTRY: dict[str, AgentTool] = {tool.name: tool for tool in (
+    AgentTool(SEARCH_DOCUMENTS_SCHEMA, AgentService._search_documents),
+    AgentTool(SEARCH_HISTORY_SCHEMA, AgentService._search_history),
+    AgentTool(SYSTEM_STATUS_SCHEMA, AgentService._system_status),
+)}
+AGENT_TOOLS: list[dict[str, Any]] = [tool.schema for tool in REGISTRY.values()]
+TOOL_NAMES = tuple(REGISTRY)
+_DECLARED = {tool.name: tool.schema["function"]["parameters"].get("properties", {}) for tool in REGISTRY.values()}
