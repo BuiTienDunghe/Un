@@ -64,9 +64,7 @@ class HistoryBackend(Protocol):
 
 AGENT_GUIDE = (
     "Bạn có thể dùng công cụ khi cần dữ liệu thật: `search_documents` tìm trong "
-    "tài liệu người dùng đã tải lên (mỗi đoạn chỉ hiện 400 ký tự đầu; chưa thấy "
-    "câu trả lời thì gọi `read_document` với document_id và chunk_index trong kết "
-    "quả để đọc trọn đoạn), `search_history` đọc tin nhắn cũ của "
+    "tài liệu người dùng đã tải lên, `search_history` đọc tin nhắn cũ của "
     "server (có query = tìm từ khóa; bỏ trống query = N tin mới nhất, dùng "
     "khi cần tóm tắt gần đây), `system_status` xem sức khỏe hệ "
     "thống. Chỉ gọi công cụ khi câu hỏi thật sự "
