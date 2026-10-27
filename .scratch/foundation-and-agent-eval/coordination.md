@@ -57,6 +57,17 @@ GPU tối 27/10 cho phần đo của **10**; 09 chạy lại trọn một mạch
 (`eval_stack --profile lab|heldout`) phải **dừng trước 02:45**: eval đêm 03:00 tự bật lab API ở
 cổng 8100 và cần GPU; đêm 27→28/10 là đêm nghiệm thu của ticket 01.
 
+## Đêm 28/10: chủ dự án đi ngủ (01:16)
+
+"tôi đi ngủ, bạn chủ động được chứ — không tự ý xoá những thứ quan trọng; không tự tải những thứ nặng về." Áp cho mọi
+phiên Ún tới khi chủ dự án nhắn lại:
+- **Không xoá**: dữ liệu, DB (thật lẫn test, trừ dọn dẹp mà bộ test tự làm), collection Qdrant, model Ollama, tệp
+  ngoài repo, nhánh `wip/*`, tag `eval-src/*`, thư mục `kept/`. Được xoá: worktree tích hợp tạm của opus sau khi gộp;
+  code trong phạm vi ticket (vd shim theo C6).
+- **Không tải nặng**: tổng một lần cài/tải trên 200 MB thì dừng, ghi số vào tệp, chờ sáng. Không `ollama pull`, không
+  tải model/dataset HF.
+- Không push, không đổi cấu hình máy; quyết định của chủ dự án (chỗ cắm BFCL, ticket 21…) để sáng.
+
 ## Giữ im Ollama đêm 28/10 (phiên Quản lý xin, 01:00)
 
 Từ khoảng 02:00 Quản lý đo độ trễ, cần GPU sạch tuyệt đối. Lúc 00:54 và 00:57 có hai lần glm-ocr được nạp, mỗi lần
