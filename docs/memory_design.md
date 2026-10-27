@@ -857,3 +857,10 @@ TERMINAL với mã riêng ngay trước khi tạo candidate, và khối sổ cá
 tất định `(subject_id, fact_key)` thay vì theo `updated_at`. Cùng
 `scripts.forget_member` (xoá-cứng theo người, chạy khô mặc định, xoá vector
 Qdrant trước vì id uuid5 không suy được từ hàng Postgres).
+
+Bổ sung 27/10 (ticket 17): `forget_member` xoá cả các bản bot CHÉP lời của thành viên, vốn nằm ở những
+chỗ không ghi tên ai. Đó là: câu hỏi của họ trong lịch sử hội thoại (`messages`), các đoạn trích nguyên
+văn trong câu trả lời của bot, và các mục của họ trong kết quả `search_history` của trace. Bản chép được
+viết đè tại chỗ bằng "[đã xoá theo yêu cầu]", nên phần của thành viên khác trong cùng một kết quả vẫn
+còn nguyên. **Giới hạn:** chỉ tìm được bản chép NGUYÊN VĂN (từ 20 ký tự). Một câu trả lời kể lại lời họ
+bằng chữ của bot thì không phát hiện được. Script in giới hạn này trong output (`limits`).

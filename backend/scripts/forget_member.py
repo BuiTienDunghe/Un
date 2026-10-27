@@ -17,6 +17,13 @@ half-deleting:
   6. discord_session_turns they wrote (deliveries cascade).
   7. discord_channel_messages they wrote — a plain DELETE, because the FTS
      index is per row.
+  8. the bot's COPIES of their words, which are filed under nobody (ticket 17):
+     their requests in the guild's backend conversations (`messages`, role user),
+     verbatim quotes of them in the bot's answers, and their items in the agent's
+     search_history traces. Rewritten in place, not deleted — another member's
+     lines in the same result stay. Their words are read BEFORE steps 6-7 delete
+     them, since nothing else says what to look for. Only verbatim copies are
+     found (app/stores/member_redaction.py); a paraphrase is not detectable.
 
 Dry-run by default: it prints what it would delete and touches nothing.
 """
@@ -33,17 +40,87 @@ from app.postgres.database import (
     create_session_factory,
 )
 from app.postgres.models import (
+    AgentTrace,
+    AgentTraceSummary,
     DiscordChannelMessage,
     DiscordCondensationProposition,
+    DiscordConversationSession,
     DiscordMemory,
     DiscordMemoryCandidate,
     DiscordMemorySource,
     DiscordSessionTurn,
+    Message,
 )
 from app.services.discord_condensation_service import (
     DiscordCondensationService,
 )
+from app.stores.member_redaction import (
+    LIMITS_NOTE,
+    PLACEHOLDER,
+    QuoteIndex,
+    redact_arguments,
+    redact_history_result,
+    redact_quotes,
+)
 from app.stores.qdrant_store import QdrantStore
+
+
+def _member_words(database, guild_id: str, author_id: str) -> tuple[QuoteIndex, dict[str, set[str]]]:
+    """What the member wrote in this guild — channel messages and turn requests —
+    read before steps 6-7 delete it: the only record of what their copies look like.
+    Requests come keyed by the backend conversation they were asked in."""
+    channel = list(database.scalars(select(DiscordChannelMessage.content).where(
+        DiscordChannelMessage.guild_id == guild_id, DiscordChannelMessage.author_id == author_id,
+    )))
+    requests: dict[str, set[str]] = {}
+    for request_text, conversation_id in database.execute(
+        select(DiscordSessionTurn.request_text, DiscordConversationSession.backend_conversation_id)
+        .join(DiscordConversationSession, DiscordSessionTurn.session_id == DiscordConversationSession.id)
+        .where(DiscordSessionTurn.author_id == author_id, DiscordConversationSession.guild_id == guild_id)
+    ):
+        requests.setdefault(str(conversation_id), set()).add(request_text)
+    return QuoteIndex([*channel, *(text for texts in requests.values() for text in texts)]), requests
+
+
+def _copies(database, guild_id: str, author_id: str, index: QuoteIndex, requests: dict[str, set[str]]) -> list[tuple[object, str, object]]:
+    """(row, field, replacement) for every copy of the member's words in the guild's
+    backend conversations. search_history only ever reads its own guild, so no other
+    conversation can hold one."""
+    conversations = [str(value) for value in database.scalars(
+        select(DiscordConversationSession.backend_conversation_id).where(DiscordConversationSession.guild_id == guild_id)
+    )]
+    if not conversations:
+        return []
+    changes: list[tuple[object, str, object]] = []
+    for row in database.scalars(select(Message).where(Message.conversation_id.in_(conversations))):
+        if row.role == "user" and row.content in requests.get(row.conversation_id, ()):
+            changes.append((row, "content", PLACEHOLDER))
+        elif row.role == "assistant":
+            redacted, changed = redact_quotes(row.content, index)
+            if changed:
+                changes.append((row, "content", redacted))
+    for row in database.scalars(select(AgentTrace).where(AgentTrace.conversation_id.in_(conversations))):
+        if row.kind == "tool_result" and row.tool_name == "search_history":
+            redacted, changed = redact_history_result(row.content, author_id, index)
+            field = "content"
+        elif row.kind == "tool_call":
+            redacted, changed = redact_arguments(row.arguments, author_id, index)
+            field = "arguments"
+        elif row.kind == "final":
+            redacted, changed = redact_quotes(row.content, index)
+            field = "content"
+        else:
+            continue
+        if changed:
+            changes.append((row, field, redacted))
+    return changes
+
+
+def _copy_counts(changes: list[tuple[object, str, object]]) -> dict[str, int]:
+    return {
+        "conversation_messages": sum(1 for row, _, _ in changes if isinstance(row, Message)),
+        "agent_trace_steps": sum(1 for row, _, _ in changes if isinstance(row, AgentTrace)),
+    }
 
 
 def _counts(database, guild_id: str, author_id: str) -> dict[str, int]:
@@ -94,6 +171,9 @@ def forget(guild_id: str, author_id: str, *, apply: bool) -> dict[str, object]:
 
     with factory() as database:
         planned = _counts(database, guild_id, author_id)
+        # Read now: steps 6-7 delete the only record of what their words were.
+        index, requests = _member_words(database, guild_id, author_id)
+        planned.update(_copy_counts(_copies(database, guild_id, author_id, index, requests)))
         memory_ids = list(
             database.scalars(
                 select(DiscordMemory.id).where(
@@ -108,6 +188,7 @@ def forget(guild_id: str, author_id: str, *, apply: bool) -> dict[str, object]:
         "mode": "apply" if apply else "dry-run",
         "planned": planned,
         "mirror_ids": [f"mem_dc_{value.hex}" for value in memory_ids],
+        "limits": LIMITS_NOTE,
     }
     if not apply:
         payload["side_effects"] = False
@@ -142,6 +223,24 @@ def forget(guild_id: str, author_id: str, *, apply: bool) -> dict[str, object]:
     ).forget_member(guild_id=guild_id, speaker_id=author_id)
 
     with factory.begin() as database:
+        # 8. the bot's copies of their words — in the same transaction as the deletes,
+        #    so a failure leaves neither half done. A rewritten trace step's summary
+        #    hash no longer matches what is stored: cleared (ticket 17, Q3).
+        copies = _copies(database, guild_id, author_id, index, requests)
+        for row, field, value in copies:
+            setattr(row, field, value)
+            if isinstance(row, AgentTrace) and field == "content":
+                database.execute(
+                    update(AgentTraceSummary)
+                    .where(
+                        AgentTraceSummary.conversation_id == row.conversation_id,
+                        AgentTraceSummary.message_id == row.message_id,
+                        AgentTraceSummary.step_index == row.step_index,
+                    )
+                    .values(content_sha256=None)
+                )
+        payload["copies_rewritten"] = _copy_counts(copies)
+
         # 2. sources (RESTRICT-references memories, candidates and turns)
         database.execute(
             delete(DiscordMemorySource).where(
@@ -197,6 +296,8 @@ def forget(guild_id: str, author_id: str, *, apply: bool) -> dict[str, object]:
 
     with factory() as database:
         payload["remaining"] = _counts(database, guild_id, author_id)
+        # Recounted with the words read before the deletes: a copy left behind shows here.
+        payload["remaining"].update(_copy_counts(_copies(database, guild_id, author_id, index, requests)))
     payload["vectors_removed"] = removed_vectors
     payload["stale_batches"] = stale_batches
     payload["side_effects"] = True
