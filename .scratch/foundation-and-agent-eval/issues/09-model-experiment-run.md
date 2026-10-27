@@ -1,13 +1,13 @@
 # 09 — Thí nghiệm model M3: hướng B, bắt đầu bằng nhánh 0
 
-Status: chờ — đăng ký trước đang viết (fable 5.1); chạy sau ticket 11
+Status: chờ — đăng ký trước xong (`m3-preregistration.md`, fable 5.1); chạy sau ticket 11
 Type: task
 Blocked by: 08 (xong), 11 (sàn dao động 788 câu); cần stack heldout + lab
 
 ## Quyết định của chủ dự án (27/10)
 
 Chọn **B** (`m3-target.md`): bắt đầu bằng **nhánh 0** — thêm chỉ dẫn phía truy vấn cho model
-embedding hiện tại, không tải gì, không re-index. Chủ dự án duyệt trước việc tải `multilingual-e5-large`
+embedding hiện tại, không tải gì (vẫn phải re-embed vào collection riêng theo quy tắc registry, xem `m3-preregistration.md`). Chủ dự án duyệt trước việc tải `multilingual-e5-large`
 (Hugging Face, ~1,1 GB fp16) và llama.cpp (`convert_hf_to_gguf.py`) **khi tới bước cần** — tức chỉ sau
 khi nhánh 0 có kết quả và bước đổi model thật sự được bắt đầu.
 

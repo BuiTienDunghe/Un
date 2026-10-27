@@ -109,6 +109,11 @@ trượt ở lần index sau, không cần `rebuild_qdrant`. Chưa kiểm: ghi v
 collection — `model_registry --check` chấp nhận cách nào. Chi phí: vài phút lab + 4 lần 788 câu. Là
 đối chứng của B: nếu chỉ dẫn lấy được phần lớn lợi ích thì đổi model kém hấp dẫn.
 
+**Sửa 27/10 (fable 5.1, khi viết đăng ký trước):** "không cần re-index" đúng về vector nhưng **trái quy
+tắc registry** — `docs/model_registry.md:48` buộc mọi đổi tiền tố là phiên bản mới + `collection_suffix`
+mới + re-embed; sửa `embedding-v0` tại chỗ làm đỏ `test_model_registry.py:178`. Đăng ký trước theo
+quy tắc: phiên bản `embedding-v0-qi`, suffix `qi`, re-embed vào collection riêng. Xem `m3-preregistration.md`.
+
 | Ưu | Nhược |
 |---|---|
 | Rẻ nhất có kết quả hai chiều trên hai bộ đo độc lập | **Không ra model tự train** — không bù khoảng trống CV |

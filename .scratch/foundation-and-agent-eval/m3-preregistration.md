@@ -21,7 +21,8 @@ dù thấy khác ở tầng vector. Cả hai kết quả đều được ghi.
 | Tiền tố chỉ phía truy vấn không đổi vector passage | `model_router.py:191` gắn `config[f"{side}_prefix"]`; đường truy vấn gọi `router.embed(query, side="query")` (`postgres_retrieval_service.py:41`) không qua cache; cache passage đọc `config_fingerprint` (`postgres_document_service.py:559-581`) |
 | Registry **bắt buộc** phiên bản mới + `collection_suffix` mới cho mọi đổi tiền tố, kể cả chỉ phía truy vấn | `docs/model_registry.md:48`; hai phiên bản không được chung collection (`model_registry.py:474-478`). `m3-target.md` viết "không cần rebuild" — đúng về vector, **sai về quy tắc**; theo quy tắc |
 | Sửa `embedding-v0.config` tại chỗ sẽ làm đỏ test | `test_model_registry.py:178` so `flat_models()` với một literal của models.yaml cũ |
-| Bản ghi ứng viên dưới đây qua `--check` | chạy với `--registry <bản sao trong scratchpad>`: 0 lỗi, 4 cảnh báo (cùng 4 cảnh báo của main) |
+| Bản ghi ứng viên dưới đây qua `--check` và `--show` | `--check --registry <bản sao trong scratchpad>` với **đúng chuỗi tiền tố dưới đây**: 0 lỗi, 4 cảnh báo (cùng 4 cảnh báo của main). `--show --no-probe` với `MODEL_VERSION_EMBEDDING=embedding-v0-qi`: `requested`/`loaded` = `embedding-v0-qi`, `source: env`, collection `documents_qi` / `memories_qi` |
+| Cổng 82 câu không từ chối một phiên bản embedding khác | `evaluate_rag.py:188-199`: baseline hiện tại không có `versions` → in WARNING "NOT version-guarded", chấm theo số và theo từng câu. **Nếu** ai ghi lại baseline có stamp trước khi 09 chạy, nhánh (iii) sẽ bị từ chối ("Baseline embedding version embedding-v0 != current embedding-v0-qi") — khi đó chạy không `--baseline` và so từng câu bằng tay |
 | Cờ `RAG_CONTEXTUAL_RETRIEVAL_ENABLED` chỉ tác động lúc lập chỉ mục | `main.py:174`, `workers/tasks.py:86` (ChunkContextService); lúc truy vấn không đọc. Trạng thái ctx của chỉ mục heldout là thứ quyết định, không phải cờ |
 | Chế độ chỉ-dense chưa từng chạy | không có file `heldout-*dense*` trong `data/evaluation/heldout_retrieval_v1/results/` |
 | Cờ thật của `eval_stack.py` | `--profile {lab,heldout,chunkexp}`, `--start/--stop/--status`, `--reranker/--no-reranker`, `--contextual/--no-contextual`, `--mode {dense,bm25,hybrid}`, `--model-version ROLE=ID` (lặp được); profile heldout mặc định ctx OFF, reranker OFF |
@@ -71,14 +72,28 @@ Nếu ticket 11 báo chỉ mục heldout **không** ở trạng thái ctx ON →
 
 N = 788. Ngưỡng McNemar cho N này: +0,032 (= 25 câu) — `.scratch/reranker-finetune/spec.md`.
 
+**Trần của recall@5, và luật chọn thước cho nhánh (i).** Ở đường ship recall@5 đã là 0,981–0,982: chỉ còn
+~14 câu ngoài top-5, nên một ngưỡng 25 câu là **không thể đạt theo cấu trúc**. Nhánh chỉ-dense chưa có số
+nào, nên không biết trần. Vì vậy thước chính của nhánh (i) được chọn **bằng luật, sau lượt v0 chỉ-dense
+và trước lượt treatment**:
+
+| Bước | Luật |
+|---|---|
+| 1 | Tính headroom của mỗi thước trên lượt v0 chỉ-dense: recall@5 → 1 − R5; Acc@1 → R5 − Acc@1 |
+| 2 | Thước chính = thước **đầu tiên** trong thứ tự [recall@5, Acc@1] có headroom ≥ 2 × 0,032 = 0,064 |
+| 3 | Không thước nào đủ → thước chính là MRR, điều kiện 1 thành "khoảng tin cậy 95% bootstrap theo cặp của ΔMRR không chứa 0" |
+
+Thước đã chọn ghi vào Comments của 09 **trước** khi chạy lượt v0-qi. Luật này cơ học, nên chọn sau khi
+thấy số control vẫn không phải chọn sau khi thấy số treatment.
+
 ## Điều kiện dừng — cố định trước khi đo
 
 Với treatment T so với control C của **cùng nhánh**, so **từng câu**:
 
 | # | Nhánh | Điều kiện | Ngưỡng |
 |---|---|---|---|
-| 1 | (i) dense | ΔRecall@5 | ≥ max(0,032 ; 2·F5/N) |
-| 2 | (i) dense | ΔAcc@1 | ≥ −F1/N (không tụt quá sàn) |
+| 1 | (i) dense | Δ của **thước chính** (chọn theo luật trên) | ≥ max(0,032 ; 2·F5/N); nếu thước chính là MRR: CI 95% bootstrap theo cặp không chứa 0 |
+| 2 | (i) dense | thước còn lại (Acc@1 hoặc recall@5) | ≥ −F1/N (không tụt quá sàn) |
 | 3 | (i) dense | câu từ tìm thấy → mất (top-5) | ≤ F5 |
 | 4 | (ii) ship | ΔAcc@1 và ΔRecall@5 | ≥ −F1/N và ≥ −F5/N |
 | 5 | (ii) ship | câu từ tìm thấy → mất | ≤ F5 |
@@ -134,7 +149,7 @@ Vì sao như vậy, không phải cách khác:
 | **Phiên bản mới, suffix `qi`, rebuild** (chọn) | `--check` 0 lỗi (kiểm 27/10 trên bản sao); vector passage giống hệt v0 nhưng nằm ở collection riêng — tốn một lượt embed, đổi lại có đường lùi và cache không bị lẫn |
 
 Chú ý: khoá YAML `query_prefix` phải nằm **trong** `config` và dùng dấu ngoặc kép để `\n` thành xuống
-dòng thật; kiểm bằng `--show` sau khi thêm (lần kiểm 27/10 chỉ chạy `--check`, chưa đọc được đầu ra `--show`).
+dòng thật (`--check` không kiểm nội dung chuỗi; Bước 1 mới là phép kiểm).
 
 ## Tập đo theo thứ tự — lệnh chính xác
 
@@ -154,13 +169,52 @@ chạy bất cứ lệnh embed nào (tương đương "script train commit trư�
 
 **Bước 1 — tiền tố có tới model không** (bẫy 05/09: hai lần "khác nhau" mà giống hệt)
 
-Từ `backend\`, với stack chưa chạy, một đoạn Python 10 dòng: dựng `ModelRouter` hai lần — một lần
-không ghim, một lần với `MODEL_VERSION_EMBEDDING=embedding-v0-qi` trong env — gọi
-`router.embed("thủ tục cấp lại căn cước công dân", side="query")` ở cả hai và
-`router.embed(<cùng câu>, side="passage")` ở cả hai. Điều kiện đi tiếp: cosine(query_v0, query_qi) **< 0,999**
-và cosine(passage_v0, passage_qi) **= 1,0** (sai số 1e-6). Ghi hai số vào Comments. Không đạt → dừng.
+Thêm và commit `backend/scripts/probe_embedding_prefix.py` (chưa chạy; import và chữ ký lấy từ
+`rebuild_qdrant.py:33-38`, `settings.py:362-374`):
+
+```python
+"""Prove a query-side prefix reaches Ollama: query vectors differ, passage vectors do not."""
+import json, math, os, subprocess, sys
+
+TEXT = "thủ tục cấp lại căn cước công dân"
+
+
+def vectors() -> dict[str, list[float]]:
+    from app.config.settings import Settings
+    from app.llm_clients.ollama_client import OllamaClient
+    from app.services.model_router import ModelRouter
+    s = Settings()
+    resolved = s.resolve_models(allow_missing_collections=True)
+    router = ModelRouter({"ollama": OllamaClient(s.ollama_base_url, s.ollama_chat_timeout_seconds, s.ollama_health_timeout_seconds, s.ollama_retry_count)},
+                         s.load_models(), embedding_refusal=resolved.embedding_refusal())
+    return {side: router.embed(TEXT, side=side)[0] for side in ("query", "passage")}
+
+
+def cosine(a: list[float], b: list[float]) -> float:
+    return sum(x * y for x, y in zip(a, b)) / (math.sqrt(sum(x * x for x in a)) * math.sqrt(sum(y * y for y in b)))
+
+
+if __name__ == "__main__":
+    if sys.argv[1:] == ["--one"]:
+        print(json.dumps(vectors())); raise SystemExit(0)
+    env = {**os.environ, "MODEL_STARTUP_PROBES": "false"}
+    base = json.loads(subprocess.check_output([sys.executable, __file__, "--one"], env={**env, "MODEL_VERSION_EMBEDDING": ""}))
+    pinned = json.loads(subprocess.check_output([sys.executable, __file__, "--one"], env={**env, "MODEL_VERSION_EMBEDDING": sys.argv[1]}))
+    print(json.dumps({"query_cosine": cosine(base["query"], pinned["query"]), "passage_cosine": cosine(base["passage"], pinned["passage"])}))
+```
+
+```bat
+cd backend
+..\.venv\Scripts\python.exe -m scripts.probe_embedding_prefix embedding-v0-qi
+```
+
+Điều kiện đi tiếp: `query_cosine` **< 0,999** và `passage_cosine` **≥ 0,999999**. Ghi hai số vào Comments.
+Không đạt → dừng (tiền tố chưa tới model, hoặc tới cả hai phía).
 
 **Bước 2 — dựng collection `qi` cho chỉ mục heldout** (shell tạm, không đụng `.env`)
+
+Chỉ bắt đầu khi ticket 11 đã có **cả hai** file kết quả: bước này không đụng API heldout nhưng chiếm
+Ollama và Qdrant — đúng hai thứ ticket 11 đang đo p50 trên đó.
 
 ```bat
 cd backend
@@ -257,7 +311,8 @@ là candidate, thêm `notes` ghi ngày và kết quả.
 
 ## Chưa kiểm
 
-- Đầu ra `--show` với ghim `embedding-v0-qi` (lần thử 27/10 không đọc được JSON; `--check` thì xanh).
+- `probe_embedding_prefix.py` chưa chạy (Ollama đang phục vụ ticket 11); `resolve_models` với
+  `MODEL_STARTUP_PROBES=false` có cần Postgres không — nếu cần, chạy sau Bước 2 với env của Bước 2.
 - Tên trường per-query trong JSON của `eval_heldout` (đọc khi có file đầu tiên).
 - Trạng thái ctx của chỉ mục heldout — chờ ticket 11.
 - `rebuild_memories` trên DB heldout: bảng `memories` có thể rỗng; nếu script từ chối vì rỗng thì ghi lại,
