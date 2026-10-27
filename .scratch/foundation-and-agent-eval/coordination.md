@@ -151,3 +151,11 @@ nhớ "Không đưa data train/thiết kế lên GitHub").
    bot chạy kiểu nào (B1 chỉ Docker / B2 chỉ trên máy).
 
 Sau khi gộp 16 (main 001966b, DB test ở 20261027_35): backend 1205 xanh / 1 lỗi teardown / 1 skip; root 74 xanh + 1 skip. Lỗi là `test_debt_t1_t2_t3` tự deadlock (đỏ 1/3 khi chạy riêng, không ai dùng chung DB) — **đính chính** ghi chú "va chạm" lúc 18:02 ở trên; ticket 18.
+
+## Nguồn gốc của các lần đo (28/10 00:25)
+
+Gộp bằng cherry-pick làm commit mà manifest eval ghi lại biến khỏi lịch sử main. Đã kiểm mọi `commit` trong
+manifest ở `kept/` và `heldout_retrieval_v1/results/`: 7 commit không thuộc main (07 baseline `6a2c3f9` — nhánh đã
+xoá; các lần đo của ticket 10 trên `wip/10-harness`, `wip/10-1a-v2`). Đã gắn tag `eval-src/<sha>` cho cả 7 để không
+mất khi dọn nhánh. **Từ nay: nhánh nào có lần đo được trích dẫn thì gộp bằng merge commit (`--no-ff`), không
+cherry-pick** (v0.3 đã gộp như vậy).
