@@ -12,9 +12,7 @@ from app.config.settings import PROJECT_ROOT, get_settings
 from app.llm_clients.ollama_client import OllamaClient
 from app.llm_clients.gemini_client import GeminiClient
 from app.llm_clients.deepseek_client import DeepSeekClient
-from app.discord.routers import bot, condensations, memory_review
-from app.discord.routers import history as discord_history
-from app.discord.routers import sessions as discord_sessions
+from app import discord
 from app.routers import agent, auth, chat, conversations, dashboard, documents, health, memory, models, ocr, rag, research, vision
 from app.security.api_key import require_api_key_for_read
 from app.security.auth import require_admin
@@ -38,15 +36,6 @@ from app.services.postgres_retrieval_service import PostgresRetrievalService
 from app.services.job_queue_service import JobQueueService
 from app.services.operational_service import OperationalService
 from app.services.reranker_service import RerankerService
-from app.discord.bot_control_service import BotControlService
-from app.discord.condensation_service import DiscordCondensationService
-from app.discord.history_service import DiscordHistoryService
-from app.discord.session_service import DiscordSessionService
-from app.discord.memory_review_service import DiscordMemoryReviewService
-from app.discord.memory_completion_service import (
-    DiscordMemoryCompletionService,
-)
-from app.discord.turn_service import DiscordTurnService
 from app.stores.qdrant_store import QdrantStore
 from app.stores.embedding_cache_store import PostgresEmbeddingCacheStore
 from app.stores.postgres_auxiliary_store import PostgresAuxiliaryStore
@@ -122,49 +111,6 @@ async def lifespan(app: FastAPI):
     app.state.logging_service = logging_service
     app.state.memory_service = MemoryService(auxiliary_store, qdrant_store, router, logging_service)
     app.state.chat_service = ChatService(auxiliary_store, router, logging_service, settings.conversation_history_limit, app.state.memory_service)
-    app.state.discord_session_service = DiscordSessionService(postgres_sessions)
-    app.state.memory_review_service = DiscordMemoryReviewService(postgres_sessions, app.state.memory_service)
-    # Tier 3 (§7): the API only READS condensations and manages them from the
-    # dashboard — the writing (and the only Gemini call) belongs to the
-    # background worker, so no condenser client is constructed here.
-    app.state.condensation_service = DiscordCondensationService(
-        postgres_sessions,
-        None,
-        min_batch=settings.discord_condensation_min_batch,
-        max_batch=settings.discord_condensation_max_batch,
-        silence_gap_minutes=settings.discord_condensation_silence_gap_minutes,
-    )
-    app.state.discord_turn_service = DiscordTurnService(
-        postgres_sessions,
-        app.state.discord_session_service,
-        app.state.chat_service,
-        memory_completion_service=DiscordMemoryCompletionService(
-            enabled=settings.discord_memory_ingestion_enabled,
-            extractor_schema_version=(
-                settings.discord_memory_extractor_schema_version
-            ),
-            max_attempts=settings.job_max_attempts,
-        ),
-        agent_tools_enabled=settings.discord_agent_tools_enabled,
-        # "*" = every guild (the pre-allowlist behavior, opted into
-        # EXPLICITLY); anything else is a comma-separated allowlist and an
-        # empty/garbled value fails closed (no guild gets tools).
-        agent_tools_guild_allowlist=(
-            None
-            if settings.discord_agent_tools_guild_allowlist.strip() == "*"
-            else frozenset(
-                value.strip()
-                for value in settings.discord_agent_tools_guild_allowlist.split(",")
-                if value.strip()
-            )
-        ),
-        condensation_service=(
-            app.state.condensation_service
-            if settings.discord_condensation_enabled
-            else None
-        ),
-        recap_limit=settings.discord_condensation_recap_limit,
-    )
     ocr_service = OCRService(router, auxiliary_store)
     queue = (
         JobQueueService(
@@ -263,8 +209,6 @@ async def lifespan(app: FastAPI):
     # model vai trò general; hỏi paper đi qua rag_service.stream_response.
     app.state.research_service = ResearchService(postgres_sessions, app.state.document_service, ollama_base_url=settings.ollama_base_url, model_router=router, conversation_store=auxiliary_store)
     agent_config = config.get("agent", {})
-    # Job 1+2 (28/08): sổ gốc writes + guild-scoped verbatim history search.
-    app.state.discord_history_service = DiscordHistoryService(postgres_sessions)
     app.state.agent_service = AgentService(
         router,
         retrieval_service,
@@ -272,7 +216,6 @@ async def lifespan(app: FastAPI):
         max_steps=int(agent_config.get("max_steps", 3)),
         tool_result_max_chars=int(agent_config.get("tool_result_max_chars", 1200)),
         defense=injection_defense,
-        history_service=app.state.discord_history_service,
         turn_budget_seconds=float(agent_config.get("turn_budget_seconds", TURN_BUDGET_SECONDS)),
         final_reserve_seconds=float(agent_config.get("final_reserve_seconds", FINAL_RESERVE_SECONDS)),
         # read_document reads the active version's chunks exactly as the retriever indexes them.
@@ -282,8 +225,6 @@ async def lifespan(app: FastAPI):
     # ChatService is built before the retrieval stack the agent needs, so the
     # agent is handed over here instead of through the constructor.
     app.state.chat_service.agent_service = app.state.agent_service
-    # P3-2: dashboard start/stop for the compose-managed Discord bot.
-    app.state.bot_control_service = BotControlService(PROJECT_ROOT)
     # P3-1: accounts. Constructed even with auth off — /auth/config answers
     # {"enabled": false} and everything else in it 409s.
     app.state.auth_service = AuthService(
@@ -292,6 +233,8 @@ async def lifespan(app: FastAPI):
         access_minutes=settings.local_ai_access_token_minutes,
         refresh_days=settings.local_ai_refresh_token_days,
     )
+    # Last: the Discord services build on the chat, memory and agent services above.
+    discord.register_services(app, settings, postgres_sessions, project_root=PROJECT_ROOT)
     try:
         yield
     finally:
@@ -314,20 +257,16 @@ read_guard = [Depends(require_api_key_for_read)]
 # while auth is disabled, so single-user installs keep today's behavior.
 admin_guard = [*read_guard, Depends(require_admin)]
 app.include_router(agent.router, dependencies=admin_guard)
-app.include_router(bot.router, dependencies=admin_guard)
 app.include_router(chat.router, dependencies=read_guard)
 app.include_router(documents.router, dependencies=read_guard)
 app.include_router(ocr.router, dependencies=read_guard)
 app.include_router(rag.router, dependencies=read_guard)
 app.include_router(research.router, dependencies=read_guard)
 app.include_router(memory.router, dependencies=read_guard)
-app.include_router(memory_review.router, dependencies=admin_guard)
-app.include_router(condensations.router, dependencies=admin_guard)
 app.include_router(conversations.router, dependencies=read_guard)
 app.include_router(dashboard.router, dependencies=admin_guard)
-app.include_router(discord_sessions.router, dependencies=admin_guard)
-app.include_router(discord_history.router, dependencies=admin_guard)
 app.include_router(vision.router, dependencies=read_guard)
+discord.register_routes(app, admin_guard=admin_guard)
 app.mount("/ui", StaticFiles(directory=str(Path(__file__).parent / "frontend"), html=True), name="ui")
 
 
