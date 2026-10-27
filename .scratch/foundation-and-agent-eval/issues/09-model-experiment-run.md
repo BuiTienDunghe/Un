@@ -93,3 +93,44 @@ cd C:/Users/dungbt06/local-ai-core/backend && $PY -m scripts.probe_embedding_pre
 vẫn sạch sau khi chạy.
 
 `backend/scripts/passage_drift.py` (Bước 2b) commit cùng với ghi chú này, trước khi chạy.
+
+#### Bước 2 — qua (19:21–19:38)
+
+```bash
+cd $W/backend
+DB_BASE=$($PY -c "from app.config.settings import Settings; print(str(Settings().database_url).rpartition('/')[0])")   # không in ra
+DATABASE_URL="$DB_BASE/local_ai_core_drill_heldout" QDRANT_DOCUMENTS_COLLECTION=documents_drill_heldout MODEL_VERSION_EMBEDDING=embedding-v0-qi $PY -m scripts.rebuild_qdrant --dry-run
+DATABASE_URL="$DB_BASE/local_ai_core_drill_heldout" QDRANT_DOCUMENTS_COLLECTION=documents_drill_heldout MODEL_VERSION_EMBEDDING=embedding-v0-qi $PY -m scripts.rebuild_qdrant
+DATABASE_URL="$DB_BASE/local_ai_core_drill_heldout" QDRANT_DOCUMENTS_COLLECTION=documents_drill_heldout MODEL_VERSION_EMBEDDING=embedding-v0-qi $PY -m scripts.rebuild_memories
+```
+
+| Lệnh | Kết quả |
+|---|---|
+| `rebuild_qdrant --dry-run` | collection `documents_drill_heldout_qi`, 2 926 tài liệu, 3 896 mảnh |
+| `rebuild_qdrant` | embedded 3 896; `points_after` 3 896 = `active_chunks` 3 896; **17 phút 41 giây** (lần đầu đo chi phí nhúng lại chỉ mục này) |
+| `rebuild_memories` | `memories_rows` 0, embedded 0, `memories_qi` không được tạo |
+
+#### Bước 2b — DỪNG theo luật bậc (19:39)
+
+```bash
+cd $W/backend && $PY -X utf8 -m scripts.passage_drift
+```
+
+| | Giá trị |
+|---|---|
+| Điểm của qi / ghép được với v0 theo id / không ghép được | 3 896 / 3 896 / 0 (so trên giao hai tập id) |
+| cosine min · p1 · trung vị | **0,99911526** · 0,99951999 · 0,99970730 |
+| Số điểm dưới 0,999999 | 3 896 (tất cả) |
+
+Luật: min < 0,9999 → **dừng**, mở ticket dựng collection v0 nhúng mới làm control. Chưa chạy lượt đo
+nào (Bước 3–5). Không stack nào được bật, GPU đã trả.
+
+Nguyên nhân, kiểm chỉ đọc:
+- Không phải ở chỗ tiền tố: probe ở Bước 1 cho thấy hôm nay passage của v0 và của qi trùng nhau (0,9999999999999999).
+- Không phải weights: blob `qwen3-embedding:0.6b` có digest `ac6da0dfba84`, sửa lần cuối 11/07/2026, tức trước 08/09.
+- Không phải văn bản đầu vào hay đường gọi: `combined_retrieval_text` không đổi từ f88380f. Các thay đổi ở `ollama_client.py` / `model_router.py` từ đó chỉ chạm chat/OCR (`seed`, `num_predict`, lỗi dừng sớm), không chạm phần nhúng.
+- Còn lại là phần ngoài repo: Ollama (`docs/RESULTS.md:8` ghi 0.33.2 cho đầu tháng 9; bây giờ là 0.40.8) hoặc phần số học của GPU/driver. Chưa tách được hai khả năng này.
+
+Hệ quả: so qi với v0 trên chỉ mục 08/09 thì Δ gồm hai thứ cùng lúc, chỉ dẫn và việc vector tài liệu bị
+nhúng lại bằng runtime khác, nên không quy được cho chỉ dẫn. Theo luật thì phải dừng ở đây.
+`documents_drill_heldout_qi` (3 896 điểm) để nguyên trong Qdrant, không xoá.
