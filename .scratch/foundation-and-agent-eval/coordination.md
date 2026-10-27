@@ -88,7 +88,7 @@ ticket mới, chờ các ticket đang chạy xong, rồi báo chủ dự án.
 | 06 | Agent Eval v0: khung chạy + bộ bài (M2) | — | Nhân viên 3 | **đã gộp** — chưa chạy lại với model thật |
 | 07 | Agent Eval v0: ghi truy xuất thật + baseline 3 lần (M2) | 06 gộp; GPU sau 11 | Nhân viên 3 | **đã gộp** — 34/40 nóng, 29/40 t0.4 |
 | 08 | Chọn mục tiêu thí nghiệm model (M3) | — (chỉ đọc) | fable 5.1 | xong — chọn B, nhánh 0 trước |
-| 09 | Thí nghiệm B, nhánh 0 trước (M3) | 11 | Nhân viên 1 chuẩn bị, Nhân viên 2 chạy | dừng ở 2b theo luật (trôi passage); cờ collection tối nay; chạy sáng 28/10 |
+| 09 | Thí nghiệm B, nhánh 0 trước (M3) | 11 | Nhân viên 1 chuẩn bị, Nhân viên 2 chạy | **xong — âm**; B đầy đủ chờ chủ dự án duyệt tải |
 | 10 | Nâng harness theo lỗi đo được (M4) | 07 gộp | Nhân viên 3 | **xong** — 3a, v0.2, mô tả 800 đã gộp; 1a, 2b, 1a-v2 đo xong, không ship (luật đăng ký); sửa bộ chấm để v0.3 |
 | 11 | Đo dao động 788 câu held-out (tiền đề M3) | stack | Nhân viên 2 | **đã gộp** — sàn = 0 câu |
 | 12 | Dọn nhỏ sau 03 (được phép trượt) | — | Nhân viên 3 | **đã gộp** |

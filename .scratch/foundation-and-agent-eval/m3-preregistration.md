@@ -362,3 +362,12 @@ trên cùng runtime; registry và manifest eval hiện không ghi phiên bản O
 phải là bản nhúng **cùng runtime** với e5 — ghi thẳng vào phần B khi tới lúc. Nếu dư ~62 phút sáng 28/10,
 lặp control v0-mới một lần để sàn dao động thuộc đúng bộ vector đang so (không bắt buộc). Production
 cũng đang ở trạng thái "passage nhúng runtime cũ, truy vấn nhúng runtime mới" — ticket 15.
+
+## Bổ sung 3 — trước khi bắt đầu B đầy đủ (28/10 00:55, opus 5.5; theo fable 5.1)
+
+Nhánh 0 kết thúc **âm**. Cho mọi bước đo của B: lệnh `rebuild_memories` phải đặt `QDRANT_MEMORIES_COLLECTION`
+về collection của bước đo, hoặc bỏ hẳn lệnh đó (DB heldout và lab có 0 dòng `memories`). Ở nhánh 0 nó trỏ vào
+`memories` production; vô hại vì bảng 0 dòng (kiểm 28/10 00:30: production `memories` 3 điểm = 3 dòng DB thật).
+Control v0 của B phải nhúng **cùng runtime, cùng buổi** với e5 (Bổ sung 2). Năm collection đo của nhánh 0
+(`documents_drill_heldout_r2`, `_r2_qi`, `documents_lab_r2`, `_r2_qi`, `documents_drill_heldout_qi`) còn
+trong Qdrant, không phải production; chủ dự án quyết xoá hay giữ.

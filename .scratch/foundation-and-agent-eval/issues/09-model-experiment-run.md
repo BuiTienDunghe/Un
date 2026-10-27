@@ -1,7 +1,6 @@
 # 09 — Thí nghiệm model M3: hướng B, bắt đầu bằng nhánh 0
 
 Status: **xong — âm** (28/10, fable 5.1 duyệt): điều kiện 1–5 không qua, 7–8 qua. B đầy đủ (e5-large) chờ chủ dự án duyệt tải
-Status: nhánh 0 chạy xong tối 27/10 theo Bổ sung 2: **âm** (điều kiện 1–5 không qua, 7–8 qua); fable 5.1 đã duyệt 28/10, chờ opus gộp. B đầy đủ chưa bắt đầu
 Type: task
 Blocked by: 08 (xong), 11 (sàn dao động 788 câu); cần stack heldout + lab
 
@@ -357,7 +356,7 @@ khởi động: đó là probe dừng của OCR.
 
 **Nguồn tải là do điều phối** (opus 5.5 xác nhận, fable 5.1 sửa tên người chạy, 28/10): là Agent Eval chạy
 cùng Ollama. Đợt 22:31–22:39 là 1a-v2 của Nhân viên 3 (A/E/F). Đợt 22:57–23:03 là bước 5 của ticket 16 do
-Nhân viên 1 chạy: `v0.2-16-A-cold` 22:57:52–23:00:21, `v0.2-16-B-cold` 23:00:33–23:03:01. `--probe` nạp
+Nhân viên 3 chạy (điều phối giao lúc 22:48, vì Nhân viên 1 đang làm ticket 17/18; đính chính 28/10 00:55 — fable đã nhầm là Nhân viên 1): `v0.2-16-A-cold` 22:57:52–23:00:21, `v0.2-16-B-cold` 23:00:33–23:03:01. `--probe` nạp
 cả OCR. Điều phối đo thấy GPU
 rỗi lúc 22:28 nên cho chạy song song, nhưng không báo phiên đo này. Thứ hạng không bị ảnh hưởng vì đường
 tìm không gọi model sinh, và các lần lặp cho hạng trùng nhau. Điều kiện p50 vẫn qua: 1 806 ≤ 2 × 1 886 ms.
