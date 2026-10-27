@@ -66,6 +66,17 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   trong container và Settings quyết định. `test_compose_defaults.py` chặn lệch lại. Riêng tên hàng
   đợi trong `command:` vẫn có mặc định, nhưng có test bắt phải bằng mặc định của Settings.
 
+- **Kiểm soát harness của agent** (27/10, ticket 16). Một lượt agent có trần **90 s** thời gian thật
+  (`models.yaml` → `agent.turn_budget_seconds`, `final_reserve_seconds`): sắp hết giờ thì không mở vòng
+  công cụ mới mà trả lời từ những gì đã có; hết hẳn thì báo người dùng bằng một câu cố định và
+  request log ghi `AGENT_TURN_BUDGET`. Mỗi lần gọi model trong lượt chỉ chờ phần thời gian còn lại, không
+  thử lại sau hạn (trước đây một lần gọi chờ được 3×120 s). Lỗi công cụ tới model thành một câu chỉ việc
+  cần làm kèm mã (`TOOL_UNAVAILABLE_HERE`, `BAD_ARGUMENTS`, `UNKNOWN_TOOL`, `TOOL_FAILED`); tên lớp ngoại
+  lệ chỉ vào trace. Bảng mới `agent_trace_summaries` (migration `20261027_35`) giữ bản rút gọn **không
+  nội dung** của từng bước (công cụ, độ trễ, mã lỗi, token, hình dạng tham số, hash kết quả) sống lâu
+  hơn hội thoại; tham số, kết quả và câu trả lời vẫn xoá theo hội thoại. **Cần `alembic upgrade head`**
+  (launcher tự chạy); thiếu bảng thì mọi lượt agent trả 500.
+
 ### Fixed
 - **Agent không còn mất tin Discord mới nhất khi kết quả công cụ quá dài** (27/10). Trước đây kết quả
   bị cắt ở 2 400 ký tự giữa chừng: "N tin mới nhất" mất đúng các tin mới nhất (hist-05 mất 8/18 tin),

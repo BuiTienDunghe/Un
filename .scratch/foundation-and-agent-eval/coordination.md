@@ -50,6 +50,9 @@ cổng 8100 và cần GPU; đêm 27→28/10 là đêm nghiệm thu của ticket 
 
 ## Đóng băng main
 
+**Gỡ lúc 22:35** (chủ dự án hỏi lại, đo lại): lý do 2 sai — Nhân viên 1 kiểm, API boot được trên schema cũ và
+`/rag/search` không đụng bảng mới; lý do 1 yếu — diff của 16 không đụng đường truy xuất/embedding/eval_stack
+(chỉ chat/chat_tools trong ollama_client). GPU lúc đó 0% tải, 1,8/16 GB. Bản gốc:
 Từ 27/10 21:15 tới sau eval đêm 03:00 ngày 28/10: KHÔNG gộp code vào main (chỉ `.scratch`). Lý do: 09 đang
 chạy và đòi worktree trùng main (editable trỏ về main); eval đêm bật lab API bằng code của main. Ghi chú:
 lúc 21:10 đã gộp wip/10-keep (chỉ đổi mô tả công cụ trong `agent_service.py` + tài liệu) sau khi 09 bắt
@@ -92,7 +95,7 @@ ticket mới, chờ các ticket đang chạy xong, rồi báo chủ dự án.
 | 13 | Chuẩn bị đóng gói e5-large (chỉ code) | — | Nhân viên 1 | **đã gộp** |
 | 14 | Cắm model decided làm cổng trí nhớ | I/O của decided | — | để sau (ngoài kế hoạch này) |
 | 15 | Ghi phiên bản runtime embedding, nhúng lại sau khi nâng Ollama | — | — | để sau M3 |
-| 16 | Kiểm soát harness: ngân sách cả lượt, lỗi có mã, trace bền (M4 cách B) | 10 gộp | Nhân viên 1 | đang code (commit 1–4); đo GPU sáng 28/10 |
+| 16 | Kiểm soát harness: ngân sách cả lượt, lỗi có mã, trace bền (M4 cách B) | 10 gộp | Nhân viên 1 | **đã gộp** commit 1–4; còn bước 5 (Agent Eval) |
 | 17 | forget_member xoá cả trích đoạn thành viên trong agent_traces | 16 | Nhân viên 1 | chờ |
 
 ## Mốc so sánh của bộ test

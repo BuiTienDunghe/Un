@@ -1,6 +1,6 @@
 # 16 — Kiểm soát harness: ngân sách cả lượt, lỗi công cụ có mã, trace bền (M4, cách B)
 
-Status: commit 1–4 chờ duyệt (Nhân viên của Ún 1, nhánh `wip/16-harness-controls`); commit 5 (Agent Eval so mốc) cần GPU
+Status: đã gộp vào main (27/10 22:40), fable 5.1 duyệt; DB test đã nâng lên 20261027_35 (chủ dự án cho phép); còn bước 5 (Agent Eval)
 Type: task
 Blocked by: 10 (cùng đụng `backend/app/services/agent_service.py`; đổi harness giữa chừng làm bẩn phép đo của 10)
 
