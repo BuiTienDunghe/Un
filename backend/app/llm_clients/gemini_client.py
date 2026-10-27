@@ -7,12 +7,14 @@ from typing import Any
 
 import httpx
 
+from app.llm_clients.deadline import ModelCallTimeoutError, can_wait, request_timeout, spent
+
 
 class GeminiUnavailableError(Exception):
     pass
 
 
-class GeminiTimeoutError(Exception):
+class GeminiTimeoutError(ModelCallTimeoutError):
     pass
 
 
@@ -108,13 +110,17 @@ class GeminiClient:
         payload = self._build_payload(messages, temperature, max_tokens, top_p)
 
         for attempt in range(self.retry_count + 1):
+            # Ticket 16: inside an agent turn, wait at most what the turn has left.
+            timeout = request_timeout(self.chat_timeout)
+            if timeout is None:
+                raise GeminiTimeoutError("Gemini was not called: the agent turn's time budget is spent")
             try:
-                response = httpx.post(url, json=payload, headers=self._headers(), timeout=self.chat_timeout)
+                response = httpx.post(url, json=payload, headers=self._headers(), timeout=timeout)
                 if response.status_code == 401:
                     raise GeminiAuthError("Invalid Gemini API key")
                 if response.status_code == 429:
                     # Rate limited – back off before retry
-                    if attempt < self.retry_count:
+                    if attempt < self.retry_count and can_wait(2 + attempt * 3):
                         time.sleep(2 + attempt * 3)
                         continue
                 response.raise_for_status()
@@ -131,11 +137,13 @@ class GeminiClient:
             except GeminiAuthError:
                 raise
             except httpx.TimeoutException as error:
-                if attempt == self.retry_count:
+                if attempt == self.retry_count or spent():
                     raise GeminiTimeoutError("Gemini did not answer before the timeout") from error
             except httpx.HTTPError as error:
                 if attempt == self.retry_count:
                     raise GeminiUnavailableError("Cannot connect to Gemini API") from error
+            if not can_wait(1 + attempt * 2):
+                raise GeminiTimeoutError("Gemini did not answer within the agent turn's time budget")
             time.sleep(1 + attempt * 2)
         raise GeminiUnavailableError("Cannot connect to Gemini API")
 

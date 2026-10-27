@@ -7,6 +7,7 @@ from typing import Any
 
 import httpx
 
+from app.llm_clients.deadline import ModelCallTimeoutError, can_wait, request_timeout, spent
 from app.llm_clients.usage import record_usage
 
 
@@ -18,7 +19,7 @@ class OllamaModelNotLoadedError(Exception):
     pass
 
 
-class OllamaTimeoutError(Exception):
+class OllamaTimeoutError(ModelCallTimeoutError):
     pass
 
 
@@ -96,9 +97,13 @@ class OllamaClient:
         if think is not None:
             payload["think"] = think
         for attempt in range(self.retry_count + 1):
+            # Ticket 16: inside an agent turn, wait at most what the turn has left.
+            timeout = request_timeout(self.chat_timeout)
+            if timeout is None:
+                raise OllamaTimeoutError("Ollama was not called: the agent turn's time budget is spent")
             try:
                 response = httpx.post(
-                    f"{self.base_url}/api/chat", json=payload, timeout=self.chat_timeout
+                    f"{self.base_url}/api/chat", json=payload, timeout=timeout
                 )
                 if response.status_code == 404:
                     raise OllamaModelNotLoadedError(
@@ -117,11 +122,13 @@ class OllamaClient:
             except OllamaModelNotLoadedError:
                 raise
             except httpx.TimeoutException as error:
-                if attempt == self.retry_count:
+                if attempt == self.retry_count or spent():
                     raise OllamaTimeoutError("Ollama did not answer before the timeout") from error
             except httpx.HTTPError as error:
                 if attempt == self.retry_count:
                     raise OllamaUnavailableError("Cannot connect to Ollama") from error
+            if not can_wait(1 + attempt * 2):
+                raise OllamaTimeoutError("Ollama did not answer within the agent turn's time budget")
             time.sleep(1 + attempt * 2)
         raise OllamaUnavailableError("Cannot connect to Ollama")
 
@@ -152,9 +159,13 @@ class OllamaClient:
         if think is not None:
             payload["think"] = think
         for attempt in range(self.retry_count + 1):
+            # Ticket 16: inside an agent turn, wait at most what the turn has left.
+            timeout = request_timeout(self.chat_timeout)
+            if timeout is None:
+                raise OllamaTimeoutError("Ollama was not called: the agent turn's time budget is spent")
             try:
                 response = httpx.post(
-                    f"{self.base_url}/api/chat", json=payload, timeout=self.chat_timeout
+                    f"{self.base_url}/api/chat", json=payload, timeout=timeout
                 )
                 if response.status_code == 404:
                     raise OllamaModelNotLoadedError(
@@ -190,11 +201,13 @@ class OllamaClient:
             except OllamaModelNotLoadedError:
                 raise
             except httpx.TimeoutException as error:
-                if attempt == self.retry_count:
+                if attempt == self.retry_count or spent():
                     raise OllamaTimeoutError("Ollama did not answer before the timeout") from error
             except httpx.HTTPError as error:
                 if attempt == self.retry_count:
                     raise OllamaUnavailableError("Cannot connect to Ollama") from error
+            if not can_wait(1 + attempt * 2):
+                raise OllamaTimeoutError("Ollama did not answer within the agent turn's time budget")
             time.sleep(1 + attempt * 2)
         raise OllamaUnavailableError("Cannot connect to Ollama")
 
