@@ -13,7 +13,8 @@ from pathlib import Path
 import pytest
 
 from app.llm_clients.usage import record_usage
-from app.services.agent_service import AGENT_TOOLS
+from app.discord import agent_tools
+from app.services.agent_service import core_tools
 from app.services.injection_defense import InjectionDefense
 from scripts.agent_eval import (
     DATA_FILES,
@@ -29,7 +30,14 @@ from scripts.agent_eval import (
 )
 from scripts.agent_eval_grader import asks_back, grade, summarize
 
-SCHEMAS = {tool["function"]["name"]: tool["function"]["parameters"] for tool in AGENT_TOOLS}
+def _api_tools() -> list[dict]:
+    # The tool list the API offers: the core's, plus app.discord's search_history (ticket 22, C4).
+    registry = core_tools()
+    agent_tools.register(registry, None)
+    return registry.schemas()
+
+
+SCHEMAS = {tool["function"]["name"]: tool["function"]["parameters"] for tool in _api_tools()}
 GUILD = {
     "guild_id": "900000000000000001",
     "now": "2026-10-20T12:00:00+07:00",

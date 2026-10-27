@@ -1,8 +1,9 @@
 """Agent loop for chat (P2-2): plan → act → observe over existing services.
 
 The agent is not a new framework — it is one bounded loop that lets the
-general model call in-house tools (searching and reading documents, the Discord
-history, system health) through Ollama's native function-calling API, then answer. The
+general model call in-house tools through Ollama's native function-calling API, then
+answer: the core's own (searching and reading documents, system health) and any a package
+plugs into its ToolRegistry (app.discord's search over the Discord history). The
 caller persists every step as an ``agent_traces`` row, honouring the plan
 invariant that autonomous behaviour must leave an inspectable trail.
 
@@ -19,7 +20,6 @@ from typing import Any, Protocol
 
 from app.llm_clients.deadline import ModelCallTimeoutError, call_within
 from app.llm_clients.usage import consume_usage, record_usage
-from app.services.discord_history_service import history_hit_payload
 from app.services.answer_figures import grounding_summary, retry_instruction, turn_texts, unsupported_figures
 from app.services.pastes import read_paste, take_pastes
 from app.services.injection_defense import InjectionDefense
@@ -44,26 +44,6 @@ class DocumentReader(Protocol):
     def chunks_on_page(self, document_id: str, page: int, n: int) -> dict[str, object] | None: ...
 
 
-class HistoryBackend(Protocol):
-    def search(
-        self,
-        *,
-        guild_id: str,
-        query: str,
-        author_id: str | None = None,
-        days: int | None = None,
-        limit: int = 5,
-    ) -> list[object]: ...
-
-    def recent(
-        self,
-        *,
-        guild_id: str,
-        limit: int = 20,
-        author_id: str | None = None,
-    ) -> list[object]: ...
-
-
 AGENT_GUIDE = (
     "Bạn có thể dùng công cụ khi cần dữ liệu thật: `search_documents` tìm trong "
     "tài liệu người dùng đã tải lên, `search_history` đọc tin nhắn cũ của "
@@ -75,13 +55,6 @@ AGENT_GUIDE = (
     "tin nhắn cũ, nêu ai nói và lúc nào. Khi đã đủ "
     "thông tin, trả lời trọn vẹn bằng tiếng Việt."
 )
-
-# A Discord message may run to 2000 characters (4000 with Nitro). Capped the way a
-# document excerpt is capped at 400, so the whole-item truncation in _dump always
-# has an item that fits instead of falling back to cutting the JSON mid-string.
-# The search_history description states the cap, so the model does not quote a
-# clipped message as if it were the whole of it.
-HISTORY_MESSAGE_MAX_CHARS = 800
 
 # A search shows the first SEARCH_EXCERPT_CHARS of each chunk; read_document returns
 # chunks whole up to READ_CHUNK_MAX_CHARS each, READ_RESULT_MAX_CHARS in all (ticket 20
@@ -122,23 +95,6 @@ READ_DOCUMENT_SCHEMA: dict[str, Any] = {
                 "page": {"type": "integer", "description": "Tùy chọn: đọc các đoạn nằm ở trang này thay cho from_chunk (chỉ tài liệu có số trang, như PDF)"},
             },
             "required": ["document_id"],
-        },
-    },
-}
-SEARCH_HISTORY_SCHEMA: dict[str, Any] = {
-    "type": "function",
-    "function": {
-        "name": "search_history",
-        "description": f"Đọc lịch sử tin nhắn của server Discord hiện tại (sổ gốc). Có query: tìm theo từ khóa, xếp theo độ khớp. KHÔNG có query: trả về các tin MỚI NHẤT theo thời gian (dùng khi cần tóm tắt N tin gần đây). Trả về đúng câu chữ (mỗi tin tối đa {HISTORY_MESSAGE_MAX_CHARS} ký tự), ai nói, lúc nào và link tới tin nhắn.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "query": {"type": "string", "description": "Từ khóa cần tìm. BỎ TRỐNG để lấy các tin mới nhất theo thời gian"},
-                "author_id": {"type": "string", "description": "Chỉ lấy tin của một người nói (author_id Discord, có trong nhãn ngữ cảnh)"},
-                "days": {"type": "integer", "description": "Chỉ tìm trong N ngày gần nhất (tùy chọn, chỉ áp dụng khi có query)"},
-                "limit": {"type": "integer", "description": "Số tin muốn lấy (tìm kiếm: 1-10, mặc định 5; tin mới nhất: 1-25, mặc định 20)"},
-            },
-            "required": [],
         },
     },
 }
@@ -206,14 +162,47 @@ class AgentTool:
         return str(self.schema["function"]["name"])
 
 
-def arguments_shape(tool_name: object, arguments: object) -> dict[str, object] | None:
+class ToolRegistry:
+    """The tools one AgentService offers, in the order the model is shown them (ticket 22,
+    C4). The core registers its own (core_tools); a package plugs its tools in with
+    register(tool, order) — app.discord registers search_history at startup. Everything
+    read off it (the schemas sent to the model, the names, the declared keys the trace
+    shapes arguments by) is computed on each call, so a late registration is never missed."""
+
+    def __init__(self) -> None:
+        self._tools: dict[str, tuple[int, AgentTool]] = {}
+
+    def register(self, tool: AgentTool, order: int) -> None:
+        if tool.name in self._tools:
+            raise ValueError(f"tool {tool.name!r} is already registered")
+        self._tools[tool.name] = (order, tool)
+
+    def get(self, name: object) -> AgentTool | None:
+        entry = self._tools.get(name) if isinstance(name, str) else None
+        return entry[1] if entry else None
+
+    def tools(self) -> list[AgentTool]:
+        return [tool for _, tool in sorted(self._tools.values(), key=lambda entry: (entry[0], entry[1].name))]
+
+    def schemas(self) -> list[dict[str, Any]]:
+        return [tool.schema for tool in self.tools()]
+
+    def names(self) -> tuple[str, ...]:
+        return tuple(tool.name for tool in self.tools())
+
+    def declared(self) -> dict[str, dict[str, Any]]:
+        return {tool.name: tool.schema["function"]["parameters"].get("properties", {}) for tool in self.tools()}
+
+
+def arguments_shape(tool_name: object, arguments: object, declared_by_tool: dict[str, dict[str, Any]]) -> dict[str, object] | None:
     """A tool call's arguments with the content taken out, for the trace that outlives
     the conversation (ticket 16, option b): a declared string becomes "str:<length>", a
     declared integer stays a number, anything else its type name. Keys the tool does not
-    declare are only counted — a model can invent a key, and a key can carry words."""
+    declare are only counted — a model can invent a key, and a key can carry words.
+    `declared_by_tool` is the running agent's ToolRegistry.declared()."""
     if not isinstance(arguments, dict):
         return None
-    declared = _DECLARED.get(str(tool_name), {})
+    declared = declared_by_tool.get(str(tool_name), {})
     shape: dict[str, object] = {}
     undeclared = 0
     for key, value in arguments.items():
@@ -244,12 +233,6 @@ def _bounded(value: object, default: int, low: int, high: int | None = None) -> 
     return number if high is None else min(number, high)
 
 
-def _history_item(hit: object) -> dict[str, object]:
-    payload = history_hit_payload(hit)
-    payload["message"] = _clip(str(payload["message"]), HISTORY_MESSAGE_MAX_CHARS)
-    return payload
-
-
 class AgentService:
     def __init__(
         self,
@@ -259,18 +242,20 @@ class AgentService:
         max_steps: int = 3,
         tool_result_max_chars: int = 2400,
         defense: InjectionDefense | None = None,
-        history_service: HistoryBackend | None = None,
         turn_budget_seconds: float = TURN_BUDGET_SECONDS,
         final_reserve_seconds: float = FINAL_RESERVE_SECONDS,
         clock: Callable[[], float] = monotonic,
         document_reader: DocumentReader | None = None,
         read_result_max_chars: int = READ_RESULT_MAX_CHARS,
+        registry: ToolRegistry | None = None,
     ) -> None:
         self.defense = defense or InjectionDefense(enabled=False)
         self.router = router
         self.retrieval_service = retrieval_service
         self.operational_service = operational_service
-        self.history_service = history_service
+        # Its own registry unless one is handed in: a tool registered into one agent (a
+        # test's, the eval's) never shows up in another.
+        self.registry = registry if registry is not None else core_tools()
         self.document_reader = document_reader
         self.max_steps = max(1, max_steps)
         self.tool_result_max_chars = max(200, tool_result_max_chars)
@@ -333,7 +318,7 @@ class AgentService:
             started = perf_counter()
             try:
                 with call_within(left - self.final_reserve_seconds):
-                    result, model_used = self.router.chat_tools("general", working, AGENT_TOOLS)
+                    result, model_used = self.router.chat_tools("general", working, self.registry.schemas())
             except ModelCallTimeoutError:
                 # The round ran into the reserve's edge: answer from what is gathered.
                 consume_usage()
@@ -372,11 +357,11 @@ class AgentService:
             for index, call in enumerate(calls):
                 # A name the model invented can carry the user's words: the content-free
                 # trace keeps a tool's name only when the step says it is a declared one.
-                declared = call["name"] in TOOL_NAMES
+                declared = call["name"] in self.registry.names()
                 steps.append({
                     "kind": "tool_call", "tool_name": call["name"], "tool_declared": declared,
                     "arguments": call["arguments"], "content": None, "latency_ms": round_latency,
-                    "arguments_shape": arguments_shape(call["name"], call["arguments"]),
+                    "arguments_shape": arguments_shape(call["name"], call["arguments"], self.registry.declared()),
                     # One model round, however many calls it made: counted once.
                     **(last if index == 0 else {"tokens_in": None, "tokens_out": None}),
                 })
@@ -467,9 +452,9 @@ class AgentService:
         kill the whole answer. The exception's class goes to the trace only: the
         model gets a sentence saying what to do next, not "TypeError: ..."."""
         try:
-            tool = REGISTRY.get(name) if isinstance(name, str) else None
+            tool = self.registry.get(name)
             if tool is None:
-                return self._error(UNKNOWN_TOOL, f"Không có công cụ {name}. Chỉ có {', '.join(TOOL_NAMES)}.")
+                return self._error(UNKNOWN_TOOL, f"Không có công cụ {name}. Chỉ có {', '.join(self.registry.names())}.")
             return tool.run(self, arguments, tool_context)
         except Exception as error:
             return self._error(
@@ -477,63 +462,6 @@ class AgentService:
                 f"{name} đang lỗi nên chưa tra được. Đừng gọi lại trong lượt này; nói với người dùng là chưa tra được.",
                 type(error).__name__,
             )
-
-    def _search_history(self, arguments: dict[str, Any], tool_context: dict[str, Any] | None) -> ToolOutput:
-        # The guild comes from the CALLER (the turn service knows the
-        # session's guild), never from the model — the same isolation
-        # lesson as the ledger read (memory_design.md §3.1).
-        guild_id = str((tool_context or {}).get("guild_id") or "")
-        if self.history_service is None or not guild_id:
-            # Asked on the web, the model used to ask back "which server?"
-            # (Agent Eval hist-10): say plainly there is no history here.
-            return self._error(
-                TOOL_UNAVAILABLE_HERE,
-                "search_history chỉ đọc được lịch sử của server Discord đang trò chuyện; "
-                "cuộc trò chuyện này không ở Discord. Đừng hỏi người dùng server nào: nói rõ "
-                "ở đây không xem được tin nhắn Discord, rồi trả lời phần còn lại.",
-            )
-        query = str(arguments.get("query") or "").strip()
-        author_id = str(arguments.get("author_id") or "").strip() or None
-        if not query:
-            # No query = the latest messages in time order — the
-            # "tóm tắt N tin gần nhất" read over the raw ledger.
-            try:
-                limit = int(arguments.get("limit", 20))
-            except (TypeError, ValueError):
-                limit = 20
-            hits = self.history_service.recent(
-                guild_id=guild_id,
-                limit=min(max(limit, 1), 25),
-                author_id=author_id,
-            )
-            if not hits:
-                return self._dump(
-                    {"result": "sổ gốc chưa có tin nhắn nào của server này"}
-                ), None, None
-            # Chronological, so an overflow must give up the OLDEST
-            # messages: they are the ones a "latest N" read cares least about.
-            return self._dump([_history_item(hit) for hit in hits], drop="first"), None, None
-        try:
-            limit = int(arguments.get("limit", 5))
-        except (TypeError, ValueError):
-            limit = 5
-        days = arguments.get("days")
-        try:
-            days = min(int(days), 3650) if days is not None else None
-        except (TypeError, ValueError):
-            days = None
-        hits = self.history_service.search(
-            guild_id=guild_id,
-            query=query,
-            author_id=author_id,
-            days=days,
-            limit=min(max(limit, 1), 10),
-        )
-        if not hits:
-            return self._dump(
-                {"result": "không tìm thấy tin nhắn cũ nào khớp"}
-            ), None, None
-        return self._dump([_history_item(hit) for hit in hits]), None, None
 
     def _search_documents(self, arguments: dict[str, Any], tool_context: dict[str, Any] | None) -> ToolOutput:
         query = str(arguments.get("query") or "").strip()
@@ -678,15 +606,18 @@ class AgentService:
         return _clip(text, limit)
 
 
-# The registry (ticket 20, option b): one entry per tool, in the order the model is shown
-# them. AGENT_TOOLS, TOOL_NAMES and _DECLARED are read off it, so a tool cannot be declared
-# without a handler, nor run without being declared.
-REGISTRY: dict[str, AgentTool] = {tool.name: tool for tool in (
-    AgentTool(SEARCH_DOCUMENTS_SCHEMA, AgentService._search_documents),
-    AgentTool(READ_DOCUMENT_SCHEMA, AgentService._read_document),
-    AgentTool(SEARCH_HISTORY_SCHEMA, AgentService._search_history),
-    AgentTool(SYSTEM_STATUS_SCHEMA, AgentService._system_status),
-)}
-AGENT_TOOLS: list[dict[str, Any]] = [tool.schema for tool in REGISTRY.values()]
-TOOL_NAMES = tuple(REGISTRY)
-_DECLARED = {tool.name: tool.schema["function"]["parameters"].get("properties", {}) for tool in REGISTRY.values()}
+# Where the core's tools stand (ticket 22, C4). The gap at 20 is app.discord's
+# search_history (app/discord/agent_tools.py ORDER): with it registered, the model is
+# shown the same four tools in the same order as before the move.
+SEARCH_DOCUMENTS_ORDER, READ_DOCUMENT_ORDER, SYSTEM_STATUS_ORDER = 10, 15, 30
+
+
+def core_tools() -> ToolRegistry:
+    """A fresh registry holding the core's own tools (ticket 20, option b; ticket 22, C4):
+    each tool is a schema and the handler that runs it, so none can be declared without a
+    handler, nor run without being declared."""
+    registry = ToolRegistry()
+    registry.register(AgentTool(SEARCH_DOCUMENTS_SCHEMA, AgentService._search_documents), SEARCH_DOCUMENTS_ORDER)
+    registry.register(AgentTool(READ_DOCUMENT_SCHEMA, AgentService._read_document), READ_DOCUMENT_ORDER)
+    registry.register(AgentTool(SYSTEM_STATUS_SCHEMA, AgentService._system_status), SYSTEM_STATUS_ORDER)
+    return registry

@@ -7,8 +7,9 @@ for Alembic, so no table or migration moved with the code.
 main.py plugs it in at two points, because FastAPI has two: register_routes() when the
 app object is built, so the routes exist whether or not the lifespan runs (tests often
 skip it), and register_services() as the last step of the lifespan, once the chat,
-memory and agent services it builds on exist. Both import lazily: the agent still
-reaches history_service through a shim until C4, and that must not load the rest.
+memory and agent services it builds on exist. Both import lazily, so loading the
+package's name loads none of its services. register_services() also plugs the agent's
+search_history tool into the running agent's ToolRegistry (agent_tools.py, C4).
 
 Imports are always absolute (`app.discord`): the bot's `discord` library from pip is a
 different package, and a script run with cwd=backend/app would shadow it.
@@ -31,6 +32,7 @@ def register_routes(app: Any, *, admin_guard: list[Any]) -> None:
 def register_services(app: Any, settings: Any, postgres_sessions: Any, *, project_root: Any) -> None:
     """Build the Discord services onto app.state. Needs app.state.memory_service,
     chat_service and agent_service, so main.py calls it last in the lifespan."""
+    from app.discord import agent_tools
     from app.discord.bot_control_service import BotControlService
     from app.discord.condensation_service import DiscordCondensationService
     from app.discord.history_service import DiscordHistoryService
@@ -85,8 +87,8 @@ def register_services(app: Any, settings: Any, postgres_sessions: Any, *, projec
     )
     # Job 1+2 (28/08): sổ gốc writes + guild-scoped verbatim history search.
     state.discord_history_service = DiscordHistoryService(postgres_sessions)
-    # The agent's search_history tool reads this attribute on every call; until C4
-    # registers the tool from this package, the package hands the agent its backend.
-    state.agent_service.history_service = state.discord_history_service
+    # The agent's search_history tool, plugged into the running agent's registry at the
+    # place it always had in the tool list (C4): the core declares no Discord tool.
+    agent_tools.register(state.agent_service.registry, state.discord_history_service)
     # P3-2: dashboard start/stop for the compose-managed Discord bot.
     state.bot_control_service = BotControlService(project_root)

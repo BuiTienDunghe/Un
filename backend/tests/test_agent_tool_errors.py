@@ -11,6 +11,7 @@ import json
 
 import pytest
 
+from app.discord import agent_tools
 from app.services import agent_service as agent_module
 from app.services.agent_service import AgentService
 
@@ -46,7 +47,9 @@ def call(name: str, arguments: dict) -> dict:
 
 
 def agent(retrieval=None, router=None, history=None) -> AgentService:
-    return AgentService(router=router, retrieval_service=retrieval or Retrieval(), operational_service=None, history_service=history)
+    service = AgentService(router=router, retrieval_service=retrieval or Retrieval(), operational_service=None)
+    agent_tools.register(service.registry, history)  # search_history, as the API plugs it in (ticket 22, C4)
+    return service
 
 
 @pytest.mark.parametrize(

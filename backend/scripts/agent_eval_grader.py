@@ -65,7 +65,7 @@ ASK_BACK_PATTERN = (
 )
 _NEGATED_CLAUSE = re.compile(r"\b(không|chưa|chẳng|bất kỳ|bất cứ)\b", re.IGNORECASE)
 
-# Ranges the tool descriptions state in prose (agent_service.AGENT_TOOLS); the
+# Ranges the tool descriptions state in prose (the agent's ToolRegistry schemas); the
 # agent clamps out-of-range values, so asking for them is a model error that
 # would otherwise never show.
 _INTEGER_RANGES = {"top_k": (1, 8), "days": (1, 3650)}

@@ -10,8 +10,9 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime, timedelta
 
-from app.services.agent_service import AgentService
+from app.discord import agent_tools
 from app.discord.history_service import DiscordHistoryHit, history_hit_payload
+from app.services.agent_service import AgentService
 
 
 def hit(index: int, content: str | None = None) -> DiscordHistoryHit:
@@ -41,7 +42,9 @@ class Retrieval:
 
 
 def agent(history=None, limit=2400) -> AgentService:
-    return AgentService(router=None, retrieval_service=Retrieval(), operational_service=None, history_service=history, tool_result_max_chars=limit)
+    service = AgentService(router=None, retrieval_service=Retrieval(), operational_service=None, tool_result_max_chars=limit)
+    agent_tools.register(service.registry, history)  # search_history, as the API plugs it in (ticket 22, C4)
+    return service
 
 
 def test_latest_messages_keep_the_newest_and_say_how_many_older_ones_went():
@@ -109,7 +112,7 @@ def test_what_cannot_be_split_into_items_keeps_the_character_cut():
 
 def test_the_history_tool_tells_the_model_messages_are_capped():
     # Without it the model may quote a clipped message as if it were complete (review 27/10).
-    from app.services.agent_service import AGENT_TOOLS, HISTORY_MESSAGE_MAX_CHARS
+    from app.discord.agent_tools import HISTORY_MESSAGE_MAX_CHARS
 
-    history = next(tool["function"] for tool in AGENT_TOOLS if tool["function"]["name"] == "search_history")
+    history = next(tool["function"] for tool in agent().registry.schemas() if tool["function"]["name"] == "search_history")
     assert f"mỗi tin tối đa {HISTORY_MESSAGE_MAX_CHARS} ký tự" in history["description"]

@@ -16,7 +16,8 @@ from sqlalchemy import delete, func, select, text
 
 from app.postgres.database import create_postgres_engine, create_session_factory
 from app.postgres.models import AgentTrace, AgentTraceSummary
-from app.services.agent_service import arguments_shape
+from app.discord import agent_tools
+from app.services.agent_service import arguments_shape, core_tools
 
 URL = os.getenv("POSTGRES_TEST_URL")
 pytestmark = pytest.mark.skipif(not URL, reason="set POSTGRES_TEST_URL")
@@ -139,8 +140,11 @@ def test_a_discord_turn_is_marked_as_such(client, factory):
 
 
 def test_the_shape_of_arguments_keeps_types_and_lengths_only():
-    assert arguments_shape("search_history", {"query": "ai nói", "limit": 5, "days": "7", "author_id": "1001"}) == {
+    registry = core_tools()
+    agent_tools.register(registry, None)  # the API's tool list (ticket 22, C4)
+    declared = registry.declared()
+    assert arguments_shape("search_history", {"query": "ai nói", "limit": 5, "days": "7", "author_id": "1001"}, declared) == {
         "query": "str:6", "limit": 5, "days": "str:1", "author_id": "str:4"}
-    assert arguments_shape("search_documents", {"query": None, "top_k": True}) == {"query": "NoneType", "top_k": "bool"}
-    assert arguments_shape("no_such_tool", {"anything": "bí mật"}) == {"_undeclared": 1}
-    assert arguments_shape("search_documents", "not a dict") is None
+    assert arguments_shape("search_documents", {"query": None, "top_k": True}, declared) == {"query": "NoneType", "top_k": "bool"}
+    assert arguments_shape("no_such_tool", {"anything": "bí mật"}, declared) == {"_undeclared": 1}
+    assert arguments_shape("search_documents", "not a dict", declared) is None

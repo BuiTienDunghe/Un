@@ -185,14 +185,16 @@ def test_without_an_agent_service_use_tools_degrades_to_plain_chat(client, mock_
 
 def _bare_agent(history_backend):
     # _execute_tool never touches the router/retrieval/status backends here.
+    from app.discord import agent_tools
     from app.services.agent_service import AgentService
 
-    return AgentService(
+    agent = AgentService(
         router=None,
         retrieval_service=None,
         operational_service=None,
-        history_service=history_backend,
     )
+    agent_tools.register(agent.registry, history_backend)
+    return agent
 
 
 class _FakeHistoryBackend:
