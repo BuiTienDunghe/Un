@@ -868,3 +868,8 @@ trả lời kể lại lời họ bằng chữ của bot thì không phát hiệ
 (`limits`). Lời dùng để dò gồm tin nhắn kênh VÀ câu hỏi của họ với bot, nên một câu dài từ 20 ký tự trở
 lên mà người khác cũng viết y hệt sẽ bị che thừa (phía an toàn). Bảng dò giữ mọi đoạn 20 ký tự trong lời
 của họ, nên với người viết rất nhiều có thể tốn vài chục MB bộ nhớ; chấp nhận được với một script chạy tay.
+
+Bổ sung 27/10 (ticket 19, chủ dự án chốt): "quên tôi" chỉ xoá trong server nơi thành viên yêu cầu
+(`--guild-id`), ở MỌI bước. Trước đó hai bước bỏ sót lọc guild: lượt hỏi (bước 6) và nguồn ký ức do họ
+viết (bước 2). Muốn quên ở mọi server thì phải ghi tường minh `--all-guilds`; không bao giờ là mặc định.
+Output có `scope`: các server được xoá, và `left_alone` đếm những gì của họ còn lại ở các server khác.

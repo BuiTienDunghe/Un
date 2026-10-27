@@ -26,6 +26,11 @@ half-deleting:
      them, since nothing else says what to look for. Only verbatim copies are
      found (app/stores/member_redaction.py); a paraphrase is not detectable.
 
+Every step is scoped to the guild where the member asked (--guild-id). --all-guilds
+widens every step to every guild they have anything in; it is never the default (the
+owner's call, 27/10, ticket 19). The output names the guilds covered and counts what
+is left alone in the others.
+
 Dry-run by default: it prints what it would delete and touches nothing.
 """
 from __future__ import annotations
@@ -64,6 +69,41 @@ from app.stores.member_redaction import (
     redact_quotes,
 )
 from app.stores.qdrant_store import QdrantStore
+
+
+def _scope(model, guild_id: str | None) -> list:
+    """The guild filter every step shares: one guild, or none under --all-guilds.
+    Turns and memory sources carry no guild column — a turn's guild is its session's,
+    a source's is that of the turn it cites, so every source citing a turn step 6
+    deletes goes in step 2 first (the RESTRICT)."""
+    if guild_id is None:
+        return []
+    if model is DiscordSessionTurn:
+        return [DiscordSessionTurn.session_id.in_(
+            select(DiscordConversationSession.id).where(DiscordConversationSession.guild_id == guild_id)
+        )]
+    if model is DiscordMemorySource:
+        return [DiscordMemorySource.source_turn_id.in_(
+            select(DiscordSessionTurn.id).where(*_scope(DiscordSessionTurn, guild_id))
+        )]
+    return [model.guild_id == guild_id]
+
+
+def _member_guilds(database, author_id: str) -> list[str]:
+    """Every guild where the member has something this script deletes."""
+    queries = [
+        select(DiscordChannelMessage.guild_id).where(DiscordChannelMessage.author_id == author_id),
+        select(DiscordConversationSession.guild_id)
+        .join(DiscordSessionTurn, DiscordSessionTurn.session_id == DiscordConversationSession.id)
+        .where(DiscordSessionTurn.author_id == author_id),
+        select(DiscordMemoryCandidate.guild_id).where(
+            (DiscordMemoryCandidate.source_author_id == author_id)
+            | (DiscordMemoryCandidate.subject_id == author_id)
+        ),
+        select(DiscordMemory.guild_id).where(DiscordMemory.subject_id == author_id),
+        select(DiscordCondensationProposition.guild_id).where(DiscordCondensationProposition.speaker_id == author_id),
+    ]
+    return sorted({guild for query in queries for guild in database.scalars(query.distinct())})
 
 
 def _member_words(database, guild_id: str, author_id: str) -> tuple[QuoteIndex, dict[str, set[str]]]:
@@ -131,6 +171,15 @@ def _copies(database, guild_id: str, author_id: str, index: QuoteIndex, requests
     return changes
 
 
+def _all_copies(database, words: dict[str, tuple[QuoteIndex, dict[str, set[str]]]], author_id: str) -> list[tuple[object, str, object]]:
+    """_copies guild by guild, each searched with what the member wrote THERE."""
+    return [
+        change
+        for guild, (index, requests) in words.items()
+        for change in _copies(database, guild, author_id, index, requests)
+    ]
+
+
 def _copy_counts(changes: list[tuple[object, str, object]]) -> dict[str, int]:
     return {
         "conversation_messages": sum(1 for row, _, _ in changes if isinstance(row, Message)),
@@ -139,17 +188,16 @@ def _copy_counts(changes: list[tuple[object, str, object]]) -> dict[str, int]:
     }
 
 
-def _counts(database, guild_id: str, author_id: str) -> dict[str, int]:
+def _counts(database, guild_id: str | None, author_id: str) -> dict[str, int]:
     def count(model, *conditions) -> int:
         return int(
-            database.scalar(select(func.count()).select_from(model).where(*conditions))
+            database.scalar(select(func.count()).select_from(model).where(*conditions, *_scope(model, guild_id)))
             or 0
         )
 
     return {
         "channel_messages": count(
             DiscordChannelMessage,
-            DiscordChannelMessage.guild_id == guild_id,
             DiscordChannelMessage.author_id == author_id,
         ),
         "session_turns": count(
@@ -157,13 +205,11 @@ def _counts(database, guild_id: str, author_id: str) -> dict[str, int]:
         ),
         "candidates": count(
             DiscordMemoryCandidate,
-            DiscordMemoryCandidate.guild_id == guild_id,
             (DiscordMemoryCandidate.source_author_id == author_id)
             | (DiscordMemoryCandidate.subject_id == author_id),
         ),
         "memories": count(
             DiscordMemory,
-            DiscordMemory.guild_id == guild_id,
             DiscordMemory.subject_id == author_id,
         ),
         "memory_sources": count(
@@ -171,37 +217,48 @@ def _counts(database, guild_id: str, author_id: str) -> dict[str, int]:
         ),
         "propositions": count(
             DiscordCondensationProposition,
-            DiscordCondensationProposition.guild_id == guild_id,
             DiscordCondensationProposition.speaker_id == author_id,
         ),
     }
 
 
-def forget(guild_id: str, author_id: str, *, apply: bool) -> dict[str, object]:
+def forget(guild_id: str, author_id: str, *, apply: bool, all_guilds: bool = False) -> dict[str, object]:
+    """Forget the member in `guild_id`, where they asked — or in every guild, only
+    when `all_guilds` says so."""
     settings = get_settings()
     if not settings.database_url:
         raise RuntimeError("DATABASE_URL is required")
     factory = create_session_factory(
         create_postgres_engine(str(settings.database_url))
     )
+    scope = None if all_guilds else guild_id
 
     with factory() as database:
-        planned = _counts(database, guild_id, author_id)
+        member_guilds = _member_guilds(database, author_id)
+        guilds = member_guilds if all_guilds else [guild_id]
+        planned = _counts(database, scope, author_id)
         # Read now: steps 6-7 delete the only record of what their words were.
-        index, requests = _member_words(database, guild_id, author_id)
-        planned.update(_copy_counts(_copies(database, guild_id, author_id, index, requests)))
+        words = {guild: _member_words(database, guild, author_id) for guild in guilds}
+        planned.update(_copy_counts(_all_copies(database, words, author_id)))
         memory_ids = list(
             database.scalars(
                 select(DiscordMemory.id).where(
-                    DiscordMemory.guild_id == guild_id,
+                    *_scope(DiscordMemory, scope),
                     DiscordMemory.subject_id == author_id,
                 )
             )
         )
+        # Shown, not implied: what this run leaves in the member's other guilds.
+        left_alone = {
+            guild: _counts(database, guild, author_id)
+            for guild in member_guilds
+            if guild not in guilds
+        }
     payload: dict[str, object] = {
         "guild_id": guild_id,
         "author_id": author_id,
         "mode": "apply" if apply else "dry-run",
+        "scope": {"all_guilds": all_guilds, "guilds": guilds, "left_alone": left_alone},
         "planned": planned,
         "mirror_ids": [f"mem_dc_{value.hex}" for value in memory_ids],
         "limits": LIMITS_NOTE,
@@ -234,15 +291,19 @@ def forget(guild_id: str, author_id: str, *, apply: bool) -> dict[str, object]:
 
     # 3. condensation propositions — the service owns this rule (it also
     #    marks the affected batches stale), so it is called, not re-written.
-    _removed_propositions, stale_batches = DiscordCondensationService(
-        factory
-    ).forget_member(guild_id=guild_id, speaker_id=author_id)
+    #    It works one guild at a time.
+    stale_batches = 0
+    for guild in guilds:
+        _removed_propositions, stale = DiscordCondensationService(
+            factory
+        ).forget_member(guild_id=guild, speaker_id=author_id)
+        stale_batches += stale
 
     with factory.begin() as database:
         # 8. the bot's copies of their words — in the same transaction as the deletes,
         #    so a failure leaves neither half done. A rewritten trace step's summary
         #    hash no longer matches what is stored: cleared (ticket 17, Q3).
-        copies = _copies(database, guild_id, author_id, index, requests)
+        copies = _all_copies(database, words, author_id)
         for row, field, value in copies:
             setattr(row, field, value)
             if isinstance(row, AgentTrace) and field == "content":
@@ -260,7 +321,8 @@ def forget(guild_id: str, author_id: str, *, apply: bool) -> dict[str, object]:
         # 2. sources (RESTRICT-references memories, candidates and turns)
         database.execute(
             delete(DiscordMemorySource).where(
-                DiscordMemorySource.source_author_id == author_id
+                DiscordMemorySource.source_author_id == author_id,
+                *_scope(DiscordMemorySource, scope),
             )
         )
         if memory_ids:
@@ -289,49 +351,63 @@ def forget(guild_id: str, author_id: str, *, apply: bool) -> dict[str, object]:
         # 5. candidates from or about them
         database.execute(
             delete(DiscordMemoryCandidate).where(
-                DiscordMemoryCandidate.guild_id == guild_id,
+                *_scope(DiscordMemoryCandidate, scope),
                 (DiscordMemoryCandidate.source_author_id == author_id)
                 | (DiscordMemoryCandidate.subject_id == author_id),
             )
         )
 
-        # 6. their turns (deliveries cascade)
+        # 6. their turns (deliveries cascade) — in this guild only, like every
+        #    other step; this one used to take every guild (ticket 19).
         database.execute(
             delete(DiscordSessionTurn).where(
-                DiscordSessionTurn.author_id == author_id
+                DiscordSessionTurn.author_id == author_id,
+                *_scope(DiscordSessionTurn, scope),
             )
         )
 
         # 7. their raw messages
         database.execute(
             delete(DiscordChannelMessage).where(
-                DiscordChannelMessage.guild_id == guild_id,
+                *_scope(DiscordChannelMessage, scope),
                 DiscordChannelMessage.author_id == author_id,
             )
         )
 
     with factory() as database:
-        payload["remaining"] = _counts(database, guild_id, author_id)
+        payload["remaining"] = _counts(database, scope, author_id)
         # Recounted with the words read before the deletes: a copy left behind shows here.
-        payload["remaining"].update(_copy_counts(_copies(database, guild_id, author_id, index, requests)))
+        payload["remaining"].update(_copy_counts(_all_copies(database, words, author_id)))
     payload["vectors_removed"] = removed_vectors
     payload["stale_batches"] = stale_batches
     payload["side_effects"] = True
     return payload
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--guild-id", required=True)
+    parser.add_argument(
+        "--guild-id",
+        required=True,
+        help="server nơi thành viên yêu cầu; mặc định chỉ xóa trong server này",
+    )
     parser.add_argument("--author-id", required=True)
     parser.add_argument(
         "--apply",
         action="store_true",
         help="thực sự xóa; mặc định chỉ in ra những gì sẽ xóa",
     )
-    arguments = parser.parse_args()
+    parser.add_argument(
+        "--all-guilds",
+        action="store_true",
+        help="xóa ở MỌI server thành viên có mặt, không riêng --guild-id",
+    )
+    arguments = parser.parse_args(argv)
     payload = forget(
-        arguments.guild_id, arguments.author_id, apply=arguments.apply
+        arguments.guild_id,
+        arguments.author_id,
+        apply=arguments.apply,
+        all_guilds=arguments.all_guilds,
     )
     print(json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str))
     remaining = payload.get("remaining")
