@@ -11,6 +11,7 @@ from app.services.agent_service import STOP_TURN_BUDGET_EXHAUSTED
 from app.services.logging_service import LoggingService
 from app.services.model_router import ModelRouter
 from app.services.memory_service import MemoryService
+from app.services.pastes import search_text, shorten_pastes
 from app.stores.auxiliary_store import AuxiliaryStore
 
 
@@ -115,11 +116,16 @@ class ChatService:
                 if model_history is None
                 else model_history
             )
+            agent_mode = use_tools and self.agent_service is not None
+            if not agent_mode:
+                # A paste from an earlier tool-mode turn: plain chat cannot open its slip,
+                # so it gets a one-line note instead of the whole text (ticket 20 #3).
+                history = shorten_pastes(history)
             messages = [{"role": "system", "content": system_prompt or self.system_prompt}]
             if context_system_prompt:
                 messages.append({"role": "system", "content": context_system_prompt})
             if use_memory and self.memory_service is not None:
-                memories = self.memory_service.search(message, top_k=5)
+                memories = self.memory_service.search(search_text(message), top_k=5)
                 if memories:
                     context = "\n".join(f"- {memory['content']}" for memory in memories)
                     messages.append({"role": "system", "content": f"{self.memory_prompt}\n\nRelevant memories:\n{context}"})
@@ -131,7 +137,7 @@ class ChatService:
             )
             started = perf_counter()
             agent_steps: list[dict[str, object]] | None = None
-            if use_tools and self.agent_service is not None:
+            if agent_mode:
                 answer, model_used, agent_steps = self.agent_service.run(
                     messages, tool_context=tool_context
                 )
@@ -176,10 +182,11 @@ class ChatService:
             self.store.create_conversation(conversation_id, derive_conversation_title(message), user_id)
         elif not self.store.conversation_exists(conversation_id):
             raise ConversationNotFoundError(conversation_id)
-        history = self.store.get_messages(conversation_id, self.history_limit)
+        # The stream path is plain chat: a paste in the history becomes its note (ticket 20 #3).
+        history = shorten_pastes(self.store.get_messages(conversation_id, self.history_limit))
         messages = [{"role": "system", "content": system_prompt or self.system_prompt}]
         if use_memory and self.memory_service is not None:
-            memories = self.memory_service.search(message, top_k=5)
+            memories = self.memory_service.search(search_text(message), top_k=5)
             if memories:
                 context = "\n".join(f"- {memory['content']}" for memory in memories)
                 messages.append({"role": "system", "content": f"{self.memory_prompt}\n\nRelevant memories:\n{context}"})

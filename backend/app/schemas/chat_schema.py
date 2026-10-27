@@ -1,8 +1,12 @@
 from pydantic import BaseModel, Field
 
+from app.services.pastes import PASTE_MAX
+
 
 class ChatRequest(BaseModel):
-    message: str = Field(min_length=1, max_length=10_000)
+    # Up to PASTE_MAX in tool mode, where a long paste becomes a document the agent
+    # reads (ticket 20 #3); /chat refuses more than PASTE_THRESHOLD without tools.
+    message: str = Field(min_length=1, max_length=PASTE_MAX)
     conversation_id: str | None = Field(default=None, max_length=64)
     # API clients such as the Discord gateway can supply their own isolated
     # persona without changing the UI/general-chat prompt on disk.
