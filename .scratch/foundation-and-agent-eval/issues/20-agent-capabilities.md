@@ -1,6 +1,6 @@
 # 20 — Khả năng cơ bản cho agent: đọc dài, kiểm câu trả lời, báo tiến độ
 
-Status: chờ chủ dự án chọn phạm vi (28/10)
+Status: đang làm — cách A (chủ dự án 28/10 00:20): v0.3 → #1 → #2 → #3 → #4; bỏ #5
 Type: task
 Blocked by: — (cần bộ bài v0.3 có bài đọc dài để đo)
 
@@ -46,3 +46,9 @@ trước khi đo #1 và #3, cùng các sửa đã gom (doc-27, hist-07, NOT_FOUN
 Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài chỉ tới chỗ khác đầu tiên.
 
 ## Comments
+- 28/10 00:20 (chủ dự án): **cách A** — bộ bài v0.3 có bài đọc dài trước, rồi #1 đọc theo handle → #2 kiểm
+  câu trả lời → #3 input dài thành tài liệu tạm → #4 stream tiến độ. Bỏ #5.
+- Phân việc (opus 5.5): Nhân viên 3 làm v0.3 (gom các sửa bộ chấm đã ghi + bài đọc dài, theo giao diện công
+  cụ của #1); Nhân viên 1 thiết kế #1 trước (schema công cụ, đường lấy dữ liệu, giới hạn kết quả, hợp đồng
+  fixture cho eval), gửi cả điều phối lẫn Nhân viên 3; code #1 sau khi duyệt. #2–#4 nối tiếp, cùng
+  `agent_service.py` nên một người làm lần lượt. Mỗi bước đo bằng v0.3, đăng ký trước, gỡ model trước mỗi lần.
