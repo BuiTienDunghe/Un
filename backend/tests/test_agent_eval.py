@@ -346,6 +346,11 @@ MENTION_KEYS = ("must_mention", "must_not_mention", "must_say_not_found", "must_
     ("hist-10", "Công cụ search_history chỉ hoạt động trong kênh Discord. Cung cấp thêm ngữ cảnh về server nào bạn đang hỏi?", False),
     ("hist-09", "Mình không xem được tin nhắn Discord từ đây. Bạn có thể: 1. Cung cấp thêm thông tin về server Discord bạn đang quan tâm (tên server, hoặc kênh cụ thể)", False),
     ("hist-08", "Cuộc trò chuyện này không ở trên Discord, nên tôi không thể truy cập lịch sử tin nhắn của bất kỳ server Discord nào.", True),
+    # v0.4: doc-19's own regex now takes the answer review cd99811 found failed.
+    ("doc-19", "Kết quả tìm kiếm không trả về thông tin về ngân sách quảng cáo năm 2027 trong file ke_hoach_marketing_2027.pdf.", True),
+    # v0.4: hist-11's baseline answer merged the meeting's room and hour into the trip.
+    ("hist-11", "Phương án dã ngoại: Tam Đảo, homestay Đồi Sim, 9h sáng thứ Năm tại phòng B203.", False),
+    ("hist-11", "Nhóm chốt lên Tam Đảo, ở homestay Đồi Sim hai ngày một đêm.", True),
 ])
 def test_shipped_criteria_on_correct_and_wrong_phrasings(task_id, answer, passes):
     task = next(t for t in load_dataset(DATASET_DIR).tasks if t["id"] == task_id)
@@ -462,6 +467,9 @@ def test_history_limit_range_follows_the_mode():
     "Không có tệp ke_hoach_marketing_2027.pdf trong kết quả.",
     # v0.3: the correct doc-19 answer ticket 10 recorded as failed by the v0.2 pattern.
     "Kết quả tìm kiếm không trả về thông tin về ngân sách marketing năm 2027.",
+    # v0.4: the two doc-12 answers kept runs show v0.3 still missed.
+    "Xin lỗi, nhưng tôi không thể tìm thấy thông tin cụ thể về quy trình xin cấp laptop mới.",
+    "Thông tin về quy trình xin cấp laptop mới không được tìm thấy trong các tài liệu hiện có.",
 ])
 def test_not_found_accepts_the_phrasings_review_listed(answer):
     assert grade({"must_say_not_found": True}, steps_for(), answer, SCHEMAS)["passed"] is True
@@ -500,6 +508,45 @@ def test_hist_07_accepts_documents_first_but_still_needs_the_history():
     documents_only = steps_for(("search_documents", {"query": "lịch bảo trì máy chủ"}))
     assert grade(task["expect"], documents_first, answer, SCHEMAS)["passed"] is True
     assert checks(grade(task["expect"], documents_only, answer, SCHEMAS))["tools_required"] is False
+
+
+def test_hist_03_accepts_documents_first_too():
+    # v0.4: the same reasoning as hist-07 at v0.3.
+    task = next(t for t in load_dataset(DATASET_DIR).tasks if t["id"] == "hist-03")
+    answer = "Trang nhắc hạn nộp báo cáo tiến độ cho thầy là 24/10."
+    documents_first = steps_for(("search_documents", {"query": "hạn nộp báo cáo"}), ("search_history", {"query": "hạn nộp báo cáo"}))
+    assert grade(task["expect"], documents_first, answer, SCHEMAS)["passed"] is True
+
+
+def test_not_found_does_not_take_a_search_that_cannot_run():
+    # v0.4 adds "không thể tìm thấy", not a bare "không thể tìm": this one says the search cannot run.
+    answer = "Mình không thể tìm kiếm trong lịch sử ở đây."
+    assert grade({"must_say_not_found": True}, steps_for(), answer, SCHEMAS)["passed"] is False
+
+
+@pytest.mark.parametrize(("answer", "made_up"), [
+    # Kept no-lookup answers (review 8cc0f73 and the 61 checked 28/10).
+    ("Phụ cấp lưu trú thường dao động từ **200.000 - 300.000 VND/ngày**.", True),
+    ("Hệ thống phát hiện nội dung trùng lặp (trên 95% tương đồng).", True),
+    ("Thông tin này được trích từ trang 3 của tài liệu XIAI.pdf.", True),
+    # Not figures: list markers, "Cách 1", code, file names, "hợp đồng".
+    ("1. **Sao lưu dữ liệu**: dùng `sqlite3 new_database.db` để nhập.\n2. Kiểm tra lại hợp đồng và phụ lục.", False),
+    ("### Cách 1: Dùng công cụ export\nBạn có muốn tôi tra trong tài liệu không?", False),
+])
+def test_a_lookup_task_answered_without_a_lookup_is_flagged_only_with_figures(answer, made_up):
+    expect = {"tools_required": ["search_documents"]}
+    result = checks(grade(expect, steps_for(), answer, SCHEMAS))
+    assert result["tools_required"] is False and result["figures_without_lookup"] is (not made_up)
+    # A task that did look something up is not judged on its figures here.
+    looked = checks(grade(expect, steps_for(("search_documents", {"query": "phụ cấp"})), answer, SCHEMAS))
+    assert "figures_without_lookup" not in looked
+
+
+def test_the_read_document_range_follows_the_tool_description():
+    from app.services.agent_service import READ_MAX_CHUNKS
+    from scripts.agent_eval_grader import _integer_range
+
+    assert _integer_range("read_document", "n", {}) == (1, READ_MAX_CHUNKS)
 
 
 def test_ask_back_ignores_a_negated_clause_but_not_the_next_sentence():

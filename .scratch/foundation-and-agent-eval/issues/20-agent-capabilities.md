@@ -125,3 +125,29 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
 - 28/10 01:51 (opus 5.5): #4 thiết kế của Nhân viên 1 duyệt phần kỹ thuật: móc `on_step` không chứa nội dung, nhãn do
   công cụ mang, web W1 (luồng phụ + SSE `progress`; phải sao ContextVar hạn giờ sang luồng), kho tiến độ P-a (dict
   trong tiến trình API, xoá khi xong + trần giờ sống), endpoint tiến độ cho bot. Cách bot hiển thị (D1/D2/D3) chờ chủ dự án.
+- 28/10 02:00 (Nhân viên 3) — **Agent Eval v0.4 sẵn sàng; đăng ký trước baseline v0.4.** Chưa chạy; lần chạy gom vào đợt
+  đo chung. Nhánh `wip/20-eval-v04`, cắt từ main `a6b08ae`.
+  - Thay đổi (chi tiết ở README của bộ bài, mục v0.4):
+    - mục mới `figures_without_lookup`, khớp chấm tay 61/61 câu đã lưu;
+    - `NOT_FOUND_PATTERN` nhận "không (thể|được) tìm (thấy|ra)";
+    - regex riêng của doc-19 nhận "không trả về";
+    - hist-11 cấm B203, 9h, 23/10;
+    - hist-03 cho tra tài liệu trước;
+    - khoảng `n` 1–3 của `read_document`.
+    - Không thêm bài L-b, L-c.
+  - Chấm lại 6 lần v0.3 đã lưu, chỉ để chẩn đoán: base 35→35; #1 34→35 (doc-12, doc-19 thành đạt; doc-33 thành trượt vì
+    xin `n=5`); #1-B 38→38 (doc-19 thành đạt, doc-33 thành trượt). Mục mới bắt doc-10 và doc-22 ở #1-B.
+  - **Đăng ký trước baseline v0.4:**
+    - Code là main lúc chạy, ghi commit. Bộ bài `agent-eval-v0.4`, bộ chấm v0.4.
+    - Gỡ `qwen3.5:9b` trước mỗi lần; t0, seed 42, `--probe`; hai lần lạnh `v0.4-base-r1-cold`, `v0.4-base-r2-cold`.
+    - Khai `--gpu-shared` nếu runner đã có (ticket 23); nếu chưa thì ghi tay trạng thái GPU.
+    - Chỉ chạy khi chủ dự án cho đo lại; luật giữ im Ollama vẫn giữ tới lúc đó.
+    - Không có luật ship. Ghi: tổng; 8 bài đọc dài; số lượt `figures_without_lookup` và bài nào; `args_valid` của
+      `read_document`; doc-39.
+  - Dự đoán (sai thì báo, không sửa bài):
+    - r1 trùng r2 từng chữ.
+    - doc-39 **không còn bị từ chối**. #3 nâng giới hạn của `ChatRequest.message` ở chế độ công cụ lên `PASTE_MAX`
+      100 000, và runner đọc giới hạn từ schema. Đoạn dán 10 164 ký tự sẽ đi qua phần xử lý dán dài trong `AgentService`
+      (`take_pastes`), nên đây là lần đầu doc-39 đo được #3.
+    - Không đưa con số dự đoán cho tổng. Code trên main khác mọi lần đã lưu (#2, #3, #4 vào sau #1-B), và mỗi lần đổi mô
+      tả công cụ đã xáo 37–39/40 câu trả lời. Bảng chấm lại chỉ cho biết bộ chấm v0.4 xử lý câu cũ thế nào.
