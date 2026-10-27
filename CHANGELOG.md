@@ -63,6 +63,11 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   đợi trong `command:` vẫn có mặc định, nhưng có test bắt phải bằng mặc định của Settings.
 
 ### Fixed
+- **Agent không còn mất tin Discord mới nhất khi kết quả công cụ quá dài** (27/10). Trước đây kết quả
+  bị cắt ở 2 400 ký tự giữa chừng: "N tin mới nhất" mất đúng các tin mới nhất (hist-05 mất 8/18 tin),
+  và tìm 5 đoạn tài liệu thì JSON gãy (12/12 lượt trong baseline). Giờ kết quả tràn bỏ trọn từng mục
+  (tin cũ nhất trước, đoạn xếp hạng cuối trước) và trả `{"omitted", "note", "items"}`; kết quả vừa thì
+  giữ nguyên từng byte. Mỗi tin Discord agent đọc tối đa 800 ký tự. Đổi cho cả bot Discord thật.
 - **Eval đêm không còn đỏ câm** (27/10). Từ 16/09 có 51 đêm exit 97. Mỗi lần hỏi `/health`, job chỉ
   chờ 3 s, mà `/health` mất 10–270 s khi phụ thuộc chết, vì phép thử Postgres/Redis không có timeout.
   Giờ job hỏi Postgres, Qdrant, Redis **trước** khi bật lab API. Thiếu cái nào thì dừng với **exit 93**
