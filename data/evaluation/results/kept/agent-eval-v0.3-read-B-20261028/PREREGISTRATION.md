@@ -1,4 +1,4 @@
-# Agent Eval v0.3 — #1-B: công cụ đọc, lời dặn như cũ — đăng ký trước (28/10/2026, 00:33, trước mọi lần chạy)
+# Agent Eval v0.3 — #1-B: công cụ đọc, lời dặn như cũ — đăng ký trước (28/10/2026, 00:32, trước mọi lần chạy)
 
 **Đây là test hồi quy nội bộ, không phải khẳng định chất lượng.** Bộ bài do dự án tự viết, không có điểm
 công bố.
