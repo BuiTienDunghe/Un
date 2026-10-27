@@ -92,7 +92,8 @@ chưa rõ phiên nào.
 | 5 | Đợt đo GPU gom lại | kế hoạch `joint-measurement-plan.md`: đợt A hồi quy #2, #3, C4 (6 lần lạnh, ~25–30 phút), B mốc v0.4 (~8 phút), C ba nhánh e5 (~3 giờ), D BFCL (chưa chạy được) |
 | 6 | Ticket 25 — nợ Discord sau 22 (3 món, mỗi món 2–3 cách) | `issues/25-discord-debt.md`; NV2 nghiêng 1B (test chặn lõi đọc thêm `discord_*`), 2A, 3A (để nguyên) |
 | 7 | Ticket 20 #4 — Discord hiện tiến độ thế nào: D1 giữ "đang nhập", D2 một tin "⏳ Ún đang làm…" sửa dần rồi thay bằng câu trả lời, D3 đổi emoji trên tin người hỏi (👀→🔎→✅) | NV1 nghiêng D2. Đêm nay chỉ code móc lõi + web (SSE `progress`) + endpoint tiến độ, chưa code phía bot |
-| 8 | Việc cũ còn treo | push, bot B1/B2, ticket 21 (tài liệu chưa có chủ), 5 collection Qdrant đo, v0.4 (L-b, L-c), 14/15 |
+| 8 | `POSTGRES_TEST_URL` (và có thể `REDIS_TEST_URL`) trong biến môi trường người dùng Windows | giữ thì mọi phiên phải nhớ bỏ khi chạy test; xoá khỏi `HKCU\Environment` thì chỉ ai đặt tường minh mới chạm DB test (opus đặt trong script của mình) |
+| 9 | Việc cũ còn treo | push, bot B1/B2, ticket 21 (tài liệu chưa có chủ), 5 collection Qdrant đo, v0.4 (L-b, L-c), 14/15 |
 
 ## Giữ im Ollama đêm 28/10 (phiên Quản lý xin, 01:00)
 
