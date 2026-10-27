@@ -26,3 +26,10 @@ các lựa chọn vào Comments trước khi code. Sửa lỗi 401.
   bằng `pythonw`. Trên một `.venv` cũ chưa chạy launcher mới lần nào, bảng điều khiển sẽ không hiện
   mà cũng không báo lỗi (hết hack sys.path, `import discord_bot` hỏng). Thêm vào `.bat` một bước kiểm
   import; thiếu thì báo "chạy run-local-ai-core.bat trước".
+- 27/10 (opus 5.5, chốt): B3 — giữ hai cơ chế nhưng thấy nhau và không chạy trùng. Backend tự quét
+  psutil, **không** import `discord_bot.control` (giữ bất biến bot↔backend chỉ qua HTTP); một test ở
+  `tests/` gốc khẳng định hai bộ nhận biết phân loại giống nhau. Bộ lọc docker của panel lọc thêm
+  label project. 401: c1, env thắng `.env` như server. Compose: 10 biến chuyển sang dạng chỉ tên,
+  PERSISTENT giữ `:-true` có comment (d1). `.bat`: e2 (`-m tools.discord_bot_control`). Lệch cấu
+  hình giữa bot trên máy (đọc cả `.env`) và bot container (13 biến): để chủ dự án quyết (B1 chỉ
+  compose / B2 chỉ tiến trình trên máy).
