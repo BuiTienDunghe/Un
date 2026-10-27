@@ -57,6 +57,12 @@ GPU tối 27/10 cho phần đo của **10**; 09 chạy lại trọn một mạch
 (`eval_stack --profile lab|heldout`) phải **dừng trước 02:45**: eval đêm 03:00 tự bật lab API ở
 cổng 8100 và cần GPU; đêm 27→28/10 là đêm nghiệm thu của ticket 01.
 
+## Xây trước, đo sau (chủ dự án, 28/10 01:20)
+
+"Hôm nay chưa cần chạy GPU nhiều quá, hãy xây dựng trước đã." Từ giờ: ưu tiên code (ticket 20 #2–#4, 22, 23,
+dựng BFCL); **hoãn** các lượt đo GPU dài (ba nhánh e5 của 09 ≈ 3 giờ, chạy BFCL). Các lần đo hồi quy Agent Eval
+(~7 phút) gom lại chạy một đợt khi chủ dự án cho. Eval đêm 03:00 vẫn chạy (nghiệm thu ticket 01, ~3 phút).
+
 ## Nhường GPU cho dự án khác (chủ dự án, 28/10 00:45)
 
 Một dự án khác của chủ dự án cũng dùng GPU này. Quy tắc:
