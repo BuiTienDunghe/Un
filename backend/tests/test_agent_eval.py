@@ -16,6 +16,7 @@ from app.llm_clients.usage import record_usage
 from app.services.agent_service import AGENT_TOOLS
 from app.services.injection_defense import InjectionDefense
 from scripts.agent_eval import (
+    DATA_FILES,
     DATASET_DIR,
     INPUT_MAX_CHARS,
     NO_SEED,
@@ -67,8 +68,9 @@ def final(text: str) -> dict:
     return {"content": text, "tool_calls": [], "raw_tool_calls": []}
 
 
-def write_dataset(directory: Path, tasks: list[dict], retrieval: list[dict]) -> Path:
+def write_dataset(directory: Path, tasks: list[dict], retrieval: list[dict], documents: list[dict] = ()) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
+    (directory / "documents.jsonl").write_text("".join(json.dumps(d, ensure_ascii=False) + "\n" for d in documents), encoding="utf-8")
     meta = {"version": "agent-eval-test", "guild": GUILD, "status_snapshots": {"healthy": {"status": "ok", "qdrant": "ok"}}}
     (directory / "dataset.json").write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
     (directory / "tasks.jsonl").write_text("".join(json.dumps(t, ensure_ascii=False) + "\n" for t in tasks), encoding="utf-8")
@@ -235,6 +237,21 @@ def test_a_malformed_dataset_is_refused_before_any_model_call(tmp_path):
         load_dataset(write_dataset(tmp_path, bad, [{"task_id": "ghost", "source": "handwritten", "chunks": []}]))
 
 
+def test_a_recorded_chunk_that_is_not_its_documents_own_chunk_is_refused(tmp_path):
+    document = {"document_id": "doc_q", "filename": "quy_che.pdf", "chunks": [
+        {"chunk_index": 0, "page_start": 3, "page_end": 3, "content": "Mỗi nhân viên có 12 ngày phép năm."},
+    ]}
+    readable = {**DOC_FIXTURE, "chunks": [{**DOC_FIXTURE["chunks"][0], "document_id": "doc_q", "chunk_index": 0}]}
+    assert load_dataset(write_dataset(tmp_path / "ok", [DOC_TASK], [readable], [document])).documents["doc_q"] == document
+
+    drifted = {**readable, "chunks": [{**readable["chunks"][0], "content": "Mỗi nhân viên có 14 ngày phép năm."}]}
+    with pytest.raises(ValueError, match="doc-x: đoạn doc_q#0 không trùng documents.jsonl"):
+        load_dataset(write_dataset(tmp_path / "drift", [DOC_TASK], [drifted], [document]))
+    gapped = {**document, "chunks": [{**document["chunks"][0], "chunk_index": 1}]}
+    with pytest.raises(ValueError, match="doc_q: chunk_index phải liên tục từ 0"):
+        load_dataset(write_dataset(tmp_path / "gap", [DOC_TASK], [DOC_FIXTURE], [gapped]))
+
+
 def test_the_shipped_dataset_loads_and_hashes_line_ending_independently(tmp_path):
     dataset = load_dataset(DATASET_DIR)
     assert dataset.version.startswith("agent-eval-v0")
@@ -250,7 +267,7 @@ def test_the_shipped_dataset_loads_and_hashes_line_ending_independently(tmp_path
     # The same bytes checked out with CRLF hash the same.
     copy = tmp_path / "crlf"
     copy.mkdir()
-    for name in ("dataset.json", "tasks.jsonl", "retrieval.jsonl"):
+    for name in DATA_FILES:
         lf = (DATASET_DIR / name).read_bytes().replace(b"\r\n", b"\n")
         (copy / name).write_bytes(lf.replace(b"\n", b"\r\n"))
     assert load_dataset(copy).sha256 == dataset.sha256

@@ -60,7 +60,7 @@ SYSTEM_PROMPT_PATH = BACKEND / "app" / "prompts" / "general_system.md"
 
 # Hashed in this order; README.md and retrieval_manifest.json describe the data
 # and never move the hash.
-DATA_FILES = ("dataset.json", "tasks.jsonl", "retrieval.jsonl")
+DATA_FILES = ("dataset.json", "tasks.jsonl", "retrieval.jsonl", "documents.jsonl")
 CATEGORIES = ("documents", "history", "status", "no_tool")
 SURFACES = ("web", "discord")
 # pending = a real-corpus question whose retrieval is not recorded yet
@@ -101,6 +101,9 @@ class Dataset:
     guild: dict[str, Any]
     status_snapshots: dict[str, dict[str, Any]]
     retrieval: dict[str, dict[str, Any]]
+    # Whole documents (v0.3, ticket 20 #1): what a read past the 400-character
+    # preview returns. Every recorded chunk is one of these, verbatim.
+    documents: dict[str, dict[str, Any]]
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -137,6 +140,21 @@ def load_dataset(directory: Path) -> Dataset:
             problems.append(f"{task['id']}: thiếu expect")
     problems += [f"retrieval cho bài không tồn tại: {task_id}" for task_id in retrieval if task_id not in ids]
     problems += [f"{task_id}: source {f.get('source')!r}" for task_id, f in retrieval.items() if f.get("source") not in RETRIEVAL_SOURCES]
+    documents = {document["document_id"]: document for document in _read_jsonl(directory / "documents.jsonl")}
+    for document_id, document in documents.items():
+        if [chunk["chunk_index"] for chunk in document["chunks"]] != list(range(len(document["chunks"]))):
+            problems.append(f"{document_id}: chunk_index phải liên tục từ 0")
+    # A readable chunk must be the document's own chunk, so reading it back
+    # shows the agent the same text the search did.
+    for task_id, fixture in retrieval.items():
+        for chunk in fixture["chunks"]:
+            if "document_id" not in chunk:
+                continue
+            document = documents.get(chunk["document_id"])
+            chunks = document["chunks"] if document else []
+            index = chunk.get("chunk_index")
+            if not (isinstance(index, int) and 0 <= index < len(chunks) and chunks[index]["content"] == chunk["content"]):
+                problems.append(f"{task_id}: đoạn {chunk['document_id']}#{index} không trùng documents.jsonl")
     if problems:
         raise ValueError(f"dataset {directory} hỏng: " + "; ".join(problems))
     return Dataset(
@@ -147,6 +165,7 @@ def load_dataset(directory: Path) -> Dataset:
         guild=meta["guild"],
         status_snapshots=snapshots,
         retrieval=retrieval,
+        documents=documents,
     )
 
 
