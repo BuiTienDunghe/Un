@@ -89,7 +89,7 @@ chưa rõ phiên nào.
 | 2 | BFCL: nhiệt độ khi đo | NV3 đề xuất 0, chạy lạnh; Ún đang dùng 0,4 |
 | 3 | BFCL (nếu cắm vòng lặp): ba công cụ của Ún ở lại hay bị thay trong lượt BFCL | |
 | 4 | BFCL: cài venv | phiên NV3 bị bộ phân loại quyền chặn `pip install`; 119 gói, 94,5 MB; hai lệnh ở mục 1 của thiết kế. Opus không chạy thay |
-| 5 | Đợt đo GPU gom lại | #2, #3 (Agent Eval v0.3, ~7 phút mỗi lần), ba nhánh e5 (~3 giờ) |
+| 5 | Đợt đo GPU gom lại | kế hoạch `joint-measurement-plan.md`: đợt A hồi quy #2, #3, C4 (6 lần lạnh, ~25–30 phút), B mốc v0.4 (~8 phút), C ba nhánh e5 (~3 giờ), D BFCL (chưa chạy được) |
 | 6 | Ticket 25 — nợ Discord sau 22 (3 món, mỗi món 2–3 cách) | `issues/25-discord-debt.md`; NV2 nghiêng 1B (test chặn lõi đọc thêm `discord_*`), 2A, 3A (để nguyên) |
 | 7 | Ticket 20 #4 — Discord hiện tiến độ thế nào: D1 giữ "đang nhập", D2 một tin "⏳ Ún đang làm…" sửa dần rồi thay bằng câu trả lời, D3 đổi emoji trên tin người hỏi (👀→🔎→✅) | NV1 nghiêng D2. Đêm nay chỉ code móc lõi + web (SSE `progress`) + endpoint tiến độ, chưa code phía bot |
 | 8 | Việc cũ còn treo | push, bot B1/B2, ticket 21 (tài liệu chưa có chủ), 5 collection Qdrant đo, v0.4 (L-b, L-c), 14/15 |
