@@ -1,14 +1,18 @@
 """Small operational read-model: health and metrics never change pipeline state."""
 from __future__ import annotations
 
+import math
+from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from redis import Redis
 from rq import Queue, Worker
-from sqlalchemy import func, select, text
+from sqlalchemy import create_engine, func, select, text
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import NullPool
 
 from app.postgres.models import (
     AgentTrace,
@@ -25,6 +29,12 @@ from app.services.job_routing import DISCORD_MEMORY_INGEST_JOB_TYPE
 
 if TYPE_CHECKING:
     from app.config.model_registry import Resolved
+
+# Each /health probe gives up after this long. Measured 27/10 with the stack off:
+# with nothing on the Postgres port, /health took 270 s (two Postgres probes with
+# no connect timeout); on a port that accepts and never answers, Postgres and
+# Redis hung for good. A health check that hangs cannot say "degraded".
+HEALTH_PROBE_TIMEOUT_SECONDS = 3.0
 
 
 class OperationalService:
@@ -43,6 +53,7 @@ class OperationalService:
         backup_heartbeat_path: Path | None = None,
         backup_max_age_hours: float = 24.0,
         model_registry: "Resolved | None" = None,
+        probe_timeout_seconds: float = HEALTH_PROBE_TIMEOUT_SECONDS,
     ) -> None:
         self.sessions, self.redis_url, self.prefix, self.qdrant, self.ollama = sessions, redis_url, prefix, qdrant, ollama
         self.cleanup_heartbeat_path = cleanup_heartbeat_path
@@ -55,6 +66,49 @@ class OperationalService:
         # per /health call so the reranker's warmup verdict is included. None
         # (tests that build the service bare) reads as "ok".
         self.model_registry = model_registry
+        self.probe_timeout_seconds = probe_timeout_seconds
+        self._postgres_probe: Engine | None = None
+        self._qdrant_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="health-qdrant")
+        self._qdrant_probe: Future | None = None
+
+    def _postgres_ok(self) -> bool:
+        """SELECT 1 on an engine of its own, with a connect timeout.
+
+        The API's engine deliberately has none (database.py: a server should wait
+        out a slow start), so the probe cannot borrow it. NullPool: a probe holds
+        no connection between calls. A non-PostgreSQL bind has no network to hang
+        on, so it is probed through the API's own sessions.
+        """
+        if self._postgres_probe is None:
+            url = getattr(self.sessions.kw.get("bind"), "url", None)
+            if url is not None and url.get_backend_name() == "postgresql":
+                # libpq takes whole seconds and treats anything under 2 as 2.
+                timeout = max(2, math.ceil(self.probe_timeout_seconds))
+                self._postgres_probe = create_engine(url, poolclass=NullPool, connect_args={"connect_timeout": timeout})
+        try:
+            if self._postgres_probe is None:
+                with self.sessions() as session: session.execute(text("SELECT 1"))
+            else:
+                with self._postgres_probe.connect() as connection: connection.execute(text("SELECT 1"))
+            return True
+        except Exception:
+            return False
+
+    def _qdrant_ok(self) -> bool:
+        """QdrantStore.healthcheck, waited on for at most the probe timeout.
+
+        Its retry (3 tries of qdrant_timeout_seconds) is right for real reads but
+        made the probe take 8 s on a closed port and 32 s on a silent one. The
+        store's own timeout still ends the call, so the probe runs in a thread
+        and is not restarted while one is still running: a probe left over from
+        the previous /health is itself the answer "Qdrant is not answering".
+        """
+        if self._qdrant_probe is None or self._qdrant_probe.done():
+            self._qdrant_probe = self._qdrant_executor.submit(self.qdrant.healthcheck)
+        try:
+            return bool(self._qdrant_probe.result(timeout=self.probe_timeout_seconds))
+        except Exception:
+            return False
 
     def _backup_status(self) -> tuple[str, float | None]:
         """Report the newest recovery point, not whether a worker is running.
@@ -78,7 +132,7 @@ class OperationalService:
         return ("ok" if age_hours <= self.backup_max_age_hours * 1.5 else "unavailable"), round(age_hours, 2)
 
     def health(self) -> dict[str, object]:
-        components: dict[str, str] = {"ollama": "ok" if self.ollama.healthcheck() else "unavailable", "qdrant": "ok" if self.qdrant.healthcheck() else "unavailable"}
+        components: dict[str, str] = {"ollama": "ok" if self.ollama.healthcheck() else "unavailable", "qdrant": "ok" if self._qdrant_ok() else "unavailable"}
         # Model registry: "fallback" when any role serves something other than
         # what its pointer names (or nothing at all). A FLAT key, because the
         # dashboard renders nested objects as [object Object]; and it never
@@ -87,12 +141,10 @@ class OperationalService:
         # per-role detail is /models.registry.
         components["model_fallback"] = self.model_registry.fallback_flag() if self.model_registry is not None else "ok"
         if self.sessions:
+            components["postgres"] = "ok" if self._postgres_ok() else "unavailable"
             try:
-                with self.sessions() as session: session.execute(text("SELECT 1"))
-                components["postgres"] = "ok"
-            except Exception: components["postgres"] = "unavailable"
-            try:
-                redis = Redis.from_url(self.redis_url); redis.ping(); components["redis"] = "ok"
+                redis = Redis.from_url(self.redis_url, socket_connect_timeout=self.probe_timeout_seconds, socket_timeout=self.probe_timeout_seconds)
+                redis.ping(); components["redis"] = "ok"
                 workers = Worker.all(connection=redis)
                 names = {queue for worker in workers for queue in worker.queue_names()}
                 components["worker_ocr"] = "ok" if f"{self.prefix}:ocr" in names else "unavailable"
@@ -133,11 +185,16 @@ class OperationalService:
                     else "disabled"
                 )
             )
-            try:
-                with self.sessions() as session:
-                    pending = session.scalar(select(func.count()).select_from(OutboxEvent).where(OutboxEvent.status.in_(("pending", "retrying", "processing")))) or 0
-                components["outbox_dispatcher"] = "ok" if pending == 0 else "pending"
-            except Exception: components["outbox_dispatcher"] = "unavailable"
+            # Through the API's engine, which has no connect timeout: asked only
+            # once the probe has shown Postgres answers, or it is the second hang.
+            if components["postgres"] != "ok":
+                components["outbox_dispatcher"] = "unavailable"
+            else:
+                try:
+                    with self.sessions() as session:
+                        pending = session.scalar(select(func.count()).select_from(OutboxEvent).where(OutboxEvent.status.in_(("pending", "retrying", "processing")))) or 0
+                    components["outbox_dispatcher"] = "ok" if pending == 0 else "pending"
+                except Exception: components["outbox_dispatcher"] = "unavailable"
             try:
                 if not self.cleanup_heartbeat_path or not self.cleanup_heartbeat_path.is_file():
                     components["cleanup_worker"] = "unavailable"

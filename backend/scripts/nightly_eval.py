@@ -22,6 +22,11 @@ uvicorn's own output (data/logs/nightly_eval_lab_api.log). Three nights in
 September died at that step and left nothing to distinguish "the machine was
 off" from "something broke" — see docs/FAILURE_MODES.md.
 
+Before any of that, Postgres (the lab database), Qdrant and Redis are probed
+directly; any of them down ends the night at once with exit 93, naming which,
+and whether Docker Desktop itself was answering. 51 nights from 17/09 waited out
+the 180 s health budget into exit 97 for what was, every time, the stack being off.
+
 Retrieval-only on purpose: zero generation calls (invariant #7 — background
 work must not queue behind a user on the single Ollama), but embeddings, BM25,
 RRF and the cross-encoder all run exactly as shipped.
@@ -35,6 +40,7 @@ import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
+from urllib.parse import urlsplit
 from urllib.request import urlopen
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -57,6 +63,113 @@ LAB_API_LOG = PROJECT_ROOT / "data" / "logs" / "nightly_eval_lab_api.log"
 # production's data/logs at 09:30 (invariant #6). The nightly's OWN marker (ATTENTION
 # above) stays in data/logs: that one the morning check is meant to find.
 LAB_LOG_DIR = "data/logs/lab"
+# The pre-start probes. Three dependencies at 3 s plus one docker call at 10 s keeps
+# the whole exit-93 path under 30 s even with Docker Desktop hung.
+PROBE_TIMEOUT_SECONDS = 3
+DOCKER_TIMEOUT_SECONDS = 10
+
+
+def _where(url: str) -> str:
+    """host:port of a URL — never the URL itself, which may carry a password."""
+    parts = urlsplit(url)
+    return f"{parts.hostname}:{parts.port}" if parts.port else str(parts.hostname)
+
+
+def _first_line(error: Exception) -> str:
+    return f"{type(error).__name__}: {(str(error).strip().splitlines() or [''])[0]}"
+
+
+def check_dependencies(database_url: str, qdrant_url: str, redis_url: str, timeout: float = PROBE_TIMEOUT_SECONDS) -> dict[str, str]:
+    """{dependency: why it is down} for each of the lab API's dependencies that does not answer; {} when all do.
+
+    Real protocol probes, not a port knock: a SELECT 1 on the LAB database (which
+    also says whether that database exists on whatever holds the port), Qdrant's
+    /readyz, a Redis PING. Each is bounded — with no timeout, a Postgres connect to
+    an empty port took minutes on Windows and one to a silent port never returned.
+    """
+    from redis import Redis
+    from sqlalchemy import text
+
+    from app.postgres.database import create_postgres_engine
+
+    down: dict[str, str] = {}
+    try:
+        engine = create_postgres_engine(database_url, connect_timeout_seconds=max(2, int(timeout)))
+        try:
+            with engine.connect() as connection:
+                connection.execute(text("SELECT 1"))
+        finally:
+            engine.dispose()
+    except Exception as error:
+        down["postgres"] = f"{_where(database_url)}{urlsplit(database_url).path}: {_first_line(error)}"
+    try:
+        with urlopen(f"{qdrant_url.rstrip('/')}/readyz", timeout=timeout) as response:
+            if response.status != 200:
+                down["qdrant"] = f"{_where(qdrant_url)}: /readyz answered {response.status}"
+    except Exception as error:
+        down["qdrant"] = f"{_where(qdrant_url)}: {_first_line(error)}"
+    try:
+        Redis.from_url(redis_url, socket_connect_timeout=timeout, socket_timeout=timeout).ping()
+    except Exception as error:
+        down["redis"] = f"{_where(redis_url)}: {_first_line(error)}"
+    return down
+
+
+def _docker(*args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(["docker", *args], cwd=str(PROJECT_ROOT), capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=DOCKER_TIMEOUT_SECONDS)
+
+
+def docker_state(postgres_port: int | None) -> str:
+    """What Docker says about the stack, for an ATTENTION file: is Docker Desktop
+    answering at all, which of this project's containers exist and in what state,
+    and — given `postgres_port`, when Postgres was down — who holds that port.
+
+    Read off `docker compose ps` the way the 51 red nights recorded it: exit 1 with
+    "failed to connect to the docker API" when Docker Desktop was not running (30
+    nights), exit 0 with no running container when it was but the stack was off (18).
+    """
+    try:
+        compose = _docker("compose", "ps", "--all", "--format", "{{.Name}}|{{.State}}")
+    except FileNotFoundError as error:
+        return f"Docker: the docker CLI was not found ({error})."
+    except subprocess.TimeoutExpired:
+        return f"Docker Desktop is not answering: docker compose ps did not return within {DOCKER_TIMEOUT_SECONDS} s."
+    if compose.returncode != 0:
+        reason = ((compose.stderr or "").strip().splitlines() or ["(no output)"])[0]
+        return f"Docker Desktop is not answering (docker compose ps exit {compose.returncode}): {reason}"
+    ours = dict(line.split("|", 1) for line in (compose.stdout or "").splitlines() if "|" in line)
+    running = sorted(name for name, state in ours.items() if state == "running")
+    stopped = sorted(f"{name} ({state})" for name, state in ours.items() if state != "running")
+    if not ours:
+        lines = ["Docker answers, but this project has no containers at all (never created, or removed)."]
+    elif not running:
+        lines = [f"Docker answers, but none of this project's containers is running: {', '.join(stopped)}."]
+    else:
+        lines = [f"Docker answers. Running: {', '.join(running)}." + (f" Not running: {', '.join(stopped)}." if stopped else "")]
+    if postgres_port is not None:
+        try:
+            holders = _docker("ps", "--filter", f"publish={postgres_port}", "--format", "{{.Names}}").stdout or ""
+        except Exception as error:
+            holders = ""
+            lines.append(f"Could not ask who holds port {postgres_port}: {_first_line(error)}")
+        for name in holders.split():
+            if name not in ours:
+                lines.append(f"Port {postgres_port} is held by {name}, a container that is not this project's.")
+    return "\n".join(lines)
+
+
+def preflight(database_url: str) -> str | None:
+    """None when the lab API's dependencies all answer; else the exit-93 text."""
+    from app.config.settings import get_settings
+
+    settings = get_settings()
+    down = check_dependencies(database_url, settings.qdrant_url, settings.redis_url)
+    if not down:
+        return None
+    postgres_port = (urlsplit(database_url).port or 5432) if "postgres" in down else None
+    lines = [f"Not starting the lab API: {', '.join(down)} {'is' if len(down) == 1 else 'are'} down.", *(f"  - {name} {why}" for name, why in down.items()), ""]
+    lines.append(docker_state(postgres_port))
+    return "\n".join(lines)
 
 
 def diagnose() -> str:
@@ -112,7 +225,9 @@ def wait_for_health(port: int, timeout_seconds: float) -> bool:
     deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
         try:
-            with urlopen(f"http://127.0.0.1:{port}/health", timeout=3) as response:
+            # Not 3 s: /health itself took 10 s with a dependency down (27/10), so a
+            # 3 s read timed out on every poll and an API that was up read as never up.
+            with urlopen(f"http://127.0.0.1:{port}/health", timeout=30) as response:
                 if response.status == 200:
                     return True
         except Exception:
@@ -201,10 +316,16 @@ def main() -> int:
 
 
 def _run(started: str) -> int:
+    database_url = lab_database_url()
+    # Exit 93 = a dependency was down before anything started: nothing to tear
+    # down, and the ATTENTION file says which one instead of "no /health in 180 s".
+    missing = preflight(database_url)
+    if missing is not None:
+        return finish(started, returncode=93, output=missing)
     env = {
         **lab_environment(dict(os.environ)),
         "PYTHONUTF8": "1",
-        "DATABASE_URL": lab_database_url(),
+        "DATABASE_URL": database_url,
         "QDRANT_DOCUMENTS_COLLECTION": LAB_COLLECTION,
     }
     LAB_API_LOG.parent.mkdir(parents=True, exist_ok=True)

@@ -21,8 +21,7 @@ echo.
 echo    Dang do chat luong RAG tren corpus lab.
 echo    KHONG dong cua so nay - no tu tat sau vai phut.
 echo.
-echo    Ket qua: data\logs
-ightly_eval.log
+echo    Ket qua: data\logs\nightly_eval.log
 echo    Neu hong: data\logs\ATTENTION_nightly_eval.txt
 echo  ==========================================================
 echo.

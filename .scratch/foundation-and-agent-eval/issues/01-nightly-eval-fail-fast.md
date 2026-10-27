@@ -1,6 +1,6 @@
 # 01 — Eval đêm dừng sớm và nói rõ phụ thuộc nào tắt (M1a)
 
-Status: đã giao — Nhân viên của Ún 1
+Status: chờ duyệt — Nhân viên của Ún 1, nhánh `wip/01-nightly-eval-fail-fast`
 Type: task
 Blocked by: —
 
@@ -48,3 +48,67 @@ Không để job tự bật container.
 - Một đêm 03:00 thật exit 0 — điều phối kiểm sau khi có stack (không chặn việc gộp).
 
 ## Comments
+
+### 27/10 — Nhân viên của Ún 1: tái hiện (bước 1)
+
+Bản chất: giả thuyết chỉ đúng một nửa. Khi phụ thuộc chết, `/health` không treo mãi, nhưng
+chậm, và chậm vượt trần mà job đêm chịu chờ cho mỗi lần hỏi. Thành ra API đã lên, sẽ trả lời
+"degraded", mà job vẫn coi như chưa từng lên. Riêng Postgres ở cổng không ai nghe thì đúng là
+treo hàng phút.
+
+Nguyên nhân trực tiếp của exit 97: `wait_for_health` đặt `urlopen(timeout=3)` cho mỗi lần hỏi.
+`/health` chậm hơn 3 s, nên lần hỏi nào cũng hết giờ, cho tới khi cạn ngân sách 180 s.
+
+Đo bằng lab API thật chạy trong worktree, với stack Ún tắt, dùng `.env` chép từ `.env.example`:
+
+| Cảnh | `/health` |
+|---|---|
+| Hôm nay: 5432 do `edu-postgres-1` giữ (từ chối ngay), 6333/6379 đóng | 200 `degraded` sau 10,4 s |
+| Không ai nghe ở cổng Postgres (như các đêm tháng 9) | 200 `degraded` sau 270 s |
+
+Từng phép thử, đo riêng bằng code của app:
+
+| Phép thử | Cổng đóng | Cổng nhận kết nối mà không trả lời |
+|---|---|---|
+| Postgres `SELECT 1` (engine không có connect_timeout) | > 90 s; 0,02 s nếu edu giữ cổng | treo > 120 s |
+| Redis `ping` (không có socket timeout) | 2,0 s (Windows thử lại SYN) | treo > 120 s |
+| Qdrant `healthcheck` (3 lần × 10 s) | 8,4 s | 32 s |
+
+`/health` hỏi Postgres hai lần (SELECT 1 và đếm outbox), nên con số 270 s là hai lần chờ cộng
+lại. Cảnh "cổng câm" được giả lập bằng một socket của tôi, không đụng container. Nó giống Docker
+Desktop đang lên dở, nhưng chưa kiểm cảnh đó trên Docker thật.
+
+Log 51 đêm đỏ (`data/logs/nightly_eval.log` ở checkout chính) cho hai dạng `docker compose ps`:
+exit 1 kèm `failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine`
+(30 đêm); exit 0 chỉ có dòng tiêu đề (18 đêm). Bộ phân loại ở bước 3 dựa trên đúng hai dạng này.
+
+### 27/10 — Nhân viên của Ún 1: sửa (bước 2–5)
+
+- `/health`: mỗi phép thử dừng sau 3 s. Postgres dùng một engine riêng cho phép thử (có
+  connect_timeout, NullPool), lấy URL từ engine của API. Engine chính giữ nguyên. Lượt đếm
+  outbox bị bỏ qua khi Postgres đã không trả lời. Redis có socket timeout. Qdrant gọi
+  `healthcheck` của store trong một luồng riêng, chờ tối đa 3 s, và không mở thêm luồng khi
+  luồng cũ còn chạy.
+- `nightly_eval.py`: trước khi bật lab API, hỏi thẳng Postgres (SELECT 1 trên DB lab), Qdrant
+  (`/readyz`) và Redis (PING), mỗi cái tối đa 3 s. Thiếu cái nào thì exit 93, và ATTENTION ghi
+  phụ thuộc nào tắt, trạng thái Docker, và container lạ nào đang giữ cổng Postgres.
+  `docker compose ps` có trần 10 s. `wait_for_health` nâng trần mỗi lần hỏi từ 3 s lên 30 s.
+- `nightly-eval-once.bat`: dòng banner bị gãy đã được nối lại thành `data\logs\nightly_eval.log`.
+- Test mới: `tests/test_health_probe_timeouts.py`, `tests/test_nightly_preflight.py`. Cả hai
+  không cần stack. Test dùng một socket nghe mà không bao giờ trả lời.
+
+| Kiểm | Kết quả |
+|---|---|
+| Test mới + `test_nightly_registry_gate.py` | 20 bài xanh, 10 s |
+| Cùng test trên code cũ | đỏ hết; hai bài `/health`, bỏ tham số timeout mới, vẫn treo quá 15 s / 5 s |
+| Job đêm, ba phụ thuộc trỏ vào cổng trống | exit 93 sau 8,7 s, ATTENTION nêu đủ ba |
+| Phép thử trước trên stack thật | cả ba trả lời, mất 1 s |
+| Job đêm trọn vẹn từ worktree trên stack thật (DB lab) | exit 0 sau 57 s, cổng chặn hồi quy đạt, ATTENTION tự xoá |
+
+Chưa kiểm: `tests/test_health.py` cần DB test, mà DB đó đang dành cho bộ test đầy đủ ở `main`.
+Dòng "container lạ giữ cổng 5432" mới chỉ kiểm bằng mock, vì `edu-postgres-1` đang tạm dừng.
+Một đêm 03:00 thật cũng chưa chạy.
+
+Lệch ticket: (1) nâng trần `urlopen` trong `wait_for_health` từ 3 s lên 30 s. Việc này không
+có trong danh sách việc, nhưng đó chính là nguyên nhân trực tiếp của exit 97. (2) Ollama không
+được kiểm trước, vì ticket chỉ nêu ba phụ thuộc. Phần chẩn đoán của exit 97 vẫn chạy `ollama ps`.
