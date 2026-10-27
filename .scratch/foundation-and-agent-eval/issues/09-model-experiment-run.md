@@ -1,6 +1,6 @@
 # 09 — Thí nghiệm model M3: hướng B, bắt đầu bằng nhánh 0
 
-Status: record + probe đã gộp (27/10, fable duyệt); nhánh 0 giao Nhân viên 2, chạy từ 19:30
+Status: dừng ở Bước 2b theo luật (trôi passage 0,99912 < 0,9999); kế hoạch mới ở "Bổ sung 2" của đăng ký trước; chạy lại sáng 28/10
 Type: task
 Blocked by: 08 (xong), 11 (sàn dao động 788 câu); cần stack heldout + lab
 

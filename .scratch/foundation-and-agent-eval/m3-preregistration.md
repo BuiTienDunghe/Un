@@ -334,3 +334,26 @@ là candidate, thêm `notes` ghi ngày và kết quả.
 | 4 | Trôi vector passage | **Bước 2b mới**, chỉ đọc: so cosine từng điểm giữa `documents_drill_heldout` (v0, nhúng 08/09) và `documents_drill_heldout_qi` (nhúng 27/10, Ollama 0.40.8) theo cùng id. Luật bậc, cố định trước khi đo: min ≥ 0,999999 → không nhiễu, đi tiếp; 0,9999 ≤ min < 0,999999 → đi tiếp, ghi là giới hạn (Δ gồm cả tiền tố lẫn nhúng lại; quyết định ship vẫn đúng vì ship cũng phải nhúng lại); min < 0,9999 → **dừng**, mở ticket dựng collection v0 nhúng mới làm control |
 | 5 | Thời gian | Nhánh 0 ước 2,5–3 giờ (Bước 4 ≈ 62 phút, đo ở ticket 11). Chạy trọn một mạch khi GPU rảnh, nếu bắt đầu được trước 23:30 (để mọi stack dừng trước 02:45); không thì dời trọn sang 05:00. **Không** tách Bước 2–3 và 4–5 sang hai buổi (p50 đo khác giờ với p50-C). Cửa sổ 05:00–21:00 ở mục Ước lượng là vì bot Discord dùng GPU 22:00–04:00; tối 27/10 bot không chạy |
 | 6 | Ghi chú | `memories` của heldout và lab đều 0 dòng → `rebuild_memories` không tạo `memories_qi`, là bình thường. `eval_stack` in sai "contextual=OFF" — đọc `/models` |
+
+## Bổ sung 2 — sau khi luật trôi passage dừng nhánh 0 (27/10 ~20:15, opus 5.5; chưa lượt đo nào chạy)
+
+Bước 2b đo được: so 3 896 / 3 896 điểm theo cùng id giữa `documents_drill_heldout` (nhúng 08/09) và
+`documents_drill_heldout_qi` (nhúng 27/10): min 0,99911526, p1 0,99951999, trung vị 0,99970730; cả
+3 896 điểm < 0,999999. Theo luật bậc (min < 0,9999) → **dừng**, không đo. Bước 1 cho thấy passage của
+v0 và qi nhúng **cùng hôm nay** trùng nhau (0,9999999999999999), weights không đổi (digest
+`ac6da0dfba84`), văn bản đầu vào và đường gọi nhúng không đổi từ f88380f. Nguyên nhân còn lại nằm ngoài
+repo: Ollama 0.33.2 → 0.40.8, hoặc phần số học GPU/driver; chưa tách được.
+
+Kế hoạch mới, cố định trước khi đo:
+
+| # | Thay đổi |
+|---|---|
+| 1 | `eval_stack` thêm cờ đặt gốc tên collection (ví dụ `--collection-base`), commit + duyệt **trước** khi nhúng. Chỉ mục 08/09 và kết quả ticket 11 giữ nguyên, không ghi đè |
+| 2 | Nhúng mới **cả hai** phía dưới cùng một gốc mới, trên cùng runtime, cùng buổi: v0 (suffix rỗng) và qi (suffix `qi`). `documents_drill_heldout_qi` nhúng 27/10 không dùng nữa |
+| 3 | Chạy lại Bước 2b giữa hai collection mới: passage phải ≥ 0,999999 (cùng runtime). Không đạt → dừng |
+| 4 | Control nhánh (ii) = **một lượt mới** v0 hybrid ctx ON reranker ON trên collection v0 mới (không dùng các lần lặp của ticket 11, vì chúng chạy trên vector 08/09). Sàn dao động lặp lại vẫn lấy từ ticket 11 (F1 = F5 = 0), vì đó là tính chất của đường truy vấn khi vector cố định |
+| 5 | Mọi điều kiện dừng, luật chọn thước, tập đo giữ nguyên |
+| 6 | Thời gian ~4 giờ GPU (2 lần nhúng ~18 phút + control ~62 phút + Bước 3–5). Không kịp trước 02:45 tối 27/10 → chạy trọn một mạch từ sáng 28/10 |
+
+Hệ quả rộng hơn 09: mọi phép so A/B về embedding (kể cả B đầy đủ với e5) phải nhúng lại **cả hai** phía
+trên cùng runtime; registry và manifest eval hiện không ghi phiên bản Ollama.
