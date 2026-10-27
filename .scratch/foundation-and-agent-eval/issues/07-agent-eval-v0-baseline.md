@@ -12,9 +12,8 @@ Blocked by: 06 (đã gộp); phần chạy GPU chờ 11 (11 đang đo p50 /rag/s
 3. Chấm tay ít nhất 5 bài để đối chiếu bộ chấm tự động.
 4. Báo cáo ghi rõ: "baseline thăm dò, chưa đủ chứng minh thống kê". Kết quả nào được trích dẫn thì
    promote vào `data/evaluation/results/kept/` và thêm một dòng vào `docs/RESULTS.md`.
-
-6. Chạy với `PYTHONUTF8=1` (runner in tiếng Việt; console cp1252 vỡ ngay cả `--help` — fable kiểm 27/10).
 5. Chạy với registry đã probe (`manifest.verified: true`) và cấu hình thật của máy, không dùng
    DATABASE_URL giữ chỗ như lần chạy thử của 06 — baseline phải gắn được với cấu hình đang ship.
+6. Chạy với `PYTHONUTF8=1` (runner in tiếng Việt; console cp1252 vỡ ngay cả `--help` — fable kiểm 27/10).
 
 ## Comments
