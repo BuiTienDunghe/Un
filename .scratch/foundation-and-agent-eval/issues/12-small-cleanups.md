@@ -1,6 +1,6 @@
 # 12 — Dọn nhỏ sau 03 (được phép trượt)
 
-Status: xong trên `wip/12-small-cleanups` (6/6), chờ duyệt
+Status: đã gộp vào main (27/10), fable 5.1 duyệt
 Type: task
 Blocked by: — (kiểm 27/10: không chung file với 02; mục 6 và 05 cùng đụng operational_service.py nhưng khác dòng)
 

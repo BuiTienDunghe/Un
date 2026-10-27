@@ -24,6 +24,11 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 ### Changed
 - `seed` trong cấu hình model general được gửi tới Ollama khi được đặt. Không phiên bản nào đang ship
   đặt nó, nên request hiện tại không đổi.
+- `.env.example` để comment mọi giá trị trùng mặc định của Settings, nên một `.env` chép từ đó không
+  còn ghim những giá trị mà Settings đổi về sau (`CONVERSATION_HISTORY_LIMIT` đã lệch: 12 ở file
+  mẫu, 40 ở Settings). Worker và adapter trích trí nhớ không còn tự giữ mặc định schema `"v1"`;
+  phiên bản luôn do nơi gọi truyền từ Settings.
+- Eval đêm hỏi thêm `/api/version` của Ollama trước khi bật lab API (không gọi model).
 - **Đường chạy bằng Docker đổi hành vi: worker trí nhớ trong container theo schema v2 như máy chủ**
   (27/10). `docker-compose.yml` từng tự khai 16 mặc định trùng Settings, trong đó
   `DISCORD_MEMORY_EXTRACTOR_SCHEMA_VERSION` lệch (compose v1, Settings v2 từ 28/08). Vì vậy worker

@@ -65,7 +65,7 @@ ticket mới, chờ các ticket đang chạy xong, rồi báo chủ dự án.
 | 09 | Thí nghiệm B, nhánh 0 trước (M3) | 11; stack | fable 5.1 viết đăng ký trước | đang chuẩn bị |
 | 10 | Nâng harness theo lỗi đo được (M4) | 07 | — | chờ |
 | 11 | Đo dao động 788 câu held-out (tiền đề M3) | stack | Nhân viên 2 | đã giao |
-| 12 | Dọn nhỏ sau 03 (được phép trượt) | — | Nhân viên 3 | đã giao |
+| 12 | Dọn nhỏ sau 03 (được phép trượt) | — | Nhân viên 3 | **đã gộp** |
 
 ## Mốc so sánh của bộ test
 
