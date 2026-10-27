@@ -1,6 +1,6 @@
 # 08 — Chọn mục tiêu cho thí nghiệm model (M3)
 
-Status: đã giao — fable 5.1 của Ún
+Status: xong — chờ chủ dự án chọn A/B/C (27/10)
 Type: research
 Blocked by: —
 
@@ -28,3 +28,8 @@ Agent Eval: bộ trích trí nhớ không nằm trên đường đi của agent,
 được tạo thẳng trong checkout chính (điều phối sẽ commit).
 
 ## Comments
+
+- 27/10 (fable 5.1): xong, xem `m3-target.md`. Ba ứng viên có bộ đo: A reranker lần 3, B đổi
+  embedding sang e5-large (bắt đầu bằng nhánh 0: chỉ dẫn truy vấn, không tải, không re-index), C D2
+  chưng cất extractor. Fable nghiêng B; muốn model tự train thì C. Điều kiện chung: chạy một lần lặp
+  control cùng cấu hình trên 788 câu trước treatment. Mọi lần tải model cần chủ dự án duyệt.

@@ -18,3 +18,7 @@ chế làm nguồn sự thật cho trạng thái; nếu vẫn giữ hai cơ ch�
 các lựa chọn vào Comments trước khi code. Sửa lỗi 401.
 
 ## Comments
+
+- 27/10 (từ Nhân viên 2, ticket 03): service `discord-bot` trong `docker-compose.yml` có 14 mặc định
+  trùng với mặc định trong `discord_bot/main.py` (không phải Settings). Xử lý cùng ticket này, cùng
+  quy tắc: một nơi giữ mặc định.
