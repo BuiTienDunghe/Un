@@ -199,7 +199,7 @@ def test_the_progress_store_forgets_a_turn_when_it_ends_and_after_its_cap():
     store.recorder("t1")({"kind": "tool_call", "round": 1, "label": "Đang tra tài liệu…"})
     store.record("t1", {"kind": "tool_result", "round": 1})
     entry = store.get("t1")
-    assert entry["label"] == "Đang tra tài liệu…" and entry["steps"] == 2 and entry["kind"] == "tool_result", "an unlabelled event keeps the last label"
+    assert entry["label"] == "Đang tra tài liệu…" and entry["events"] == 2 and entry["kind"] == "tool_result", "an unlabelled event keeps the last label"
 
     store.finish("t1")
     assert store.get("t1") is None and len(store) == 0
@@ -217,7 +217,7 @@ def test_the_progress_store_takes_writes_from_many_threads():
         thread.start()
     for thread in threads:
         thread.join()
-    assert len(store) == 8 and all(store.get(f"t{i}")["steps"] == 200 for i in range(8))
+    assert len(store) == 8 and all(store.get(f"t{i}")["events"] == 200 for i in range(8))
 
 
 def test_the_bot_reads_a_running_turns_progress_and_nothing_once_it_ended():
@@ -229,9 +229,9 @@ def test_the_bot_reads_a_running_turns_progress_and_nothing_once_it_ended():
     api = TestClient(app)
 
     running = api.get("/api/discord/sessions/turns/6f1c1d0a-0000-4000-8000-000000000001/progress").json()
-    assert running["running"] is True and running["label"] == "Đang tra tài liệu…" and running["steps"] == 1
+    assert running["running"] is True and running["label"] == "Đang tra tài liệu…" and running["events"] == 1
     ended = api.get("/api/discord/sessions/turns/6f1c1d0a-0000-4000-8000-000000000002/progress").json()
-    assert ended == {"turn_id": "6f1c1d0a-0000-4000-8000-000000000002", "running": False, "label": None, "kind": None, "round": None, "steps": 0, "updated_at": None}
+    assert ended == {"turn_id": "6f1c1d0a-0000-4000-8000-000000000002", "running": False, "label": None, "kind": None, "round": None, "events": 0, "updated_at": None}
 
 
 def test_a_discord_turn_drops_its_progress_however_it_ends():

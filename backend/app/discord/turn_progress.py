@@ -35,8 +35,8 @@ class TurnProgress:
     def record(self, turn_id: str, event: dict[str, object]) -> None:
         with self._lock:
             self._prune()
-            entry = self._entries.setdefault(turn_id, {"steps": 0, "label": None})
-            entry["steps"] = int(entry["steps"]) + 1
+            entry = self._entries.setdefault(turn_id, {"events": 0, "label": None})
+            entry["events"] = int(entry["events"]) + 1
             entry["kind"] = event.get("kind")
             entry["round"] = event.get("round")
             if event.get("label"):

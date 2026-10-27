@@ -86,7 +86,9 @@ class DiscordTurnProgressResponse(BaseModel):
     label: str | None = None
     kind: str | None = None
     round: int | None = None
-    steps: int = 0
+    # How many progress events the turn has sent (every kind, thinking included): not the
+    # trace's step count.
+    events: int = 0
     updated_at: str | None = None
 
 
