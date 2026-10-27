@@ -231,9 +231,10 @@ class Settings(BaseSettings):
     )
     @classmethod
     def _empty_pin_is_unset(cls, value: object) -> object:
-        # Same reason as above: docker-compose passes `${MODEL_VERSION_X:-}` and a
-        # shell `set MODEL_VERSION_X=` both arrive as "", which must mean "unset",
-        # never "pin the version named ''". Only the exact empty string maps:
+        # Same reason as above: a shell `set MODEL_VERSION_X=` arrives as "", and
+        # docker-compose's bare pass-through hands that "" to the containers
+        # too; it must mean "unset", never "pin the version named ''". Only the
+        # exact empty string maps:
         # whitespace is a typo the validator below refuses rather than silences.
         if value == "":
             return None

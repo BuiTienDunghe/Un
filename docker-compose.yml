@@ -34,9 +34,16 @@ services:
       retries: 12
   # Model registry (backend/app/config/model_versions.yaml) is baked into the
   # image with backend/, so a registry edit reaches these workers only after
-  # `docker compose build`. MODEL_VERSION_* are shell-only measuring pins; an
-  # empty default arrives as "" and Settings maps that to "unset" — a non-empty
-  # default here would pin every container to one version forever.
+  # `docker compose build`.
+  # Settings (backend/app/config/settings.py) holds every default. A Settings
+  # field is passed through as a bare key (`VAR:`): compose copies it from the
+  # shell or .env, and when neither sets it the variable is absent in the
+  # container, so Settings decides. A default written here drifts from Settings
+  # (the extractor schema version did: v1 here, v2 there), and on a
+  # MODEL_VERSION_* pin it would pin every container to one version forever.
+  # The one exception is the rq queue name on `command:`: the rq CLI needs it
+  # before any Settings exists, so it keeps Settings' own default there
+  # (backend/tests/test_compose_defaults.py fails if the two ever differ).
   worker-ocr:
     build: .
     profiles: ["workers"]
@@ -45,11 +52,11 @@ services:
       INGESTION_EXECUTION_BACKEND: rq
       DATABASE_URL: ${CONTAINER_DATABASE_URL:-${DATABASE_URL}}
       REDIS_URL: redis://redis:6379/0
-      RQ_QUEUE_PREFIX: ${RQ_QUEUE_PREFIX:-local-ai:dev}
+      RQ_QUEUE_PREFIX:
       OLLAMA_BASE_URL: http://host.docker.internal:11434
-      MODEL_VERSION_EXTRACTOR: ${MODEL_VERSION_EXTRACTOR:-}
-      MODEL_VERSION_VERIFIER: ${MODEL_VERSION_VERIFIER:-}
-      MODEL_VERSION_EMBEDDING: ${MODEL_VERSION_EMBEDDING:-}
+      MODEL_VERSION_EXTRACTOR:
+      MODEL_VERSION_VERIFIER:
+      MODEL_VERSION_EMBEDDING:
     volumes: ["./data:/app/data"]
     depends_on: [redis]
   worker-index:
@@ -60,11 +67,11 @@ services:
       INGESTION_EXECUTION_BACKEND: rq
       DATABASE_URL: ${CONTAINER_DATABASE_URL:-${DATABASE_URL}}
       REDIS_URL: redis://redis:6379/0
-      RQ_QUEUE_PREFIX: ${RQ_QUEUE_PREFIX:-local-ai:dev}
+      RQ_QUEUE_PREFIX:
       OLLAMA_BASE_URL: http://host.docker.internal:11434
-      MODEL_VERSION_EXTRACTOR: ${MODEL_VERSION_EXTRACTOR:-}
-      MODEL_VERSION_VERIFIER: ${MODEL_VERSION_VERIFIER:-}
-      MODEL_VERSION_EMBEDDING: ${MODEL_VERSION_EMBEDDING:-}
+      MODEL_VERSION_EXTRACTOR:
+      MODEL_VERSION_VERIFIER:
+      MODEL_VERSION_EMBEDDING:
     volumes: ["./data:/app/data"]
     depends_on: [redis]
   worker-memory:
@@ -75,21 +82,21 @@ services:
       INGESTION_EXECUTION_BACKEND: rq
       DATABASE_URL: ${CONTAINER_DATABASE_URL:-${DATABASE_URL}}
       REDIS_URL: redis://redis:6379/0
-      RQ_QUEUE_PREFIX: ${RQ_QUEUE_PREFIX:-local-ai:dev}
+      RQ_QUEUE_PREFIX:
       OLLAMA_BASE_URL: http://host.docker.internal:11434
-      DISCORD_MEMORY_INGESTION_ENABLED: ${DISCORD_MEMORY_INGESTION_ENABLED:-false}
-      DISCORD_MEMORY_EXTRACTOR_ENABLED: ${DISCORD_MEMORY_EXTRACTOR_ENABLED:-false}
-      # Empty = follow roles.extractor.active in the registry; a tag = ad-hoc pin.
-      DISCORD_MEMORY_EXTRACTOR_MODEL: ${DISCORD_MEMORY_EXTRACTOR_MODEL:-}
-      MODEL_VERSION_EXTRACTOR: ${MODEL_VERSION_EXTRACTOR:-}
-      MODEL_VERSION_VERIFIER: ${MODEL_VERSION_VERIFIER:-}
-      MODEL_VERSION_EMBEDDING: ${MODEL_VERSION_EMBEDDING:-}
-      DISCORD_MEMORY_EXTRACTOR_SCHEMA_VERSION: ${DISCORD_MEMORY_EXTRACTOR_SCHEMA_VERSION:-v1}
-      DISCORD_MEMORY_EXTRACTOR_NUM_CTX: ${DISCORD_MEMORY_EXTRACTOR_NUM_CTX:-4096}
-      DISCORD_MEMORY_EXTRACTOR_TIMEOUT_SECONDS: ${DISCORD_MEMORY_EXTRACTOR_TIMEOUT_SECONDS:-60}
-      DISCORD_MEMORY_EXTRACTOR_RETRY_COUNT: ${DISCORD_MEMORY_EXTRACTOR_RETRY_COUNT:-1}
-      DISCORD_MEMORY_QUEUE_NAME: ${DISCORD_MEMORY_QUEUE_NAME:-memory_extract}
-      JOB_STALE_TIMEOUT_SECONDS: ${JOB_STALE_TIMEOUT_SECONDS:-900}
+      DISCORD_MEMORY_INGESTION_ENABLED:
+      DISCORD_MEMORY_EXTRACTOR_ENABLED:
+      # Unset = follow roles.extractor.active in the registry; a tag = ad-hoc pin.
+      DISCORD_MEMORY_EXTRACTOR_MODEL:
+      MODEL_VERSION_EXTRACTOR:
+      MODEL_VERSION_VERIFIER:
+      MODEL_VERSION_EMBEDDING:
+      DISCORD_MEMORY_EXTRACTOR_SCHEMA_VERSION:
+      DISCORD_MEMORY_EXTRACTOR_NUM_CTX:
+      DISCORD_MEMORY_EXTRACTOR_TIMEOUT_SECONDS:
+      DISCORD_MEMORY_EXTRACTOR_RETRY_COUNT:
+      DISCORD_MEMORY_QUEUE_NAME:
+      JOB_STALE_TIMEOUT_SECONDS:
     volumes: ["./data:/app/data"]
     depends_on: [redis]
   outbox-dispatcher:
@@ -99,8 +106,8 @@ services:
     environment:
       DATABASE_URL: ${CONTAINER_DATABASE_URL:-${DATABASE_URL}}
       REDIS_URL: redis://redis:6379/0
-      RQ_QUEUE_PREFIX: ${RQ_QUEUE_PREFIX:-local-ai:dev}
-      JOB_MAX_ATTEMPTS: ${JOB_MAX_ATTEMPTS:-3}
+      RQ_QUEUE_PREFIX:
+      JOB_MAX_ATTEMPTS:
     depends_on: [redis]
   cleanup-worker:
     build: .
@@ -109,7 +116,7 @@ services:
     environment:
       DATABASE_URL: ${CONTAINER_DATABASE_URL:-${DATABASE_URL}}
       QDRANT_URL: http://qdrant:6333
-      REQUEST_LOG_RETENTION_DAYS: ${REQUEST_LOG_RETENTION_DAYS:-7}
+      REQUEST_LOG_RETENTION_DAYS:
     volumes: ["./data:/app/data"]
     depends_on: [qdrant]
   discord-bot:
@@ -124,7 +131,7 @@ services:
       LOCAL_AGENT_USERNAME: ${LOCAL_AGENT_USERNAME:-}
       LOCAL_AGENT_PASSWORD: ${LOCAL_AGENT_PASSWORD:-}
       # Without this a secured backend would 401 every Discord turn.
-      LOCAL_AI_API_KEY: ${LOCAL_AI_API_KEY:-}
+      LOCAL_AI_API_KEY:
       DISCORD_SYSTEM_PROMPT_PATH: /app/discord_bot/system_prompt.md
       DISCORD_MEMBER_CONTEXT_LIMIT: ${DISCORD_MEMBER_CONTEXT_LIMIT:-100}
       DISCORD_PERSISTENT_SESSIONS_ENABLED: ${DISCORD_PERSISTENT_SESSIONS_ENABLED:-true}
