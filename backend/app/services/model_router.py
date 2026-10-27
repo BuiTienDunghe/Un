@@ -78,7 +78,10 @@ class ModelRouter:
         return client
 
     def _ollama_options(self, config: dict[str, Any]) -> dict[str, Any]:
-        options = {key: config[key] for key in ("temperature", "top_p") if key in config}
+        # `seed` only when the config names one: no shipped version sets it, so
+        # every request body stays byte-identical; the agent eval adds it to its
+        # own copy of the config to make a temperature-0 run repeatable.
+        options = {key: config[key] for key in ("temperature", "top_p", "seed") if key in config}
         if "context" in config:
             options["num_ctx"] = config["context"]
         return options

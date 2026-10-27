@@ -1,0 +1,491 @@
+"""Agent Eval v0: the agent's own exam (ticket 06, spec "Mốc 2").
+
+Runs each task of data/benchmarks/agent_eval/<version>/ through the REAL
+AgentService.run() and the REAL general model (ModelRouter built from the
+active model version), with three fake backends behind the agent's Protocols:
+document retrieval replayed from a fixture, one fixed fake Discord guild, and a
+system-status snapshot. It measures tool choice, arguments, use of the results,
+stopping and the final answer. It does NOT measure retrieval quality, persona,
+memory context or the SSE path: those have their own evals or none yet.
+
+    cd backend
+    python -m scripts.agent_eval                                  # shipped sampling (0.4, no seed)
+    python -m scripts.agent_eval --temperature 0 --seed 42        # repeatable, for before/after
+    python -m scripts.agent_eval --tasks doc-01,hist-01,hist-07   # a subset
+
+Each run writes data/evaluation/results/agent_eval/<run_id>/ (gitignored):
+manifest.json, task_results.jsonl, events.jsonl, summary.json. No database, no
+Qdrant, no Docker: the only service called is Ollama.
+
+Temperature and seed overrides live in this process only: the router gets a
+copy of the resolved general config; models.yaml and model_versions.yaml are
+never touched.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import statistics
+import subprocess
+import sys
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from time import perf_counter
+from types import SimpleNamespace
+from typing import Any
+
+from app.llm_clients.usage import consume_usage
+from app.services.agent_service import AGENT_GUIDE, AGENT_TOOLS, AgentService
+from app.services.discord_history_service import _SAFE_LEXEME, DiscordHistoryHit
+from app.services.discord_speaker_context import DISCORD_SPEAKER_SYSTEM_INSTRUCTION, attributed_user_content
+from app.services.injection_defense import InjectionDefense
+from app.utils.vi_tokenizer import tokenize_vietnamese
+from scripts.agent_eval_grader import GRADER_VERSION, grade, summarize, tool_calls
+
+BACKEND = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = BACKEND.parent
+DATASET_DIR = PROJECT_ROOT / "data" / "benchmarks" / "agent_eval" / "v0"
+RESULTS_DIR = PROJECT_ROOT / "data" / "evaluation" / "results" / "agent_eval"
+SYSTEM_PROMPT_PATH = BACKEND / "app" / "prompts" / "general_system.md"
+
+# Hashed in this order; README.md is documentation and never moves the hash.
+DATA_FILES = ("dataset.json", "tasks.jsonl", "retrieval.jsonl")
+CATEGORIES = ("documents", "history", "status", "no_tool")
+SURFACES = ("web", "discord")
+NO_SEED = "không seed"
+# Settings refuses to exist without a PostgreSQL URL; this run opens no
+# database, so a placeholder satisfies the validator and is never dialled.
+PLACEHOLDER_DATABASE_URL = "postgresql+psycopg://agent-eval@unused/none"
+
+
+def _sha256(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+# ── dataset ──────────────────────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class Dataset:
+    version: str
+    sha256: str
+    path: Path
+    tasks: list[dict[str, Any]]
+    guild: dict[str, Any]
+    status_snapshots: dict[str, dict[str, Any]]
+    retrieval: dict[str, dict[str, Any]]
+
+
+def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def load_dataset(directory: Path) -> Dataset:
+    """Read and cross-check one dataset version; refuses a malformed one
+    before any model call is paid for."""
+    digest = hashlib.sha256()
+    for name in DATA_FILES:
+        # autocrlf checks these out as CRLF on Windows; hash the LF bytes git
+        # stores so the same commit gives the same hash on every machine.
+        data = (directory / name).read_bytes().replace(b"\r\n", b"\n")
+        digest.update(name.encode() + b"\0" + data + b"\0")
+    meta = json.loads((directory / "dataset.json").read_text(encoding="utf-8"))
+    tasks = _read_jsonl(directory / "tasks.jsonl")
+    retrieval = {fixture["task_id"]: fixture for fixture in _read_jsonl(directory / "retrieval.jsonl")}
+    snapshots = meta["status_snapshots"]
+
+    problems: list[str] = []
+    ids = [task["id"] for task in tasks]
+    problems += [f"id trùng: {task_id}" for task_id in sorted({i for i in ids if ids.count(i) > 1})]
+    for task in tasks:
+        if task.get("category") not in CATEGORIES:
+            problems.append(f"{task['id']}: category {task.get('category')!r}")
+        if task.get("surface", "web") not in SURFACES:
+            problems.append(f"{task['id']}: surface {task.get('surface')!r}")
+        if task.get("surface") == "discord" and not task.get("speaker"):
+            problems.append(f"{task['id']}: discord cần speaker")
+        if task.get("status_snapshot", "healthy") not in snapshots:
+            problems.append(f"{task['id']}: không có snapshot {task.get('status_snapshot')!r}")
+        if not task.get("expect"):
+            problems.append(f"{task['id']}: thiếu expect")
+    problems += [f"retrieval cho bài không tồn tại: {task_id}" for task_id in retrieval if task_id not in ids]
+    if problems:
+        raise ValueError(f"dataset {directory} hỏng: " + "; ".join(problems))
+    return Dataset(
+        version=str(meta["version"]),
+        sha256=digest.hexdigest(),
+        path=directory,
+        tasks=tasks,
+        guild=meta["guild"],
+        status_snapshots=snapshots,
+        retrieval=retrieval,
+    )
+
+
+# ── fake backends (the agent's Protocols, agent_service.py) ──────────────
+
+
+class ReplayRetrieval:
+    """One task's recorded (or hand-written) chunks, returned for ANY query:
+    the model never repeats the recorded query verbatim, and what it asked is
+    already in its tool_call step. Fixture order is rank order."""
+
+    def __init__(self, chunks: list[dict[str, Any]]) -> None:
+        self.chunks = chunks
+
+    def retrieve(self, query: str, top_k: int, document_id: str | list[str] | None = None) -> list[dict[str, object]]:
+        return [dict(chunk) for chunk in self.chunks[:top_k]]
+
+
+class SnapshotStatus:
+    def __init__(self, snapshot: dict[str, Any]) -> None:
+        self.snapshot = snapshot
+
+    def health(self) -> dict[str, object]:
+        return json.loads(json.dumps(self.snapshot))
+
+
+def _lexemes(text: str) -> set[str]:
+    # The real search's lexemes (discord_history_service._or_query_text).
+    return {cleaned for token in tokenize_vietnamese(text) if (cleaned := _SAFE_LEXEME.sub("", token))}
+
+
+class FixtureHistory:
+    """The fixed fake guild, searched the way DiscordHistoryService does it:
+    OR of Vietnamese lexemes, densest match first; `recent` = the latest N in
+    chronological order. `days` counts back from the fixture's own `now`, not
+    the wall clock, so a task means the same thing next year."""
+
+    def __init__(self, guild: dict[str, Any]) -> None:
+        self.guild_id = str(guild["guild_id"])
+        self.now = datetime.fromisoformat(guild["now"])
+        self.hits = [
+            DiscordHistoryHit(
+                discord_message_id=str(message["id"]),
+                channel_id=str(message["channel_id"]),
+                thread_id=None,
+                author_id=str(message["author_id"]),
+                author_display_name=str(message["author_display_name"]),
+                is_bot=bool(message.get("is_bot", False)),
+                content=str(message["content"]),
+                sent_at=datetime.fromisoformat(message["sent_at"]),
+                link=f"https://discord.com/channels/{self.guild_id}/{message['channel_id']}/{message['id']}",
+            )
+            for message in guild["messages"]
+        ]
+        self._tokens = {hit.discord_message_id: _lexemes(hit.content) for hit in self.hits}
+
+    def search(self, *, guild_id: str, query: str, author_id: str | None = None, days: int | None = None, limit: int = 5) -> list[object]:
+        if guild_id != self.guild_id:
+            return []
+        wanted = _lexemes(query)
+        scored = []
+        for hit in self.hits:
+            if author_id and hit.author_id != author_id:
+                continue
+            if days is not None and hit.sent_at < self.now - timedelta(days=days):
+                continue
+            score = len(wanted & self._tokens[hit.discord_message_id])
+            if score:
+                scored.append((score, hit.sent_at, hit))
+        scored.sort(key=lambda item: (item[0], item[1]), reverse=True)
+        return [hit for _, _, hit in scored[:limit]]
+
+    def recent(self, *, guild_id: str, limit: int = 20, author_id: str | None = None) -> list[object]:
+        if guild_id != self.guild_id:
+            return []
+        hits = sorted((hit for hit in self.hits if not author_id or hit.author_id == author_id), key=lambda hit: hit.sent_at)
+        return hits[-limit:]
+
+
+# ── the router seam ──────────────────────────────────────────────────────
+
+
+class UsageRecordingRouter:
+    """Delegates to the real router and reads token usage after EVERY call.
+    The usage ContextVar keeps only the last call (llm_clients/usage.py), so a
+    three-round answer would otherwise report its final round alone. `chat`
+    is wrapped too: an exhausted tool budget answers through it."""
+
+    def __init__(self, inner: Any) -> None:
+        self.inner = inner
+        self.rounds: list[dict[str, Any]] = []
+
+    def _call(self, kind: str, call: Any) -> Any:
+        consume_usage()  # a value left by an earlier failed call must not leak in
+        started = perf_counter()
+        try:
+            return call()
+        finally:
+            self.rounds.append({"call": kind, **consume_usage(), "latency_ms": int((perf_counter() - started) * 1000)})
+
+    def chat_tools(self, mode: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> tuple[dict[str, Any], str]:
+        return self._call("chat_tools", lambda: self.inner.chat_tools(mode, messages, tools))
+
+    def chat(self, mode: str, messages: list[dict[str, Any]], options: dict[str, Any] | None = None) -> tuple[str, str]:
+        return self._call("chat", lambda: self.inner.chat(mode, messages, options))
+
+    def take(self) -> list[dict[str, Any]]:
+        rounds, self.rounds = self.rounds, []
+        return rounds
+
+
+def override_general(models: dict[str, dict[str, Any]], *, temperature: float | None = None, seed: int | None = None) -> dict[str, dict[str, Any]]:
+    """A copy of the resolved models with the eval's sampling on `general`.
+    Resolved.flat_models() is cached and shared, so it is never edited."""
+    copied = {role: dict(config) for role, config in models.items()}
+    if temperature is not None:
+        copied["general"]["temperature"] = temperature
+    if seed is not None:
+        copied["general"]["seed"] = seed
+    return copied
+
+
+# ── one run ──────────────────────────────────────────────────────────────
+
+
+def build_messages(task: dict[str, Any], system_prompt: str) -> list[dict[str, Any]]:
+    """The messages chat_service.respond_with_context hands the agent: system
+    prompt, the Discord context block on a guild turn, history, the user turn
+    (speaker-labelled on Discord, exactly as discord_speaker_context does it)."""
+    messages: list[dict[str, Any]] = [{"role": "system", "content": system_prompt}]
+    if task.get("surface") == "discord":
+        messages.append({"role": "system", "content": DISCORD_SPEAKER_SYSTEM_INSTRUCTION})
+    messages.extend(task.get("history") or [])
+    content = task["input"]
+    if task.get("surface") == "discord":
+        speaker = task["speaker"]
+        turn = SimpleNamespace(
+            request_text=task["input"],
+            response_text=None,
+            author_id=speaker["author_id"],
+            author_display_name=speaker["name"],
+            reply_to_discord_message_id=None,
+        )
+        content = attributed_user_content(turn, current_speaker=True)
+    messages.append({"role": "user", "content": content})
+    return messages
+
+
+def _sum(values: list[int | None]) -> int | None:
+    known = [value for value in values if value is not None]
+    return sum(known) if known else None
+
+
+def _aggregates(results: list[dict[str, Any]]) -> dict[str, Any]:
+    latencies = sorted(result["latency_ms"] for result in results)
+    tokens_in = [result["tokens_in"] for result in results if result["tokens_in"] is not None]
+    tokens_out = [result["tokens_out"] for result in results if result["tokens_out"] is not None]
+    return {
+        "latency_ms": {
+            "mean": round(statistics.fmean(latencies)) if latencies else None,
+            "p50": round(statistics.median(latencies)) if latencies else None,
+            "max": latencies[-1] if latencies else None,
+        },
+        "tokens_in_total": sum(tokens_in) if tokens_in else None,
+        "tokens_out_total": sum(tokens_out) if tokens_out else None,
+        "mean_tool_calls": round(statistics.fmean(len(r["tool_calls"]) for r in results), 2) if results else None,
+        "budget_exhausted": sum(1 for result in results if result["budget_exhausted"]),
+    }
+
+
+def run_eval(
+    dataset: Dataset,
+    router: Any,
+    *,
+    out_dir: Path,
+    agent_config: dict[str, int],
+    defense: InjectionDefense,
+    system_prompt: str,
+    run_meta: dict[str, Any],
+    task_ids: list[str] | None = None,
+    progress: Any = print,
+) -> dict[str, Any]:
+    """Run the tasks, grade them, write the four artifacts; returns the summary.
+
+    Lines are appended task by task, so a run that dies half-way still leaves
+    a readable manifest and every finished task on disk."""
+    tasks = dataset.tasks
+    if task_ids:
+        unknown = sorted(set(task_ids) - {task["id"] for task in tasks})
+        if unknown:
+            raise ValueError(f"không có bài: {', '.join(unknown)}")
+        tasks = [task for task in tasks if task["id"] in task_ids]
+    out_dir.mkdir(parents=True, exist_ok=False)
+    max_steps = int(agent_config["max_steps"])
+    tool_result_max_chars = int(agent_config["tool_result_max_chars"])
+    manifest = {
+        **run_meta,
+        "max_steps": max_steps,
+        "tool_result_max_chars": tool_result_max_chars,
+        "injection_defense": defense.enabled,
+        # The guide as the model reads it, i.e. AFTER the defense appended its rule.
+        "agent_guide_sha256": _sha256(defense.agent_guide(AGENT_GUIDE)),
+        "system_prompt_sha256": _sha256(system_prompt),
+        "discord_context_sha256": _sha256(DISCORD_SPEAKER_SYSTEM_INSTRUCTION),
+        "tools_sha256": _sha256(json.dumps(AGENT_TOOLS, ensure_ascii=False, sort_keys=True)),
+        "dataset": {
+            "version": dataset.version,
+            "sha256": dataset.sha256,
+            "path": str(dataset.path),
+            "tasks_run": [task["id"] for task in tasks],
+        },
+        "grader_version": GRADER_VERSION,
+        "started_at": datetime.now(UTC).isoformat(),
+    }
+    manifest_path = out_dir / "manifest.json"
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    recording = UsageRecordingRouter(router)
+    history = FixtureHistory(dataset.guild)
+    schemas = {tool["function"]["name"]: tool["function"]["parameters"] for tool in AGENT_TOOLS}
+    results: list[dict[str, Any]] = []
+    for task in tasks:
+        retrieval = dataset.retrieval.get(task["id"], {})
+        agent = AgentService(
+            recording,
+            ReplayRetrieval(retrieval.get("chunks", [])),
+            SnapshotStatus(dataset.status_snapshots[task.get("status_snapshot", "healthy")]),
+            max_steps=max_steps,
+            tool_result_max_chars=tool_result_max_chars,
+            defense=defense,
+            history_service=history,
+        )
+        tool_context = {"guild_id": history.guild_id} if task.get("surface") == "discord" else None
+        answer: str | None = None
+        model: str | None = None
+        steps: list[dict[str, object]] = []
+        error: str | None = None
+        started = perf_counter()
+        try:
+            answer, model, steps = agent.run(build_messages(task, system_prompt), tool_context=tool_context)
+        except Exception as exc:  # one broken task must not cost the others
+            error = f"{type(exc).__name__}: {exc}"
+        latency_ms = int((perf_counter() - started) * 1000)
+        rounds = recording.take()
+        graded = grade(task["expect"], steps, answer, schemas, error)
+        result = {
+            "task_id": task["id"],
+            "category": task["category"],
+            "surface": task.get("surface", "web"),
+            "passed": graded["passed"],
+            "answer": answer,
+            "model": model,
+            "error": error,
+            "tool_calls": tool_calls(steps),
+            "model_rounds": len(rounds),
+            "budget_exhausted": any(round_["call"] == "chat" for round_ in rounds),
+            "tokens_in": _sum([round_["tokens_in"] for round_ in rounds]),
+            "tokens_out": _sum([round_["tokens_out"] for round_ in rounds]),
+            "latency_ms": latency_ms,
+            "retrieval_source": retrieval.get("source"),
+            "grade": graded,
+        }
+        results.append(result)
+        events = [{"task_id": task["id"], "step_index": index, **step} for index, step in enumerate(steps)]
+        events += [{"task_id": task["id"], "kind": "model_round", "round_index": index, **round_} for index, round_ in enumerate(rounds)]
+        with (out_dir / "task_results.jsonl").open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(result, ensure_ascii=False) + "\n")
+        with (out_dir / "events.jsonl").open("a", encoding="utf-8") as handle:
+            handle.writelines(json.dumps(event, ensure_ascii=False, default=str) + "\n" for event in events)
+        progress(f"{task['id']:<10} {'PASS' if result['passed'] else 'FAIL'} {latency_ms / 1000:6.1f}s" + (" ERROR" if error else ""))
+
+    summary = {**summarize(results), **_aggregates(results)}
+    (out_dir / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    manifest["finished_at"] = datetime.now(UTC).isoformat()
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    return summary
+
+
+# ── CLI: the real model ──────────────────────────────────────────────────
+
+
+def _git(*args: str) -> str:
+    try:
+        return subprocess.run(["git", *args], cwd=PROJECT_ROOT, capture_output=True, text=True, check=True).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return "unknown"
+
+
+def parse_args(argv: list[str] | None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--dataset", type=Path, default=DATASET_DIR)
+    parser.add_argument("--tasks", help="comma-separated task ids (default: all)")
+    parser.add_argument("--temperature", type=float, help="override the general model's temperature for this run only")
+    parser.add_argument("--seed", type=int, help="pass a seed to Ollama for this run only (default: no seed)")
+    parser.add_argument("--out", type=Path, default=RESULTS_DIR)
+    parser.add_argument("--run-id")
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    from app.config.model_registry import overrides_from_settings, resolve
+    from app.config.settings import Settings
+    from app.llm_clients.ollama_client import OllamaClient
+    from app.services.model_router import ModelRouter
+
+    args = parse_args(argv)
+    dataset = load_dataset(args.dataset)
+    settings = Settings(database_url=PLACEHOLDER_DATABASE_URL)
+    # Pointer only, no probes: probing needs Postgres and Qdrant, which this
+    # eval never touches. The manifest says `verified: false` accordingly.
+    resolved = resolve(settings.registry(), overrides_from_settings(settings), None)
+    general_role = resolved.roles["general"]
+    models = override_general(resolved.flat_models(), temperature=args.temperature, seed=args.seed)
+    general = models["general"]
+    router = ModelRouter(
+        {"ollama": OllamaClient(settings.ollama_base_url, settings.ollama_chat_timeout_seconds, settings.ollama_health_timeout_seconds, settings.ollama_retry_count)},
+        models,
+    )
+    config = settings.load_config()
+    agent_section = config.get("agent", {})
+    # The same reads and defaults as main.py, so the eval runs what the API runs.
+    agent_config = {
+        "max_steps": int(agent_section.get("max_steps", 3)),
+        "tool_result_max_chars": int(agent_section.get("tool_result_max_chars", 1200)),
+    }
+    defense = InjectionDefense.from_config(config.get("rag", {}), enabled_override=settings.rag_injection_defense_enabled)
+
+    seed_label = f"seed{args.seed}" if args.seed is not None else "noseed"
+    run_id = args.run_id or f"{datetime.now().strftime('%Y%m%d-%H%M%S')}-t{general.get('temperature')}-{seed_label}"
+    run_meta = {
+        "run_id": run_id,
+        "commit": _git("rev-parse", "HEAD"),
+        "worktree_dirty": bool(_git("status", "--porcelain")),
+        "general_version": {
+            "requested_id": general_role.requested_id,
+            "loaded_id": general_role.loaded_id,
+            "source": general_role.source,
+            "status": general_role.status,
+            "verified": general_role.verified,
+        },
+        "model": general.get("name"),
+        "provider": general.get("provider", "ollama"),
+        "temperature": general.get("temperature"),
+        "top_p": general.get("top_p"),
+        "seed": general["seed"] if "seed" in general else NO_SEED,
+        "think": general.get("think"),
+        "num_ctx": general.get("context"),
+        "overrides": {"temperature": args.temperature, "seed": args.seed},
+        "argv": sys.argv[1:] if argv is None else argv,
+    }
+    out_dir = args.out / run_id
+    summary = run_eval(
+        dataset,
+        router,
+        out_dir=out_dir,
+        agent_config=agent_config,
+        defense=defense,
+        system_prompt=SYSTEM_PROMPT_PATH.read_text(encoding="utf-8"),
+        run_meta=run_meta,
+        task_ids=[task_id.strip() for task_id in args.tasks.split(",") if task_id.strip()] if args.tasks else None,
+    )
+    overall = summary["overall"]
+    print(f"{overall['passed']}/{overall['total']} passed, {summary['errors']} errors -> {out_dir}")
+    return 1 if summary["errors"] else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

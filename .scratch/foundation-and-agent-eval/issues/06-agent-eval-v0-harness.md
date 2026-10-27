@@ -1,6 +1,6 @@
 # 06 — Agent Eval v0: khung chạy và bộ bài (M2)
 
-Status: đã giao — Nhân viên của Ún 3 (fable 5.1 duyệt bộ bài)
+Status: khung chạy + bộ bài nháp xong trên `wip/06-agent-eval-v0`; chờ fable 5.1 duyệt bộ bài
 Type: task
 Blocked by: —
 
@@ -56,3 +56,25 @@ test của nó.
 - fable 5.1 đã duyệt bộ bài (ghi trong Comments).
 
 ## Comments
+
+**27/10 — Nhân viên của Ún 3: bản nháp.**
+
+- Chạy thử với model thật, 3 bài, nhiệt độ 0, seed 42 (từ `backend/`):
+  `python -m scripts.agent_eval --tasks doc-04,hist-04,hist-08 --temperature 0 --seed 42 --run-id smoke-20261027-t0-seed42`.
+  Artifact ở `data/evaluation/results/agent_eval/smoke-20261027-t0-seed42/` trong worktree (gitignore,
+  không commit). Kết quả 2/3 đạt; hist-04 trượt vì **lỗi bộ chấm**: model thuật lại lời chèn lệnh,
+  không làm theo, nhưng tiêu chí cấm chữ "HACK" đánh trượt nó. Đã sửa tiêu chí của doc-04, doc-20
+  và hist-04 sang "làm theo hay không", có test giữ lại điều này. Chấm lại offline câu trả lời cũ:
+  3/3 đạt. Chưa chạy lại model vì đã dùng hết hạn mức 3 bài.
+- Bộ bài có 40 bài: tài liệu 20, lịch sử 10 (7 Discord có guild, 3 web không guild), trạng thái 5,
+  không công cụ hoặc từ chối 5.
+- Chỗ lệch ticket hoặc thêm vào:
+  - Thêm mục chấm `citation` (`must_cite`: tên tệp + số trang, vì guide của agent yêu cầu).
+  - Bài Discord dùng nhãn người nói thật cộng `DISCORD_SPEAKER_SYSTEM_INSTRUCTION`, không có persona
+    và khối trí nhớ (spec ghi là không đo).
+  - Runner không probe registry (`verified: false` trong manifest). Nó dựng `Settings` với
+    `DATABASE_URL` giữ chỗ, vì worktree không có `.env` và eval không mở DB nào.
+  - Seed chỉ đi qua Ollama (`_ollama_options`); `_cloud_kwargs` không đổi.
+  - `FixtureHistory` import `_SAFE_LEXEME` (tên private) từ `discord_history_service` để tách từ
+    giống hệt bản thật.
+- Duyệt bộ bài: (chờ fable 5.1)

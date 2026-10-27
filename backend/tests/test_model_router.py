@@ -17,6 +17,11 @@ class FakeOllama(OllamaClient):
         self.think = think
         return "answer"
 
+    def chat_tools(self, model, messages, tools, options, keep_alive, think=None):
+        self.model = model
+        self.options = options
+        return {"content": "answer", "tool_calls": [], "raw_tool_calls": []}
+
 
 def test_model_router_uses_general_model():
     client = FakeOllama()
@@ -37,6 +42,24 @@ def test_model_router_disables_thinking_when_configured():
     router.chat("general", [{"role": "user", "content": "Hello"}])
 
     assert client.think is False
+
+
+def test_seed_reaches_ollama_only_when_the_config_names_one():
+    # No shipped version sets a seed: the request body must not grow a key.
+    unseeded = FakeOllama()
+    router = ModelRouter({"ollama": unseeded}, {"general": {"name": "qwen3.5:9b", "temperature": 0.4, "top_p": 0.9}})
+    router.chat_tools("general", [{"role": "user", "content": "Hello"}], [])
+    assert "seed" not in unseeded.options
+    router.chat("general", [{"role": "user", "content": "Hello"}])
+    assert "seed" not in unseeded.options
+
+    # The agent eval's own copy of the config: both agent paths carry it.
+    seeded = FakeOllama()
+    router = ModelRouter({"ollama": seeded}, {"general": {"name": "qwen3.5:9b", "temperature": 0, "seed": 42}})
+    router.chat_tools("general", [{"role": "user", "content": "Hello"}], [])
+    assert seeded.options == {"temperature": 0, "seed": 42}
+    router.chat("general", [{"role": "user", "content": "Hello"}])
+    assert seeded.options == {"temperature": 0, "seed": 42}
 
 
 def test_model_router_rejects_removed_code_mode():
