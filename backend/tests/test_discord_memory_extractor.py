@@ -177,6 +177,7 @@ def test_exact_schema_mode_ollama_request_and_bounded_logging(caplog):
         seed=7391,
         client=httpx.Client(transport=httpx.MockTransport(handler)),
         sleep=lambda _: None,
+        schema_version="v1",
     )
     with caplog.at_level("INFO"):
         result = adapter.extract(envelope)
@@ -234,6 +235,7 @@ def test_json_fallback_is_used_only_when_explicitly_enabled():
         json_fallback=True,
         retry_count=0,
         client=httpx.Client(transport=httpx.MockTransport(handler)),
+        schema_version="v1",
     )
     assert adapter.extract(envelope).format_mode == "json_fallback"
     assert isinstance(formats[0], dict)
@@ -253,6 +255,7 @@ def test_schema_rejection_does_not_silently_fallback():
         json_fallback=False,
         retry_count=2,
         client=httpx.Client(transport=httpx.MockTransport(handler)),
+        schema_version="v1",
     )
     with pytest.raises(DiscordMemoryExtractorTransportError):
         adapter.extract(_envelope())
@@ -282,6 +285,7 @@ def test_transient_timeout_retries_are_bounded():
         retry_count=1,
         client=httpx.Client(transport=httpx.MockTransport(handler)),
         sleep=lambda _: None,
+        schema_version="v1",
     )
     assert adapter.extract(envelope).proposal.operation == "create"
     assert calls == 2
@@ -307,6 +311,7 @@ def test_malformed_fenced_or_prose_output_is_not_retried(content):
         base_url="http://ollama.test",
         retry_count=3,
         client=httpx.Client(transport=httpx.MockTransport(handler)),
+        schema_version="v1",
     )
     with pytest.raises(DiscordMemoryExtractorOutputError):
         adapter.extract(_envelope())
@@ -382,6 +387,7 @@ def test_fact_key_and_memory_type_must_match_trusted_pair():
         base_url="http://ollama.test",
         retry_count=0,
         client=httpx.Client(transport=httpx.MockTransport(handler)),
+        schema_version="v1",
     )
     with pytest.raises(
         DiscordMemoryExtractorOutputError,
@@ -413,6 +419,7 @@ def test_forged_subject_and_target_are_rejected_by_trusted_binding():
         base_url="http://ollama.test",
         retry_count=0,
         client=httpx.Client(transport=httpx.MockTransport(handler)),
+        schema_version="v1",
     )
     with pytest.raises(
         DiscordMemoryExtractorOutputError,
@@ -442,6 +449,7 @@ def test_exact_source_ids_are_required():
     adapter = DiscordMemoryExtractorAdapter(
         base_url="http://ollama.test",
         client=httpx.Client(transport=httpx.MockTransport(handler)),
+        schema_version="v1",
     )
     with pytest.raises(
         DiscordMemoryExtractorOutputError,

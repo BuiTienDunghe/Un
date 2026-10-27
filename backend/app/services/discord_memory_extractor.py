@@ -496,7 +496,9 @@ class DiscordMemoryExtractorAdapter:
         *,
         base_url: str,
         model: str = "qwen3.5:2b",
-        schema_version: str = "v1",
+        # No default on purpose: Settings.discord_memory_extractor_schema_version
+        # is the only one. A second one here said "v1" while Settings shipped "v2".
+        schema_version: str,
         num_ctx: int = 4096,
         temperature: float = 0.0,
         seed: int = 424242,

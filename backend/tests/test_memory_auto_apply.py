@@ -148,6 +148,7 @@ def make_worker(client, factory, threshold: float | None) -> DiscordMemoryWorker
         lease_seconds=5,
         review_service=client.app.state.memory_review_service if threshold is not None else None,
         auto_apply_threshold=threshold,
+        extractor_schema_version="v1",
     )
 
 

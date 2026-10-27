@@ -472,6 +472,10 @@ def main() -> None:
         timeout_seconds=args.timeout_seconds,
         retry_count=0,
         json_fallback=False,
+        # v1 on purpose, not Settings' current version: every benchmark result in
+        # data/benchmarks/discord_memory_extractor/ was measured under v1, and a run
+        # under another schema would no longer compare with them.
+        schema_version="v1",
     )
     results = []
     if not args.repeat_only:

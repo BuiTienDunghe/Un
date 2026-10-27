@@ -624,6 +624,7 @@ def test_worker_filters_one_candidate_receipt_and_creates_no_memory(
         factory,
         worker_id="memory-worker-a",
         lease_seconds=30,
+        extractor_schema_version="v1",
     )
     first = worker.process(jobs[0].id)
     duplicate = worker.process(jobs[0].id)
@@ -733,6 +734,7 @@ def test_worker_persists_terminal_no_op_without_model_or_memory(
         lease_seconds=30,
         extractor_enabled=True,
         extractor=extractor,
+        extractor_schema_version="v1",
     ).process(jobs[0].id)
     assert outcome.status == "completed"
     assert extractor.calls == []
@@ -776,6 +778,7 @@ def test_worker_filter_exception_retries_without_touching_completed_turn(
         worker_id="memory-worker-filter-error",
         lease_seconds=30,
         rule_filter=BrokenFilter(),
+        extractor_schema_version="v1",
     ).process(jobs[0].id)
     assert outcome.status == "retrying"
     assert outcome.reason == "memory_rule_filter_error"
@@ -812,6 +815,7 @@ def test_worker_persists_policy_rejection_when_policy_is_disabled(
         memory_policy_enabled=False,
         extractor_enabled=True,
         extractor=extractor,
+        extractor_schema_version="v1",
     ).process(jobs[0].id)
     assert outcome.status == "completed"
     assert extractor.calls == []
@@ -851,6 +855,7 @@ def test_worker_persists_valid_proposal_once_without_applying_memory(
         lease_seconds=30,
         extractor_enabled=True,
         extractor=extractor,
+        extractor_schema_version="v1",
     )
     first = worker.process(jobs[0].id)
     duplicate = worker.process(jobs[0].id)
@@ -953,6 +958,7 @@ def test_schema_invalid_output_is_terminal_rejected_without_memory(
         lease_seconds=30,
         extractor_enabled=True,
         extractor=extractor,
+        extractor_schema_version="v1",
     ).process(jobs[0].id)
     assert outcome.status == "completed"
     assert outcome.reason == "extractor_schema_invalid"
@@ -997,6 +1003,7 @@ def test_transport_retry_keeps_same_candidate_and_completed_discord_turn(
         lease_seconds=30,
         extractor_enabled=True,
         extractor=failing,
+        extractor_schema_version="v1",
     ).process(jobs[0].id)
     assert first.status == "retrying"
     with factory.begin() as database:
@@ -1018,6 +1025,7 @@ def test_transport_retry_keeps_same_candidate_and_completed_discord_turn(
         lease_seconds=30,
         extractor_enabled=True,
         extractor=succeeding,
+        extractor_schema_version="v1",
     ).process(jobs[0].id)
     assert second.status == "completed"
     assert second.candidate_id == str(candidate_id)
@@ -1054,6 +1062,7 @@ def test_worker_fails_closed_when_source_disappears_after_dispatch(
         factory,
         worker_id="memory-worker-a",
         lease_seconds=30,
+        extractor_schema_version="v1",
     ).process(jobs[0].id)
     assert outcome.status == "failed"
     assert outcome.reason == "source_missing"
@@ -1082,6 +1091,7 @@ def test_worker_revalidates_source_and_does_not_change_completed_turn(
         factory,
         worker_id="memory-worker-a",
         lease_seconds=30,
+        extractor_schema_version="v1",
     ).process(jobs[0].id)
     assert outcome.status == "failed"
     assert outcome.reason == "session_inactive"
@@ -1113,6 +1123,7 @@ def test_worker_error_retries_without_changing_turn_or_delivery(
         factory,
         worker_id="memory-worker-a",
         lease_seconds=30,
+        extractor_schema_version="v1",
     ).process(jobs[0].id)
     assert outcome.status == "retrying"
     with factory() as database:

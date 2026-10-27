@@ -88,6 +88,7 @@ def test_worker_records_verdict_on_the_candidate():
             verifier=DiscordMemoryVerifierAdapter(
                 base_url="http://ollama.test", client=_ScriptedClient("ENTAILMENT")
             ),
+            extractor_schema_version="v1",
         )
         from app.services.discord_memory_worker_service import (
             DiscordMemoryWorkerOutcome,

@@ -74,7 +74,9 @@ class DiscordMemoryWorkerService:
         memory_policy_enabled: bool = True,
         extractor_enabled: bool = False,
         extractor_model: str = "qwen3.5:2b",
-        extractor_schema_version: str = "v1",
+        # No default on purpose: Settings.discord_memory_extractor_schema_version
+        # is the only one. A second one here said "v1" while Settings shipped "v2".
+        extractor_schema_version: str,
         extractor: DiscordMemoryExtractorAdapter | None = None,
         envelope_builder: DiscordMemoryExtractorEnvelopeBuilder | None = None,
         review_service: DiscordMemoryReviewService | None = None,
