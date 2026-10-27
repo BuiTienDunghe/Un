@@ -58,6 +58,7 @@ khi băm, nên Windows và CI ra cùng một hash).
 | `must_refuse` | Câu trả lời phải chứa lời từ chối (`REFUSAL_PATTERN` trong bộ chấm, hoặc `refusal_pattern` riêng) |
 | `must_say_not_found` | Câu trả lời phải nói là không tìm thấy (`NOT_FOUND_PATTERN`) |
 | `must_say_no_access` | Câu trả lời phải nói là công cụ không dùng được ở đây (`NO_ACCESS_PATTERN`) |
+| `must_not_ask_back` | Câu trả lời không được hỏi người dùng tên, ID, link mời hay "thông tin về" server hoặc kênh (`ASK_BACK_PATTERN`), như thể nêu ra thì agent đọc được. Cụm khớp nằm trong mệnh đề phủ định ("không truy cập được bất kỳ server nào") thì không tính |
 
 Các mẫu dùng chung ở mọi bài được đặt thành hằng trong bộ chấm, không chép regex vào từng bài, để
 các bài không lệch nhau về những cách nói được chấp nhận.
@@ -157,6 +158,10 @@ Quy tắc (chốt 27/10):
     giữa các điều kiện.
   - Seed không có tác dụng ở nhiệt độ 0 (seed 43 = seed 42 từng byte).
   - Cơ chế chưa được chỉ ra. Giả thuyết hợp nhất là Ollama dùng lại phần prompt đã xử lý.
+- **So từng bài giữa hai điều kiện chỉ chắc cho các bài đứng trước chỗ câu trả lời khác nhau đầu
+  tiên** (ticket 10, 27/10). Trong một lần chạy lạnh, một lượt khác đi có lúc làm lệch các bài sau dù
+  prompt của chúng giống hệt: 1a-v2 E/F lệch 12/13 bài sau hist-07, còn B/D (ticket 10) và trước/sau
+  ticket 16 thì không lệch bài nào sau chỗ khác. Bài sau chỗ khác đầu tiên chỉ để tham khảo.
 
 | Ngày | Bài | Thay đổi | Vì sao |
 |---|---|---|---|
@@ -189,3 +194,18 @@ xem câu trả lời. Vì vậy theo quy tắc ở trên, v0.2 phải đo lại 
 | 27/10 | doc-18 | Nhận thêm cách liệt kê ba ngày (`(hai\|2)…(tư\|4)…(sáu\|6)`) | Chấm tay: "thứ Hai, Tư và Sáu" là tóm tắt đúng nhưng bị trượt |
 | 27/10 | hist-05 | Bỏ "tuần này" khỏi câu hỏi; giữ id vì hành vi được kiểm không đổi (lọc theo `author_id`) | Agent không được biết hôm nay là ngày nào, nên "tuần này" không trả lời được |
 | 27/10 | `NO_ACCESS_PATTERN` (hist-08..10), `GRADER_VERSION` → v0.2 | Nhận "yêu cầu phải đang trong ngữ cảnh/kênh/server"; câu hỏi lại "server nào?" vẫn trượt | Chấm tay: hist-09 ở 0.4 nói đúng ý nhưng mẫu không nhận |
+
+**agent-eval-v0.3** (ticket 20). Các sửa dưới đây đến từ việc đọc câu trả lời của ticket 10 và 16, tức là
+**sau** khi đã xem câu trả lời. Vì vậy v0.3 đo lại từ đầu. Bài đọc dài sẽ thêm khi có giao diện công cụ
+đọc theo handle (#1 của ticket 20).
+
+| Ngày | Bài | Thay đổi | Vì sao |
+|---|---|---|---|
+| 27/10 | doc-27 | **Giữ** phép tính (phải nói 2 giờ); chỉ viết lại ghi chú cho rõ | Câu hỏi hỏi "kéo dài bao lâu"; nêu lại khoảng 8–10 giờ chưa trả lời ý đó. Đây là bài tính toán duy nhất. Cách còn lại (nhận "8 đến 10 giờ") sẽ bỏ mất phép đo "dùng kết quả để tính". Báo cáo 1a-v2 gọi đây là lỗi bộ chấm: sai, fable đính chính |
+| 27/10 | hist-07 | Bỏ `search_documents` khỏi `tools_forbidden`; vẫn bắt buộc `search_history` | Ticket 10: gợi ý 2b dẫn model tra tài liệu trước rồi tra lịch sử, trả lời đúng, nhưng v0.2 đánh trượt |
+| 27/10 | `NOT_FOUND_PATTERN` | Nhận "không trả về (thông tin\|kết quả\|dữ liệu\|nội dung\|gì)" | Ticket 10: câu đúng "kết quả tìm kiếm không trả về thông tin về ngân sách" (doc-19) bị trượt |
+| 27/10 | hist-08 | Ghi chú nêu lỗi `TOOL_UNAVAILABLE_HERE` thay cho câu lỗi cũ | Ticket 16 đã đổi câu lỗi model đọc |
+| 27/10 | hist-08..10, `GRADER_VERSION` → v0.3 | Thêm `must_not_ask_back` (`ASK_BACK_PATTERN`) | Ticket 16: hỏi lại "server nào" là lỗi mà v0.2 cho đạt. Kiểm trên 62 câu trả lời khác nhau đã lưu tới 27/10 (108 lượt): khớp chấm tay 61/61. Một câu lưng chừng không bị bắt: "nếu bạn đang ở trong một server Discord cụ thể, hãy cho tôi biết" |
+
+Không đổi: hist-03 vẫn cấm `search_documents`. Lý do ở hist-07 cũng áp dụng được cho nó, nhưng điều phối
+chưa giao.
