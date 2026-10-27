@@ -153,7 +153,9 @@ class ChatService:
         assistant_message_id = self.store.add_message(conversation_id, "assistant", answer, model_used)
         if agent_steps:
             # Trace rows attach to the persisted answer they explain (P2-2).
-            self.store.add_agent_traces(conversation_id, assistant_message_id, agent_steps)
+            # Discord turns are the ones that carry their guild; the web's do not.
+            source = "discord" if (tool_context or {}).get("guild_id") else "web"
+            self.store.add_agent_traces(conversation_id, assistant_message_id, agent_steps, source=source)
         # Ticket 16: a turn that ran out of time replied with a fixed sentence, not an
         # answer; the dashboard counts it as an error, under its own code.
         out_of_time = bool(agent_steps) and agent_steps[-1].get("stop_reason") == STOP_TURN_BUDGET_EXHAUSTED

@@ -1067,7 +1067,8 @@ class AgentTrace(Base):
     arguments, what came back, and the final synthesis.
 
     Rows are written after the assistant message is persisted and cascade with
-    it — a trace never outlives the answer it explains.
+    it — the CONTENT of a trace never outlives the answer it explains. Its
+    content-free skeleton does: AgentTraceSummary, written in the same transaction.
     """
 
     __tablename__ = "agent_traces"
@@ -1084,6 +1085,41 @@ class AgentTrace(Base):
     arguments: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     content: Mapped[str | None] = mapped_column(Text)
     latency_ms: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class AgentTraceSummary(Base):
+    """The content-free skeleton of one agent step, kept after the conversation is
+    deleted (ticket 16, owner's option b): which tool, how long, what error, how many
+    tokens — never an argument, a result or an answer. Deliberately no ForeignKey:
+    telemetry outlives its subject, as RequestLog.message_id already does.
+
+    `arguments_shape` keeps a declared integer as a number and a declared string as
+    "str:<length>"; undeclared keys are only counted. `content_sha256` hashes what the
+    model read or wrote — a result or an answer, long enough not to be guessed back;
+    a short question would be, which is why arguments are shaped and never hashed.
+    """
+
+    __tablename__ = "agent_trace_summaries"
+    __table_args__ = (
+        Index("ix_agent_trace_summaries_conversation_created", "conversation_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    conversation_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    message_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
+    step_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    tool_name: Mapped[str | None] = mapped_column(String(128))
+    latency_ms: Mapped[int | None] = mapped_column(Integer)
+    error_code: Mapped[str | None] = mapped_column(String(64))
+    error_type: Mapped[str | None] = mapped_column(String(128))
+    stop_reason: Mapped[str | None] = mapped_column(String(32))
+    tokens_in: Mapped[int | None] = mapped_column(Integer)
+    tokens_out: Mapped[int | None] = mapped_column(Integer)
+    arguments_shape: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    content_sha256: Mapped[str | None] = mapped_column(String(64))
+    source: Mapped[str] = mapped_column(String(16), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 

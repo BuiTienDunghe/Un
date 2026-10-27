@@ -17,6 +17,7 @@ from time import monotonic, perf_counter
 from typing import Any, Protocol
 
 from app.llm_clients.deadline import ModelCallTimeoutError, call_within
+from app.llm_clients.usage import consume_usage, record_usage
 from app.services.discord_history_service import history_hit_payload
 from app.services.injection_defense import InjectionDefense
 from app.services.model_router import ModelRouter
@@ -140,6 +141,33 @@ STOP_TURN_BUDGET = "turn_budget"
 STOP_TURN_BUDGET_EXHAUSTED = "turn_budget_exhausted"
 
 
+_DECLARED = {tool["function"]["name"]: tool["function"]["parameters"].get("properties", {}) for tool in AGENT_TOOLS}
+
+
+def arguments_shape(tool_name: object, arguments: object) -> dict[str, object] | None:
+    """A tool call's arguments with the content taken out, for the trace that outlives
+    the conversation (ticket 16, option b): a declared string becomes "str:<length>", a
+    declared integer stays a number, anything else its type name. Keys the tool does not
+    declare are only counted — a model can invent a key, and a key can carry words."""
+    if not isinstance(arguments, dict):
+        return None
+    declared = _DECLARED.get(str(tool_name), {})
+    shape: dict[str, object] = {}
+    undeclared = 0
+    for key, value in arguments.items():
+        if key not in declared:
+            undeclared += 1
+        elif declared[key].get("type") == "integer" and isinstance(value, int) and not isinstance(value, bool):
+            shape[key] = value
+        elif isinstance(value, str):
+            shape[key] = f"str:{len(value)}"
+        else:
+            shape[key] = type(value).__name__
+    if undeclared:
+        shape["_undeclared"] = undeclared
+    return shape
+
+
 def _clip(text: str, limit: int) -> str:
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
@@ -198,6 +226,11 @@ class AgentService:
         model_used = ""
         turn_started = self.clock()
         stop_reason = STOP_MAX_STEPS
+        # Token counts per model call, for the trace: the usage ContextVar keeps only the
+        # last call, so it is read after every one. `last` is put back at the end, so the
+        # caller's request log keeps reading the last call as it always has (ticket 16, k2).
+        consume_usage()
+        last: dict[str, int | None] = {"tokens_in": None, "tokens_out": None}
         for _ in range(self.max_steps):
             left = self.turn_budget_seconds - (self.clock() - turn_started)
             # A tool round must leave the final answer its reserve: started any later,
@@ -211,23 +244,29 @@ class AgentService:
                     result, model_used = self.router.chat_tools("general", working, AGENT_TOOLS)
             except ModelCallTimeoutError:
                 # The round ran into the reserve's edge: answer from what is gathered.
+                consume_usage()
                 stop_reason = STOP_TURN_BUDGET
                 break
             round_latency = int((perf_counter() - started) * 1000)
+            last = consume_usage()
             calls = result["tool_calls"]
             if not calls:
                 steps.append({
                     "kind": "final", "tool_name": None, "arguments": None,
                     "content": _clip(result["content"], 4000), "latency_ms": round_latency,
-                    "stop_reason": STOP_FINAL,
+                    "stop_reason": STOP_FINAL, **last,
                 })
+                record_usage(last["tokens_in"], last["tokens_out"])
                 return result["content"], model_used, steps
             # The model must see its own calls on the next round, verbatim.
             working.append({"role": "assistant", "content": result["content"], "tool_calls": result["raw_tool_calls"]})
-            for call in calls:
+            for index, call in enumerate(calls):
                 steps.append({
                     "kind": "tool_call", "tool_name": call["name"],
                     "arguments": call["arguments"], "content": None, "latency_ms": round_latency,
+                    "arguments_shape": arguments_shape(call["name"], call["arguments"]),
+                    # One model round, however many calls it made: counted once.
+                    **(last if index == 0 else {"tokens_in": None, "tokens_out": None}),
                 })
                 tool_started = perf_counter()
                 text, error_code, error_type = self._run_tool(call["name"], call["arguments"], tool_context)
@@ -254,20 +293,24 @@ class AgentService:
         })
         started = perf_counter()
         left = self.turn_budget_seconds - (self.clock() - turn_started)
+        usage: dict[str, int | None] = {"tokens_in": None, "tokens_out": None}
         try:
             if left <= 0:
                 raise ModelCallTimeoutError("no time left for the final answer")
             with call_within(left):
                 answer, model_used = self.router.chat("general", working)
+            usage = last = consume_usage()
         except ModelCallTimeoutError:
             # Only running out of time ends here: an unreachable or broken model still
             # raises as before, because "not in time" would then be a false reply.
+            consume_usage()
             answer, stop_reason = self._out_of_time_reply(), STOP_TURN_BUDGET_EXHAUSTED
         steps.append({
             "kind": "final", "tool_name": None, "arguments": None,
             "content": _clip(answer, 4000), "latency_ms": int((perf_counter() - started) * 1000),
-            "stop_reason": stop_reason,
+            "stop_reason": stop_reason, **usage,
         })
+        record_usage(last["tokens_in"], last["tokens_out"])
         return answer, model_used, steps
 
     def _execute_tool(
