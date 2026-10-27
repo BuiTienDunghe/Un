@@ -89,7 +89,7 @@ ticket mới, chờ các ticket đang chạy xong, rồi báo chủ dự án.
 | 07 | Agent Eval v0: ghi truy xuất thật + baseline 3 lần (M2) | 06 gộp; GPU sau 11 | Nhân viên 3 | **đã gộp** — 34/40 nóng, 29/40 t0.4 |
 | 08 | Chọn mục tiêu thí nghiệm model (M3) | — (chỉ đọc) | fable 5.1 | xong — chọn B, nhánh 0 trước |
 | 09 | Thí nghiệm B, nhánh 0 trước (M3) | 11 | Nhân viên 1 chuẩn bị, Nhân viên 2 chạy | dừng ở 2b theo luật (trôi passage); cờ collection tối nay; chạy sáng 28/10 |
-| 10 | Nâng harness theo lỗi đo được (M4) | 07 gộp | Nhân viên 3 | **đã gộp** phần giữ (3a, v0.2, mô tả 800, báo cáo); 1a/2b không ship; 1a-v2 (wip/10-1a-v2) đo sáng 28/10 |
+| 10 | Nâng harness theo lỗi đo được (M4) | 07 gộp | Nhân viên 3 | **xong** — 3a, v0.2, mô tả 800 đã gộp; 1a, 2b, 1a-v2 đo xong, không ship (luật đăng ký); sửa bộ chấm để v0.3 |
 | 11 | Đo dao động 788 câu held-out (tiền đề M3) | stack | Nhân viên 2 | **đã gộp** — sàn = 0 câu |
 | 12 | Dọn nhỏ sau 03 (được phép trượt) | — | Nhân viên 3 | **đã gộp** |
 | 13 | Chuẩn bị đóng gói e5-large (chỉ code) | — | Nhân viên 1 | **đã gộp** |
@@ -137,7 +137,7 @@ nhớ "Không đưa data train/thiết kế lên GitHub").
 3. Ticket 16 (fable đã duyệt dceaaab; chủ dự án đã cho phép nâng DB test 27/10 22:10): nâng DB test → chạy
    riêng test_agent_trace_summaries.py → gộp → chạy bộ đầy đủ. Không nâng DB thật (launcher tự nâng).
 4. GPU, mỗi lần đo gỡ model chính trước: 1a-v2 của ticket 10 (`wip/10-1a-v2`, ~8 phút) → bước 5 của 16.
-5. Hỏi chủ dự án: push (kept/ 4,1 MB); bật lại edu-postgres-1 (phải tắt Postgres của Ún vì chung 5432);
+5. Hỏi chủ dự án: push (kept/ 4,6 MB). edu-postgres-1: chủ dự án nói **không cần mở lại** (27/10 23:00) — giữ stack Ún chạy;
    bot chạy kiểu nào (B1 chỉ Docker / B2 chỉ trên máy).
 
 Sau khi gộp 16 (main 001966b, DB test ở 20261027_35): backend 1205 xanh / 1 lỗi teardown / 1 skip; root 74 xanh + 1 skip. Lỗi là `test_debt_t1_t2_t3` tự deadlock (đỏ 1/3 khi chạy riêng, không ai dùng chung DB) — **đính chính** ghi chú "va chạm" lúc 18:02 ở trên; ticket 18.

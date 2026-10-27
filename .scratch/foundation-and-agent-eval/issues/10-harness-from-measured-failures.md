@@ -162,3 +162,7 @@ Tiêu chí nghiệm thu theo `spec.md` Mốc 4.
     động lại Ollama hay qua ngày. Run-id lệch mẫu đã đăng ký (`v0.2-1a2-<X>-cold`).
   - Code E, F ở lại nhánh `wip/10-1a-v2` làm hồ sơ; nhánh `wip/10-1a-v2-result` chỉ mang ticket và báo cáo.
   - `docs/RESULTS.md` sửa luôn câu cũ "cần một lần khởi động bỏ đi" thành quy tắc gỡ model trước mỗi lần đo.
+- 27/10 23:00 (opus 5.5): 1a-v2 đo lạnh 33 vs 34, mất 3 bài theo dõi > 1 → không ship theo luật đã đăng
+  ký (`ccc6136`). Đóng hướng 1a: đổi một câu lời dặn làm 38/40 câu trả lời đổi chữ, nên 40 bài không tách
+  được tác dụng nhỏ của prompt. Sửa bộ chấm (doc-27 "2 tiếng", hist-07 cho phép tài liệu trước rồi lịch
+  sử, NOT_FOUND "không trả về thông tin", ghi chú hist-08) gom vào v0.3, làm sau. Ticket 10 xong.
