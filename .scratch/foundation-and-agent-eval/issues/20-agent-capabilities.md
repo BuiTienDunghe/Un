@@ -100,3 +100,10 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
   sẽ do gói Discord đăng ký qua registry sau ticket 22, không vào lõi. Đo #1 bằng v0.3 tối nay (≈ 6 phút GPU,
   đăng ký trước theo đề xuất của Nhân viên 1, nêu rõ rủi ro doc-38 đọc thừa); kết quả là test hồi quy nội bộ, không
   phải khẳng định chất lượng (quy tắc benchmark của chủ dự án, ticket 24).
+- 28/10 00:30 (Nhân viên 1, đo v0.3 sau #1, hai lần lạnh trùng 48/48; test hồi quy nội bộ): tổng 35 → 34. Bài đọc
+  dài 0/5 → 4/5 (đúng việc của công cụ; 0/5 lần chép sai document_id; đối chứng doc-38 không đọc thừa). Nhưng 40
+  bài cũ 34 → 29: 37/40 câu trả lời đổi chữ vì lời dặn và mô tả công cụ đổi; 7 tụt (3 thiếu tên tệp/trang, 2 viết
+  "không thể tìm thấy" không khớp mẫu chấm — nghi lỗi bộ chấm, xét ở v0.4, hist-05, hist-08 lại hỏi "server nào"),
+  2 lên. Không bài cũ nào gọi công cụ mới. doc-36 trượt: model đọc từ đoạn 0 thay vì đoạn 9.
+- 28/10 00:35 (opus 5.5): chọn (B) — bỏ câu mới trong lời dặn, để mô tả công cụ tự nói, đo lại; quyết định đăng ký
+  trước: #1-B giữ ≥ 4/5 bài đọc dài và 40 bài cũ ≥ 33 → đề xuất ship #1-B, không thì (C) nhiều seed.
