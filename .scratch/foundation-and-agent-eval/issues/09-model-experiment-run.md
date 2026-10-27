@@ -164,3 +164,15 @@ cách sau.
 | `eval_heldout` / `evaluate_rag` đọc `GET /api/version` của Ollama và ghi vào JSON kết quả | rẻ, mọi file kết quả từ nay đều tự mang bản Ollama | file cũ vẫn thiếu |
 | `/models` của API trả thêm bản Ollama; script đo chép từ `/models` như đang chép `versions` | một nguồn sự thật, xem được cả khi chạy production | đụng API, cần test cho trường mới |
 | Registry ghi bản Ollama đã dùng khi nhúng mỗi collection (vd. trong `eval.reports` hoặc khi rebuild) | bắt được đúng chuyện vector cũ do runtime cũ sinh ra | phải đổi lược đồ registry, nặng nhất |
+- 28/10 00:35 (opus 5.5): nhánh 0 **âm** theo đăng ký trước (Nhân viên 2 báo, chờ fable duyệt). Ba việc điều
+  phối kiểm/ghi:
+  1. **Nguồn tải GPU lạ trong hai lượt hybrid** (365 lệnh chat tới qwen3.5:9b + nạp glm-ocr): là Agent Eval
+     của Nhân viên 3 (1a-v2 lúc 22:31–22:39; bước 5 của ticket 16 lúc 22:57–23:0x, `--probe` nạp cả OCR) — điều
+     phối cho chạy song song lúc 22:28 sau khi đo GPU rỗi, nhưng **không báo Nhân viên 2**. Lỗi điều phối.
+     Thứ hạng không đổi (đường truy xuất tất định); điều kiện p50 vẫn qua. Ghi vào báo cáo kết quả.
+  2. **Production `memories` nguyên vẹn**: `rebuild_memories` của nhánh v0 không đặt
+     `QDRANT_MEMORIES_COLLECTION` nên trỏ vào collection production; kiểm 00:30: Qdrant `memories` 3 điểm =
+     bảng `memories` của DB thật 3 dòng. Cho B đầy đủ: bắt buộc đặt biến này, hoặc bỏ `rebuild_memories` khỏi
+     các bước đo (DB heldout/lab có 0 dòng memories).
+  3. Cho ticket 15: nhúng lại v0 trên runtime mới chỉ làm 1 câu lên hạng 1, 0 câu rời top-5 → vector cũ của
+     production không lệch đo được trên tập này. p50 4,6 s của ticket 11 là do chia GPU; khi rỗi 1,9 s.
