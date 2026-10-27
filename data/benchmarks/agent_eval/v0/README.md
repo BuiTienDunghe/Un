@@ -229,7 +229,7 @@ Bài đọc dài (thêm 27/10, **trước** mọi lần chạy có chúng):
 
 - Dữ kiện được chọn bằng code: regex đáp án không khớp 400 ký tự đầu của **bất kỳ** đoạn nào trong 27
   đoạn của corpus, và mỗi bài ghép hai dữ kiện để không đoán bừa được.
-- Truy xuất ghi ngày 28/10 lúc 00:00 (API lab, commit `745810b`, contextual và reranker bật): 5/5 bài L-a,
+- Truy xuất ghi ngày 28/10 lúc 00:00 (API lab, commit `745810b`, tức `fdd2b9a` trước khi nhánh được rebase lên main, contextual và reranker bật): 5/5 bài L-a,
   đoạn có đáp án luôn ở hạng 1; đối chứng thấy đáp án ngay trong 400 ký tự đầu.
 - **Chưa có bài L-b** (đáp án ở đoạn kề mà truy xuất không trả về). Với mọi câu hỏi tự nhiên, 5 đoạn trả
   về trên một tài liệu 10 đoạn đã chứa luôn đoạn có đáp án. Muốn có L-b cần một tài liệu dài hơn.
