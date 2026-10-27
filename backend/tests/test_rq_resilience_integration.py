@@ -170,7 +170,7 @@ def test_stale_worker_job_is_recovered_and_completed(worker_integration_resource
     with r["factory"].begin() as session:
         repo = PostgresDocumentRepository(session); job = repo.start_job(extract_id, "worker-a", 1)
         old = datetime.now(UTC) - timedelta(seconds=30); job.lease_expires_at = job.heartbeat_at = old
-    monkeypatch.setattr("app.services.job_errors.retry_delay", lambda attempts: 0)
+    monkeypatch.setattr("app.jobs.retry.retry_delay", lambda attempts: 0)
     queue = JobQueueService(r["redis_url"], r["prefix"])
     assert JobRecoveryService(r["factory"], queue).recover_stale() == 1
     with r["factory"].begin() as session:

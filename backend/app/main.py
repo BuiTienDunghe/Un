@@ -17,6 +17,7 @@ from app.security.api_key import require_api_key_for_read
 from app.security.auth import require_admin
 from app.services.auth_service import AuthService
 from app.services.chunk_inspection_service import ChunkInspectionService
+from app.services.dashboard_service import DashboardService
 from app.services.postgres_bm25_service import PostgresBm25Service
 from app.services.chat_service import ChatService
 from app.services.chunk_context_service import ChunkContextService
@@ -200,6 +201,7 @@ async def lifespan(app: FastAPI):
     )
     app.state.ocr_job_service = OcrJobService(router, settings.ocr_runs_path, auxiliary_store, ocr_service)
     app.state.chunk_inspection_service = ChunkInspectionService(postgres_sessions)
+    app.state.dashboard_service = DashboardService(postgres_sessions, auxiliary_store)
     reranker_service = RerankerService.from_config(
         rag_config, enabled_override=settings.rag_reranker_enabled, versions=resolved.reranker_chain(),
     )

@@ -20,7 +20,7 @@ from app.services.postgres_document_service import PostgresDocumentService
 from app.stores.embedding_cache_store import PostgresEmbeddingCacheStore
 from app.stores.qdrant_store import QdrantStore
 from app.stores.postgres_auxiliary_store import PostgresAuxiliaryStore
-from app.services.job_errors import classify_error, retry_delay
+from app.jobs.retry import classify_error, retry_delay
 
 
 def _checkpoint(sessions, job_id: str, worker_id: str, run_id: str) -> bool:

@@ -50,8 +50,8 @@ from app.services.discord_memory_worker_service import (
 from app.services.discord_session_service import DiscordSessionService
 from app.services.discord_turn_service import DiscordTurnService
 from app.services.job_recovery_service import JobRecoveryService
-from app.services.job_routing import DISCORD_MEMORY_INGEST_JOB_TYPE
-from app.services.job_routing import resolve_job_route
+from app.jobs.routing import DISCORD_MEMORY_INGEST_JOB_TYPE
+from app.jobs.routing import resolve_job_route
 from app.services.outbox_dispatcher_service import OutboxDispatcherService
 from app.services import operational_service
 from app.services.operational_service import OperationalService

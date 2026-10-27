@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.postgres.models import DocumentVersion, IngestionRun, Job
 from app.postgres.repositories import PostgresDocumentRepository
-from app.services.job_routing import DOCUMENT_JOB_TYPES
+from app.jobs.routing import DOCUMENT_JOB_TYPES
 
 
 class JobRecoveryService:
@@ -59,7 +59,7 @@ class JobRecoveryService:
                     PostgresDocumentRepository(session).fail_run(job.ingestion_run_id, "WORKER_STALE", "Worker lease expired")
                 else:
                     if dry_run: count += 1; continue
-                    from app.services.job_errors import retry_delay
+                    from app.jobs.retry import retry_delay
                     from datetime import timedelta
                     job.status, job.worker_id, job.lease_expires_at, job.heartbeat_at, job.redis_job_id, job.available_at = "retrying", None, None, None, None, now + timedelta(seconds=retry_delay(job.attempts))
                 count += 1

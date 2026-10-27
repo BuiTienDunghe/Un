@@ -1,7 +1,7 @@
 import pytest
 
 from app.llm_clients.ollama_client import OllamaClient, OllamaModelNotLoadedError
-from app.services.job_errors import classify_error
+from app.jobs.retry import classify_error
 from app.services.model_router import EmbeddingRefusedError, ModelRouter
 
 

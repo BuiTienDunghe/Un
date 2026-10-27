@@ -6,7 +6,7 @@ from rq import Queue, Retry
 from rq.job import Job
 from redis import Redis
 
-from app.services.job_routing import resolve_job_route
+from app.jobs.routing import resolve_job_route
 
 
 class JobQueueService:

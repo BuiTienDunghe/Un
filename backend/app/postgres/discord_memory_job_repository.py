@@ -16,8 +16,8 @@ from app.postgres.models import (
     OutboxEvent,
     new_id,
 )
-from app.services.job_errors import retry_delay
-from app.services.job_routing import DISCORD_MEMORY_INGEST_JOB_TYPE
+from app.jobs.retry import retry_delay
+from app.jobs.routing import DISCORD_MEMORY_INGEST_JOB_TYPE
 
 
 EligibilityReason = Literal[

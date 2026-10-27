@@ -1,4 +1,4 @@
-from app.services.job_errors import classify_error, retry_delay
+from app.jobs.retry import classify_error, retry_delay
 
 
 def test_retry_backoff_and_classification():

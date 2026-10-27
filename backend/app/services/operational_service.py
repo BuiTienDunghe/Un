@@ -25,7 +25,7 @@ from app.postgres.models import (
     Job,
     OutboxEvent,
 )
-from app.services.job_routing import DISCORD_MEMORY_INGEST_JOB_TYPE
+from app.jobs.routing import DISCORD_MEMORY_INGEST_JOB_TYPE
 
 if TYPE_CHECKING:
     from app.config.model_registry import Resolved

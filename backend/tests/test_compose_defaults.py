@@ -31,7 +31,7 @@ from app.postgres.discord_memory_job_repository import (
 from app.postgres.discord_memory_repositories import DiscordMemoryRepository
 from app.services.discord_memory_completion_service import DiscordMemoryCompletionService
 from app.services.discord_memory_worker_service import DiscordMemoryWorkerService
-from app.services.job_routing import DISCORD_MEMORY_INGEST_JOB_TYPE
+from app.jobs.routing import DISCORD_MEMORY_INGEST_JOB_TYPE
 
 COMPOSE = PROJECT_ROOT / "docker-compose.yml"
 WORKERS = ("worker-ocr", "worker-index", "worker-memory")

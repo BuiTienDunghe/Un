@@ -6,8 +6,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 from app.postgres.models import Job, OutboxEvent
-from app.services.job_errors import retry_delay
-from app.services.job_routing import UnknownJobTypeError
+from app.jobs.retry import retry_delay
+from app.jobs.routing import UnknownJobTypeError
 
 
 class OutboxDispatcherService:

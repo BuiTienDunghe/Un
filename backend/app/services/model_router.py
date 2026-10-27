@@ -22,7 +22,7 @@ class EmbeddingRefusedError(OllamaModelNotLoadedError):
     record, or a collection missing while the corpus is non-empty).
 
     A subclass on purpose: every existing except-branch (rag/chat/memory/documents
-    routers, the SSE error event, job_errors -> non-retryable) already maps
+    routers, the SSE error event, app.jobs.retry -> non-retryable) already maps
     OllamaModelNotLoadedError to 502 MODEL_NOT_LOADED, so the refusal reaches the caller
     with a message naming the reason and /models.registry without a new router branch.
     Raised BEFORE any Ollama or Qdrant call: nothing ever writes foreign vectors into a

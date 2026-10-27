@@ -6,7 +6,7 @@ import pytest
 
 from app.services import job_queue_service
 from app.services.job_queue_service import JobQueueService
-from app.services.job_routing import (
+from app.jobs.routing import (
     UnknownJobTypeError,
     resolve_job_route,
 )
