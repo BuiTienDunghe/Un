@@ -29,3 +29,5 @@ trung thực), có leaderboard/điểm tham chiếu cho model 7–14B mở, ch�
   (2) tệp tokenizer của `Qwen/Qwen3-8B` từ HF (vài MB). Rủi ro tái lập: leaderboard chạy bf16 qua vLLM, Ollama
   `qwen3:8b` là Q4 và có thể áp template riêng ở endpoint completions — chênh phải ghi như một phép đo.
   GPU đang nhường cho dự án decision model tới 02:55; mọi lần chạy BFCL sau đó hoặc sáng mai.
+- 28/10 01:00: `ollama pull qwen3:8b` xong — digest `500a1f067a9f`, 5,2 GB (bản mặc định của Ollama, lượng tử Q4);
+  chưa nạp lên GPU (GPU đang nhường).
