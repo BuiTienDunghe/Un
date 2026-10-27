@@ -81,3 +81,12 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
   - Chưa có: bài L-b (đáp án ở đoạn kề), vì với mọi câu hỏi tự nhiên, 5 đoạn trả về trên tài liệu 10 đoạn đã
     chứa đoạn có đáp án. Bài L-c (đọc theo số trang, P2) cũng chưa có, vì corpus lab chỉ có tệp txt/md, không
     có trang. Cả hai cần thêm tài liệu dài hơn hoặc có trang vào corpus lab, và một phiên bản bộ bài sau.
+- 28/10 00:20 (Nhân viên 3) — **Kết quả baseline v0.3**, đo 00:04–00:11. Báo cáo:
+  `data/evaluation/results/kept/agent-eval-v0.3-baseline-20261028/REPORT.md`.
+  - Lạnh: r1 = r2 = 35/48, trùng từng chữ 48/48. Đúng cả bốn dự đoán: 6 bài đọc dài trượt; doc-39 bị từ chối
+    `INPUT_TOO_LONG`; doc-38 (đối chứng) đạt với 1 lượt tra; r1 = r2.
+  - 40 bài cũ: 34/40, trùng từng chữ với lần B của ticket 16 (22:57). Bộ chấm v0.3 không lật bài cũ nào.
+  - Bài đọc dài: phần lớn nói thật là không thấy; doc-34 nhận ra bảng bị cắt; ba bài tra lại 2–3 lần.
+    hist-11 bịa, ghép giờ họp và phòng B203 thành phương án dã ngoại.
+  - Model nhúng 0.6B còn nạp lúc bắt đầu cả hai lần (giống lần 22:57); điều kiện "không có model nhúng" chưa đo.
+  - Chờ v0.4: bài L-b, bài L-c, hist-11 cấm dữ kiện bịa, hist-03 cho tra tài liệu trước.
