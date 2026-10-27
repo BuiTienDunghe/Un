@@ -130,7 +130,7 @@ ticket mới, chờ các ticket đang chạy xong, rồi báo chủ dự án.
 | 21 | Tài liệu không có chủ: agent đọc mọi tài liệu, kể cả PDF Nghiên cứu của người khác | — | — | chờ chủ dự án |
 | 22 | Tách mềm Discord: lõi không import Discord; Discord tự cắm qua registry | 20 #1 (1) | fable thiết kế | chờ thiết kế |
 | 23 | Bảng điểm harness: đúng, hiệu quả, bền, minh bạch + lịch sử | — | Nhân viên 3 | đã giao |
-| 24 | Đo harness bằng benchmark uy tín có điểm công bố | — | agent phụ | đang khảo sát |
+| 24 | Đo harness bằng benchmark uy tín có điểm công bố | — | — | khảo sát xong; chờ chủ dự án chọn |
 
 ## Mốc so sánh của bộ test
 

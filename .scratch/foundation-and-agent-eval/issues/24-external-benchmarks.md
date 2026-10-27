@@ -1,6 +1,6 @@
 # 24 — Đo harness bằng benchmark uy tín có điểm công bố
 
-Status: đang khảo sát (agent phụ, nguồn chính thống)
+Status: khảo sát xong (`external-benchmarks-survey.md`); chờ chủ dự án chọn benchmark + duyệt tải
 Type: research
 Blocked by: —
 
