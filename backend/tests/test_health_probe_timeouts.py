@@ -91,6 +91,8 @@ def test_a_hung_qdrant_reads_unavailable_and_is_not_probed_again_while_hung(sile
         assert first["postgres"] == "ok"
         # The probe still running from the first call is the second call's answer.
         assert qdrant.calls == 1
+        # Abandoned, it must not hold up the process's exit.
+        assert all(thread.daemon for thread in threading.enumerate() if thread.name == "health-qdrant")
 
         qdrant.release.set()
         assert health_within(service, 5)["qdrant"] == "ok"

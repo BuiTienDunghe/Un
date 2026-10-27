@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import math
-from concurrent.futures import Future, ThreadPoolExecutor
+import threading
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -68,8 +68,7 @@ class OperationalService:
         self.model_registry = model_registry
         self.probe_timeout_seconds = probe_timeout_seconds
         self._postgres_probe: Engine | None = None
-        self._qdrant_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="health-qdrant")
-        self._qdrant_probe: Future | None = None
+        self._qdrant_probe: tuple[threading.Thread, dict[str, bool]] | None = None
 
     def _postgres_ok(self) -> bool:
         """SELECT 1 on an engine of its own, with a connect timeout.
@@ -102,13 +101,24 @@ class OperationalService:
         store's own timeout still ends the call, so the probe runs in a thread
         and is not restarted while one is still running: a probe left over from
         the previous /health is itself the answer "Qdrant is not answering".
+        A daemon thread, because an abandoned probe has nothing to finish, and an
+        executor's thread would hold the process's exit for up to those 32 s.
         """
-        if self._qdrant_probe is None or self._qdrant_probe.done():
-            self._qdrant_probe = self._qdrant_executor.submit(self.qdrant.healthcheck)
-        try:
-            return bool(self._qdrant_probe.result(timeout=self.probe_timeout_seconds))
-        except Exception:
-            return False
+        probe = self._qdrant_probe
+        if probe is None or not probe[0].is_alive():
+            answer: dict[str, bool] = {}
+
+            def run() -> None:
+                try:
+                    answer["ok"] = bool(self.qdrant.healthcheck())
+                except Exception:
+                    answer["ok"] = False
+
+            probe = (threading.Thread(target=run, name="health-qdrant", daemon=True), answer)
+            self._qdrant_probe = probe
+            probe[0].start()
+        probe[0].join(self.probe_timeout_seconds)
+        return probe[1].get("ok", False)
 
     def _backup_status(self) -> tuple[str, float | None]:
         """Report the newest recovery point, not whether a worker is running.

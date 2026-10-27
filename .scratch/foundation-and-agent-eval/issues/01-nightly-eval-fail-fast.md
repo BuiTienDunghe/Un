@@ -112,3 +112,15 @@ Một đêm 03:00 thật cũng chưa chạy.
 Lệch ticket: (1) nâng trần `urlopen` trong `wait_for_health` từ 3 s lên 30 s. Việc này không
 có trong danh sách việc, nhưng đó chính là nguyên nhân trực tiếp của exit 97. (2) Ollama không
 được kiểm trước, vì ticket chỉ nêu ba phụ thuộc. Phần chẩn đoán của exit 97 vẫn chạy `ollama ps`.
+
+### 27/10 — sau khi điều phối duyệt
+
+- Lệch đã duyệt: sửa một dòng ở `tests/test_discord_memory_outbox_worker.py:1242`, đổi
+  `lambda *_: FakeRedis()` thành `lambda *_, **__: FakeRedis()`. Cái giả cũ không nhận tham số
+  tên, nên timeout mới của Redis làm case `[False-ok-disabled]` đỏ. Giờ hai case đều xanh.
+- Ba lệch tạm chấp nhận: trần `urlopen` 30 s; không kiểm Ollama trước; luồng Qdrant (mục dưới).
+- Luồng Qdrant giờ là luồng daemon. Bản đầu dùng một executor, mà luồng của executor không đặt
+  daemon được, và tiến trình phải chờ nó khi thoát. Không có lý do giữ: phép thử bị bỏ dở chẳng
+  có gì cần làm cho xong. Nên đổi sang `threading.Thread(daemon=True)`. Test khoá điều này.
+- Ngoài lề: tôi đã chạy bài outbox hai lần trên `local_ai_core_test`, khoảng 16:37–16:41, sau khi
+  bộ đầy đủ của điều phối xong lúc 16:36.

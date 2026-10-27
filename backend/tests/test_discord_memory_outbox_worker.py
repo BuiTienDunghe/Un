@@ -1239,7 +1239,7 @@ def test_memory_health_and_metrics_are_observable_without_real_redis(
     monkeypatch.setattr(
         operational_service.Redis,
         "from_url",
-        lambda *_: FakeRedis(),
+        lambda *_, **__: FakeRedis(),
     )
     monkeypatch.setattr(
         operational_service.Worker,
