@@ -1,8 +1,8 @@
 # 12 — Dọn nhỏ sau 03 (được phép trượt)
 
-Status: chờ
+Status: đã giao — Nhân viên của Ún 3 (trong lúc 07 chờ GPU)
 Type: task
-Blocked by: 02
+Blocked by: — (kiểm 27/10: không chung file với 02; mục 6 và 05 cùng đụng operational_service.py nhưng khác dòng)
 
 Gom các phát hiện ngoài phạm vi khi làm và duyệt ticket 03:
 
