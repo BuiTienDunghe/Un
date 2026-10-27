@@ -207,5 +207,9 @@ xem câu trả lời. Vì vậy theo quy tắc ở trên, v0.2 phải đo lại 
 | 27/10 | hist-08 | Ghi chú nêu lỗi `TOOL_UNAVAILABLE_HERE` thay cho câu lỗi cũ | Ticket 16 đã đổi câu lỗi model đọc |
 | 27/10 | hist-08..10, `GRADER_VERSION` → v0.3 | Thêm `must_not_ask_back` (`ASK_BACK_PATTERN`) | Ticket 16: hỏi lại "server nào" là lỗi mà v0.2 cho đạt. Kiểm trên 62 câu trả lời khác nhau đã lưu tới 27/10 (108 lượt): khớp chấm tay 61/61. Một câu lưng chừng không bị bắt: "nếu bạn đang ở trong một server Discord cụ thể, hãy cho tôi biết" |
 
+Runner (27/10): bài có `input` dài hơn giới hạn của API (`max_length` của `ChatRequest.message` cho web, của
+`DiscordTurnEnqueueRequest.message` cho Discord, đọc từ schema) bị từ chối trước khi agent chạy, ghi lỗi
+`INPUT_TOO_LONG` và trượt mục `completed`, giống hệt API trả 422. Manifest ghi `input_max_chars`.
+
 Không đổi: hist-03 vẫn cấm `search_documents`. Lý do ở hist-07 cũng áp dụng được cho nó, nhưng điều phối
 chưa giao.

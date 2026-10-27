@@ -17,6 +17,7 @@ from app.services.agent_service import AGENT_TOOLS
 from app.services.injection_defense import InjectionDefense
 from scripts.agent_eval import (
     DATASET_DIR,
+    INPUT_MAX_CHARS,
     NO_SEED,
     RETRIEVAL_SOURCES,
     FixtureHistory,
@@ -162,6 +163,20 @@ def test_a_failing_task_is_recorded_and_the_run_goes_on(tmp_path):
     assert first["error"] == "RuntimeError: Ollama down" and first["passed"] is False
     assert second["passed"] is True
     assert summary["errors"] == 1 and summary["failed_tasks"] == ["doc-broken"]
+
+
+def test_an_input_the_api_would_reject_fails_without_a_model_call(tmp_path):
+    # v0.3 (ticket 20): the API refuses a message longer than the request
+    # schema allows before the agent runs, so the eval refuses it the same way.
+    limit = INPUT_MAX_CHARS["web"]
+    too_long = {**DOC_TASK, "id": "doc-long", "input": "x" * (limit + 1)}
+    at_limit = {**DOC_TASK, "input": DOC_TASK["input"].ljust(limit, ".")}
+    out_dir, summary = _run(tmp_path, [too_long, at_limit], [DOC_FIXTURE], ScriptedRouter([call("search_documents", {"query": "phép"}), final("12 ngày")]))
+
+    rejected, answered = _jsonl(out_dir / "task_results.jsonl")
+    assert rejected["error"].startswith("INPUT_TOO_LONG") and rejected["model_rounds"] == 0 and rejected["passed"] is False
+    assert answered["passed"] is True
+    assert json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))["input_max_chars"] == INPUT_MAX_CHARS
 
 
 def test_web_turns_get_no_guild_and_discord_turns_get_the_fixed_one(tmp_path):
