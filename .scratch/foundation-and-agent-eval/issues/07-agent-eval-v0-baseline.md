@@ -13,4 +13,7 @@ Blocked by: 06; cần stack Postgres + Qdrant của Ún và Ollama
 4. Báo cáo ghi rõ: "baseline thăm dò, chưa đủ chứng minh thống kê". Kết quả nào được trích dẫn thì
    promote vào `data/evaluation/results/kept/` và thêm một dòng vào `docs/RESULTS.md`.
 
+5. Chạy với registry đã probe (`manifest.verified: true`) và cấu hình thật của máy, không dùng
+   DATABASE_URL giữ chỗ như lần chạy thử của 06 — baseline phải gắn được với cấu hình đang ship.
+
 ## Comments
