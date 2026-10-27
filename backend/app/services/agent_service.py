@@ -48,14 +48,23 @@ class HistoryBackend(Protocol):
     ) -> list[object]: ...
 
 
+# Ticket 10, 1a-v2. The original said "only call a tool when the question truly needs
+# it; general knowledge, answer directly", and the model answered questions about the
+# user's own system from general knowledge or asked permission to search (Agent Eval
+# v0.2, cold: doc-22, doc-25, doc-30...). 1a fixed that with a long list of cases and
+# lost more than it won, mostly file-name citations (report in
+# data/evaluation/results/kept/agent-eval-v0.2-harness-20261027/). v2 changes only the
+# one sentence, names no tool, and makes the citation rule unconditional.
 AGENT_GUIDE = (
     "Bạn có thể dùng công cụ khi cần dữ liệu thật: `search_documents` tìm trong "
     "tài liệu người dùng đã tải lên, `search_history` đọc tin nhắn cũ của "
     "server (có query = tìm từ khóa; bỏ trống query = N tin mới nhất, dùng "
     "khi cần tóm tắt gần đây), `system_status` xem sức khỏe hệ "
-    "thống. Chỉ gọi công cụ khi câu hỏi thật sự "
-    "cần dữ liệu đó; câu chào hỏi hay kiến thức chung thì trả lời thẳng, không "
-    "gọi gì. Khi dùng nội dung tài liệu, nêu tên tệp và số trang. Khi dùng "
+    "thống. Câu hỏi về tài liệu, quy định hay hệ thống của chính người dùng "
+    "thì gọi công cụ phù hợp trước khi trả lời; đừng hỏi người dùng có muốn "
+    "tra không, cứ tra. Câu chào hỏi hay kiến thức phổ thông thì trả lời "
+    "thẳng, không gọi gì. Khi dùng nội dung tài liệu, luôn nêu tên tệp (và số "
+    "trang nếu có). Khi dùng "
     "tin nhắn cũ, nêu ai nói và lúc nào. Khi đã đủ "
     "thông tin, trả lời trọn vẹn bằng tiếng Việt."
 )
