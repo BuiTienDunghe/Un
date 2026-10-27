@@ -85,6 +85,23 @@ roles:
           revision: qwen3-embedding-0.6b-r1
           normalization: raw
           dimensions: 1024
+      - id: embedding-v0-qi              # CANDIDATE (after active): v0's weights + a query-side instruction
+        provider: ollama
+        collection_suffix: qi            # -> documents_qi / memories_qi (documents_lab_qi, documents_drill_heldout_qi)
+        vram_mib: null                   # same tag as v0 (2870 at ctx 8192); still measured once before promotion
+        eval:
+          reports:
+            d1_multidoc: null
+            heldout: null
+            mteb: null
+        config:
+          provider: ollama
+          name: qwen3-embedding:0.6b
+          context: 32768
+          revision: qwen3-embedding-0.6b-r1
+          normalization: raw
+          dimensions: 1024
+          query_prefix: "Instruct: Retrieve text based on user query.\nQuery: "   # the exact string mteb sent on 05/09
       - id: embedding-e5l-v1           # CANDIDATE (after active): never served automatically
         provider: ollama
         ollama:
