@@ -487,6 +487,15 @@ two cold runs, identical: 35/48. The 40 old tasks give ticket 16's answers word 
 answer), the paste is refused, the control passes. A tool that reads past the preview is
 measured against this.
 
+The reading tool (ticket 20 #1, `results/kept/agent-eval-v0.3-read-20261028/`; an internal
+regression test, not a quality claim) scores 34/48 in two identical cold runs. It does its
+job: four of the five long-reading document tasks now pass by opening the chunk the search
+pointed to (the fifth read from the document's start instead), the control still passes
+with one search, and the 36-character document id was copied right 5/5. But the old forty
+fall from 34/40 to 29/40: none of them calls the new tool, and 37 of their 40 answers change
+wording because the prompt that describes the tools changed. One run a side at temperature
+0 cannot tell that reshuffle from harm.
+
 Hand grading of 16 tasks agrees with the grader on 15; the one grader error (doc-18,
 a regex too narrow) would make the warm runs 35/40. The largest failure class is the
 agent **not calling** document search for a question that sounds generic, and

@@ -61,3 +61,9 @@ on the three tasks whose tool error text changed. `decide.py` recomputes `analys
 or a paste longer than the API accepts), two cold runs, identical. 35/48: the 40 old tasks
 repeat ticket 16's answers word for word, the six long-reading tasks all fail, the long
 paste is refused. `analyze.py` recomputes `analysis.json`.
+
+`agent-eval-v0.3-read-20261028/` measures ticket 20 #1 (read_document) against that
+baseline: two cold runs, identical, 34/48, an internal regression test registered before
+the runs. Four of the five long-reading document tasks pass by opening the chunk; the old
+forty fall from 34 to 29, none of them calling the new tool, as the changed prompt reshuffles
+37 of their 40 answers. `analyze.py` recomputes `analysis.json`.
