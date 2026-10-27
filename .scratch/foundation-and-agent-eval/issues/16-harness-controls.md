@@ -243,3 +243,7 @@ Duyệt mọi chỗ "Ý tôi" ở trên, kèm 3 chỉnh:
   chạy đầy đủ; lab/heldout không bắt buộc (không đi qua agent). Lệnh nâng DB test bị chặn quyền ở phiên
   Nhân viên 1 → điều phối hỏi chủ dự án trước khi nâng, không làm thay. Gộp sáng 28/10 sau eval đêm, sau
   khi fable duyệt lại dceaaab (tool_name "unknown" trong bảng rút gọn khi model bịa tên công cụ).
+- 27/10 22:10 (chủ dự án, trong phiên opus 5.5): **cho phép** nâng schema DB test `local_ai_core_test`
+  bằng `alembic upgrade head` khi gộp ticket 16; DB thật để launcher tự nâng. Fable duyệt dceaaab: gộp
+  được. Thứ tự sáng 28/10 (sau eval đêm và sau khi 09 xong): nâng DB test → chạy riêng
+  `test_agent_trace_summaries.py` → gộp → bộ đầy đủ.
