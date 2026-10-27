@@ -78,7 +78,7 @@ ticket mới, chờ các ticket đang chạy xong, rồi báo chủ dự án.
 | 07 | Agent Eval v0: ghi truy xuất thật + baseline 3 lần (M2) | 06 gộp; GPU sau 11 | Nhân viên 3 | **đã gộp** — 34/40 nóng, 29/40 t0.4 |
 | 08 | Chọn mục tiêu thí nghiệm model (M3) | — (chỉ đọc) | fable 5.1 | xong — chọn B, nhánh 0 trước |
 | 09 | Thí nghiệm B, nhánh 0 trước (M3) | 11 | Nhân viên 1 chuẩn bị, Nhân viên 2 chạy | dừng ở 2b theo luật (trôi passage); cờ collection tối nay; chạy sáng 28/10 |
-| 10 | Nâng harness theo lỗi đo được (M4) | 07 gộp | Nhân viên 3 | 3a + v0.2 đã gộp; 1a/2b đo xong, không ship; 1a-v2 đo sáng 28/10 |
+| 10 | Nâng harness theo lỗi đo được (M4) | 07 gộp | Nhân viên 3 | **đã gộp** phần giữ (3a, v0.2, mô tả 800, báo cáo); 1a/2b không ship; 1a-v2 (wip/10-1a-v2) đo sáng 28/10 |
 | 11 | Đo dao động 788 câu held-out (tiền đề M3) | stack | Nhân viên 2 | **đã gộp** — sàn = 0 câu |
 | 12 | Dọn nhỏ sau 03 (được phép trượt) | — | Nhân viên 3 | **đã gộp** |
 | 13 | Chuẩn bị đóng gói e5-large (chỉ code) | — | Nhân viên 1 | **đã gộp** |
@@ -113,3 +113,7 @@ Sau khi gộp 05 (main 9d3fbe8): backend 1109 passed, 1 skipped, 5 warnings; roo
 Sau khi gộp 09-prep + 04 + 07 (main 457c7c1): backend 1140 xanh / 0 đỏ / 1 skip; root 71 xanh.
 
 Sau khi gộp phần không-GPU của 10 (main d825aed): backend 1148 xanh / 0 đỏ / 1 skip; root 71 xanh. Ghi chú: test_agent_service.py CÓ dùng Postgres (skipif theo POSTGRES_TEST_URL) — fable đính chính.
+
+Lưu ý trước khi push: `data/evaluation/results/kept/` giờ 4,1 MB (ticket 07 + 10 thêm 27 lần chạy Agent
+Eval, mỗi lần có manifest/task_results/events/summary). Quy ước của chủ dự án: hỏi trước file lớn (ghi
+nhớ "Không đưa data train/thiết kế lên GitHub").
