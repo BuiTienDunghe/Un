@@ -289,6 +289,37 @@
    "source": "log GPU lúc chạy (gpu20.log, 00:07:55)",
    "gpu_shared": false,
    "gpu_shared_source": "điều phối 28/10 00:03: GPU 0%, 1,8 GB; Nhân viên 2 đóng gói e5 bằng CPU"
+  },
+  "v0.3-read-B-r1-cold": {
+   "loaded_at_start": [],
+   "unload": "general",
+   "source": "agent-eval-v0.3-read-B-20261028/ollama_ps.jsonl (00:32:47, sau khi gỡ, ngay trước lần chạy)",
+   "gpu_shared": false,
+   "gpu_shared_source": "REPORT agent-eval-v0.3-read-B: r1 chạy trên GPU trống"
+  },
+  "v0.3-read-B-r2-cold": {
+   "loaded_at_start": [
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "general",
+   "source": "agent-eval-v0.3-read-B-20261028/ollama_ps.jsonl (00:36:09, sau khi gỡ, ngay trước lần chạy)",
+   "gpu_shared_source": "REPORT agent-eval-v0.3-read-B: r2 chạy khi dự án decision model đang chờ GPU; báo cáo không dùng độ trễ của r2"
+  },
+  "v0.3-read-r1-cold": {
+   "loaded_at_start": [],
+   "unload": "general",
+   "source": "agent-eval-v0.3-read-20261028/ollama_ps.jsonl (00:20:20, sau khi gỡ, ngay trước lần chạy)",
+   "gpu_shared": false,
+   "gpu_shared_source": "REPORT agent-eval-v0.3-read: điều phối báo GPU trống trong lúc đo"
+  },
+  "v0.3-read-r2-cold": {
+   "loaded_at_start": [
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "general",
+   "source": "agent-eval-v0.3-read-20261028/ollama_ps.jsonl (00:24:00, sau khi gỡ, ngay trước lần chạy)",
+   "gpu_shared": false,
+   "gpu_shared_source": "REPORT agent-eval-v0.3-read: điều phối báo GPU trống trong lúc đo"
   }
  }
 }

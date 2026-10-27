@@ -86,6 +86,23 @@ def test_fabrication_is_a_forbidden_claim_and_a_missed_not_found_is_counted_apar
     assert c["fabricated_tasks"] == ["hist-2"] and c["not_found_missed_tasks"] == ["doc-19"]
 
 
+def test_figures_the_turn_never_saw_count_the_retries_and_the_answers_that_kept_them(tmp_path):
+    # Ticket 20 #2: an answer_check step is a retry the check forced; a final step
+    # whose unsupported_figures > 0 went out with such figures anyway.
+    checked = turn("doc-1", after_16=True)
+    checked[2]["arguments_shape"] = {"unsupported_figures": 0}
+    retried = turn("doc-2", after_16=True)
+    retried.insert(2, {"task_id": "doc-2", "kind": "answer_check", "arguments_shape": {"unsupported_figures": 2}, "error_code": "UNSUPPORTED_FIGURES"})
+    retried[3]["arguments_shape"] = {"unsupported_figures": 1}
+    run = write_run(tmp_path / "checked", [result("doc-1", True), result("doc-2", False)], checked + retried)
+    c = scorecard(run)["correctness"]
+    assert (c["answer_checks"], c["answer_check_tasks"]) == (1, ["doc-2"])
+    assert (c["finals_unsupported"], c["finals_unsupported_tasks"]) == (1, ["doc-2"])
+
+    before = write_run(tmp_path / "before-check", [result("doc-1", True)], turn("doc-1", after_16=True))
+    assert "trước ticket 20 #2" in scorecard(before)["correctness"]["unsupported_figures_unavailable"]
+
+
 def test_efficiency_leaves_out_the_refused_turn_and_prices_calls_per_solved_task(tmp_path):
     e = scorecard(after_16_run(tmp_path))["efficiency"]
     assert e["tasks_ran"] == 3, "the INPUT_TOO_LONG task never reached the model"

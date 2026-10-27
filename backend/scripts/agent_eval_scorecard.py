@@ -105,6 +105,26 @@ def correctness(results: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def unsupported_figures(events: list[dict[str, Any]] | None) -> dict[str, Any]:
+    """Answers with figures the turn never saw (ticket 20 #2): how often the check sent
+    the agent back for one more round (answer_check steps), and how many answers still
+    went out with such figures (final steps whose unsupported_figures > 0). The check
+    writes its count into the final step's arguments_shape; runs before it have none."""
+    if events is None:
+        return {"unsupported_figures_unavailable": "không có events.jsonl"}
+    finals = [e for e in events if e.get("kind") == "final"]
+    if not any(isinstance(e.get("arguments_shape"), dict) and "unsupported_figures" in e["arguments_shape"] for e in finals):
+        return {"unsupported_figures_unavailable": "bước final không có unsupported_figures (trước ticket 20 #2)"}
+    retried = sorted({e["task_id"] for e in events if e.get("kind") == "answer_check"})
+    delivered = sorted({e["task_id"] for e in finals if int((e.get("arguments_shape") or {}).get("unsupported_figures") or 0) > 0})
+    return {
+        "answer_checks": sum(e.get("kind") == "answer_check" for e in events),
+        "answer_check_tasks": retried,
+        "finals_unsupported": len(delivered),
+        "finals_unsupported_tasks": delivered,
+    }
+
+
 def efficiency(results: list[dict[str, Any]]) -> dict[str, Any]:
     ran = [r for r in results if _ran(r)]
     tokens_in = [int(r["tokens_in"]) for r in ran if r.get("tokens_in") is not None]
@@ -235,7 +255,7 @@ def scorecard(run_dir: Path, recorded: dict[str, Any] | None = None) -> dict[str
         "model": _model_name(manifest),
         "started_at": manifest.get("started_at"),
         "condition": condition(manifest, recorded),
-        "correctness": correctness(results),
+        "correctness": {**correctness(results), **unsupported_figures(events)},
         "efficiency": efficiency(results),
         "robustness": robustness(results, events),
         "traceability": traceability(results, events),
@@ -265,6 +285,10 @@ def render(card: dict[str, Any]) -> str:
     cold = {True: "lạnh", False: "nóng", None: "lạnh/nóng không rõ"}[cond["cold"]]
     shared = {True: "GPU dùng chung", False: "GPU riêng", None: "GPU dùng chung: không rõ"}[cond["gpu_shared"]]
     per_category = {name: f"{v['passed']}/{v['tasks']}" for name, v in c["by_category"].items()}
+    figures = (
+        f"{c['answer_checks']} / {c['finals_unsupported']} {_fmt(c['finals_unsupported_tasks']) if c['finals_unsupported_tasks'] else ''}"
+        if "answer_checks" in c else "n/a: " + c["unsupported_figures_unavailable"]
+    )
     stop = r.get("stop_reasons")
     stop_text = _fmt(stop) if stop is not None else "n/a: " + str(r.get("stop_reasons_unavailable") or r.get("unavailable"))
     lines = [
@@ -281,6 +305,7 @@ def render(card: dict[str, Any]) -> str:
         f"| Đúng | bịa (nói ra điều bị cấm: trượt must_not_mention) | {c['fabricated']} {_fmt(c['fabricated_tasks']) if c['fabricated_tasks'] else ''} |",
         f"| Đúng | chưa nói rõ \"không tìm thấy\" (trượt not_found, có thể do mẫu của bộ chấm) | {c['not_found_missed']} {_fmt(c['not_found_missed_tasks']) if c['not_found_missed_tasks'] else ''} |",
         f"| Đúng | trích nguồn đúng / nguyên văn | {c['citation_passed']}/{c['citation_tasks']} / {c['citation_verbatim']} |",
+        f"| Đúng | số liệu không tra được: lần kiểm bắt và cho thử lại / câu trả lời vẫn còn | {figures} |",
         f"| Hiệu quả | token vào mỗi bài (TB / trung vị) | {_fmt(e['tokens_in_mean'])} / {_fmt(e['tokens_in_median'])} |",
         f"| Hiệu quả | token ra mỗi bài (TB / trung vị) | {_fmt(e['tokens_out_mean'])} / {_fmt(e['tokens_out_median'])} |",
         f"| Hiệu quả | vòng model mỗi bài | {_fmt(e['model_rounds_mean'])} |",
@@ -313,6 +338,7 @@ class Incomparable(ValueError):
 
 SCALARS = (
     ("correctness", "pass_rate"), ("correctness", "fabricated"), ("correctness", "not_found_missed"), ("correctness", "citation_rate"),
+    ("correctness", "answer_checks"), ("correctness", "finals_unsupported"),
     ("efficiency", "tokens_in_mean"), ("efficiency", "tokens_out_mean"), ("efficiency", "model_rounds_mean"),
     ("efficiency", "tool_calls_per_solved"), ("efficiency", "latency_p50_ms"), ("efficiency", "latency_p95_ms"),
     ("robustness", "bad_arguments_rate"), ("robustness", "results_trimmed_by_item"), ("traceability", "complete_rate"),
