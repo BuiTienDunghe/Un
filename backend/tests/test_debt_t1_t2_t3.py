@@ -47,7 +47,9 @@ class _RecordingThreading:
 
     def Thread(self, *args, **kwargs):  # noqa: N802 - stands in for the class
         thread = threading.Thread(*args, **kwargs)
-        if getattr(kwargs.get("target"), "__name__", "") == "_run_index":
+        # By identity, not by name (fable): rename _run_index and this fixture fails
+        # at once with AttributeError instead of silently waiting for nothing.
+        if getattr(kwargs.get("target"), "__func__", None) is postgres_document_service.PostgresDocumentService._run_index:
             self.index_threads.append(thread)
         return thread
 
