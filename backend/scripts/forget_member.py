@@ -19,7 +19,8 @@ half-deleting:
      index is per row.
   8. the bot's COPIES of their words, which are filed under nobody (ticket 17):
      their requests in the guild's backend conversations (`messages`, role user),
-     verbatim quotes of them in the bot's answers, and their items in the agent's
+     verbatim quotes of them in the bot's answers (`messages`, role assistant, and
+     the response_text of other members' turns), and their items in the agent's
      search_history traces. Rewritten in place, not deleted — another member's
      lines in the same result stay. Their words are read BEFORE steps 6-7 delete
      them, since nothing else says what to look for. Only verbatim copies are
@@ -32,7 +33,7 @@ from __future__ import annotations
 import argparse
 import json
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, func, or_, select, update
 
 from app.config.settings import get_settings
 from app.postgres.database import (
@@ -99,6 +100,20 @@ def _copies(database, guild_id: str, author_id: str, index: QuoteIndex, requests
             redacted, changed = redact_quotes(row.content, index)
             if changed:
                 changes.append((row, "content", redacted))
+    # The bot's reply is also stored on EVERY turn (discord_repositories.py:422), so an
+    # answer to another member that quoted them survives step 6, which only deletes
+    # their own turns (fable's review). A NULL author is someone else too.
+    for turn in database.scalars(
+        select(DiscordSessionTurn)
+        .join(DiscordConversationSession, DiscordSessionTurn.session_id == DiscordConversationSession.id)
+        .where(
+            DiscordConversationSession.guild_id == guild_id,
+            or_(DiscordSessionTurn.author_id.is_(None), DiscordSessionTurn.author_id != author_id),
+        )
+    ):
+        redacted, changed = redact_quotes(turn.response_text, index)
+        if changed:
+            changes.append((turn, "response_text", redacted))
     for row in database.scalars(select(AgentTrace).where(AgentTrace.conversation_id.in_(conversations))):
         if row.kind == "tool_result" and row.tool_name == "search_history":
             redacted, changed = redact_history_result(row.content, author_id, index)
@@ -120,6 +135,7 @@ def _copy_counts(changes: list[tuple[object, str, object]]) -> dict[str, int]:
     return {
         "conversation_messages": sum(1 for row, _, _ in changes if isinstance(row, Message)),
         "agent_trace_steps": sum(1 for row, _, _ in changes if isinstance(row, AgentTrace)),
+        "turn_responses": sum(1 for row, _, _ in changes if isinstance(row, DiscordSessionTurn)),
     }
 
 

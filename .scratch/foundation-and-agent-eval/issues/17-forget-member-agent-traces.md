@@ -72,3 +72,22 @@ Giới hạn còn lại:
 - Lời diễn giải không bắt được.
 - Một câu chung chung dài từ 20 ký tự trở lên mà A từng viết sẽ bị che cả khi bot dùng nó không phải để trích A; đây là che thừa, phía an toàn.
 - Việc xoá turn của A theo `author_id` vẫn không lọc theo guild, như code cũ; tôi chưa đổi.
+
+### 27/10 — Nhân viên của Ún 1: sửa theo lượt duyệt của fable
+
+Fable chỉ ra một chỗ sót: câu trả lời của bot được lưu trên MỌI turn (`discord_repositories.py:422`), kể
+cả turn của B. Nếu bot trả lời B mà trích lời A, đoạn trích đó còn lại vì bước 6 chỉ xoá turn của A.
+
+- `_copies` quét thêm `response_text` của các turn trong guild mà tác giả không phải A (kể cả tác giả
+  NULL), bằng `redact_quotes`. Dry-run, `remaining` và `copies_rewritten` có thêm `turn_responses`.
+- Test DB: turn của B có câu trả lời trích A thì đoạn trích thành dấu, phần của B giữ nguyên; một câu
+  trả lời khác của B không trích A thì giữ nguyên từng chữ.
+- Docs ghi thêm: lời dùng để dò gồm cả câu hỏi của A với bot, nên có thể che thừa; bảng dò có thể tốn vài
+  chục MB với người viết rất nhiều.
+
+| Kiểm | Kết quả |
+|---|---|
+| `test_forget_member_copies.py` + `test_member_redaction.py` | 13 xanh |
+| Kiểm ngược: tắt quét `response_text` | 2/4 test DB đỏ (dry-run và quên A), đúng hai test kiểm chỗ này |
+
+Việc bước 6 không lọc theo guild đã thành ticket 19 (chủ dự án chốt `--all-guilds`), không làm ở đây.

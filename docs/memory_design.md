@@ -860,7 +860,11 @@ Qdrant trước vì id uuid5 không suy được từ hàng Postgres).
 
 Bổ sung 27/10 (ticket 17): `forget_member` xoá cả các bản bot CHÉP lời của thành viên, vốn nằm ở những
 chỗ không ghi tên ai. Đó là: câu hỏi của họ trong lịch sử hội thoại (`messages`), các đoạn trích nguyên
-văn trong câu trả lời của bot, và các mục của họ trong kết quả `search_history` của trace. Bản chép được
-viết đè tại chỗ bằng "[đã xoá theo yêu cầu]", nên phần của thành viên khác trong cùng một kết quả vẫn
-còn nguyên. **Giới hạn:** chỉ tìm được bản chép NGUYÊN VĂN (từ 20 ký tự). Một câu trả lời kể lại lời họ
-bằng chữ của bot thì không phát hiện được. Script in giới hạn này trong output (`limits`).
+văn trong câu trả lời của bot (ở `messages`, ở bước `final` của trace, và ở `response_text` của turn của
+thành viên KHÁC, vì câu trả lời được lưu trên mọi turn), và các mục của họ trong kết quả `search_history`
+của trace. Bản chép được viết đè tại chỗ bằng "[đã xoá theo yêu cầu]", nên phần của thành viên khác trong
+cùng một kết quả vẫn còn nguyên. **Giới hạn:** chỉ tìm được bản chép NGUYÊN VĂN (từ 20 ký tự). Một câu
+trả lời kể lại lời họ bằng chữ của bot thì không phát hiện được. Script in giới hạn này trong output
+(`limits`). Lời dùng để dò gồm tin nhắn kênh VÀ câu hỏi của họ với bot, nên một câu dài từ 20 ký tự trở
+lên mà người khác cũng viết y hệt sẽ bị che thừa (phía an toàn). Bảng dò giữ mọi đoạn 20 ký tự trong lời
+của họ, nên với người viết rất nhiều có thể tốn vài chục MB bộ nhớ; chấp nhận được với một script chạy tay.
