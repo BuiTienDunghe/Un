@@ -125,3 +125,13 @@ Sau khi gộp phần không-GPU của 10 (main d825aed): backend 1148 xanh / 0 �
 Lưu ý trước khi push: `data/evaluation/results/kept/` giờ 4,1 MB (ticket 07 + 10 thêm 27 lần chạy Agent
 Eval, mỗi lần có manifest/task_results/events/summary). Quy ước của chủ dự án: hỏi trước file lớn (ghi
 nhớ "Không đưa data train/thiết kế lên GitHub").
+
+## Việc sáng 28/10 (theo thứ tự)
+
+1. Đọc kết quả eval đêm 03:00 (`data/logs/nightly_eval.log`): exit 0 là nghiệm thu ticket 01.
+2. Đọc báo cáo ticket 09 của Nhân viên 2 (hoặc chỗ nó dừng); fable duyệt; gộp.
+3. Ticket 16: fable duyệt lại dceaaab → **hỏi chủ dự án** trước khi nâng DB test (lệnh bị chặn ở phiên
+   Nhân viên 1) → gộp → chạy bộ đầy đủ.
+4. GPU, mỗi lần đo gỡ model chính trước: 1a-v2 của ticket 10 (`wip/10-1a-v2`, ~8 phút) → bước 5 của 16.
+5. Hỏi chủ dự án: push (kept/ 4,1 MB); bật lại edu-postgres-1 (phải tắt Postgres của Ún vì chung 5432);
+   bot chạy kiểu nào (B1 chỉ Docker / B2 chỉ trên máy).

@@ -237,3 +237,9 @@ Duyệt mọi chỗ "Ý tôi" ở trên, kèm 3 chỉnh:
   của tham số hay kết quả: chèn một chuỗi mồi vào câu hỏi, rồi quét mọi cột text/JSONB của bảng.
 
 `forget_member` không xoá `agent_traces` → ticket 17 riêng, làm sau 16. Code chỉ bắt đầu khi 10 đã gộp.
+- 27/10 22:00 (opus 5.5): chọn (p1) — chỉ quy trình, không code phòng thủ. API boot được trên DB ở
+  `_34`, nhưng mọi lượt agent sẽ 500 ở `add_agent_traces` nếu thiếu bảng mới. Quy trình gộp: DB thật nâng
+  qua launcher (`run-local-ai-core.bat:104` tự chạy `alembic upgrade head`); DB test phải nâng trước lượt
+  chạy đầy đủ; lab/heldout không bắt buộc (không đi qua agent). Lệnh nâng DB test bị chặn quyền ở phiên
+  Nhân viên 1 → điều phối hỏi chủ dự án trước khi nâng, không làm thay. Gộp sáng 28/10 sau eval đêm, sau
+  khi fable duyệt lại dceaaab (tool_name "unknown" trong bảng rút gọn khi model bịa tên công cụ).
