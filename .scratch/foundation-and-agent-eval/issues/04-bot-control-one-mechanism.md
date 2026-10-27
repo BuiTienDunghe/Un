@@ -22,3 +22,7 @@ các lựa chọn vào Comments trước khi code. Sửa lỗi 401.
 - 27/10 (từ Nhân viên 2, ticket 03): service `discord-bot` trong `docker-compose.yml` có 14 mặc định
   trùng với mặc định trong `discord_bot/main.py` (không phải Settings). Xử lý cùng ticket này, cùng
   quy tắc: một nơi giữ mặc định.
+- 27/10 (từ Nhân viên 1, ticket 02): `discord-bot-control.bat` chạy `tools\discord_bot_control.py`
+  bằng `pythonw`. Trên một `.venv` cũ chưa chạy launcher mới lần nào, bảng điều khiển sẽ không hiện
+  mà cũng không báo lỗi (hết hack sys.path, `import discord_bot` hỏng). Thêm vào `.bat` một bước kiểm
+  import; thiếu thì báo "chạy run-local-ai-core.bat trước".

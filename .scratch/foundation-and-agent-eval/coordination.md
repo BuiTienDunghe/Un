@@ -55,10 +55,10 @@ ticket mới, chờ các ticket đang chạy xong, rồi báo chủ dự án.
 | # | Ticket | Phụ thuộc | Giao cho | Trạng thái |
 |---|---|---|---|---|
 | 01 | Eval đêm dừng sớm, báo rõ (M1a) | — | Nhân viên 1 | **đã gộp** — còn một đêm 03:00 thật |
-| 02 | Một cách cài, xoá hack sys.path (M1b) | — | Nhân viên 1 | đã giao |
+| 02 | Một cách cài, xoá hack sys.path (M1b) | — | Nhân viên 1 | xong, chờ fable duyệt (wip/02, 73c8c76) |
 | 03 | Compose chỉ chuyển tiếp, Docker sang v2 (M1c) | — | Nhân viên 2 | **đã gộp** |
-| 04 | Một cơ chế bật bot + panel 401 (M1d) | 02 đã gộp | — | chờ |
-| 05 | Dời job_*, query dashboard vào service (M1d) | 02 đã gộp | — | chờ |
+| 04 | Một cơ chế bật bot + panel 401 (M1d) | 02 đã gộp | Nhân viên 1 (sau 05) | chờ |
+| 05 | Dời job_*, query dashboard vào service (M1d) | 02 đã gộp | Nhân viên 1 (sau 02) | đã giao |
 | 06 | Agent Eval v0: khung chạy + bộ bài (M2) | — | Nhân viên 3 | **đã gộp** — chưa chạy lại với model thật |
 | 07 | Agent Eval v0: ghi truy xuất thật + baseline 3 lần (M2) | 06 gộp; GPU sau 11 | Nhân viên 3 | đã giao |
 | 08 | Chọn mục tiêu thí nghiệm model (M3) | — (chỉ đọc) | fable 5.1 | xong — chọn B, nhánh 0 trước |

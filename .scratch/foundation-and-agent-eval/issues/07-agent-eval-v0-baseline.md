@@ -17,3 +17,10 @@ Blocked by: 06 (đã gộp); phần chạy GPU chờ 11 (11 đang đo p50 /rag/s
 6. Chạy với `PYTHONUTF8=1` (runner in tiếng Việt; console cp1252 vỡ ngay cả `--help` — fable kiểm 27/10).
 
 ## Comments
+- 27/10 (opus 5.5): 20 bài tài liệu của v0 hỏi về tài liệu **giả**, không có trong corpus lab, nên
+  không ghi truy xuất thật được cho chúng. Chốt cách (C): giữ viết tay cho 8 bài bẫy (doc-04, 10,
+  11, 12, 17, 18, 19, 20); khoảng 12 bài tra cứu thường viết **mới** trên tài liệu thật của corpus
+  lab, không lấy từ `rag_multidoc_eval.jsonl` (truy xuất đã được chỉnh theo bộ đó). Summary tách
+  theo `retrieval_source`. Dataset nâng lên `agent-eval-v0.1`. Fable duyệt 12 bài mới trước khi ghi.
+  top_k: nếu ghi được với 8 thì ghi 8, không thì 5 và ghi khác biệt vào manifest. Không chọn (A),
+  nạp tài liệu giả vào corpus mà 09 dùng; không chọn (D), bỏ nhiễu truy xuất thật.
