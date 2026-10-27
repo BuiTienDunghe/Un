@@ -21,6 +21,7 @@ from app.llm_clients.deadline import ModelCallTimeoutError, call_within
 from app.llm_clients.usage import consume_usage, record_usage
 from app.services.discord_history_service import history_hit_payload
 from app.services.answer_figures import grounding_summary, retry_instruction, turn_texts, unsupported_figures
+from app.services.pastes import read_paste, take_pastes
 from app.services.injection_defense import InjectionDefense
 from app.services.model_router import ModelRouter
 
@@ -292,16 +293,20 @@ class AgentService:
         (persona system prompt, optional context blocks, history, user turn);
         the agent only adds its tool guidance and the tool traffic.
         """
-        working: list[dict[str, Any]] = list(messages)
+        # A paste longer than PASTE_THRESHOLD reaches the model as a slip, and is read
+        # through read_document from this turn's own pastes (ticket 20 #3).
+        working, pastes = take_pastes(list(messages))
         guide = {"role": "system", "content": self.defense.agent_guide(AGENT_GUIDE)}
         insert_at = 1 if working and working[0].get("role") == "system" else 0
         working.insert(insert_at, guide)
         # The turn's own copy, so the caller's dict is never written to. It carries what
-        # read_document may open: a document search_documents showed in THIS turn, or one
-        # the caller allows outright (ticket 20 #1, A2).
+        # read_document may open: a document search_documents showed in THIS turn, one the
+        # caller allows outright (ticket 20 #1, A2), or a paste in this turn's messages —
+        # whose text comes from those messages only, never from the caller.
         tool_context = {
             **(tool_context or {}),
-            "readable_documents": set((tool_context or {}).get("readable_documents") or ()),
+            "readable_documents": set((tool_context or {}).get("readable_documents") or ()) | set(pastes),
+            "pastes": pastes,
         }
 
         steps: list[dict[str, object]] = []
@@ -565,17 +570,22 @@ class AgentService:
         return self._dump(items), None, None
 
     def _read_document(self, arguments: dict[str, Any], tool_context: dict[str, Any] | None) -> ToolOutput:
-        if self.document_reader is None:
+        document_id = str(arguments.get("document_id") or "").strip()
+        pastes = (tool_context or {}).get("pastes") or {}
+        if document_id not in pastes and self.document_reader is None:
             return self._error(
                 TOOL_UNAVAILABLE_HERE,
                 "read_document chưa dùng được ở đây; trả lời bằng các trích đoạn search_documents đã cho.",
             )
-        document_id = str(arguments.get("document_id") or "").strip()
         if not document_id or document_id not in (tool_context or {}).get("readable_documents", ()):
             return self._error(BAD_ARGUMENTS, NOT_READABLE)
         n = _bounded(arguments.get("n"), 2, 1, READ_MAX_CHUNKS)
         page = _bounded(arguments.get("page"), 0, 0)
-        if page:
+        if document_id in pastes:
+            # This turn's paste (ticket 20 #3): its text is in the turn's own context, so
+            # the document store is never asked about an id it could not have.
+            found = read_paste(document_id, pastes[document_id], _bounded(arguments.get("from_chunk"), 0, 0), n, page)
+        elif page:
             # A page, when given, wins over from_chunk: a model that sends both by habit
             # should not lose a round to an error.
             found = self.document_reader.chunks_on_page(document_id, page, n)
