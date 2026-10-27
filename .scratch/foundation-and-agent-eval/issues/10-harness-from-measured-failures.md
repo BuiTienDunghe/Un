@@ -150,3 +150,15 @@ Tiêu chí nghiệm thu theo `spec.md` Mốc 4.
   - A chạy lại lạnh làm đối chứng, đồng thời kiểm xem lần lạnh có lặp lại qua ngày và qua khởi động lại
     Ollama không (tối 27/10: A lạnh = 34/40). Ticket 16 sẽ dựa vào điều này.
   - Sáng 28/10 có hai việc GPU (09 nhúng lại, và 1a-v2): chạy nối tiếp, không xen kẽ.
+- 27/10 22:50 (Nhân viên 3) — **Kết quả 1a-v2**, đo 22:31–22:39 cùng lúc 09 chạy (opus đổi lịch; đăng ký
+  ghi sáng 28/10, nối tiếp). Báo cáo: `data/evaluation/results/kept/agent-eval-v0.2-1a-v2-20261027/REPORT.md`.
+  - Lạnh: A 34, E 33, F 33. E đạt 4/5 mục tiêu (A 2/5), mất 3 bài theo dõi (doc-17, doc-26, doc-27),
+    mất trích dẫn 1/3. Mã băm lời dặn: A trùng lần 19:43, E = F, khác B.
+  - Theo luật: E trượt 2/4 điều kiện (tổng 33 < 34; mất 3 > 1) → **không ship E**. Điều khoản F là
+    "thay E" nên không áp khi E trượt; F cũng trượt đúng hai điều kiện đó → **không ship F**.
+  - So với 1a đầu: mất 7 → 4, mất trích dẫn 3/3 → 1/3. Ngoài danh sách: hist-10 mất (kiểu hỏng mới),
+    doc-29 được. doc-27 trượt vì bộ chấm đòi chữ "2 tiếng" (ghi cho v0.3); tính nó là đạt thì luật vẫn trượt.
+  - A lặp lại 40/40 câu trả lời so với 19:43: qua 3 giờ, cùng một tiến trình Ollama. Chưa kiểm qua khởi
+    động lại Ollama hay qua ngày. Run-id lệch mẫu đã đăng ký (`v0.2-1a2-<X>-cold`).
+  - Code E, F ở lại nhánh `wip/10-1a-v2` làm hồ sơ; nhánh `wip/10-1a-v2-result` chỉ mang ticket và báo cáo.
+  - `docs/RESULTS.md` sửa luôn câu cũ "cần một lần khởi động bỏ đi" thành quy tắc gỡ model trước mỗi lần đo.
