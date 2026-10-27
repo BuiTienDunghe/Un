@@ -56,4 +56,6 @@ doc-10 không còn số không có nguồn. Nếu không, báo lại kèm bài l
 - Số tự tính (tổng, đổi đơn vị) không có trong nguồn sẽ bị bắt nhầm. Kết quả một chữ số ("2 giờ") thì
   không bao giờ bị kiểm.
 - Số viết bằng chữ ("hai trăm nghìn") không được thấy.
+- Số thập phân ngắn ("3,5 triệu", "10,5%") bị tách thành các chữ số lẻ, nên không bao giờ được kiểm
+  (fable chỉ ra khi duyệt, ghi thêm sau khi đăng ký; không đổi dự đoán hay luật quyết định).
 - Câu khẳng định bịa mà không có số thì không bị bắt.

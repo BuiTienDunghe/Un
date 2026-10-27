@@ -15,6 +15,8 @@ Blind spots, by construction:
 - a figure the model computed (a sum, a converted unit) is in no source and is flagged;
   the retry asks it to show the arithmetic. A one-digit result ("2 giờ") is never checked;
 - a figure written in words ("hai trăm nghìn") is not a digit run and is not seen at all;
+- a short decimal ("3,5 triệu", "1.5 giờ", "10,5%") splits into one-digit pieces, since a
+  separator only joins groups of three digits, and is never checked (fable, 28/10);
 - an invented claim that carries no figure is not caught.
 Single digits are skipped: in an answer they number a list more often than they claim.
 """
