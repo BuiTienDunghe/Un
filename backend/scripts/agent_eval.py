@@ -12,10 +12,14 @@ memory context or the SSE path: those have their own evals or none yet.
     python -m scripts.agent_eval                                  # shipped sampling (0.4, no seed)
     python -m scripts.agent_eval --temperature 0 --seed 42        # repeatable, for before/after
     python -m scripts.agent_eval --tasks doc-01,hist-01,hist-07   # a subset
+    python -m scripts.agent_eval --probe --temperature 0 --seed 42  # a citable baseline
 
 Each run writes data/evaluation/results/agent_eval/<run_id>/ (gitignored):
-manifest.json, task_results.jsonl, events.jsonl, summary.json. No database, no
-Qdrant, no Docker: the only service called is Ollama.
+manifest.json, task_results.jsonl, events.jsonl, summary.json. The agent's
+tools never reach a database or Qdrant; the model is the only service called.
+`--probe` adds the API's own startup probes (Ollama, Qdrant, Postgres) so the
+manifest records `verified: true`, and refuses to run when the general model is
+not the verified pointer. Run with PYTHONUTF8=1 on a cp1252 console.
 
 Temperature and seed overrides live in this process only: the router gets a
 copy of the resolved general config; models.yaml and model_versions.yaml are
@@ -50,10 +54,14 @@ DATASET_DIR = PROJECT_ROOT / "data" / "benchmarks" / "agent_eval" / "v0"
 RESULTS_DIR = PROJECT_ROOT / "data" / "evaluation" / "results" / "agent_eval"
 SYSTEM_PROMPT_PATH = BACKEND / "app" / "prompts" / "general_system.md"
 
-# Hashed in this order; README.md is documentation and never moves the hash.
+# Hashed in this order; README.md and retrieval_manifest.json describe the data
+# and never move the hash.
 DATA_FILES = ("dataset.json", "tasks.jsonl", "retrieval.jsonl")
 CATEGORIES = ("documents", "history", "status", "no_tool")
 SURFACES = ("web", "discord")
+# pending = a real-corpus question whose retrieval is not recorded yet
+# (scripts.agent_eval_record_retrieval); the runner refuses to replay it.
+RETRIEVAL_SOURCES = ("handwritten", "recorded", "pending")
 NO_SEED = "không seed"
 # Settings refuses to exist without a PostgreSQL URL; this run opens no
 # database, so a placeholder satisfies the validator and is never dialled.
@@ -111,6 +119,7 @@ def load_dataset(directory: Path) -> Dataset:
         if not task.get("expect"):
             problems.append(f"{task['id']}: thiếu expect")
     problems += [f"retrieval cho bài không tồn tại: {task_id}" for task_id in retrieval if task_id not in ids]
+    problems += [f"{task_id}: source {f.get('source')!r}" for task_id, f in retrieval.items() if f.get("source") not in RETRIEVAL_SOURCES]
     if problems:
         raise ValueError(f"dataset {directory} hỏng: " + "; ".join(problems))
     return Dataset(
@@ -313,6 +322,11 @@ def run_eval(
         if unknown:
             raise ValueError(f"không có bài: {', '.join(unknown)}")
         tasks = [task for task in tasks if task["id"] in task_ids]
+    # Replaying an empty pending fixture would turn a lookup into a "not found"
+    # task without anyone noticing.
+    pending = [task["id"] for task in tasks if dataset.retrieval.get(task["id"], {}).get("source") == "pending"]
+    if pending:
+        raise ValueError(f"chưa ghi truy xuất cho: {', '.join(pending)} (chạy scripts.agent_eval_record_retrieval)")
     out_dir.mkdir(parents=True, exist_ok=False)
     max_steps = int(agent_config["max_steps"])
     tool_result_max_chars = int(agent_config["tool_result_max_chars"])
@@ -417,22 +431,60 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--seed", type=int, help="pass a seed to Ollama for this run only (default: no seed)")
     parser.add_argument("--out", type=Path, default=RESULTS_DIR)
     parser.add_argument("--run-id")
+    parser.add_argument(
+        "--probe", action="store_true",
+        help="probe the registry as the API boots (needs the stack and the real .env); required for a citable baseline",
+    )
+    parser.add_argument(
+        "--env-file", type=Path,
+        help="the .env Settings reads (default: this checkout's); a worktree has none, so point it at the main checkout's",
+    )
     return parser.parse_args(argv)
 
 
-def main(argv: list[str] | None = None) -> int:
-    from app.config.model_registry import overrides_from_settings, resolve
+def build_settings(env_file: Path | None, *, probe: bool) -> Any:
     from app.config.settings import Settings
+
+    kwargs: dict[str, Any] = {} if env_file is None else {"_env_file": env_file}
+    if not probe:
+        # Pointer only: no database is dialled, so a placeholder satisfies the validator.
+        kwargs["database_url"] = PLACEHOLDER_DATABASE_URL
+    return Settings(**kwargs)
+
+
+def resolve_registry(settings: Any, probes: Any) -> Any:
+    """probes=None: the pointer alone (`verified: false`, the 06 smoke mode).
+    With probes: the same pointer -> probe -> fallback walk the API boots with,
+    forced on even where MODEL_STARTUP_PROBES is false, because a baseline must
+    be tied to what actually serves (ticket 07)."""
+    from app.config.model_registry import overrides_from_settings, resolve
+
+    return resolve(settings.registry(), overrides_from_settings(settings), probes)
+
+
+def probe_refusal(general_role: Any, *, probed: bool) -> str | None:
+    """Why a probed run must not start: the general role is not the verified
+    pointer (fallback, missing, Ollama silent...). None = go. Only `general`
+    matters here; the other roles are recorded, not gated."""
+    if probed and (general_role.deviates or not general_role.verified):
+        return f"general {general_role.status}: {general_role.reason or 'not verified'}"
+    return None
+
+
+def main(argv: list[str] | None = None) -> int:
+    from app.config.model_registry import ProductionProbes
     from app.llm_clients.ollama_client import OllamaClient
     from app.services.model_router import ModelRouter
 
     args = parse_args(argv)
     dataset = load_dataset(args.dataset)
-    settings = Settings(database_url=PLACEHOLDER_DATABASE_URL)
-    # Pointer only, no probes: probing needs Postgres and Qdrant, which this
-    # eval never touches. The manifest says `verified: false` accordingly.
-    resolved = resolve(settings.registry(), overrides_from_settings(settings), None)
+    settings = build_settings(args.env_file, probe=args.probe)
+    resolved = resolve_registry(settings, ProductionProbes(settings) if args.probe else None)
     general_role = resolved.roles["general"]
+    refusal = probe_refusal(general_role, probed=args.probe)
+    if refusal:
+        print(f"refusing to run: {refusal}", file=sys.stderr)
+        return 2
     models = override_general(resolved.flat_models(), temperature=args.temperature, seed=args.seed)
     general = models["general"]
     router = ModelRouter(
@@ -461,6 +513,10 @@ def main(argv: list[str] | None = None) -> int:
             "status": general_role.status,
             "verified": general_role.verified,
         },
+        "probed": args.probe,
+        # Every role's verdict, not just general's: context for a reader, never a gate.
+        "registry_fallback": resolved.fallback_flag() if args.probe else None,
+        "env_file": str(args.env_file) if args.env_file else "default",
         "model": general.get("name"),
         "provider": general.get("provider", "ollama"),
         "temperature": general.get("temperature"),

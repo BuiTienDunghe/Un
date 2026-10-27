@@ -231,9 +231,14 @@ def summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
 
     by_category: dict[str, list[bool]] = defaultdict(list)
     by_check: dict[str, list[bool]] = defaultdict(list)
+    by_source: dict[str, list[bool]] = defaultdict(list)
     verbatim: list[bool] = []
     for result in results:
         by_category[result["category"]].append(bool(result["passed"]))
+        # Recorded retrieval carries real ranking noise, hand-written does not:
+        # the two are only comparable side by side (ticket 07).
+        if result.get("retrieval_source"):
+            by_source[result["retrieval_source"]].append(bool(result["passed"]))
         for check in result["grade"]["checks"]:
             # args_expected:<tool> rolls up into one row; the tool is in the detail.
             by_check[check["check"].split(":", 1)[0]].append(bool(check["passed"]))
@@ -244,6 +249,7 @@ def summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
         "errors": sum(1 for r in results if r.get("error")),
         "by_category": {name: rate(sum(v), len(v)) for name, v in sorted(by_category.items())},
         "by_check": {name: rate(sum(v), len(v)) for name, v in sorted(by_check.items())},
+        "by_retrieval_source": {name: rate(sum(v), len(v)) for name, v in sorted(by_source.items())},
         # Reference only, never part of `passed`: how many citing tasks wrote
         # every file name exactly as stored (B8 accepts a re-typed title).
         "citation_verbatim": {"verbatim": sum(verbatim), "of_tasks_with_citation": len(verbatim)},
