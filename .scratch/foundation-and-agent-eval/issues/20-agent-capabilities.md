@@ -57,3 +57,6 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
   commit — điểm nóng duy nhất của `backend/app` hôm nay. Thiết kế #1 phải so (a) giữ một file / (b) registry
   tối thiểu trong file / (c) tách gói `app/agent/` (commit đầu chỉ dời code, kiểm bằng Agent Eval lạnh trùng
   40/40). Chủ dự án chọn.
+- 28/10 01:20: bản thiết kế #1 của Nhân viên 1 lưu nguyên văn ở `ticket20-design-1.md` (cùng thư mục): schema 2
+  công cụ mới, đường lấy dữ liệu, trần kết quả, hợp đồng fixture cho v0.3, 7 chỗ lựa chọn (H, A, P, L, R,
+  tổ chức code (a)/(b)/(c), D). Chờ chủ dự án chốt. Phát hiện kèm theo về quyền đọc tài liệu → ticket 21.
