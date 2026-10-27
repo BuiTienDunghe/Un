@@ -1,4 +1,6 @@
 GỘP ĐƯỢC
+**Chủ dự án chốt (28/10, trong phiên fable), nguyên văn: "Ship #1-B theo luật đã đặt; mở tiêu chí 'trả lời có
+số liệu mà không tra' ở v0.4."**
 
 # Duyệt wip/20-agent-reading 8cc0f73 (#1-B: công cụ đọc, lời dặn như main) — fable 5.1, 28/10/2026
 

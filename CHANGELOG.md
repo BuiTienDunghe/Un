@@ -37,6 +37,11 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   trang, tối đa 6 000 ký tự mỗi lần (`agent.read_result_max_chars`), chỉ mở được tài liệu đã hiện trong lần tra của
   chính lượt đó. Ba công cụ của agent thành một registry. Agent Eval v0.3 (test hồi quy nội bộ): 35 → 38/48, 4/5 bài
   đọc dài từ 0/5; mô tả công cụ mới làm 39/40 câu trả lời cũ đổi chữ, một bài (doc-10) trả lời bằng số bịa.
+- **Agent kiểm con số trong câu trả lời** (28/10, ticket 20 #2). Mỗi con số từ hai chữ số trở lên phải xuất hiện trong
+  thứ lượt đó đã thấy (câu hỏi, hội thoại, kết quả công cụ); nếu có số không rõ nguồn và còn ít nhất 20 giây, agent
+  làm lại một lần, có công cụ, để tra trước. Câu bị loại chỉ ghi thành một bước `answer_check` trong trace, không lưu
+  chữ. Kiểm lại trên 144 câu đã lưu: bắt đúng 3 câu đang trượt, không chặn câu đạt nào. Chưa đo bằng Agent Eval (hoãn,
+  gom vào đợt đo chung). Điểm mù đã biết: số thập phân ngắn như "3,5 triệu" không được kiểm.
 
 ### Changed
 - `seed` trong cấu hình model general được gửi tới Ollama khi được đặt. Không phiên bản nào đang ship
