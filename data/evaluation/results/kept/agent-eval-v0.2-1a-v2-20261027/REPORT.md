@@ -87,11 +87,12 @@ Tiêu chí cấm tra tài liệu trước ở hist-07 là lỗi đã ghi ở REP
 - A lúc 22:31 trùng từng chữ với A lạnh lúc 19:43 trên 40/40 câu trả lời, dù 09 đang nạp model nhúng
   trên cùng GPU. **Đã kiểm**: lặp qua 3 giờ, và khi có model khác cùng nạp. **Chưa kiểm**: qua khởi động
   lại Ollama (tiến trình chạy liên tục từ 22/10) và qua ngày.
-- Cho ticket 16: E và F có prompt giống hệt ở mọi bài trừ lượt hist-07. Câu trả lời giống nhau tới
-  hist-07, rồi khác ở cả 12 bài sau đó (không bài nào đổi đạt/trượt). B và D, khác nhau đúng chỗ đó, chỉ
-  khác ở 2 bài hist. Vậy trong một lần chạy lạnh, một lượt khác đi có lúc kéo theo các bài sau, có lúc
-  không; chưa rõ vì sao (lần này 09 chạy song song). So từng bài giữa hai điều kiện chỉ chắc cho các bài
-  đứng trước chỗ khác đầu tiên.
+- Cho ticket 16: gợi ý 2b chỉ được chèn ở lượt hist-07 của F (đếm trong `events.jsonl`), nên E và F có
+  prompt giống hệt ở mọi bài khác. Câu trả lời giống nhau tới hist-07, rồi khác ở 12 trong 13 bài sau đó
+  (nt-02 trùng; không bài nào đổi đạt/trượt). Ở D, gợi ý được chèn ở hist-03 và hist-07, hist-07 cũng có
+  thêm một lượt gọi `search_history`, vậy mà D chỉ khác B ở đúng hai bài đó. Vậy trong một lần chạy lạnh,
+  một lượt khác đi có lúc kéo theo các bài sau, có lúc không; chưa rõ vì sao (lần này 09 chạy song song).
+  So từng bài giữa hai điều kiện chỉ chắc cho các bài đứng trước chỗ khác đầu tiên.
 - Đổi một câu lời dặn làm 38/40 câu trả lời đổi chữ. Với một lần chạy mỗi điều kiện, chênh 1 bài nằm
   trong mức xáo trộn đó: luật là ngưỡng cho một quyết định thăm dò, không phải phép thử thống kê.
 
