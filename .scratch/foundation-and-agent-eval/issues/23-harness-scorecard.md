@@ -109,3 +109,17 @@ Bảng điểm của baseline v0.3 in đủ bốn chiều; lịch sử có các 
     đo v0r2-hybrid chạy 22:30–22:55 (kết quả lúc 22:55:49) và chính nó thấy tải chat của 1a-v2 lúc 22:31–22:39.
     Mốc 22:28:10 là lượt chỉ-dense trước đó. Vì vậy dòng ở ticket 10 ("lệch lan không do 09, lượt cuối của 09 xong
     22:28:10") cũng sai: 09 có chạy song song lúc 1a-v2.
+- 28/10 01:45 (Nhân viên 3) — **Cột "trả lời có số liệu mà không tra"** (fable gợi ý, opus duyệt), soạn sẵn trên nhánh này
+  khi chờ fable duyệt lại 31b92bf.
+  - Đã gộp main vào nhánh (059edf3) để có #2 và các thay đổi runner. Xung đột chỉ ở hai đoạn văn được thêm cùng chỗ trong
+    `kept/README.md` và `docs/RESULTS.md`; giữ cả hai đoạn.
+  - Định nghĩa, đọc từ `events.jsonl`; thiếu tệp thì n/a:
+    - `answer_checks` = số bước `answer_check`, tức số lần bước kiểm của #2 bắt được số liệu lạ và cho agent thử lại.
+    - `finals_unsupported` = số bài có bước final mà `arguments_shape.unsupported_figures` > 0, tức câu trả lời vẫn ra
+      tới người dùng với số liệu không tra được.
+    - Không bước final nào có trường đó thì n/a "trước ticket 20 #2".
+    - Nằm trong chiều Đúng; lịch sử và `--compare` có cả hai cột.
+  - Lịch sử thêm 4 lần đã lưu của #1 và #1-B, thành 42 dòng. Lạnh/nóng của 4 lần này lấy từ `ollama_ps.jsonl` trong thư
+    mục của chúng; GPU dùng chung lấy từ REPORT, riêng read-B r2 để trống vì báo cáo ghi dự án kia đang chờ GPU.
+  - Cả 42 lần đều n/a ở cột mới, vì chưa lần đã lưu nào chạy với #2 (phép đo #2 đang hoãn). 91 test xanh, chạy với
+    `env -u POSTGRES_TEST_URL -u REDIS_TEST_URL` và bộ giữ im GPU.
