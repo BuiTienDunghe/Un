@@ -1,6 +1,6 @@
 # 13 — Chuẩn bị đóng gói e5-large cho B đầy đủ (chỉ code, không tải, không GPU)
 
-Status: chờ duyệt — Nhân viên của Ún 1, nhánh `wip/13-e5-packaging`
+Status: đã gộp vào main (27/10), fable 5.1 duyệt
 Type: task
 Blocked by: — (chạy thật thuộc ticket 09, sau Bước 6 của nhánh 0)
 
@@ -98,3 +98,5 @@ Còn mở, cần xác nhận lúc tải:
 - Danh sách `SOURCE_FILES` viết theo cấu trúc repo, chưa đối chiếu với nhánh XLM-RoBERTa của
   `convert_hf_to_gguf.py` (cần tải llama.cpp mới đối chiếu được).
 - Có cần gọi API metadata của HF (chỉ JSON, không tải model) để điền revision ngay bây giờ không?
+- 27/10 (fable, khi duyệt): gợi ý không chặn — `converter_commit` là None (tải zip thay vì clone)
+  thì nên từ chối ghi lần đầu, thay vì so None == None. Làm khi tới bước tải thật.

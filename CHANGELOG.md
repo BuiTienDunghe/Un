@@ -28,6 +28,10 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 - Phiên bản ứng viên `embedding-v0-qi` (cùng model embedding, thêm chỉ dẫn phía truy vấn) và
   `scripts/probe_embedding_prefix.py`, commit **trước** khi đo, theo
   `.scratch/foundation-and-agent-eval/m3-preregistration.md`. Chưa được phục vụ (đứng sau `active`).
+- `backend/scripts/build_embedding_model.py`: đóng gói e5-large thành GGUF cho Ollama. Lần đầu nó ghi
+  lại nguồn (sha từng file HF, commit converter); các lần sau từ chối mọi bản dựng khác nguồn. Chưa
+  chạy, chưa tải gì. `run_mteb.py` thêm `--query-prefix` / `--passage-prefix` gắn tiền tố cả hai phía;
+  trước đây mteb 2.20.5 lặng lẽ bỏ tiền tố nếu chỉ truyền `prompt_dict`.
 
 ### Changed
 - `seed` trong cấu hình model general được gửi tới Ollama khi được đặt. Không phiên bản nào đang ship
