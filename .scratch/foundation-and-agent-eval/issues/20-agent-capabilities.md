@@ -52,3 +52,8 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
   cụ của #1); Nhân viên 1 thiết kế #1 trước (schema công cụ, đường lấy dữ liệu, giới hạn kết quả, hợp đồng
   fixture cho eval), gửi cả điều phối lẫn Nhân viên 3; code #1 sau khi duyệt. #2–#4 nối tiếp, cùng
   `agent_service.py` nên một người làm lần lượt. Mỗi bước đo bằng v0.3, đăng ký trước, gỡ model trước mỗi lần.
+- 28/10 00:40 (opus 5.5): #1 thêm 2 công cụ → agent có 5 công cụ, **chạm điều kiện mở lại registry** chủ dự án
+  đặt ở ticket 16 ("chỉ khi có công cụ thứ 4"). `agent_service.py` 276 → 466 dòng trong ngày, bị đụng ở 8
+  commit — điểm nóng duy nhất của `backend/app` hôm nay. Thiết kế #1 phải so (a) giữ một file / (b) registry
+  tối thiểu trong file / (c) tách gói `app/agent/` (commit đầu chỉ dời code, kiểm bằng Agent Eval lạnh trùng
+  40/40). Chủ dự án chọn.
