@@ -63,7 +63,7 @@ LAB_API_LOG = PROJECT_ROOT / "data" / "logs" / "nightly_eval_lab_api.log"
 # production's data/logs at 09:30 (invariant #6). The nightly's OWN marker (ATTENTION
 # above) stays in data/logs: that one the morning check is meant to find.
 LAB_LOG_DIR = "data/logs/lab"
-# The pre-start probes. Three dependencies at 3 s plus one docker call at 10 s keeps
+# The pre-start probes. Four dependencies at 3 s plus one docker call at 10 s keeps
 # the whole exit-93 path under 30 s even with Docker Desktop hung.
 PROBE_TIMEOUT_SECONDS = 3
 DOCKER_TIMEOUT_SECONDS = 10
@@ -79,13 +79,15 @@ def _first_line(error: Exception) -> str:
     return f"{type(error).__name__}: {(str(error).strip().splitlines() or [''])[0]}"
 
 
-def check_dependencies(database_url: str, qdrant_url: str, redis_url: str, timeout: float = PROBE_TIMEOUT_SECONDS) -> dict[str, str]:
+def check_dependencies(database_url: str, qdrant_url: str, redis_url: str, ollama_url: str, timeout: float = PROBE_TIMEOUT_SECONDS) -> dict[str, str]:
     """{dependency: why it is down} for each of the lab API's dependencies that does not answer; {} when all do.
 
     Real protocol probes, not a port knock: a SELECT 1 on the LAB database (which
     also says whether that database exists on whatever holds the port), Qdrant's
-    /readyz, a Redis PING. Each is bounded — with no timeout, a Postgres connect to
+    /readyz, a Redis PING, Ollama's /api/version. Each is bounded — with no timeout, a Postgres connect to
     an empty port took minutes on Windows and one to a silent port never returned.
+    Ollama is asked for its version, never for a model: a probe must not cost a
+    generation call or load anything onto the GPU (invariant #7).
     """
     from redis import Redis
     from sqlalchemy import text
@@ -112,6 +114,12 @@ def check_dependencies(database_url: str, qdrant_url: str, redis_url: str, timeo
         Redis.from_url(redis_url, socket_connect_timeout=timeout, socket_timeout=timeout).ping()
     except Exception as error:
         down["redis"] = f"{_where(redis_url)}: {_first_line(error)}"
+    try:
+        with urlopen(f"{ollama_url.rstrip('/')}/api/version", timeout=timeout) as response:
+            if response.status != 200:
+                down["ollama"] = f"{_where(ollama_url)}: /api/version answered {response.status}"
+    except Exception as error:
+        down["ollama"] = f"{_where(ollama_url)}: {_first_line(error)}"
     return down
 
 
@@ -163,7 +171,7 @@ def preflight(database_url: str) -> str | None:
     from app.config.settings import get_settings
 
     settings = get_settings()
-    down = check_dependencies(database_url, settings.qdrant_url, settings.redis_url)
+    down = check_dependencies(database_url, settings.qdrant_url, settings.redis_url, settings.ollama_base_url)
     if not down:
         return None
     postgres_port = (urlsplit(database_url).port or 5432) if "postgres" in down else None

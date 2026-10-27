@@ -3,7 +3,7 @@
 From 17/09 to 27/10, 51 nights ended in exit 97 — "no /health in 180 s" — and
 the evidence beside them showed the same thing every time: Docker Desktop not
 running (30 nights) or running with the stack off (18). What is locked here:
-that the nightly asks the three dependencies itself, bounded, before starting
+that the nightly asks the four dependencies itself, bounded, before starting
 anything; that it tells those two Docker states apart from what `docker compose
 ps` really printed on those nights; and that it names a foreign container
 holding the Postgres port. No stack needed: docker is faked, the ports are local.
@@ -112,14 +112,46 @@ def test_dead_dependencies_are_each_named_within_seconds_and_without_the_passwor
         f"postgresql+psycopg://lab:s3cret@127.0.0.1:{silent_port}/local_ai_core_lab_20260821",
         f"http://127.0.0.1:{silent_port}",
         f"redis://:s3cret@127.0.0.1:{silent_port}/0",
+        f"http://127.0.0.1:{silent_port}",
         timeout=1,
     )
 
-    assert set(down) == {"postgres", "qdrant", "redis"}
+    assert set(down) == {"postgres", "qdrant", "redis", "ollama"}
     assert down["postgres"].startswith(f"127.0.0.1:{silent_port}/local_ai_core_lab_20260821: ")
     assert all("s3cret" not in why for why in down.values())
-    # libpq's 2 s floor + 1 s + 1 s, with room for a slow CI machine.
-    assert time.monotonic() - started < 12
+    # libpq's 2 s floor + 1 s each for the other three, with room for a slow CI machine.
+    assert time.monotonic() - started < 14
+
+
+def test_ollama_is_asked_its_version_never_a_model(silent_port, monkeypatch):
+    # Ticket 12: the GPU may be busy measuring at 03:00; a probe that loaded a
+    # model would both cost a generation call and skew that measurement.
+    asked: list[str] = []
+
+    class Answer:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    def fake_urlopen(url, timeout):
+        asked.append(url)
+        return Answer()
+
+    monkeypatch.setattr(nightly, "urlopen", fake_urlopen)
+    down = nightly.check_dependencies(
+        f"postgresql+psycopg://lab@127.0.0.1:{silent_port}/lab",
+        "http://127.0.0.1:6333",
+        f"redis://127.0.0.1:{silent_port}/0",
+        "http://127.0.0.1:11434/",
+        timeout=1,
+    )
+
+    assert "ollama" not in down and "qdrant" not in down
+    assert asked == ["http://127.0.0.1:6333/readyz", "http://127.0.0.1:11434/api/version"]
 
 
 def test_a_down_dependency_ends_the_night_with_93_before_the_lab_api_starts(monkeypatch, tmp_path):
