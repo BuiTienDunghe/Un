@@ -60,3 +60,7 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
 - 28/10 01:20: bản thiết kế #1 của Nhân viên 1 lưu nguyên văn ở `ticket20-design-1.md` (cùng thư mục): schema 2
   công cụ mới, đường lấy dữ liệu, trần kết quả, hợp đồng fixture cho v0.3, 7 chỗ lựa chọn (H, A, P, L, R,
   tổ chức code (a)/(b)/(c), D). Chờ chủ dự án chốt. Phát hiện kèm theo về quyền đọc tài liệu → ticket 21.
+- 28/10 01:35 (chủ dự án: "7 cái kia quá đơn giản" → điều phối quyết): phần tài liệu chốt H1, A2, P2, L2
+  (`agent.read_result_max_chars` 6 000), tổ chức code (b) registry trong file. Phần Discord (`read_messages_around`,
+  `message_id` trong `search_history`, R, D) **tạm giữ**: chủ dự án nêu ý tách bot Discord khỏi phần còn lại,
+  đang hỏi lại phạm vi. Nhân viên 1 code (1) registry chỉ dời code → fable duyệt → (2) handle → (3) read_document.
