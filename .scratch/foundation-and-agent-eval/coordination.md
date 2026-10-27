@@ -96,7 +96,8 @@ ticket mới, chờ các ticket đang chạy xong, rồi báo chủ dự án.
 | 14 | Cắm model decided làm cổng trí nhớ | I/O của decided | — | để sau (ngoài kế hoạch này) |
 | 15 | Ghi phiên bản runtime embedding, nhúng lại sau khi nâng Ollama | — | — | để sau M3 |
 | 16 | Kiểm soát harness: ngân sách cả lượt, lỗi có mã, trace bền (M4 cách B) | 10 gộp | Nhân viên 1 | **đã gộp** commit 1–4; còn bước 5 (Agent Eval) |
-| 17 | forget_member xoá cả trích đoạn thành viên trong agent_traces | 16 | Nhân viên 1 | chờ |
+| 17 | forget_member xoá cả trích đoạn thành viên trong agent_traces | 16 gộp | Nhân viên 1 | đã giao (sau 18) |
+| 18 | test_debt_t1_t2_t3 tự deadlock lúc teardown | — | Nhân viên 1 | đã giao |
 
 ## Mốc so sánh của bộ test
 
@@ -138,3 +139,5 @@ nhớ "Không đưa data train/thiết kế lên GitHub").
 4. GPU, mỗi lần đo gỡ model chính trước: 1a-v2 của ticket 10 (`wip/10-1a-v2`, ~8 phút) → bước 5 của 16.
 5. Hỏi chủ dự án: push (kept/ 4,1 MB); bật lại edu-postgres-1 (phải tắt Postgres của Ún vì chung 5432);
    bot chạy kiểu nào (B1 chỉ Docker / B2 chỉ trên máy).
+
+Sau khi gộp 16 (main 001966b, DB test ở 20261027_35): backend 1205 xanh / 1 lỗi teardown / 1 skip; root 74 xanh + 1 skip. Lỗi là `test_debt_t1_t2_t3` tự deadlock (đỏ 1/3 khi chạy riêng, không ai dùng chung DB) — **đính chính** ghi chú "va chạm" lúc 18:02 ở trên; ticket 18.
