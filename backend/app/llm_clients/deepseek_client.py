@@ -7,12 +7,14 @@ from typing import Any
 
 import httpx
 
+from app.llm_clients.deadline import ModelCallTimeoutError, can_wait, request_timeout, spent
+
 
 class DeepSeekUnavailableError(Exception):
     pass
 
 
-class DeepSeekTimeoutError(Exception):
+class DeepSeekTimeoutError(ModelCallTimeoutError):
     pass
 
 
@@ -90,14 +92,18 @@ class DeepSeekClient:
         payload = self._build_payload(model, messages, temperature, max_tokens, top_p, stream=False)
 
         for attempt in range(self.retry_count + 1):
+            # Ticket 16: inside an agent turn, wait at most what the turn has left.
+            timeout = request_timeout(self.chat_timeout)
+            if timeout is None:
+                raise DeepSeekTimeoutError("DeepSeek was not called: the agent turn's time budget is spent")
             try:
-                response = httpx.post(url, json=payload, headers=self._headers(), timeout=self.chat_timeout)
+                response = httpx.post(url, json=payload, headers=self._headers(), timeout=timeout)
                 if response.status_code == 401:
                     raise DeepSeekAuthError("Invalid DeepSeek API key")
                 if response.status_code == 402:
                     raise DeepSeekAuthError("DeepSeek account has insufficient balance")
                 if response.status_code == 429:
-                    if attempt < self.retry_count:
+                    if attempt < self.retry_count and can_wait(2 + attempt * 3):
                         time.sleep(2 + attempt * 3)
                         continue
                 response.raise_for_status()
@@ -113,11 +119,13 @@ class DeepSeekClient:
             except DeepSeekAuthError:
                 raise
             except httpx.TimeoutException as error:
-                if attempt == self.retry_count:
+                if attempt == self.retry_count or spent():
                     raise DeepSeekTimeoutError("DeepSeek did not answer before the timeout") from error
             except httpx.HTTPError as error:
                 if attempt == self.retry_count:
                     raise DeepSeekUnavailableError("Cannot connect to DeepSeek API") from error
+            if not can_wait(1 + attempt * 2):
+                raise DeepSeekTimeoutError("DeepSeek did not answer within the agent turn's time budget")
             time.sleep(1 + attempt * 2)
         raise DeepSeekUnavailableError("Cannot connect to DeepSeek API")
 
