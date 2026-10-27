@@ -12,10 +12,10 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.engine import make_url
 
 from app.postgres.database import create_postgres_engine, create_session_factory
-from app.postgres.discord_memory_job_repository import (
+from app.discord.memory_job_repository import (
     DiscordMemoryJobRepository,
 )
-from app.postgres.discord_memory_repositories import (
+from app.discord.memory_repositories import (
     DiscordMemoryConflictError,
     DiscordMemoryRepository,
 )
@@ -31,24 +31,24 @@ from app.postgres.models import (
     OutboxEvent,
     new_id,
 )
-from app.services.discord_memory_completion_service import (
+from app.discord.memory_completion_service import (
     DiscordMemoryCompletionTransportError,
     DiscordMemoryCompletionService,
 )
-from app.services.discord_memory_extractor import (
+from app.discord.memory_extractor import (
     DiscordMemoryExtractorOutputError,
     DiscordMemoryExtractorResult,
     DiscordMemoryExtractorTransportError,
     DiscordMemoryProposalV1,
 )
-from app.services.discord_memory_recovery_service import (
+from app.discord.memory_recovery_service import (
     DiscordMemoryRecoveryService,
 )
-from app.services.discord_memory_worker_service import (
+from app.discord.memory_worker_service import (
     DiscordMemoryWorkerService,
 )
-from app.services.discord_session_service import DiscordSessionService
-from app.services.discord_turn_service import DiscordTurnService
+from app.discord.session_service import DiscordSessionService
+from app.discord.turn_service import DiscordTurnService
 from app.services.job_recovery_service import JobRecoveryService
 from app.jobs.routing import DISCORD_MEMORY_INGEST_JOB_TYPE
 from app.jobs.routing import resolve_job_route

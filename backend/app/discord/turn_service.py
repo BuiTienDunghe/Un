@@ -8,15 +8,15 @@ from uuid import UUID, uuid4
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
-from app.postgres.discord_memory_repositories import DiscordMemoryRepository
-from app.postgres.discord_repositories import DiscordSessionRepository
+from app.discord.memory_repositories import DiscordMemoryRepository
+from app.discord.repositories import DiscordSessionRepository
 from app.postgres.models import DiscordConversationSession, DiscordSessionTurn
 from app.services.chat_service import ChatService, ConversationNotFoundError
-from app.services.discord_session_service import DiscordSessionService
-from app.services.discord_memory_completion_service import (
+from app.discord.session_service import DiscordSessionService
+from app.discord.memory_completion_service import (
     DiscordMemoryCompletionService,
 )
-from app.services.discord_speaker_context import (
+from app.discord.speaker_context import (
     DISCORD_HISTORY_USAGE_RULES,
     DISCORD_SPEAKER_ATTRIBUTION_RULES,
     BotReplyTargetContext,

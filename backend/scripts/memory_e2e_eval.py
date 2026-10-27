@@ -43,7 +43,7 @@ BACKEND = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = BACKEND.parent
 
 from app.postgres.database import create_postgres_engine, create_session_factory  # noqa: E402
-from app.postgres.discord_memory_repositories import DiscordMemoryRepository  # noqa: E402
+from app.discord.memory_repositories import DiscordMemoryRepository  # noqa: E402
 from app.postgres.models import (  # noqa: E402
     Conversation,
     DiscordChannelMessage,
@@ -54,11 +54,11 @@ from app.postgres.models import (  # noqa: E402
     DiscordMemorySource,
     DiscordSessionTurn,
 )
-from app.services.discord_history_service import DiscordHistoryService  # noqa: E402
-from app.services.discord_memory_guard import auto_apply_allowed  # noqa: E402
-from app.services.discord_memory_review_service import DiscordMemoryReviewService  # noqa: E402
-from app.services.discord_session_service import DiscordSessionService  # noqa: E402
-from app.services.discord_turn_service import DiscordTurnService  # noqa: E402
+from app.discord.history_service import DiscordHistoryService  # noqa: E402
+from app.discord.memory_guard import auto_apply_allowed  # noqa: E402
+from app.discord.memory_review_service import DiscordMemoryReviewService  # noqa: E402
+from app.discord.session_service import DiscordSessionService  # noqa: E402
+from app.discord.turn_service import DiscordTurnService  # noqa: E402
 
 FIXTURE = BACKEND / "tests" / "fixtures" / "discord_memory_e2e_v1.jsonl"
 
@@ -408,7 +408,7 @@ def run_extraction_phase(cases: list[dict]) -> tuple[bool, dict]:
     plus the verifier's entailment rate on correct extractions (E1).
     """
     from app.config.settings import get_settings
-    from app.services.discord_memory_extractor import (
+    from app.discord.memory_extractor import (
         DISCORD_MEMORY_EXTRACTOR_PROMPT_VERSION,
         DiscordMemoryExtractorAdapter,
         DiscordMemoryExtractorEnvelopeBuilder,
@@ -416,11 +416,11 @@ def run_extraction_phase(cases: list[dict]) -> tuple[bool, dict]:
         ExtractorSource,
         ExtractorTarget,
     )
-    from app.services.discord_memory_rule_filter import (
+    from app.discord.memory_rule_filter import (
         DiscordMemoryFilterInput,
         DiscordMemoryRuleFilter,
     )
-    from app.services.discord_memory_verifier import DiscordMemoryVerifierAdapter
+    from app.discord.memory_verifier import DiscordMemoryVerifierAdapter
 
     settings = get_settings()
     # Model registry: the tags come from the resolved extractor/verifier versions

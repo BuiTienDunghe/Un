@@ -44,10 +44,10 @@ from annotated_types import MaxLen
 
 from app.llm_clients.usage import consume_usage
 from app.schemas.chat_schema import ChatRequest
-from app.schemas.discord_schema import DiscordTurnEnqueueRequest
+from app.discord.schema import DiscordTurnEnqueueRequest
 from app.services.agent_service import AGENT_GUIDE, AGENT_TOOLS, FINAL_RESERVE_SECONDS, READ_RESULT_MAX_CHARS, TURN_BUDGET_SECONDS, AgentService
-from app.services.discord_history_service import _SAFE_LEXEME, DiscordHistoryHit
-from app.services.discord_speaker_context import DISCORD_SPEAKER_SYSTEM_INSTRUCTION, attributed_user_content
+from app.discord.history_service import _SAFE_LEXEME, DiscordHistoryHit
+from app.discord.speaker_context import DISCORD_SPEAKER_SYSTEM_INSTRUCTION, attributed_user_content
 from app.services.injection_defense import InjectionDefense
 from app.utils.vi_tokenizer import tokenize_vietnamese
 from scripts.agent_eval_grader import GRADER_VERSION, grade, summarize, tool_calls

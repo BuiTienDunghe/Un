@@ -24,13 +24,13 @@ import yaml
 
 from app.config.model_registry import PROJECT_ROOT
 from app.config.settings import Settings
-from app.postgres.discord_memory_job_repository import (
+from app.discord.memory_job_repository import (
     DiscordMemoryEligibility,
     DiscordMemoryJobRepository,
 )
-from app.postgres.discord_memory_repositories import DiscordMemoryRepository
-from app.services.discord_memory_completion_service import DiscordMemoryCompletionService
-from app.services.discord_memory_worker_service import DiscordMemoryWorkerService
+from app.discord.memory_repositories import DiscordMemoryRepository
+from app.discord.memory_completion_service import DiscordMemoryCompletionService
+from app.discord.memory_worker_service import DiscordMemoryWorkerService
 from app.jobs.routing import DISCORD_MEMORY_INGEST_JOB_TYPE
 
 COMPOSE = PROJECT_ROOT / "docker-compose.yml"
@@ -273,7 +273,7 @@ def test_a_job_the_host_enqueues_is_one_the_docker_memory_worker_keys(monkeypatc
     ).on_first_completion(SimpleNamespace(flush=lambda: None), turn_id)
     assert enqueued["key"] == f"{DISCORD_MEMORY_INGEST_JOB_TYPE}:{turn_id}:{shipped}"
 
-    # Container side, wired as app/workers/memory_tasks.py wires it.
+    # Container side, wired as app/discord/memory_tasks.py wires it.
     operator = {"CONTAINER_DATABASE_URL": "postgresql+psycopg://local_ai:x@postgres:5432/local_ai_core"}
     container = settings_seeing(monkeypatch, container_environment(services()["worker-memory"], operator))
     worker = DiscordMemoryWorkerService(

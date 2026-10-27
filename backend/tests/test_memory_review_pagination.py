@@ -13,9 +13,9 @@ from uuid import uuid4
 import pytest
 
 from app.postgres.database import create_postgres_engine, create_session_factory
-from app.postgres.discord_memory_repositories import DiscordMemoryRepository
+from app.discord.memory_repositories import DiscordMemoryRepository
 from app.postgres.models import DiscordSessionTurn
-from app.services.discord_memory_review_service import DiscordMemoryReviewService
+from app.discord.memory_review_service import DiscordMemoryReviewService
 from scripts.memory_e2e_eval import REASON_BY_KEY, CaseWorld, _NoMirror
 
 URL = os.getenv("POSTGRES_TEST_URL")

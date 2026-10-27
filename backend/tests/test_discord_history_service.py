@@ -13,7 +13,7 @@ from sqlalchemy import delete, select
 
 from app.postgres.database import create_postgres_engine, create_session_factory
 from app.postgres.models import DiscordChannelMessage, DiscordChannelPolicy
-from app.services.discord_history_service import (
+from app.discord.history_service import (
     DiscordHistoryService,
     snowflake_to_datetime,
 )

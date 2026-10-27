@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request
 
-from app.schemas.discord_history_schema import (
+from app.discord.history_schema import (
     DiscordHistoryDeleteRequest,
     DiscordHistoryEditRequest,
     DiscordHistoryMessageRequest,

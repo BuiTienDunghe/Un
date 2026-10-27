@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.services.discord_memory_rule_filter import (
+from app.discord.memory_rule_filter import (
     DISCORD_MEMORY_RULE_FILTER_POLICY_VERSION,
     DiscordMemoryFilterInput,
     DiscordMemoryRuleFilter,

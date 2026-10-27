@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.security.api_key import require_api_key
-from app.services.bot_control_service import BotControlError, BotRunningOnHostError, BotTokenMissingError
+from app.discord.bot_control_service import BotControlError, BotRunningOnHostError, BotTokenMissingError
 
 router = APIRouter(prefix="/api/bot", tags=["bot"])
 

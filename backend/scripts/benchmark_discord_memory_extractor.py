@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID, uuid5
 
-from app.services.discord_memory_extractor import (
+from app.discord.memory_extractor import (
     DISCORD_MEMORY_EXTRACTOR_PROMPT_VERSION,
     AllowedTargetMemory,
     DiscordMemoryExtractorAdapter,

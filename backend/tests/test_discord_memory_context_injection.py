@@ -16,7 +16,7 @@ import pytest
 from sqlalchemy import delete, func, select
 
 from app.postgres.database import create_postgres_engine, create_session_factory
-from app.postgres.discord_memory_repositories import DiscordMemoryRepository
+from app.discord.memory_repositories import DiscordMemoryRepository
 from app.postgres.models import (
     Conversation,
     DiscordConversationSession,
@@ -24,8 +24,8 @@ from app.postgres.models import (
     DiscordMemoryCandidate,
     DiscordSessionTurn,
 )
-from app.services.discord_session_service import DiscordSessionService
-from app.services.discord_turn_service import DiscordTurnService
+from app.discord.session_service import DiscordSessionService
+from app.discord.turn_service import DiscordTurnService
 
 URL = os.getenv("POSTGRES_TEST_URL")
 pytestmark = pytest.mark.skipif(not URL, reason="set POSTGRES_TEST_URL")

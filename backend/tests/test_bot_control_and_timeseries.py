@@ -11,8 +11,8 @@ from sqlalchemy import delete
 
 from app.postgres.database import create_postgres_engine, create_session_factory
 from app.postgres.models import RequestLog
-from app.services import bot_control_service
-from app.services.bot_control_service import (
+from app.discord import bot_control_service
+from app.discord.bot_control_service import (
     BotControlService,
     BotControlError,
     BotRunningOnHostError,

@@ -4,7 +4,7 @@ import argparse
 
 from app.config.settings import get_settings
 from app.postgres.database import create_postgres_engine, create_session_factory
-from app.services.discord_memory_recovery_service import (
+from app.discord.memory_recovery_service import (
     DiscordMemoryRecoveryService,
 )
 

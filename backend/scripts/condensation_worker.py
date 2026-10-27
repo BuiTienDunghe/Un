@@ -17,7 +17,7 @@ import time
 from app.config.settings import get_settings
 from app.llm_clients.gemini_client import GeminiClient
 from app.postgres.database import create_postgres_engine, create_session_factory
-from app.services.discord_condensation_service import DiscordCondensationService
+from app.discord.condensation_service import DiscordCondensationService
 
 
 def build_service(settings) -> DiscordCondensationService | None:

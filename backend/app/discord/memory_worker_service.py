@@ -7,20 +7,20 @@ from uuid import UUID
 
 from sqlalchemy.orm import sessionmaker
 
-from app.postgres.discord_memory_job_repository import (
+from app.discord.memory_job_repository import (
     DiscordMemoryJobRepository,
 )
-from app.postgres.discord_memory_repositories import DiscordMemoryRepository
+from app.discord.memory_repositories import DiscordMemoryRepository
 from app.postgres.models import DiscordMemoryCandidate, DiscordSessionTurn
-from app.services.discord_memory_guard import auto_apply_allowed
-from app.services.discord_memory_verifier import (
+from app.discord.memory_guard import auto_apply_allowed
+from app.discord.memory_verifier import (
     DiscordMemoryVerifierAdapter,
 )
-from app.services.discord_memory_review_service import (
+from app.discord.memory_review_service import (
     DiscordMemoryReviewService,
     MemoryMirrorError,
 )
-from app.services.discord_memory_extractor import (
+from app.discord.memory_extractor import (
     DiscordMemoryExtractorAdapter,
     DiscordMemoryExtractorEnvelope,
     DiscordMemoryExtractorEnvelopeBuilder,
@@ -29,7 +29,7 @@ from app.services.discord_memory_extractor import (
     ExtractorSource,
     ExtractorTarget,
 )
-from app.services.discord_memory_rule_filter import (
+from app.discord.memory_rule_filter import (
     DISCORD_MEMORY_RULE_FILTER_POLICY_VERSION,
     DiscordMemoryFilterInput,
     DiscordMemoryRuleFilter,

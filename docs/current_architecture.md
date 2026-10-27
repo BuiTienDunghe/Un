@@ -1,6 +1,6 @@
 # Current architecture — PostgreSQL-only baseline
 
-Date: 2026-08-19 (original 2026-07-19; refreshed after P0 and P1-1..P1-3; model version registry 2026-09-07)
+Date: 2026-08-19 (original 2026-07-19; refreshed after P0 and P1-1..P1-3; model version registry 2026-09-07; Discord package 2026-10-28)
 
 ## Source-of-truth boundary
 
@@ -41,6 +41,34 @@ Which model serves each role is decided once per process by the model version
 registry (next section).
 
 The current Alembic head is pinned in README ("Alembic head hiện tại"); do not duplicate it here.
+
+## Discord is a package the core does not import
+
+`backend/app/discord/` holds what exists only because of Discord: the bot's sessions and
+turns, channel history, condensation, the memory pipeline (extractor, verifier, guard,
+review, completion, recovery, the RQ ingest task), member redaction, bot start/stop, and
+the five admin routers (`/api/bot`, `/api/condensations`, `/api/memory-review`,
+`/api/discord/sessions`, `/api/discord/history`). The core — agent loop, RAG, documents,
+web memory, dashboard — imports nothing from it. `main.py` plugs it in twice:
+`discord.register_routes()` when the app object is built, and
+`discord.register_services()` as the last step of the lifespan, after the chat, memory
+and agent services it builds on. `backend/tests/test_discord_boundary.py` holds the rule
+(no core module imports `app.discord`; importing the agent, chat, RAG, web-memory or
+grounding modules loads no Discord module). Package notes: `backend/app/discord/README.md`.
+
+The split is soft, on purpose (ticket 22):
+
+- Discord's 10 tables keep their models in `app/postgres/models.py` (one metadata for
+  Alembic, no migration), and the dashboard and `/health` count rows in them.
+- The 25 `discord_*` fields stay in `Settings`; `jobs/routing.py` names the memory
+  ingest task by its string path.
+- Until the agent's `search_history` tool is registered from the package, it reaches the
+  history service through one shim, `app/services/discord_history_service.py`.
+
+Web memory and Discord memory meet at one contract. The `memories` table and the Qdrant
+`memories` collection belong to the core (`MemoryService`); an approved Discord fact is
+projected into them under a `mem_dc_<uuid>` id through `upsert_with_id` / `remove_with_id`,
+and the core infers nothing from that prefix.
 
 ## Model versions
 

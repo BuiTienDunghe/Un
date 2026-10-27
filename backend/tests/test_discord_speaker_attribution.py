@@ -15,9 +15,9 @@ from app.postgres.models import (
     Message,
 )
 from app.services.chat_service import ChatService
-from app.services.discord_session_service import DiscordSessionService
-from app.services.discord_speaker_context import build_discord_speaker_context
-from app.services.discord_turn_service import DiscordTurnService
+from app.discord.session_service import DiscordSessionService
+from app.discord.speaker_context import build_discord_speaker_context
+from app.discord.turn_service import DiscordTurnService
 from app.stores.postgres_auxiliary_store import PostgresAuxiliaryStore
 
 

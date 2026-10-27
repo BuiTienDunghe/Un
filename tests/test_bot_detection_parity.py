@@ -1,7 +1,7 @@
 """The panel and the dashboard call the same processes "the host bot" (ticket 04).
 
 Two detectors exist on purpose: discord_bot/control.py (the tkinter panel) and
-backend/app/services/bot_control_service.py (the dashboard). The backend does not
+backend/app/discord/bot_control_service.py (the dashboard). The backend does not
 import the bot — they only talk over HTTP — so the scan is written twice, and this
 test is what keeps the two copies agreeing. Both read psutil.process_iter, so one
 fake process table feeds both.
@@ -13,7 +13,7 @@ from pathlib import Path
 import psutil
 import pytest
 
-from app.services.bot_control_service import host_bot_pids
+from app.discord.bot_control_service import host_bot_pids
 from discord_bot.control import matching_bot_processes
 
 

@@ -13,7 +13,7 @@ import pytest
 from sqlalchemy import delete, select
 
 from app.postgres.database import create_postgres_engine, create_session_factory
-from app.postgres.discord_memory_repositories import DiscordMemoryRepository
+from app.discord.memory_repositories import DiscordMemoryRepository
 from app.postgres.models import (
     Conversation,
     DiscordConversationSession,

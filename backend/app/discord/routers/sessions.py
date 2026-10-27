@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.security.api_key import require_api_key
 
-from app.schemas.discord_schema import (
+from app.discord.schema import (
     DiscordSessionResolveRequest,
     DiscordSessionResolveResponse,
     DiscordTurnEnqueueRequest,
@@ -15,11 +15,11 @@ from app.schemas.discord_schema import (
     DiscordTurnOperatorStopResponse,
     DiscordTurnStateResponse,
 )
-from app.services.discord_session_service import (
+from app.discord.session_service import (
     DiscordDirectMessageUnsupportedError,
     DiscordSessionInputError,
 )
-from app.services.discord_turn_service import (
+from app.discord.turn_service import (
     DiscordTurnDeliveryConflictError,
     DiscordTurnNotFoundError,
     DiscordTurnOwnershipError,

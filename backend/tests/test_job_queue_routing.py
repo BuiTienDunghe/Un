@@ -30,7 +30,7 @@ from app.config.settings import Settings
         (
             "discord_memory_ingest",
             "memory_extract",
-            "app.workers.memory_tasks.discord_memory_ingest",
+            "app.discord.memory_tasks.discord_memory_ingest",
         ),
     ],
 )
@@ -109,6 +109,6 @@ def test_queue_service_uses_memory_queue_and_deterministic_job_id(monkeypatch):
     assert result == "job-memory-1"
     assert calls[0][:3] == (
         "local-ai:test:memory_extract",
-        "app.workers.memory_tasks.discord_memory_ingest",
+        "app.discord.memory_tasks.discord_memory_ingest",
         "job-memory-1",
     )

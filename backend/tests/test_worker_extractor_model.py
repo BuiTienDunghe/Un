@@ -11,8 +11,7 @@ import pytest
 
 from app.config.model_registry import PostgresCounts, ProductionProbes
 from app.config.settings import Settings
-from app.workers import memory_tasks
-
+from app.discord import memory_tasks
 DATABASE_URL = "postgresql+psycopg://user:password@localhost/test"
 # roles.extractor.active = extractor-v0 and roles.verifier.active = verifier-v0 both name it.
 SHIPPED_TAG = "qwen3.5:9b"

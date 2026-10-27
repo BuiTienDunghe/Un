@@ -5,7 +5,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.postgres.discord_memory_job_repository import (
+from app.discord.memory_job_repository import (
     DiscordMemoryEligibility,
     DiscordMemoryJobRepository,
 )

@@ -10,11 +10,11 @@ import pytest
 from sqlalchemy import delete, select
 
 from app.postgres.database import create_postgres_engine, create_session_factory
-from app.postgres.discord_repositories import DiscordSessionRepository
+from app.discord.repositories import DiscordSessionRepository
 from app.postgres.models import Conversation, DiscordConversationSession, DiscordSessionTurn
 from app.services.chat_service import ConversationNotFoundError
-from app.services.discord_session_service import DiscordSessionService
-from app.services.discord_turn_service import (
+from app.discord.session_service import DiscordSessionService
+from app.discord.turn_service import (
     DiscordTurnOwnershipError,
     DiscordTurnService,
 )

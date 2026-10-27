@@ -15,7 +15,7 @@ from rq import Queue, SimpleWorker
 
 # Imported eagerly so a broken task path fails at startup, not per-job.
 from app.config.settings import get_settings
-from app.workers import memory_tasks  # noqa: F401
+from app.discord import memory_tasks  # noqa: F401
 
 
 def main() -> int:
