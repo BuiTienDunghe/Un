@@ -1,8 +1,8 @@
 """Agent loop for chat (P2-2): plan → act → observe over existing services.
 
 The agent is not a new framework — it is one bounded loop that lets the
-general model call three in-house tools (document retrieval, long-term memory,
-system health) through Ollama's native function-calling API, then answer. The
+general model call in-house tools (searching and reading documents, the Discord
+history, system health) through Ollama's native function-calling API, then answer. The
 caller persists every step as an ``agent_traces`` row, honouring the plan
 invariant that autonomous behaviour must leave an inspectable trail.
 
