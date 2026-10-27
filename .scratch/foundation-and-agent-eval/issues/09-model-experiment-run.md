@@ -52,3 +52,44 @@ Lưu ý khi chạy Bước 1: lần chạy con của script dùng `[sys.executab
 dạng file. Vậy `import app` đi qua bản cài editable của `.venv`, và bản đó trỏ về checkout chính.
 Hệ quả: phải chạy sau khi nhánh này đã gộp, từ `backend\` của checkout chính, đúng như bản đăng ký
 trước ghi. Chạy từ worktree thì lần chạy con sẽ đọc registry của main, nơi chưa có `qi`.
+
+### 27/10 — Nhân viên của Ún 2: chạy nhánh 0 (Bước 0–6)
+
+Worktree `C:\Users\dungbt06\local-ai-core-wt\09-model-experiment-run`, nhánh
+`wip/09-model-experiment-run`, tạo 19:18 từ main 4710ce4. Commit sau đó trên main (1068849) chỉ
+đụng `.scratch/`, nên code trùng nhau. `.env` có 4 dòng chép từ `.env.example`. DATABASE_URL trùng
+`.env` thật, đã so bằng máy, không in giá trị. Mọi lệnh dưới đây chạy bằng Git Bash, đặt env theo
+từng lệnh. `PY` = `C:/Users/dungbt06/local-ai-core/.venv/Scripts/python.exe`.
+
+Kiểm trước khi chạy (19:19): cổng 8100 và 8200 không ai nghe; GPU 0 MiB / 16 311 MiB, 0 %;
+Ollama chưa nạp model nào; chưa có collection `*_qi`; `rag_multidoc_baseline.json` không có `versions`.
+
+#### Bước 0 — xanh
+
+```bash
+cd $W && $PY -m training.common.split_manifest --check      # split_manifest OK: 12 artifacts, hashes match.
+cd $W && $PY -m training.common.leak_check --construction-only   # leak_check OK.
+cd $W/backend && $PY -m app.config.model_registry --check  # 0 error(s), 4 warning(s) — đúng 4 cảnh báo của main
+```
+
+Lần đầu `split_manifest --check` đỏ ở worktree với
+`backend/tests/fixtures/discord_memory_extractor_benchmark_v1.json: content changed`, còn ở checkout
+chính thì xanh. Nguyên nhân: `core.autocrlf=true` đổi LF thành CRLF khi tạo worktree. Blob trong git
+vẫn LF (`git ls-files --eol`: `i/lf w/crlf`). Tôi lấy lại đúng byte của blob
+(`rm <file> && git -c core.autocrlf=false checkout -- <file>`), chạy lại thì xanh. File này là
+benchmark của extractor, 09 không dùng. Các file dữ liệu mà 09 dùng cũng là CRLF trong worktree,
+y như ở ticket 11. Ticket 11 cho hạng trùng 08/09 trên cả 788 câu, nên chuyện xuống dòng không làm
+lệch kết quả. Fixture `multidoc` của cổng 82 câu là CRLF ở cả main lẫn worktree, nên dedupe theo hash
+khi upload vẫn khớp.
+
+#### Bước 1 — probe, qua (19:20, từ `backend\` của checkout chính, chỉ in ra)
+
+```bash
+cd C:/Users/dungbt06/local-ai-core/backend && $PY -m scripts.probe_embedding_prefix embedding-v0-qi
+# {"query_cosine": 0.9067410888197519, "passage_cosine": 0.9999999999999999}
+```
+
+Điều kiện đi tiếp: query_cosine < 0,999 và passage_cosine ≥ 0,999999. Cả hai đều đạt. Checkout chính
+vẫn sạch sau khi chạy.
+
+`backend/scripts/passage_drift.py` (Bước 2b) commit cùng với ghi chú này, trước khi chạy.
