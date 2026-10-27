@@ -68,6 +68,26 @@ phiên Ún tới khi chủ dự án nhắn lại:
   tải model/dataset HF.
 - Không push, không đổi cấu hình máy; quyết định của chủ dự án (chỗ cắm BFCL, ticket 21…) để sáng.
 
+## DB test dùng chung: chỉ opus chạy (28/10 01:25)
+
+Hai lượt chạy bộ test đầy đủ của opus (01:09 và 01:13) đều đỏ 14 bài, mỗi lần một bộ khác nhau: một phiên Ún khác
+(claude.exe opus, chạy `pytest … tests` qua PowerShell lúc 01:16) cũng dùng `local_ai_core_test` cùng lúc, và các
+bài migration hạ/nâng schema giẫm lên nhau (lúc 01:19 DB đang ở revision 18, thiếu `conversations.title`). Từ giờ:
+**chỉ opus chạy test có DB** (đặt `POSTGRES_TEST_URL`). Phiên khác cần thì ghi vào tệp duyệt hoặc ticket, opus chạy
+giúp khi gộp. Đính chính: lần nạp glm-ocr 00:54 là từ lượt test `after20` của chính opus (Ollama còn sống); lần 00:57
+chưa rõ phiên nào.
+
+## Sáng 28/10 — chờ chủ dự án
+
+| # | Việc | Ghi chú |
+|---|---|---|
+| 1 | BFCL: cắm vào vòng lặp hay bước gọi model | `ticket24-design.md` có bảng; opus nghiêng vòng lặp |
+| 2 | BFCL: nhiệt độ khi đo | NV3 đề xuất 0, chạy lạnh; Ún đang dùng 0,4 |
+| 3 | BFCL (nếu cắm vòng lặp): ba công cụ của Ún ở lại hay bị thay trong lượt BFCL | |
+| 4 | BFCL: cài venv | phiên NV3 bị bộ phân loại quyền chặn `pip install`; 119 gói, 94,5 MB; hai lệnh ở mục 1 của thiết kế. Opus không chạy thay |
+| 5 | Đợt đo GPU gom lại | #2, #3 (Agent Eval v0.3, ~7 phút mỗi lần), ba nhánh e5 (~3 giờ) |
+| 6 | Việc cũ còn treo | push, bot B1/B2, ticket 21 (tài liệu chưa có chủ), 5 collection Qdrant đo, v0.4 (L-b, L-c), 14/15 |
+
 ## Giữ im Ollama đêm 28/10 (phiên Quản lý xin, 01:00)
 
 Từ khoảng 02:00 Quản lý đo độ trễ, cần GPU sạch tuyệt đối. Lúc 00:54 và 00:57 có hai lần glm-ocr được nạp, mỗi lần
