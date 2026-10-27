@@ -44,3 +44,9 @@ runs at 0.4 per condition, judged as pre-registered in the ticket. It also holds
 runs showing that temperature 0 is reproducible only from a cold model (unloaded
 before each run), not from warm runs separated by other work. 27 runs; `events.jsonl`
 only for the eight that the report quotes.
+
+`agent-eval-v0.2-1a-v2-20261027/` is the follow-up: the 1a guide rewritten in one
+sentence (1a-v2), alone and with 2b, against the baseline re-run, one cold run each,
+judged by a rule registered in the ticket before running. Not shipped: 33/40 against
+34. The re-run baseline repeats the 19:43 cold run answer for answer, three hours later.
+`decide.py` recomputes `analysis.json` from the runs.

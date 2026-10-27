@@ -1,0 +1,167 @@
+{
+ "A_repeat_vs_19h43": {
+  "same_answers": 40,
+  "of": 40
+ },
+ "E_vs_F_answers_differ": [
+  "hist-07",
+  "hist-08",
+  "hist-09",
+  "hist-10",
+  "stat-01",
+  "stat-02",
+  "stat-03",
+  "stat-04",
+  "stat-05",
+  "nt-01",
+  "nt-03",
+  "nt-04",
+  "nt-05"
+ ],
+ "A": {
+  "passed": 34,
+  "targets": [
+   "doc-10",
+   "doc-25"
+  ],
+  "watch_lost_vs_A": [],
+  "citation_lost_26_28": [],
+  "gained_vs_A": [],
+  "lost_vs_A": [],
+  "hist_calls": {
+   "hist-03": [
+    "search_history"
+   ],
+   "hist-07": [
+    "search_documents"
+   ]
+  }
+ },
+ "B_first_1a": {
+  "passed": 30,
+  "targets": [
+   "doc-10",
+   "doc-25",
+   "doc-30",
+   "stat-02"
+  ],
+  "watch_lost_vs_A": [
+   "doc-17",
+   "doc-19",
+   "doc-26",
+   "doc-27",
+   "doc-28",
+   "hist-03",
+   "hist-05"
+  ],
+  "citation_lost_26_28": [
+   "doc-26",
+   "doc-27",
+   "doc-28"
+  ],
+  "gained_vs_A": [
+   "doc-29",
+   "doc-30",
+   "stat-02"
+  ],
+  "lost_vs_A": [
+   "doc-17",
+   "doc-19",
+   "doc-26",
+   "doc-27",
+   "doc-28",
+   "hist-03",
+   "hist-05"
+  ],
+  "hist_calls": {
+   "hist-03": [
+    "search_documents"
+   ],
+   "hist-07": [
+    "search_documents"
+   ]
+  }
+ },
+ "E": {
+  "passed": 33,
+  "targets": [
+   "doc-10",
+   "doc-25",
+   "doc-30",
+   "stat-02"
+  ],
+  "watch_lost_vs_A": [
+   "doc-17",
+   "doc-26",
+   "doc-27"
+  ],
+  "citation_lost_26_28": [
+   "doc-26"
+  ],
+  "gained_vs_A": [
+   "doc-29",
+   "doc-30",
+   "stat-02"
+  ],
+  "lost_vs_A": [
+   "doc-17",
+   "doc-26",
+   "doc-27",
+   "hist-10"
+  ],
+  "hist_calls": {
+   "hist-03": [
+    "search_history"
+   ],
+   "hist-07": [
+    "search_documents"
+   ]
+  }
+ },
+ "F": {
+  "passed": 33,
+  "targets": [
+   "doc-10",
+   "doc-25",
+   "doc-30",
+   "stat-02"
+  ],
+  "watch_lost_vs_A": [
+   "doc-17",
+   "doc-26",
+   "doc-27"
+  ],
+  "citation_lost_26_28": [
+   "doc-26"
+  ],
+  "gained_vs_A": [
+   "doc-29",
+   "doc-30",
+   "stat-02"
+  ],
+  "lost_vs_A": [
+   "doc-17",
+   "doc-26",
+   "doc-27",
+   "hist-10"
+  ],
+  "hist_calls": {
+   "hist-03": [
+    "search_history"
+   ],
+   "hist-07": [
+    "search_documents",
+    "search_history"
+   ]
+  }
+ },
+ "rule_E": {
+  "total_ge_A": false,
+  "targets_ge_A_plus_1": true,
+  "watch_lost_le_1": false,
+  "citation_lost_le_1": true,
+  "ship_E": false
+ },
+ "rule_F_total_ge_E": true,
+ "F_passes_E_conditions": false
+}

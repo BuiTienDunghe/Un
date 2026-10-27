@@ -423,6 +423,8 @@ differed on 30 of 33 identical prompts, so only the cold column compares across 
 | + "look it up first" guide (1a) | 30/40 | 28, 31, 27 |
 | + empty-search history hint (2b) | 34/40 | 30, 32, 31 |
 | + both (supplementary) | 30/40 | 29, 30, 29 |
+| + guide rewritten in one sentence (1a-v2) | 33/40 | not run |
+| + 1a-v2 + hint | 33/40 | not run |
 
 The guide raises the "did not search" targets (2/5 to 4/5 cold, 4/15 to 11/15 at 0.4
 with the hint) but loses more elsewhere, mostly file-name citations; the hint alone
@@ -430,13 +432,19 @@ changes nothing, and with the guide it routes both Discord tasks to the history,
 correctly but still failed by a criterion that forbids searching documents first.
 Neither prompt change is shipped as of this measurement.
 
+1a-v2 (`results/kept/agent-eval-v0.2-1a-v2-20261027/`, measured while another eval
+shared the GPU) keeps the same four targets and cuts the losses from 7 tasks to 4 and
+the lost citations from 3/3 to 1/3, but still totals 33 against 34 and loses 3 of the 7
+tasks it had to keep. Not shipped, by a rule registered before the runs.
+
 Hand grading of 16 tasks agrees with the grader on 15; the one grader error (doc-18,
 a regex too narrow) would make the warm runs 35/40. The largest failure class is the
 agent **not calling** document search for a question that sounds generic, and
 answering from general knowledge instead (3 of 12 recorded-retrieval tasks, every
-temperature-0 run). The seed only makes runs repeatable once the model is warm: the
-cold first run differs from the warm ones on 15 of 40 answers, so a before/after
-comparison needs a discarded warm-up run on each side.
+temperature-0 run). The cold first run differs from the warm ones on 15 of 40 answers.
+Ticket 10 later found that warm runs separated by other work do not repeat either, while
+cold runs do (answer for answer, three hours apart), so a before/after comparison
+unloads the model before every run; the seed has no effect at temperature 0.
 
 ## Engineering
 
