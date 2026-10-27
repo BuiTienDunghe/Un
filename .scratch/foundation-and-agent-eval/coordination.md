@@ -40,6 +40,13 @@ Chủ dự án cho phép (27/10): khi cần bật stack của Ún, **opus** đư
 (không xoá), xong việc thì `docker start edu-postgres-1`. Chỉ opus làm việc này; nhân viên và fable
 không bật/tắt container. Stack chưa bật cho tới khi ticket 01 tái hiện xong cảnh "stack tắt".
 
+## GPU
+
+Mỗi lúc chỉ một việc nặng trên GPU, vì 07 và 09 đều ghi độ trễ và 09 có điều kiện dừng theo p50.
+Thứ tự từ 27/10 18:45: **07** (ghi truy xuất lab + baseline) → **09** nhánh 0. Mọi eval stack
+(`eval_stack --profile lab|heldout`) phải **dừng trước 02:45**: eval đêm 03:00 tự bật lab API ở
+cổng 8100 và cần GPU; đêm 27→28/10 là đêm nghiệm thu của ticket 01.
+
 ## Tin nhắn
 
 Ứng dụng giữ lại tin của một phiên khi nó gửi quá nhiều tin liên tiếp (fable 5.1 bị giữ sau khoảng 10
@@ -69,7 +76,7 @@ ticket mới, chờ các ticket đang chạy xong, rồi báo chủ dự án.
 | 08 | Chọn mục tiêu thí nghiệm model (M3) | — (chỉ đọc) | fable 5.1 | xong — chọn B, nhánh 0 trước |
 | 09 | Thí nghiệm B, nhánh 0 trước (M3) | 11; stack | Nhân viên 1 (commit trước GPU) | record + probe chờ fable duyệt; đo chờ 11 |
 | 10 | Nâng harness theo lỗi đo được (M4) | 07 | — | chờ |
-| 11 | Đo dao động 788 câu held-out (tiền đề M3) | stack | Nhân viên 2 | đã giao |
+| 11 | Đo dao động 788 câu held-out (tiền đề M3) | stack | Nhân viên 2 | **đã gộp** — sàn = 0 câu |
 | 12 | Dọn nhỏ sau 03 (được phép trượt) | — | Nhân viên 3 | **đã gộp** |
 
 ## Mốc so sánh của bộ test

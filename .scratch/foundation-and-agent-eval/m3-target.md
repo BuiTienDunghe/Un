@@ -25,11 +25,11 @@ viên nào vừa rẻ, vừa chắc ra model tự train, vừa đổi được s
 | Benchmark extractor (`benchmark_discord_memory_extractor.py`) | 150 (~50 ca phải im lặng) | bootstrap ±0,12 trên no_op | **chỉ Ollama** | ship / không ship D2; không dùng cho ablation |
 | Dev reranker (`data/evaluation/reranker_v1/dev_pool.jsonl`) | 134 | 1 câu = 0,75 điểm; trần pool 0,8433 | không cần stack | chọn checkpoint |
 | mteb VieQuAD (`training/common/run_mteb.py`) | 2 490 tài liệu | số công bố để so (e5-large 0,6112) | `.venv-eval` + Ollama | kiểm model embedding đã đóng gói đúng |
-| Dao động cùng cấu hình | — | 82 câu: re-index không đổi code −0,0010 MRR; **held-out: chưa có lần lặp nào cùng cấu hình** | — | — |
+| Dao động cùng cấu hình | — | 82 câu: re-index không đổi code −0,0010 MRR; held-out: **hai lần lặp 27/10 cùng cấu hình cho hạng giống hệt trên 788 câu** (ticket 11) | — | — |
 
 Dòng cuối là lỗ hổng: ticket 09 nói "chỉ giữ khi vượt mức dao động đã đo", nhưng trên 788 câu
 chưa đo dao động bao giờ — ba lần chạy 07–08/09 (0,7843 / 0,7919 / 0,7906) là ba cấu hình khác nhau
-(ctx OFF; ctx ON; heading-ctx), không phải ba lần lặp. Hai lần 08/09 chưa vào `docs/RESULTS.md`.
+(ctx OFF; ctx ON; heading-ctx), không phải ba lần lặp. **Cập nhật 27/10:** ticket 11 đã lặp cấu hình ctx ON hai lần, hạng giống hệt; hai lần 08/09 đã vào `docs/RESULTS.md`.
 
 ## Ứng viên
 

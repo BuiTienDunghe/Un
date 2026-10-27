@@ -64,13 +64,19 @@ Nếu ticket 11 báo chỉ mục heldout **không** ở trạng thái ctx ON →
 
 | Ký hiệu | Nghĩa | Giá trị |
 |---|---|---|
-| C-Acc1 | Acc@1 trung bình hai lần lặp | ⟨ ⟩ |
-| C-R5 | recall@5 trung bình hai lần lặp | ⟨ ⟩ |
-| F1 | số câu đổi kết quả ở hạng 1 giữa hai lần (đếm, không phải %) | ⟨ ⟩ |
-| F5 | số câu đổi kết quả ở top-5 giữa hai lần | ⟨ ⟩ |
-| p50-C | p50 `/rag/search` (ms) của lần lặp | ⟨ ⟩ |
+| C-Acc1 | Acc@1 trung bình hai lần lặp | 0,7919 |
+| C-R5 | recall@5 trung bình hai lần lặp | 0,9822 |
+| F1 | số câu đổi kết quả ở hạng 1 giữa hai lần (đếm, không phải %) | 0 |
+| F5 | số câu đổi kết quả ở top-5 giữa hai lần | 0 |
+| p50-C | p50 `/rag/search` (ms) của lần lặp | 4 585 (trung bình 4 622 và 4 548; có thể đã bị Ollama dùng chung đẩy lên) |
 
 N = 788. Ngưỡng McNemar cho N này: +0,032 (= 25 câu) — `.scratch/reranker-finetune/spec.md`.
+
+**Điền 27/10 từ ticket 11 (opus 5.5), trước lần đo đầu tiên của 09.** Hai lần lặp cho hạng giống hệt trên
+cả 788 câu, nên F1 = F5 = 0: các điều kiện dạng max(0,032 ; 2·F/N) thành 0,032, các điều kiện "không
+tụt quá sàn" thành **không tụt câu nào**, và luật "sàn > 2 câu thì lặp v0" không kích hoạt. So với 08/09
+có 2 câu đổi (không câu nào ở hạng 1), sau khi đổi code và Ollama: đó là trôi giữa hai phiên bản, không
+phải dao động lặp lại; control của nhánh (ii) là các lần lặp 27/10, không phải file 08/09.
 
 **Trần của recall@5, và luật chọn thước cho nhánh (i).** Ở đường ship recall@5 đã là 0,981–0,982: chỉ còn
 ~14 câu ngoài top-5, nên một ngưỡng 25 câu là **không thể đạt theo cấu trúc**. Nhánh chỉ-dense chưa có số

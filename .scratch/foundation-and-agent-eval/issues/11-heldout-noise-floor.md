@@ -1,6 +1,6 @@
 # 11 — Đo dao động trên 788 câu held-out (tiền đề M3, dùng cho mọi ứng viên)
 
-Status: xong trên nhánh `wip/11-heldout-noise-floor` — chờ điều phối duyệt
+Status: đã gộp vào main (27/10), opus 5.5 duyệt (chỉ dữ liệu + RESULTS.md); số đã điền vào m3-preregistration.md
 Type: task
 Blocked by: — (stack Ún đã bật 27/10)
 
