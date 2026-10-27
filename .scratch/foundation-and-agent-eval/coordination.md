@@ -57,6 +57,17 @@ GPU tối 27/10 cho phần đo của **10**; 09 chạy lại trọn một mạch
 (`eval_stack --profile lab|heldout`) phải **dừng trước 02:45**: eval đêm 03:00 tự bật lab API ở
 cổng 8100 và cần GPU; đêm 27→28/10 là đêm nghiệm thu của ticket 01.
 
+## Nhường GPU cho dự án khác (chủ dự án, 28/10 00:45)
+
+Một dự án khác của chủ dự án cũng dùng GPU này. Quy tắc:
+- Phiên của dự án đó xin GPU thì **nhường**; họ báo xong thì dùng tiếp.
+- Yêu cầu nhường gửi tới **opus** (điều phối), không tới từng nhân viên. Opus báo nhân viên đang giữ GPU dừng ở
+  ranh giới an toàn (hết một lần đo, không bỏ dở giữa lần), gỡ model (`ollama stop`) để trả VRAM.
+- Opus **được từ chối** khi đang có một lần đo mà dừng giữa chừng sẽ làm hỏng kết quả, hoặc việc thật sự cần
+  thiết; khi đó trả lời rõ còn bao lâu xong.
+- Khi không có GPU, các phiên làm việc không cần GPU (code, test không model, thiết kế, tài liệu).
+- Mọi số độ trễ đo trong lúc dự án kia dùng GPU phải ghi là "GPU dùng chung", không so với mốc đo lúc GPU rỗi.
+
 ## Đóng băng main
 
 **Gỡ lúc 22:35** (chủ dự án hỏi lại, đo lại): lý do 2 sai — Nhân viên 1 kiểm, API boot được trên schema cũ và
