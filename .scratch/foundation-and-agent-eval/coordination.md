@@ -105,6 +105,10 @@ CI; reranker chạy PyTorch ngay trong tiến trình python nên phải giấu G
 `agent_eval`, `run_mteb`, `eval_stack`, `ollama run/pull`. Eval đêm 03:00 vẫn chạy (Quản lý tránh 03:00–03:05).
 Backup 02:00 chỉ dùng đĩa và CPU (`pg_dump`).
 
+Quản lý báo đã xong GPU từ khoảng 04:10 và tới sáng không dùng nữa. Ún vẫn **không** chạy đợt đo: chủ dự án dặn
+"hôm nay chưa cần chạy GPU nhiều", và đợt đo gom chung chờ họ duyệt (`joint-measurement-plan.md`). Luật giữ im giữ
+nguyên tới khi chủ dự án cho đo.
+
 ## Xây trước, đo sau (chủ dự án, 28/10 00:58)
 
 "Hôm nay chưa cần chạy GPU nhiều quá, hãy xây dựng trước đã." Từ giờ: ưu tiên code (ticket 20 #2–#4, 22, 23,
