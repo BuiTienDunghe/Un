@@ -496,6 +496,13 @@ fall from 34/40 to 29/40: none of them calls the new tool, and 37 of their 40 an
 wording because the prompt that describes the tools changed. One run a side at temperature
 0 cannot tell that reshuffle from harm.
 
+Taking the sentence that urged reading on out of the agent guide (#1-B,
+`results/kept/agent-eval-v0.3-read-B-20261028/`, same internal regression test) gives 38/48
+in two identical cold runs: four of the five long-reading tasks still pass, and the old forty
+come back to 33/40 against the baseline's 34. That meets the rule registered before the runs
+for proposing #1-B. The tool descriptions alone still reshuffle 39 of the 40 old answers (five
+down, four up), and one of the new failures, doc-10, gives made-up figures without searching.
+
 Hand grading of 16 tasks agrees with the grader on 15; the one grader error (doc-18,
 a regex too narrow) would make the warm runs 35/40. The largest failure class is the
 agent **not calling** document search for a question that sounds generic, and

@@ -1,0 +1,2 @@
+{"run_id": "v0.3-read-B-r1-cold", "at": "2026-10-28T00:32:47+07:00", "loaded_before_unload": [], "loaded_after_unload": [], "general_unloaded": true, "embedding_loaded": false}
+{"run_id": "v0.3-read-B-r2-cold", "at": "2026-10-28T00:36:09+07:00", "loaded_before_unload": [{"name": "qwen3.5:9b", "size_vram": 6047945194}, {"name": "qwen3-embedding:0.6b", "size_vram": 1715396935}], "loaded_after_unload": [{"name": "qwen3-embedding:0.6b", "size_vram": 1715396935}], "general_unloaded": true, "embedding_loaded": true}
