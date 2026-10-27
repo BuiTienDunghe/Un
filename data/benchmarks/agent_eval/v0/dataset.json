@@ -7,6 +7,114 @@
     "now": "2026-10-20T12:00:00+07:00",
     "messages": [
       {
+        "id": "7101",
+        "channel_id": "60",
+        "author_id": "1004",
+        "author_display_name": "Trang",
+        "is_bot": false,
+        "content": "Cuối năm nay cả phòng tổ chức dã ngoại không mọi người?",
+        "sent_at": "2026-10-01T08:30:00+07:00"
+      },
+      {
+        "id": "7102",
+        "channel_id": "60",
+        "author_id": "1002",
+        "author_display_name": "Minh",
+        "is_bot": false,
+        "content": "Mình thấy lên Tam Đảo, ở homestay Đồi Sim hai ngày một đêm thì hợp lý nhất.",
+        "sent_at": "2026-10-01T08:45:00+07:00"
+      },
+      {
+        "id": "7103",
+        "channel_id": "60",
+        "author_id": "1003",
+        "author_display_name": "Hùng",
+        "is_bot": false,
+        "content": "Ok, vậy theo phương án dã ngoại cuối năm như tin ở trên nhé, mọi người thống nhất rồi.",
+        "sent_at": "2026-10-01T09:00:00+07:00"
+      },
+      {
+        "id": "7104",
+        "channel_id": "60",
+        "author_id": "1004",
+        "author_display_name": "Trang",
+        "is_bot": false,
+        "content": "Ai ăn chay thì nhắn riêng để đặt suất nha.",
+        "sent_at": "2026-10-01T09:20:00+07:00"
+      },
+      {
+        "id": "7105",
+        "channel_id": "60",
+        "author_id": "1002",
+        "author_display_name": "Minh",
+        "is_bot": false,
+        "content": "Xe 16 chỗ khứ hồi hết 3,2 triệu, mình giữ chỗ rồi.",
+        "sent_at": "2026-10-01T10:00:00+07:00"
+      },
+      {
+        "id": "7106",
+        "channel_id": "60",
+        "author_id": "1003",
+        "author_display_name": "Hùng",
+        "is_bot": false,
+        "content": "Nhớ mang áo khoác, trên đó buổi tối khá lạnh.",
+        "sent_at": "2026-10-01T14:00:00+07:00"
+      },
+      {
+        "id": "7107",
+        "channel_id": "60",
+        "author_id": "1004",
+        "author_display_name": "Trang",
+        "is_bot": false,
+        "content": "Quỹ chung còn đủ, mỗi người không phải góp thêm.",
+        "sent_at": "2026-10-01T15:30:00+07:00"
+      },
+      {
+        "id": "7108",
+        "channel_id": "60",
+        "author_id": "1002",
+        "author_display_name": "Minh",
+        "is_bot": false,
+        "content": "Mình mang theo loa với bộ bài để chơi buổi tối.",
+        "sent_at": "2026-10-02T08:00:00+07:00"
+      },
+      {
+        "id": "7109",
+        "channel_id": "60",
+        "author_id": "1003",
+        "author_display_name": "Hùng",
+        "is_bot": false,
+        "content": "Sáng hôm đi tập trung ở cổng toà nhà lúc 6h30.",
+        "sent_at": "2026-10-02T09:00:00+07:00"
+      },
+      {
+        "id": "7110",
+        "channel_id": "60",
+        "author_id": "1004",
+        "author_display_name": "Trang",
+        "is_bot": false,
+        "content": "Mình gom tên người đi vào một bảng tính chung.",
+        "sent_at": "2026-10-02T10:30:00+07:00"
+      },
+      {
+        "id": "7111",
+        "channel_id": "60",
+        "author_id": "1002",
+        "author_display_name": "Minh",
+        "is_bot": false,
+        "content": "Ai say xe thì ngồi hàng ghế đầu nhé.",
+        "sent_at": "2026-10-02T11:00:00+07:00"
+      },
+      {
+        "id": "7112",
+        "channel_id": "60",
+        "author_id": "1003",
+        "author_display_name": "Hùng",
+        "is_bot": false,
+        "content": "Cảm ơn cả nhà, hẹn gặp mọi người hôm đó.",
+        "sent_at": "2026-10-02T18:00:00+07:00"
+      },
+      {
         "id": "7001",
         "channel_id": "50",
         "author_id": "1001",
