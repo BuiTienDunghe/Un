@@ -1,8 +1,8 @@
 # 02 — Một cách cài, xoá hack sys.path (M1b)
 
-Status: chờ
+Status: đã giao — Nhân viên của Ún 1
 Type: task
-Blocked by: 01
+Blocked by: — (kiểm 27/10: 01 không đụng file nào của 02)
 
 ## Vì sao
 
