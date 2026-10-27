@@ -8,13 +8,14 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from hashlib import sha256
 from uuid import UUID
 
 from sqlalchemy import String, cast, exists, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import sessionmaker
 
-from app.postgres.models import AgentTrace, Conversation, DiscordConversationSession, Memory, Message, MessageSource, OcrCache, OcrRun, RequestLog
+from app.postgres.models import AgentTrace, AgentTraceSummary, Conversation, DiscordConversationSession, Memory, Message, MessageSource, OcrCache, OcrRun, RequestLog
 
 
 def _utc_now() -> datetime:
@@ -107,23 +108,60 @@ class PostgresAuxiliaryStore:
         rows.reverse()
         return [{"role": row.role, "content": row.content} for row in rows]
 
-    def add_agent_traces(self, conversation_id: str, message_id: int | None, steps: list[dict[str, object]]) -> None:
-        """Persist the agent-loop steps that produced one assistant message."""
+    def add_agent_traces(
+        self, conversation_id: str, message_id: int | None, steps: list[dict[str, object]], source: str = "web",
+    ) -> None:
+        """Persist the agent-loop steps that produced one assistant message: the full
+        step in agent_traces (cascades with the conversation) and its content-free
+        skeleton in agent_trace_summaries (outlives it), in ONE transaction, so a
+        skeleton never exists without the trace it summarises at write time."""
         if not steps:
             return
         now = _utc_now()
+
+        def number(value: object) -> int | None:
+            return int(value) if value is not None else None
+
+        def text(value: object, limit: int) -> str | None:
+            return str(value)[:limit] if value else None
+
         with self._sessions.begin() as session:
             for index, step in enumerate(steps):
+                kind = str(step.get("kind", "tool_call"))
+                tool_name = text(step.get("tool_name"), 128)
+                content = str(step["content"]) if step.get("content") is not None else None
                 session.add(
                     AgentTrace(
                         conversation_id=conversation_id,
                         message_id=message_id,
                         step_index=index,
-                        kind=str(step.get("kind", "tool_call")),
-                        tool_name=(str(step["tool_name"]) if step.get("tool_name") else None),
+                        kind=kind,
+                        tool_name=tool_name,
                         arguments=step.get("arguments") if isinstance(step.get("arguments"), dict) else None,
-                        content=(str(step["content"]) if step.get("content") is not None else None),
-                        latency_ms=(int(step["latency_ms"]) if step.get("latency_ms") is not None else None),
+                        content=content,
+                        latency_ms=number(step.get("latency_ms")),
+                        created_at=now,
+                    )
+                )
+                # Nothing below may carry an argument, a result or an answer
+                # (test_agent_trace_summaries scans every text column for a bait).
+                shape = step.get("arguments_shape")
+                session.add(
+                    AgentTraceSummary(
+                        conversation_id=conversation_id,
+                        message_id=message_id,
+                        step_index=index,
+                        kind=kind,
+                        tool_name=tool_name,
+                        latency_ms=number(step.get("latency_ms")),
+                        error_code=text(step.get("error_code"), 64),
+                        error_type=text(step.get("error_type"), 128),
+                        stop_reason=text(step.get("stop_reason"), 32),
+                        tokens_in=number(step.get("tokens_in")),
+                        tokens_out=number(step.get("tokens_out")),
+                        arguments_shape=shape if isinstance(shape, dict) else None,
+                        content_sha256=sha256(content.encode("utf-8")).hexdigest() if content is not None else None,
+                        source=source,
                         created_at=now,
                     )
                 )

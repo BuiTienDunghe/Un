@@ -152,7 +152,7 @@ class Store:
     def add_message(self, conversation_id, role, content, model_used=None, sources=None):
         return 7
 
-    def add_agent_traces(self, conversation_id, message_id, steps):
+    def add_agent_traces(self, conversation_id, message_id, steps, source="web"):
         self.traces.append(steps)
 
 
