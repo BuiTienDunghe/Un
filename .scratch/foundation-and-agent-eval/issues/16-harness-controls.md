@@ -1,6 +1,6 @@
 # 16 — Kiểm soát harness: ngân sách cả lượt, lỗi công cụ có mã, trace bền (M4, cách B)
 
-Status: đang thiết kế — chờ khảo sát harness nổi tiếng (nguồn chính thống); code sau khi 10 gộp
+Status: đã khảo sát; giao Nhân viên 1 thiết kế; code sau khi 10 gộp
 Type: task
 Blocked by: 10 (cùng đụng `backend/app/services/agent_service.py`; đổi harness giữa chừng làm bẩn phép đo của 10)
 
@@ -33,9 +33,27 @@ Bằng chứng đã có (kiểm code 27/10):
    chiếu với khuyến nghị của các harness và OpenTelemetry GenAI về việc ghi nội dung.
 4. **Registry**: không làm (chưa có công cụ thứ 4); ghi điều kiện mở lại.
 
-## Khảo sát harness (nguồn chính thống)
+## Khảo sát harness (nguồn chính thống, 27/10)
 
-(điền khi khảo sát xong)
+Một agent phụ đọc tài liệu chính thức và repo gốc; nguồn đầy đủ ở cuối mục. Số mặc định đọc từ `main`
+của repo không gắn với một bản phát hành; các mục đánh dấu ⚠ là chưa kiểm được từ nguồn gốc hoặc phụ
+thuộc phiên bản.
+
+| Mối quan tâm | Các harness làm gì | Hệ quả cho Ún |
+|---|---|---|
+| Ngân sách cả lượt | Hầu hết giới hạn **số lượt / số lần gọi / token**, hiếm khi giới hạn giây: Claude Agent SDK `max_turns`, `max_budget_usd`; OpenAI Agents `max_turns` (mặc định 10 ⚠ đọc từ source), và nói rõ timeout của họ "không giới hạn cả lượt chạy"; LangGraph `recursion_limit` (⚠ mặc định chưa rõ: 25 / 1000 / 10007); Pydantic AI `UsageLimits` (`request_limit` 50) và `run(timeout=)`; smolagents `max_steps` 20; Google ADK `max_llm_calls` 500. Chỉ Pydantic AI và Inspect AI giới hạn **thời gian tường** cho cả lượt | Ún đã có `max_steps`; thêm thời gian tường là theo mẫu Pydantic AI / Inspect |
+| Khi chạm giới hạn | Hai họ: **ném lỗi, mất phần đã làm** (OpenAI, LangGraph, ADK, Pydantic `UsageLimitExceeded`) hoặc **dừng có cấu trúc, giữ phần đã làm** (Claude SDK trả subtype `error_max_turns`; smolagents ép một câu trả lời cuối; Inspect "vẫn chấm điểm"; Pydantic `RunTimedOut.all_messages()`) | Ún nên theo họ thứ hai: trả lời từ những gì đã gom (như nhánh "Tool budget exhausted" hiện có), ghi mã lý do dừng vào trace |
+| Lỗi công cụ | Mặc định phổ biến: **trả lỗi về model như một kết quả công cụ, vòng lặp chạy tiếp** (Claude SDK `is_error`, OpenAI `failure_error_function`, smolagents, ADK, Inspect `ToolError`). Anthropic ("Writing tools for agents") muốn thông báo lỗi "cụ thể, gợi ý được việc cần làm", không phải mã khó hiểu; OTel muốn `error.type` là định danh ít giá trị | **Mã vào trace, câu giải thích có ích vào model** — không mâu thuẫn với yêu cầu "lỗi có mã". Thử lại có ngân sách riêng (Pydantic `retries=1`) |
+| Trace và quyền riêng tư | Trace luôn nằm **ở kho khác** với trạng thái hội thoại (OpenAI sessions vs trace processor; Claude transcript vs OTel; LangGraph checkpointer vs LangSmith). OTel GenAI: tham số/kết quả công cụ và nội dung tin nhắn là **opt-in, "SHOULD NOT capture by default"**; Claude Code tắt mọi cổng nội dung mặc định nhưng luôn phát `error_type`. (OpenAI và Pydantic AI thì mặc định bật nội dung) | Khớp lựa chọn (b) của chủ dự án: bản rút gọn không nội dung, khoá theo `conversation_id` như một thuộc tính chứ không phải khoá ngoại CASCADE (suy luận của agent phụ, không nguồn nào nói thẳng) |
+| Registry công cụ | Anthropic: "bắt đầu bằng gọi API LLM trực tiếp", "giảm lớp trừu tượng"; "nhiều công cụ hơn không phải lúc nào cũng tốt hơn". Mọi SDK đăng ký công cụ bằng decorator hoặc danh sách, không cần lớp registry riêng | Khớp "registry chỉ khi có công cụ thứ 4" |
+
+Nguồn chính: anthropic.com/engineering/building-effective-agents (19/12/2024) và
+/writing-tools-for-agents (11/09/2025); code.claude.com/docs (agent-sdk/agent-loop, hooks, custom-tools,
+monitoring-usage); openai.github.io/openai-agents-python (running_agents, tools, tracing, models) và
+`run_config.py`; docs.langchain.com/oss/python/langgraph (graph-api, persistence) và PR #7177;
+pydantic.dev/docs/ai (agent, timeouts, tools-advanced, instrumented); huggingface.co/docs/smolagents;
+adk.dev (runconfig, plugins, observability/traces); github.com/open-telemetry/semantic-conventions-genai
+(`gen-ai-spans.md`, trạng thái Development ⚠); inspect.aisi.org.uk (setting-limits, tools-custom).
 
 ## Nghiệm thu
 
