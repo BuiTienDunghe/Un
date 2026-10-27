@@ -66,7 +66,7 @@ discord` sẽ lấy nhầm gói. Không script nào làm vậy hôm nay; ghi m�
 |---|---|---|
 | `ToolRegistry.register(tool, order=)` | `agent_service.py` | `search_history` (sau này `read_messages_around`) với backend riêng |
 | `app.include_router` | `main.py` gọi `discord.register(app, settings, sessions)` một lần | 4 router |
-| `jobs.routing.register_route(job_type, route)` **hoặc** giữ chuỗi `task_path` như nay | `jobs/routing.py` | tuyến `discord_memory_ingest` |
+| `jobs/routing.py` giữ **chuỗi** `job_type` + `task_path` (trỏ vào `app.discord.workers…`), không có `register_route` trong ticket này | `jobs/routing.py` | không cắm gì; lý do: `operational_service.py:28` (lõi) import `DISCORD_MEMORY_INGEST_JOB_TYPE` từ `jobs.routing` — đem hằng số đó sang gói là lõi phải import gói, vi phạm đúng luật duy nhất của ticket. Ghi là nợ "biết tên", cùng loại với settings |
 | `app.state.*` | do `register()` đặt | `discord_turn_service`, `discord_history_service`, … |
 
 Hai thứ lõi vẫn gọi tên Discord sau ticket này, ghi rõ là **nợ**: 25 trường settings, và ba dịch vụ lõi
@@ -81,9 +81,9 @@ vài dòng cấu hình trong `main.py`/`agent_eval.py`. Ticket 22 chỉ có **m�
 | # | Commit | File đụng | Lùi được? | Kiểm |
 |---|---|---|---|---|
 | C1 | `STOPWORDS`, `fold` sang `app/utils/vi_text.py`; `answer_grounding` và `discord_memory_guard` import từ đó (guard re-export tên cũ) | 3 file, ~40 dòng | có | test grounding + guard xanh |
-| C2 | `git mv` toàn bộ nhóm "sang gói" ở câu 1 vào `app/discord/`; sửa ~65 dòng import ở test/script; `main.py` chỉ đổi 8 dòng import (15, 39–46). **Giữ một shim** `app/services/discord_history_service.py` re-export (câu 4) để `agent_service.py:21` không phải đổi | ~27 file dời, ~70 dòng import | có (git mv ngược) | cả bộ test; `alembic check` (model không dời) |
-| C3 | `app/discord/__init__.py::register(app, settings, sessions)` gom `main.py:122-165, 264, 322-323` + include `memory_review`, `condensations`, `bot`; `main.py` còn một dòng `discord.register(...)`. Phần `history_service=` cho `AgentService` tạm GIỮ trong `register()` (đặt `app.state.agent_service.history_service`), vì C4 chưa có | `main.py` −60/+2, gói +70 | có | bộ test; smoke `/health`, `/dashboard` |
-| C4 | **Sau khi ticket 20 bước (3) gộp**, do Nhân viên 1 làm (họ đang giữ file): registry cắm được + dời `search_history` sang `app/discord/agent_tools.py`; bỏ tham số `history_service` của `AgentService`; `register()` của C3 đổi sang `registry.register(...)`; `agent_eval.py` đăng ký fixture history qua gói; xoá shim | `agent_service.py` ~120 dòng, `agent_eval.py` ~10, gói +60 | có | 7 file test agent; **Agent Eval lạnh trùng 40/40** (hash `tools_sha256` phải = `872acc92…`) |
+| C2 | `git mv` toàn bộ nhóm "sang gói" ở câu 1 vào `app/discord/`; sửa ~65 dòng import ở test/script **và 2 dòng ở `scripts/agent_eval.py:45-46`** (file này ticket 20 cũng đang sửa phần cấu hình — hunk khác vùng, nhưng gộp C2 lúc 20 không có commit treo trên nó); `main.py` chỉ đổi 8 dòng import (15, 39–46). **Giữ một shim** `app/services/discord_history_service.py` re-export (câu 4) để `agent_service.py:21` không phải đổi | ~27 file dời, ~72 dòng import | có (git mv ngược) | cả bộ test; `alembic check` (model không dời) |
+| C3 | `app/discord/__init__.py::register(app, settings, sessions, *, admin_guard, read_guard)` gom `main.py:122-165, 264, 322-323` + include `memory_review`, `condensations`, `bot`; `main.py` còn một dòng `discord.register(...)`, đặt **cuối cùng** trong lifespan (sau khi `app.state.chat_service` và `app.state.agent_service` đã dựng — hôm nay khối Discord ở 122–165 đứng TRƯỚC agent ở ~265, nên phải dời xuống). Phần `history_service=` cho `AgentService` tạm GIỮ trong `register()` (đặt `app.state.agent_service.history_service`), vì C4 chưa có | `main.py` −60/+2, gói +70 | có | bộ test; smoke `/health`, `/dashboard` |
+| C4 | **Sau khi ticket 20 bước (3) gộp**, do Nhân viên 1 làm (họ đang giữ file): registry cắm được + dời `search_history` sang `app/discord/agent_tools.py`; bỏ tham số `history_service` của `AgentService`; `register()` của C3 đổi sang `registry.register(...)`; `agent_eval.py` đăng ký fixture history qua gói; xoá shim | `agent_service.py` ~120 dòng, `agent_eval.py` ~10, gói +60 | có | 7 file test agent; **Agent Eval lạnh trùng 40/40 so với mốc đo cùng buổi trên đúng `main` ngay trước C4** (một lần A lạnh trên merge-base, rồi một lần trên C4; `tools_sha256` của hai manifest phải bằng nhau — giá trị cụ thể lúc đó sẽ khác `872acc92…` vì bước (2)–(3) của 20 đã thêm công cụ; so từng bài chỉ tới chỗ khác đầu tiên) |
 | C5 | Test tĩnh: AST mọi module `app/**` trừ `app/discord/**` và `main.py` không import `app.discord`; và test "lõi import được khi không có gói" bằng `__import__` chặn (mẫu `test_postgres_runtime_guard.py:21`) trên danh sách module lõi | 1 file test | có | tự nó |
 | C6 | Docs (`current_architecture.md`, README gói), CHANGELOG, xoá allowlist shim khỏi C5 | docs | có | — |
 
@@ -92,21 +92,32 @@ C1, C2, C3, C5 làm được **ngay**, song song với ticket 20, vì không đ�
 kề nhau, nên C3 nên gộp **trước** bước (2) của 20 hoặc ngay sau, tránh cùng lúc). C4 là điểm hẹn duy nhất.
 
 Hình dạng registry cho C4 (đề xuất, Nhân viên 1 quyết chi tiết khi code):
-- `ToolRegistry` là một **instance** (`AgentService.registry`), không phải dict cấp module; `register(tool,
-  order: int)`; `schemas()`, `names()`, `declared()` tính mỗi lần gọi (hoặc cache vô hiệu khi register).
-  Lý do: ba thứ `AGENT_TOOLS`/`TOOL_NAMES`/`_DECLARED` đang tính lúc import nên đăng ký muộn không thấy.
+- Một object `ToolRegistry` với `register(tool, order: int)`, `schemas()`, `names()`, `declared()` tính
+  mỗi lần gọi (hoặc cache vô hiệu khi register). Lý do: ba thứ `AGENT_TOOLS`/`TOOL_NAMES`/`_DECLARED`
+  đang tính lúc import nên đăng ký muộn không thấy.
+- **Một** registry mặc định cấp module `DEFAULT_REGISTRY` (lõi đăng ký hai công cụ của mình vào đó lúc
+  import); `AgentService(registry=DEFAULT_REGISTRY)`; `register()` của gói Discord đăng ký vào
+  `app.state.agent_service.registry` lúc khởi động; `agent_eval.py` dựng registry riêng cho mỗi lần chạy
+  (lõi + fixture history). Không có lớp bí danh nào tính lúc import nữa.
+- Hệ quả bắt buộc, kẻo phép đo hỏng mà không ai thấy: `tools_sha256` trong manifest của `agent_eval`, bảng
+  `_DECLARED` cho `arguments_shape`, và cờ `tool_declared` (ticket 16) đều phải đọc từ **registry của
+  instance sau khi đã đăng ký**, không từ một hằng cấp module chụp lúc import — nếu không manifest sẽ
+  thiếu `search_history` mà không báo, và mốc so sánh vô nghĩa. Việc cho Nhân viên 1 trong C4: liệt kê
+  12 importer hiện có của `AGENT_TOOLS`/`TOOL_NAMES`, chia "đọc lúc import" / "đọc lúc gọi", chuyển hết
+  sang đọc lúc gọi.
 - Giữ chữ ký handler của 3d5927a `(service, arguments, tool_context) -> ToolOutput`; handler Discord là
   method của một object giữ `history_service`, nên không cần thuộc tính Discord trên `AgentService`.
 - `order`: lõi 10 (`search_documents`), 30 (`system_status`); Discord đăng ký 20 → thứ tự model thấy
-  **y hệt** hôm nay → `tools_sha256` không đổi → phép kiểm "Agent Eval lạnh trùng" còn giá trị.
-- `AGENT_TOOLS`/`TOOL_NAMES` cấp module giữ làm bí danh đọc từ registry mặc định (12 importer hiện có),
-  đánh dấu deprecated, bỏ ở C6 hoặc sau.
+  **y hệt** trước C4 → `tools_sha256` không đổi → phép kiểm "Agent Eval lạnh trùng" còn giá trị.
 
 **D2 (chỉ khai báo công cụ Discord khi `tool_context` có guild) KHÔNG nằm trong C4.** Nó đổi prompt của
 mọi bài web (33/40 bài Agent Eval mất một công cụ trong danh sách), nên không còn trùng 40/40 được, và
-hist-08..10 (bài web hỏi về Discord, chấm "phải nói không xem được") đổi hành vi. Làm D2 thành commit
-riêng, đo bằng v0.3 có đăng ký trước. Hai cách: D1 giữ (không đổi gì, hash bằng) / D2 (đúng ý "lõi không
-biết Discord" hơn, nhưng là thay đổi hành vi phải đo). Ý tôi: D1 trong 22, D2 đo cùng v0.3 của ticket 20.
+hist-08..10 (bài web hỏi về Discord, chấm "phải nói không xem được") đổi hành vi. Nói thẳng: mục 3 của
+phạm vi ticket ("chỉ khai báo khi có guild") và mục 6 ("hành vi không đổi, Agent Eval lạnh trùng") **không
+cùng đúng được trong một commit** — chủ dự án đang chọn giữa hai mục của chính ticket, không phải giữa tôi
+và ticket. Làm D2 thành commit riêng, đo bằng v0.3 có đăng ký trước. Hai cách: D1 giữ (không đổi gì, hash
+bằng) / D2 (đúng ý "lõi không biết Discord" hơn, nhưng là thay đổi hành vi phải đo). Ý tôi: D1 trong 22,
+D2 đo cùng v0.3 của ticket 20.
 
 ## Câu 3 — model Discord ở đâu (Alembic)
 

@@ -90,3 +90,13 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
     hist-11 bịa, ghép giờ họp và phòng B203 thành phương án dã ngoại.
   - Model nhúng 0.6B còn nạp lúc bắt đầu cả hai lần (giống lần 22:57); điều kiện "không có model nhúng" chưa đo.
   - Chờ v0.4: bài L-b, bài L-c, hist-11 cấm dữ kiện bịa, hist-03 cho tra tài liệu trước.
+- 28/10 (Nhân viên của Ún 1): #1 phần tài liệu xong — wip/20-agent-reading 3d5927a (registry b, fable duyệt),
+  3515226 (search_documents trả document_id/chunk_index/chars; read_document theo đoạn hoặc theo trang, chỉ mở tài
+  liệu đã tra trong lượt, xếp đoạn nguyên vẹn vào trần 6 000 kèm next_from_chunk; DocumentReader =
+  ChunkInspectionService.read_chunks/chunks_on_page; eval dùng FixtureDocuments trên documents.jsonl). 164 test xanh,
+  kiểm ngược đỏ đúng chỗ. Chưa đo bằng eval (cần GPU). L-b, L-c, P2 chưa đo được vì v0.3 không có bài. Phần Discord
+  (read_messages_around, message_id) tạm giữ chờ quyết định tách bot.
+- 28/10 00:25 (opus 5.5): chủ dự án đã chọn tách mềm Discord (ticket 22) → `read_messages_around` và `message_id`
+  sẽ do gói Discord đăng ký qua registry sau ticket 22, không vào lõi. Đo #1 bằng v0.3 tối nay (≈ 6 phút GPU,
+  đăng ký trước theo đề xuất của Nhân viên 1, nêu rõ rủi ro doc-38 đọc thừa); kết quả là test hồi quy nội bộ, không
+  phải khẳng định chất lượng (quy tắc benchmark của chủ dự án, ticket 24).
