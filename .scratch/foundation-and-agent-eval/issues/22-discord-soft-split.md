@@ -94,5 +94,14 @@ trí nhớ Discord thành một gói riêng, đăng ký công cụ của mình q
     - **Chưa chạy**: bộ test có DB test, gồm các bài chạy trọn lifespan; `alembic check`, vì cần DB, nhưng
       `models.py` và `alembic/` không đổi.
   - Ghi chú triển khai: job RQ nạp ký ức đã nằm trong Redis với đường dẫn cũ `app.workers.memory_tasks…` sẽ lỗi
-    import sau khi triển khai. Nên chạy hết hàng đợi `discord_memory` trước khi triển khai, hoặc để cơ chế
-    retry/recover đẩy lại bằng đường dẫn mới.
+    import sau khi triển khai. Phải chạy hết hàng đợi `memory_extract` trước khi triển khai. (Sửa lại sau khi
+    đọc code ở C6: `recover_discord_memory_jobs.py` **không** cứu được, vì nó chỉ đẩy lại job `running` đã
+    hết lease, còn job lỗi import thì chưa bao giờ tới `running`.)
+  - **C6, phần tài liệu** (d465077):
+    - `docs/current_architecture.md` có thêm mục "Discord is a package the core does not import": ranh giới,
+      hai điểm cắm, ba chỗ "mềm" và hợp đồng `mem_dc_`.
+    - Thêm `backend/app/discord/README.md`.
+    - CHANGELOG có mục Changed và ghi chú nâng cấp kèm lệnh kiểm hàng đợi rỗng. Đã chạy lệnh đó, chỉ đọc
+      Redis: `0 0`.
+    - `FAILURE_MODES.md` đổi đường dẫn của guard.
+    - Việc xoá shim và allowlist làm sau C4.
