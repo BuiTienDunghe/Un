@@ -20,6 +20,7 @@ from typing import Any, Protocol
 from app.llm_clients.deadline import ModelCallTimeoutError, call_within
 from app.llm_clients.usage import consume_usage, record_usage
 from app.services.discord_history_service import history_hit_payload
+from app.services.answer_figures import grounding_summary, retry_instruction, turn_texts, unsupported_figures
 from app.services.injection_defense import InjectionDefense
 from app.services.model_router import ModelRouter
 
@@ -180,6 +181,12 @@ STOP_FINAL = "final"
 STOP_MAX_STEPS = "max_steps"
 STOP_TURN_BUDGET = "turn_budget"
 STOP_TURN_BUDGET_EXHAUSTED = "turn_budget_exhausted"
+# The answer check (ticket 20 #2, app/services/answer_figures.py). An answer whose figures
+# the turn saw nowhere gets one retry, in one extra round with tools, while the final
+# reserve is still free; the rejected attempt is an ANSWER_CHECK_STEP that keeps no text.
+ANSWER_CHECK = True
+ANSWER_CHECK_STEP = "answer_check"
+UNSUPPORTED_FIGURES = "UNSUPPORTED_FIGURES"
 
 
 # What a handler returns: (text for the model, error code, exception type).
@@ -306,7 +313,12 @@ class AgentService:
         # caller's request log keeps reading the last call as it always has (ticket 16, k2).
         consume_usage()
         last: dict[str, int | None] = {"tokens_in": None, "tokens_out": None}
-        for _ in range(self.max_steps):
+        # The answer check (ticket 20 #2) may grant one more round, for its single retry;
+        # `checked_out` are the messages it added, which never count as something seen.
+        rounds, round_index, retried = self.max_steps, 0, False
+        checked_out: set[int] = set()
+        while round_index < rounds:
+            round_index += 1
             left = self.turn_budget_seconds - (self.clock() - turn_started)
             # A tool round must leave the final answer its reserve: started any later,
             # it would spend the time the answer needs.
@@ -326,13 +338,30 @@ class AgentService:
             last = consume_usage()
             calls = result["tool_calls"]
             if not calls:
+                answer = result["content"]
+                check = self._check_answer(answer, working, checked_out)
+                left = self.turn_budget_seconds - (self.clock() - turn_started)
+                if check["unsupported"] and not retried and left >= self.final_reserve_seconds:
+                    # Figures the turn saw nowhere (ticket 20 #2, T1): one retry, with tools,
+                    # in a round of its own. The rejected answer reached no one, so the trace
+                    # keeps only how many figures it had, not its text.
+                    steps.append({
+                        "kind": ANSWER_CHECK_STEP, "tool_name": None, "arguments": None, "content": None,
+                        "latency_ms": round_latency, "error_code": UNSUPPORTED_FIGURES,
+                        "arguments_shape": {"unsupported_figures": len(check["unsupported"])}, **last,
+                    })
+                    checked_out.update((len(working), len(working) + 1))
+                    working.append({"role": "assistant", "content": answer})
+                    working.append({"role": "system", "content": retry_instruction(check["unsupported"])})
+                    retried, rounds = True, rounds + 1
+                    continue
                 steps.append({
                     "kind": "final", "tool_name": None, "arguments": None,
-                    "content": _clip(result["content"], 4000), "latency_ms": round_latency,
-                    "stop_reason": STOP_FINAL, **last,
+                    "content": _clip(answer, 4000), "latency_ms": round_latency,
+                    "stop_reason": STOP_FINAL, **check["trace"], **last,
                 })
                 record_usage(last["tokens_in"], last["tokens_out"])
-                return result["content"], model_used, steps
+                return answer, model_used, steps
             # The model must see its own calls on the next round, verbatim.
             working.append({"role": "assistant", "content": result["content"], "tool_calls": result["raw_tool_calls"]})
             for index, call in enumerate(calls):
@@ -383,13 +412,31 @@ class AgentService:
             # raises as before, because "not in time" would then be a false reply.
             consume_usage()
             answer, stop_reason = self._out_of_time_reply(), STOP_TURN_BUDGET_EXHAUSTED
+        # Out of rounds or time, there is no retry left: the check only marks the trace.
+        # The fixed out-of-time reply is ours, not the model's, and is not checked.
+        check = self._check_answer(answer, working, checked_out) if stop_reason != STOP_TURN_BUDGET_EXHAUSTED else {"trace": {}}
         steps.append({
             "kind": "final", "tool_name": None, "arguments": None,
             "content": _clip(answer, 4000), "latency_ms": int((perf_counter() - started) * 1000),
-            "stop_reason": stop_reason, **usage,
+            "stop_reason": stop_reason, **check["trace"], **usage,
         })
         record_usage(last["tokens_in"], last["tokens_out"])
         return answer, model_used, steps
+
+    @staticmethod
+    def _check_answer(answer: str, working: list[dict[str, Any]], checked_out: set[int]) -> dict[str, Any]:
+        """The answer check (ticket 20 #2): its figures against what the turn saw (K3, the
+        gate), and answer_grounding's verdict on the tool results (K1, recorded only). The
+        trace gets labels and counts, never text, in the final step's arguments_shape."""
+        if not ANSWER_CHECK:
+            return {"unsupported": [], "trace": {}}
+        shown, tool_results = turn_texts(working, checked_out)
+        unsupported = unsupported_figures(answer, shown)
+        shape: dict[str, object] = {"unsupported_figures": len(unsupported), **(grounding_summary(answer, tool_results) or {})}
+        trace: dict[str, object] = {"arguments_shape": shape}
+        if unsupported:
+            trace["error_code"] = UNSUPPORTED_FIGURES
+        return {"unsupported": unsupported, "trace": trace}
 
     def _execute_tool(
         self,
