@@ -48,6 +48,14 @@ GPU tối 27/10 cho phần đo của **10**; 09 chạy lại trọn một mạch
 (`eval_stack --profile lab|heldout`) phải **dừng trước 02:45**: eval đêm 03:00 tự bật lab API ở
 cổng 8100 và cần GPU; đêm 27→28/10 là đêm nghiệm thu của ticket 01.
 
+## Đóng băng main
+
+Từ 27/10 21:15 tới sau eval đêm 03:00 ngày 28/10: KHÔNG gộp code vào main (chỉ `.scratch`). Lý do: 09 đang
+chạy và đòi worktree trùng main (editable trỏ về main); eval đêm bật lab API bằng code của main. Ghi chú:
+lúc 21:10 đã gộp wip/10-keep (chỉ đổi mô tả công cụ trong `agent_service.py` + tài liệu) sau khi 09 bắt
+đầu từ d1e2171 — không nằm trên đường đo của 09 (eval_stack, rag, embedding không đổi). Ticket 16 gộp
+sáng 28/10, cần xét `alembic upgrade head` cho các DB.
+
 ## Tin nhắn
 
 Ứng dụng giữ lại tin của một phiên khi nó gửi quá nhiều tin liên tiếp: khoảng **10 tin sau mỗi lần chủ
