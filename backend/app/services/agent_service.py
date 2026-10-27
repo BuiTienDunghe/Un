@@ -224,7 +224,9 @@ class AgentService:
                         return self._dump(
                             {"result": "sổ gốc chưa có tin nhắn nào của server này"}
                         )
-                    return self._dump([history_hit_payload(hit) for hit in hits])
+                    # Chronological, so an overflow must give up the OLDEST
+                    # messages: they are the ones a "latest N" read cares least about.
+                    return self._dump([history_hit_payload(hit) for hit in hits], drop="first")
                 try:
                     limit = int(arguments.get("limit", 5))
                 except (TypeError, ValueError):
@@ -272,5 +274,29 @@ class AgentService:
         except Exception as error:
             return self._dump({"error": f"{type(error).__name__}: {error}"})
 
-    def _dump(self, payload: object) -> str:
-        return _clip(json.dumps(payload, ensure_ascii=False, default=str), self.tool_result_max_chars)
+    def _dump(self, payload: object, *, drop: str = "last") -> str:
+        """JSON for the model, at most tool_result_max_chars.
+
+        A list that does not fit loses WHOLE items and says how many, never
+        half of one. A plain character cut left broken JSON on every top_k=5
+        search, and on the chronological "latest N" history read it cut exactly
+        the newest messages (Agent Eval baseline v0.1, hist-05: 8 of 18 gone).
+        `drop="last"` gives up the end of a ranked list; `drop="first"` the
+        front of a chronological one. Anything else, or a list whose single
+        item is already too long, falls back to the character cut."""
+        text = json.dumps(payload, ensure_ascii=False, default=str)
+        limit = self.tool_result_max_chars
+        if len(text) <= limit or not isinstance(payload, list):
+            return _clip(text, limit)
+        items = list(payload)
+        while len(items) > 1:
+            items = items[1:] if drop == "first" else items[:-1]
+            omitted = len(payload) - len(items)
+            note = {
+                "omitted": omitted,
+                "note": f"đã bỏ {omitted} mục {'cũ nhất' if drop == 'first' else 'xếp cuối'} để vừa giới hạn kết quả công cụ",
+            }
+            fitted = json.dumps([note, *items] if drop == "first" else [*items, note], ensure_ascii=False, default=str)
+            if len(fitted) <= limit:
+                return fitted
+        return _clip(text, limit)
