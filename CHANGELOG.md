@@ -56,7 +56,14 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 - **Bảng điểm harness** (28/10, ticket 23). Mỗi lần chạy Agent Eval in ra bốn nhóm chỉ số (đúng, hiệu quả, bền,
   minh bạch) tính từ chính tệp kết quả của lần chạy, ghi điều kiện chạy (model đã nạp sẵn hay chưa, GPU có dùng chung
   không) và thêm một dòng vào `data/evaluation/results/kept/agent-eval-scorecard-history.jsonl`; 38 lần chạy đã giữ
-  được nạp lại làm lịch sử. Đây là số của bộ bài nội bộ, dùng để so các phiên bản harness với nhau.
+  được nạp lại làm lịch sử. Đây là số của bộ bài nội bộ, dùng để so các phiên bản harness với nhau. Có thêm cột
+  "trả lời có số liệu mà không tra": số lần kiểm của ticket 20 #2 buộc làm lại, và số câu vẫn gửi đi với con số không
+  rõ nguồn.
+- **Agent Eval v0.4** (28/10, test hồi quy nội bộ). Bộ chấm thêm mục `figures_without_lookup` (bài cần tra mà agent
+  không gọi công cụ nào, nhưng câu trả lời vẫn có con số hay số tiền; khớp chấm tay 61/61 câu đã lưu). Đồng thời sửa hai
+  mẫu chấm "không tìm thấy" bị lọt, siết hist-11 (cấm dữ kiện mượn từ cuộc họp) và cho hist-03 tra tài liệu trước.
+  Chấm lại các lần v0.3 đã lưu chỉ để chẩn đoán: mốc 35 → 35, #1-B 38 → 38. Mốc v0.4 chưa chạy (đăng ký trước, chờ đợt
+  đo chung).
 
 ### Changed
 - **Discord thành một gói riêng** (28/10, ticket 22): 26 module Discord dời vào `backend/app/discord/`
