@@ -59,8 +59,9 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   Lõi (agent, RAG, tài liệu, trí nhớ web, dashboard) không import gì từ gói; `main.py` cắm gói bằng
   `discord.register_routes()` và `discord.register_services()`. `STOPWORDS`/`fold` dời sang
   `app/utils/vi_text.py`. Bảng, migration và đường API không đổi (tài liệu OpenAPI giống từng byte);
-  `tests/test_discord_boundary.py` giữ luật. Còn một shim tạm `app/services/discord_history_service.py`
-  cho công cụ `search_history` của agent. Xem `docs/current_architecture.md`.
+  `tests/test_discord_boundary.py` giữ luật. Công cụ `search_history` của agent giờ do gói Discord tự đăng
+  ký vào registry công cụ (`app/discord/agent_tools.py`), cùng vị trí và cùng mô tả như trước; shim tạm
+  `app/services/discord_history_service.py` đã xoá (C4). Xem `docs/current_architecture.md`.
   - **Nâng cấp:** job RQ nạp trí nhớ đã nằm trong Redis trước khi nâng mang đường dẫn task cũ
     `app.workers.memory_tasks.discord_memory_ingest` và sẽ lỗi import ở worker mới. Hãy chạy hết hàng đợi
     trí nhớ trước khi nâng. `scripts/recover_discord_memory_jobs.py` **không** cứu được các job này: nó chỉ
