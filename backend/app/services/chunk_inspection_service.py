@@ -13,7 +13,7 @@ applying.
 """
 from __future__ import annotations
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import sessionmaker
 
 from app.postgres.models import ChunkFeedback, Document, DocumentChunk, DocumentVersion, new_id
@@ -104,6 +104,47 @@ class ChunkInspectionService:
                         "content_hash": chunk.content_hash,
                         "feedback": feedback_for(chunk),
                     }
+                    for chunk in rows
+                ],
+            }
+
+    def read_chunks(self, document_id: str, from_chunk: int, n: int) -> dict[str, object] | None:
+        """The agent's read_document (ticket 20 #1): up to `n` chunks of the active version
+        from chunk_index `from_chunk` on, whole, without feedback marks. None when the
+        document has no active indexed version: the agent answers that the same way as an
+        id it may not open."""
+        return self._read(document_id, n, DocumentChunk.chunk_index >= max(0, int(from_chunk)))
+
+    def chunks_on_page(self, document_id: str, page: int, n: int) -> dict[str, object] | None:
+        """read_document by page: the chunks whose page range covers `page`, in order. A
+        document without pages (txt, md) has page_start NULL, so nothing matches."""
+        page = int(page)
+        return self._read(
+            document_id,
+            n,
+            DocumentChunk.page_start <= page,
+            or_(DocumentChunk.page_end >= page, DocumentChunk.page_end.is_(None) & (DocumentChunk.page_start == page)),
+        )
+
+    def _read(self, document_id: str, n: int, *conditions) -> dict[str, object] | None:
+        with self.sessions() as session:
+            try:
+                document, version = self._active_version(session, document_id)
+            except ChunkInspectionError:
+                return None
+            rows = list(session.scalars(
+                select(DocumentChunk)
+                .where(DocumentChunk.version_id == version.id, *conditions)
+                .order_by(DocumentChunk.chunk_index)
+                .limit(max(1, int(n)))
+            ))
+            total = session.scalar(select(func.count()).select_from(DocumentChunk).where(DocumentChunk.version_id == version.id))
+            return {
+                "document_id": document.id,
+                "filename": document.original_filename,
+                "total_chunks": int(total or 0),
+                "chunks": [
+                    {"chunk_index": chunk.chunk_index, "page_start": chunk.page_start, "page_end": chunk.page_end, "content": chunk.content}
                     for chunk in rows
                 ],
             }

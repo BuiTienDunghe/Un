@@ -1,0 +1,148 @@
+{
+  "scores": {
+    "A": {
+      "total": 35,
+      "old_40": 34,
+      "long_5": 0
+    },
+    "#1": {
+      "total": 34,
+      "old_40": 29,
+      "long_5": 4
+    },
+    "#1-B": {
+      "total": 38,
+      "old_40": 33,
+      "long_5": 4
+    }
+  },
+  "b_r2": {
+    "total": 38,
+    "old_40": 33,
+    "long_5": 4
+  },
+  "b_r1_equals_r2_answers": 48,
+  "decision_rule": "ship #1-B if long_5 >= 4 and old_40 >= 33 (on r1, or the worse run if r1 != r2); else (C)",
+  "decision": "propose ship #1-B",
+  "old_tasks_answer_identical_to_A": 1,
+  "flips_vs_A": {
+    "doc-10": {
+      "A": true,
+      "#1-B": false
+    },
+    "doc-19": {
+      "A": true,
+      "#1-B": false
+    },
+    "doc-25": {
+      "A": true,
+      "#1-B": false
+    },
+    "doc-26": {
+      "A": true,
+      "#1-B": false
+    },
+    "doc-29": {
+      "A": false,
+      "#1-B": true
+    },
+    "doc-31": {
+      "A": false,
+      "#1-B": true
+    },
+    "hist-05": {
+      "A": true,
+      "#1-B": false
+    },
+    "hist-07": {
+      "A": false,
+      "#1-B": true
+    },
+    "stat-02": {
+      "A": false,
+      "#1-B": true
+    },
+    "doc-33": {
+      "A": false,
+      "#1-B": true
+    },
+    "doc-34": {
+      "A": false,
+      "#1-B": true
+    },
+    "doc-35": {
+      "A": false,
+      "#1-B": true
+    },
+    "doc-37": {
+      "A": false,
+      "#1-B": true
+    }
+  },
+  "flips_vs_#1": {
+    "doc-12": {
+      "#1": false,
+      "#1-B": true
+    },
+    "doc-20": {
+      "#1": false,
+      "#1-B": true
+    },
+    "doc-25": {
+      "#1": true,
+      "#1-B": false
+    },
+    "doc-29": {
+      "#1": false,
+      "#1-B": true
+    },
+    "hist-07": {
+      "#1": false,
+      "#1-B": true
+    },
+    "hist-08": {
+      "#1": false,
+      "#1-B": true
+    }
+  },
+  "read_document": {
+    "doc-33": {
+      "calls": [
+        {
+          "from_chunk": 0,
+          "n": 5
+        }
+      ],
+      "errors": {}
+    },
+    "doc-34": {
+      "calls": [
+        {
+          "from_chunk": 3,
+          "n": 3
+        }
+      ],
+      "errors": {}
+    },
+    "doc-35": {
+      "calls": [
+        {
+          "from_chunk": 8,
+          "n": 3
+        }
+      ],
+      "errors": {}
+    },
+    "doc-37": {
+      "calls": [
+        {
+          "from_chunk": 1,
+          "n": 3
+        }
+      ],
+      "errors": {}
+    }
+  },
+  "tokens_in_max": 3811,
+  "tokens_in_max_share_of_window": 0.233
+}
