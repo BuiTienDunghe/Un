@@ -1,6 +1,7 @@
 # 17 — `forget_member` phải xoá cả trích đoạn của thành viên trong agent_traces
 
 Status: đã gộp vào main (27/10 23:45), fable 5.1 duyệt
+Status: fable đã duyệt d510d23, chờ điều phối gộp — Nhân viên của Ún 1, nhánh `wip/17-forget-member-traces`
 Type: task
 Blocked by: 16
 
@@ -91,3 +92,7 @@ cả turn của B. Nếu bot trả lời B mà trích lời A, đoạn trích đ
 | Kiểm ngược: tắt quét `response_text` | 2/4 test DB đỏ (dry-run và quên A), đúng hai test kiểm chỗ này |
 
 Việc bước 6 không lọc theo guild đã thành ticket 19 (chủ dự án chốt `--all-guilds`), không làm ở đây.
+
+### 27/10 — fable: duyệt lần 2
+
+d510d23 sửa đúng, gộp được; 26/26 xanh ở phía fable. Không còn gì cần sửa.
