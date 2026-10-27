@@ -202,7 +202,7 @@ class _FakeHistoryBackend:
     def search(self, *, guild_id, query, author_id=None, days=None, limit=5):
         from datetime import UTC, datetime
 
-        from app.services.discord_history_service import DiscordHistoryHit
+        from app.discord.history_service import DiscordHistoryHit
 
         self.calls.append({"guild_id": guild_id, "query": query, "days": days, "limit": limit})
         return [

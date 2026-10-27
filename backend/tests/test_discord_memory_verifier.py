@@ -12,8 +12,8 @@ from sqlalchemy import select
 
 from app.postgres.database import create_postgres_engine, create_session_factory
 from app.postgres.models import DiscordMemoryCandidate
-from app.services.discord_memory_verifier import DiscordMemoryVerifierAdapter
-from app.services.discord_memory_worker_service import DiscordMemoryWorkerService
+from app.discord.memory_verifier import DiscordMemoryVerifierAdapter
+from app.discord.memory_worker_service import DiscordMemoryWorkerService
 from scripts.memory_e2e_eval import CaseWorld
 from tests.test_memory_review_pagination import _defer_candidate
 
@@ -90,7 +90,7 @@ def test_worker_records_verdict_on_the_candidate():
             ),
             extractor_schema_version="v1",
         )
-        from app.services.discord_memory_worker_service import (
+        from app.discord.memory_worker_service import (
             DiscordMemoryWorkerOutcome,
         )
         outcome = worker.verify_proposal(

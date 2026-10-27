@@ -11,7 +11,7 @@ import json
 from datetime import UTC, datetime, timedelta
 
 from app.services.agent_service import AgentService
-from app.services.discord_history_service import DiscordHistoryHit, history_hit_payload
+from app.discord.history_service import DiscordHistoryHit, history_hit_payload
 
 
 def hit(index: int, content: str | None = None) -> DiscordHistoryHit:

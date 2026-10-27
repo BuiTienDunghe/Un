@@ -3,14 +3,12 @@
 Two checks, both read without a database or a running service:
 
 - Source: no module under app/ outside app/discord/ imports app.discord. main.py is the
-  one place allowed to, because it calls the package's register(). Lazy imports inside
-  functions count. Today app/discord/ does not exist yet (C2 moves the code there), so
-  this check starts to bite at C2; it is written first so that C2 cannot land without it.
+  one place allowed to, because it wires the package in, and so is the one shim C2 left
+  for the agent's search_history tool. Lazy imports inside functions count.
 - Runtime: importing a core module in a fresh interpreter pulls in no Discord module.
-  This bites today: C1 moved STOPWORDS/fold out of discord_memory_guard, so
-  answer_grounding and memory_service now import none. The agent still reaches the
-  Discord history service until C4 moves search_history into the package; that one
-  debt is named below and nothing else is tolerated.
+  answer_grounding, memory_service and the web memory router load none. The agent still
+  reaches the Discord history service through the shim until C4 moves search_history
+  into the package; that one debt is named below and nothing else is tolerated.
 """
 from __future__ import annotations
 
@@ -28,8 +26,9 @@ APP = BACKEND / "app"
 # models.py imports it and the Discord models stay in the shared metadata (ticket 22, choice 2):
 # a constants module the core owns, whatever its name says.
 ALWAYS_ALLOWED = {"app.postgres.discord_memory_constants"}
-# The agent's search_history tool, until C4 registers it from the Discord package instead.
-SEARCH_HISTORY_DEBT = {"app.services.discord_history_service"}
+# The agent's search_history tool, until C4 registers it from the Discord package and deletes the shim.
+SHIM = "services/discord_history_service.py"
+SEARCH_HISTORY_DEBT = {"app.services.discord_history_service", "app.discord", "app.discord.history_service"}
 CORE_MODULES = {
     "app.services.answer_grounding": set(),
     "app.services.memory_service": set(),
@@ -57,12 +56,23 @@ def test_no_core_module_imports_the_discord_package():
     offenders = {}
     for path in sorted(APP.rglob("*.py")):
         relative = path.relative_to(APP).as_posix()
-        if relative == "main.py" or relative.startswith("discord/"):
+        if relative in ("main.py", SHIM) or relative.startswith("discord/"):
             continue
         names = imports_app_discord(ast.parse(path.read_text(encoding="utf-8")))
         if names:
             offenders[relative] = names
     assert not offenders, f"core modules import app.discord: {offenders}"
+
+
+def test_only_the_agent_uses_the_shim():
+    shim = "app.services.discord_history_service"
+    users = sorted(
+        path.relative_to(BACKEND).as_posix()
+        for path in BACKEND.rglob("*.py")
+        if path.relative_to(BACKEND).parts[0] in ("app", "scripts", "tests") and path.name != Path(__file__).name
+        and shim in path.read_text(encoding="utf-8")
+    )
+    assert users == ["app/services/agent_service.py"], f"{shim} is the agent's alone until C4: {users}"
 
 
 def test_the_source_check_sees_every_spelling_of_the_import():

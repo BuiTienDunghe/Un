@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from app.services.discord_memory_guard import (
+from app.discord.memory_guard import (
     auto_apply_allowed,
     content_words,
     evidence_grounded,
@@ -76,7 +76,7 @@ def test_negation_clause_blocks_a_fact_its_source_denies():
         source_text="Dũng: thôi chốt bỏ Postgres nhé, không dùng Postgres nữa",
     )
     # Clause-scoped: negation in a DIFFERENT clause must not block.
-    from app.services.discord_memory_guard import negation_clause_hit
+    from app.discord.memory_guard import negation_clause_hit
 
     assert not negation_clause_hit(
         "GPU là RTX 3060", "tôi không thích trà, card tôi là RTX 3060"

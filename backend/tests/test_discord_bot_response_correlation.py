@@ -13,8 +13,8 @@ from app.postgres.models import (
     DiscordSessionTurn,
     DiscordTurnDelivery,
 )
-from app.services.discord_session_service import DiscordSessionService
-from app.services.discord_turn_service import (
+from app.discord.session_service import DiscordSessionService
+from app.discord.turn_service import (
     DiscordTurnDeliveryConflictError,
     DiscordTurnService,
 )

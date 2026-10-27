@@ -17,7 +17,7 @@ from uuid import UUID
 from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import sessionmaker
 
-from app.postgres.discord_memory_repositories import (
+from app.discord.memory_repositories import (
     DiscordMemoryIdentity,
     DiscordMemoryRepository,
 )

@@ -5,16 +5,16 @@ import socket
 from app.config.settings import get_settings
 from app.llm_clients.ollama_client import OllamaClient
 from app.postgres.database import create_postgres_engine, create_session_factory
-from app.services.discord_memory_extractor import (
+from app.discord.memory_extractor import (
     DiscordMemoryExtractorAdapter,
 )
-from app.services.discord_memory_review_service import (
+from app.discord.memory_review_service import (
     DiscordMemoryReviewService,
 )
-from app.services.discord_memory_verifier import (
+from app.discord.memory_verifier import (
     DiscordMemoryVerifierAdapter,
 )
-from app.services.discord_memory_worker_service import (
+from app.discord.memory_worker_service import (
     DiscordMemoryWorkerService,
 )
 from app.services.logging_service import LoggingService

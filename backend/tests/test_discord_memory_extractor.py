@@ -8,7 +8,7 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
-from app.services.discord_memory_extractor import (
+from app.discord.memory_extractor import (
     DISCORD_MEMORY_EXTRACTOR_PROMPT_VERSION,
     DISCORD_MEMORY_EXTRACTOR_SYSTEM_PROMPT,
     DiscordMemoryExtractorAdapter,
@@ -466,8 +466,7 @@ def test_prompt_version_matches_prompt_body():
     row is stamped with the label, so a label that does not identify the text
     that produced it quietly destroys the ability to compare two runs.
     """
-    from app.services import discord_memory_extractor as module
-
+    from app.discord import memory_extractor as module
     label = DISCORD_MEMORY_EXTRACTOR_PROMPT_VERSION
     generation = label.rsplit("_v", 1)[-1]
     body_constant = f"DISCORD_MEMORY_EXTRACTOR_SYSTEM_PROMPT_V{generation}"

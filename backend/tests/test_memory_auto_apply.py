@@ -16,7 +16,7 @@ import pytest
 from sqlalchemy import delete, select, update
 
 from app.postgres.database import create_postgres_engine, create_session_factory
-from app.postgres.discord_memory_repositories import DiscordMemoryRepository
+from app.discord.memory_repositories import DiscordMemoryRepository
 from app.postgres.models import (
     Conversation,
     DiscordConversationSession,
@@ -27,7 +27,7 @@ from app.postgres.models import (
     DiscordTurnDelivery,
     Memory,
 )
-from app.services.discord_memory_worker_service import (
+from app.discord.memory_worker_service import (
     DiscordMemoryWorkerOutcome,
     DiscordMemoryWorkerService,
 )

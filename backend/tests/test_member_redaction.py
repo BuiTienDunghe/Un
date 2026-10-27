@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 
-from app.stores.member_redaction import (
+from app.discord.member_redaction import (
     LIMITS_NOTE,
     MIN_QUOTE_CHARS,
     PLACEHOLDER,

@@ -6,9 +6,9 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from app.postgres.discord_memory_repositories import DiscordMemoryConflictError
+from app.discord.memory_repositories import DiscordMemoryConflictError
 from app.security.api_key import require_api_key
-from app.services.discord_memory_review_service import (
+from app.discord.memory_review_service import (
     CandidateNotFoundError,
     CandidateNotReviewableError,
     MemoryMirrorError,

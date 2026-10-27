@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from sqlalchemy.orm import sessionmaker
 
-from app.postgres.discord_memory_job_repository import (
+from app.discord.memory_job_repository import (
     DiscordMemoryJobRepository,
 )
 

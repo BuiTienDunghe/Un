@@ -6,7 +6,7 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
-from app.postgres.discord_repositories import DiscordSessionRepository
+from app.discord.repositories import DiscordSessionRepository
 from app.postgres.models import DiscordConversationSession
 
 

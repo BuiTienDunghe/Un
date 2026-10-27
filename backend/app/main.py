@@ -12,7 +12,10 @@ from app.config.settings import PROJECT_ROOT, get_settings
 from app.llm_clients.ollama_client import OllamaClient
 from app.llm_clients.gemini_client import GeminiClient
 from app.llm_clients.deepseek_client import DeepSeekClient
-from app.routers import agent, auth, bot, chat, condensations, conversations, dashboard, discord_history, discord_sessions, documents, health, memory, memory_review, models, ocr, rag, research, vision
+from app.discord.routers import bot, condensations, memory_review
+from app.discord.routers import history as discord_history
+from app.discord.routers import sessions as discord_sessions
+from app.routers import agent, auth, chat, conversations, dashboard, documents, health, memory, models, ocr, rag, research, vision
 from app.security.api_key import require_api_key_for_read
 from app.security.auth import require_admin
 from app.services.auth_service import AuthService
@@ -35,15 +38,15 @@ from app.services.postgres_retrieval_service import PostgresRetrievalService
 from app.services.job_queue_service import JobQueueService
 from app.services.operational_service import OperationalService
 from app.services.reranker_service import RerankerService
-from app.services.bot_control_service import BotControlService
-from app.services.discord_condensation_service import DiscordCondensationService
-from app.services.discord_history_service import DiscordHistoryService
-from app.services.discord_session_service import DiscordSessionService
-from app.services.discord_memory_review_service import DiscordMemoryReviewService
-from app.services.discord_memory_completion_service import (
+from app.discord.bot_control_service import BotControlService
+from app.discord.condensation_service import DiscordCondensationService
+from app.discord.history_service import DiscordHistoryService
+from app.discord.session_service import DiscordSessionService
+from app.discord.memory_review_service import DiscordMemoryReviewService
+from app.discord.memory_completion_service import (
     DiscordMemoryCompletionService,
 )
-from app.services.discord_turn_service import DiscordTurnService
+from app.discord.turn_service import DiscordTurnService
 from app.stores.qdrant_store import QdrantStore
 from app.stores.embedding_cache_store import PostgresEmbeddingCacheStore
 from app.stores.postgres_auxiliary_store import PostgresAuxiliaryStore

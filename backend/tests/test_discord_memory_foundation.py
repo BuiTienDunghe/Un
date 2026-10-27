@@ -12,12 +12,12 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.exc import IntegrityError
 
 from app.postgres.database import create_postgres_engine, create_session_factory
-from app.postgres.discord_memory_repositories import (
+from app.discord.memory_repositories import (
     DiscordMemoryConflictError,
     DiscordMemoryIdentity,
     DiscordMemoryRepository,
 )
-from app.postgres.discord_repositories import DiscordSessionRepository
+from app.discord.repositories import DiscordSessionRepository
 from app.postgres.models import (
     Conversation,
     DiscordConversationSession,
@@ -26,7 +26,7 @@ from app.postgres.models import (
     DiscordMemorySource,
     DiscordSessionTurn,
 )
-from app.services.discord_session_service import DiscordSessionService
+from app.discord.session_service import DiscordSessionService
 
 
 URL = os.getenv("POSTGRES_TEST_URL")

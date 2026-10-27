@@ -18,8 +18,8 @@ from app.postgres.models import (
     DiscordCondensationBatch,
     DiscordCondensationProposition,
 )
-from app.services.discord_condensation_service import DiscordCondensationService
-from app.services.discord_history_service import DiscordHistoryService
+from app.discord.condensation_service import DiscordCondensationService
+from app.discord.history_service import DiscordHistoryService
 
 URL = os.getenv("POSTGRES_TEST_URL")
 pytestmark = pytest.mark.skipif(not URL, reason="set POSTGRES_TEST_URL")

@@ -24,7 +24,7 @@ half-deleting:
      search_history traces. Rewritten in place, not deleted — another member's
      lines in the same result stay. Their words are read BEFORE steps 6-7 delete
      them, since nothing else says what to look for. Only verbatim copies are
-     found (app/stores/member_redaction.py); a paraphrase is not detectable.
+     found (app/discord/member_redaction.py); a paraphrase is not detectable.
 
 Every step is scoped to the guild where the member asked (--guild-id). --all-guilds
 widens every step to every guild they have anything in; it is never the default (the
@@ -57,10 +57,10 @@ from app.postgres.models import (
     DiscordSessionTurn,
     Message,
 )
-from app.services.discord_condensation_service import (
+from app.discord.condensation_service import (
     DiscordCondensationService,
 )
-from app.stores.member_redaction import (
+from app.discord.member_redaction import (
     LIMITS_NOTE,
     PLACEHOLDER,
     QuoteIndex,

@@ -11,9 +11,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
 from app.postgres.database import create_postgres_engine, create_session_factory
-from app.postgres.discord_repositories import DiscordSessionRepository
+from app.discord.repositories import DiscordSessionRepository
 from app.postgres.models import Conversation, DiscordConversationSession, DiscordSessionTurn
-from app.services.discord_session_service import DiscordDirectMessageUnsupportedError, DiscordSessionService
+from app.discord.session_service import DiscordDirectMessageUnsupportedError, DiscordSessionService
 from app.stores.postgres_auxiliary_store import PostgresAuxiliaryStore
 
 

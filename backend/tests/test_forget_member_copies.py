@@ -27,7 +27,7 @@ from app.postgres.models import (
     DiscordSessionTurn,
     Message,
 )
-from app.stores.member_redaction import PLACEHOLDER
+from app.discord.member_redaction import PLACEHOLDER
 from app.stores.postgres_auxiliary_store import PostgresAuxiliaryStore
 from scripts.forget_member import forget
 

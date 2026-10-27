@@ -33,7 +33,7 @@ def resolve_job_route(
         ),
         DISCORD_MEMORY_INGEST_JOB_TYPE: JobRoute(
             queue_name=memory_queue_name,
-            task_path="app.workers.memory_tasks.discord_memory_ingest",
+            task_path="app.discord.memory_tasks.discord_memory_ingest",
         ),
     }
     try:
