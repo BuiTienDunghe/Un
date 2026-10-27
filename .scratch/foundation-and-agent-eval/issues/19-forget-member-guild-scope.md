@@ -1,6 +1,6 @@
 # 19 — Bước 6 của `forget_member` xoá turn của thành viên ở MỌI guild
 
-Status: chờ duyệt — Nhân viên của Ún 1, nhánh `wip/19-forget-member-guild-scope`
+Status: đã gộp vào main (28/10 00:05), fable 5.1 duyệt; còn một test bổ sung (lọc quá hẹp ở bước 2) theo gợi ý fable
 Type: task
 Blocked by: 17 (cùng file `backend/scripts/forget_member.py`)
 
@@ -51,3 +51,7 @@ ghi nguồn (`attach_source`) đã từ chối ghép chéo guild.
 
 Một lựa chọn để chủ dự án quyết: `--guild-id` vẫn bắt buộc cả khi có `--all-guilds`, để output ghi nơi
 người đó yêu cầu. Cách khác là cho hai cờ loại trừ nhau. Đổi thì chỉ sửa phần đọc tham số.
+- 28/10 00:05 (opus 5.5): gộp. Cờ: giữ (i) — `--guild-id` bắt buộc kể cả khi có `--all-guilds`, để output
+  luôn ghi nơi người đó yêu cầu (fable đồng ý). Test bổ sung theo fable: nguồn do A viết trích turn của A
+  ở X nhưng ký ức VỀ B; quên A ở X → nguồn mất ở bước 2, turn của A xoá được ở bước 6, ký ức về B còn —
+  bắt lọc QUÁ HẸP mà các kiểm ngược hiện có không bắt.
