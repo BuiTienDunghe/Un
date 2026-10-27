@@ -32,6 +32,16 @@ class StatusBackend(Protocol):
     def health(self) -> dict[str, object]: ...
 
 
+class DocumentReader(Protocol):
+    """Consecutive chunks of a document's active version, whole (read_document, ticket 20 #1):
+    {"document_id", "filename", "total_chunks", "chunks": [{"chunk_index", "page_start",
+    "page_end", "content"}]}, or None when the document has no active indexed version."""
+
+    def read_chunks(self, document_id: str, from_chunk: int, n: int) -> dict[str, object] | None: ...
+
+    def chunks_on_page(self, document_id: str, page: int, n: int) -> dict[str, object] | None: ...
+
+
 class HistoryBackend(Protocol):
     def search(
         self,
@@ -54,7 +64,9 @@ class HistoryBackend(Protocol):
 
 AGENT_GUIDE = (
     "Bạn có thể dùng công cụ khi cần dữ liệu thật: `search_documents` tìm trong "
-    "tài liệu người dùng đã tải lên, `search_history` đọc tin nhắn cũ của "
+    "tài liệu người dùng đã tải lên (mỗi đoạn chỉ hiện 400 ký tự đầu; chưa thấy "
+    "câu trả lời thì gọi `read_document` với document_id và chunk_index trong kết "
+    "quả để đọc trọn đoạn), `search_history` đọc tin nhắn cũ của "
     "server (có query = tìm từ khóa; bỏ trống query = N tin mới nhất, dùng "
     "khi cần tóm tắt gần đây), `system_status` xem sức khỏe hệ "
     "thống. Chỉ gọi công cụ khi câu hỏi thật sự "
@@ -71,11 +83,21 @@ AGENT_GUIDE = (
 # clipped message as if it were the whole of it.
 HISTORY_MESSAGE_MAX_CHARS = 800
 
+# A search shows the first SEARCH_EXCERPT_CHARS of each chunk; read_document returns
+# chunks whole up to READ_CHUNK_MAX_CHARS each, READ_RESULT_MAX_CHARS in all (ticket 20
+# #1, L2). Measured on the v0.2 lab retrieval: chunks run 1 680 characters at the median
+# and 2 429 at most, so the old 400 showed about a quarter of one. At ~2.9 characters a
+# token, three reads of 6 000 are ~6.2k tokens: with the prompt, half of the 16k window.
+SEARCH_EXCERPT_CHARS = 400
+READ_CHUNK_MAX_CHARS = 2400
+READ_RESULT_MAX_CHARS = 6000
+READ_MAX_CHUNKS = 3
+
 SEARCH_DOCUMENTS_SCHEMA: dict[str, Any] = {
     "type": "function",
     "function": {
         "name": "search_documents",
-        "description": "Tìm các đoạn liên quan trong tài liệu đã index (PDF, DOCX, ...). Trả về tên tệp, trang và trích đoạn.",
+        "description": f"Tìm các đoạn liên quan trong tài liệu đã index (PDF, DOCX, ...). Trả về tên tệp, trang, {SEARCH_EXCERPT_CHARS} ký tự đầu của mỗi đoạn (excerpt), độ dài cả đoạn (chars), và document_id + chunk_index để đọc trọn đoạn bằng read_document.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -83,6 +105,23 @@ SEARCH_DOCUMENTS_SCHEMA: dict[str, Any] = {
                 "top_k": {"type": "integer", "description": "Số đoạn muốn lấy (1-8), mặc định 4"},
             },
             "required": ["query"],
+        },
+    },
+}
+READ_DOCUMENT_SCHEMA: dict[str, Any] = {
+    "type": "function",
+    "function": {
+        "name": "read_document",
+        "description": f"Đọc trọn nguyên văn các đoạn liên tiếp của một tài liệu mà search_documents vừa tìm thấy, khi {SEARCH_EXCERPT_CHARS} ký tự đầu chưa đủ để trả lời. Dùng document_id và chunk_index trong kết quả search_documents. Trả về các đoạn kèm next_from_chunk: muốn đọc tiếp thì gọi lại với from_chunk bằng số đó (null = đã hết tài liệu).",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "document_id": {"type": "string", "description": "document_id trong kết quả search_documents"},
+                "from_chunk": {"type": "integer", "description": "Đọc từ đoạn này (chunk_index trong kết quả search_documents), mặc định 0"},
+                "n": {"type": "integer", "description": f"Số đoạn liên tiếp muốn đọc (1-{READ_MAX_CHUNKS}), mặc định 2"},
+                "page": {"type": "integer", "description": "Tùy chọn: đọc các đoạn nằm ở trang này thay cho from_chunk (chỉ tài liệu có số trang, như PDF)"},
+            },
+            "required": ["document_id"],
         },
     },
 }
@@ -123,6 +162,12 @@ BAD_ARGUMENTS = "BAD_ARGUMENTS"
 UNKNOWN_TOOL = "UNKNOWN_TOOL"
 TOOL_FAILED = "TOOL_FAILED"
 TOOL_TIMEOUT = "TOOL_TIMEOUT"
+# One sentence for an id that does not exist and for one this turn may not open, so
+# read_document never tells the model which document ids exist.
+NOT_READABLE = (
+    "document_id này không có trong kết quả search_documents của lượt này. Dùng đúng "
+    "document_id trong kết quả tra; chưa tra thì gọi search_documents trước."
+)
 
 # The whole turn's wall clock (ticket 16). Agent Eval v0.2 measured 3.2-3.6 s median and
 # 9.2 s at worst per answer, warm or cold; the Discord bot waits 180 s for a turn. 90 s is
@@ -183,6 +228,16 @@ def _clip(text: str, limit: int) -> str:
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
+def _bounded(value: object, default: int, low: int, high: int | None = None) -> int:
+    """A model-supplied whole number, clamped; anything unreadable is the default."""
+    try:
+        number = default if value is None else int(value)
+    except (TypeError, ValueError):
+        number = default
+    number = max(number, low)
+    return number if high is None else min(number, high)
+
+
 def _history_item(hit: object) -> dict[str, object]:
     payload = history_hit_payload(hit)
     payload["message"] = _clip(str(payload["message"]), HISTORY_MESSAGE_MAX_CHARS)
@@ -202,14 +257,18 @@ class AgentService:
         turn_budget_seconds: float = TURN_BUDGET_SECONDS,
         final_reserve_seconds: float = FINAL_RESERVE_SECONDS,
         clock: Callable[[], float] = monotonic,
+        document_reader: DocumentReader | None = None,
+        read_result_max_chars: int = READ_RESULT_MAX_CHARS,
     ) -> None:
         self.defense = defense or InjectionDefense(enabled=False)
         self.router = router
         self.retrieval_service = retrieval_service
         self.operational_service = operational_service
         self.history_service = history_service
+        self.document_reader = document_reader
         self.max_steps = max(1, max_steps)
         self.tool_result_max_chars = max(200, tool_result_max_chars)
+        self.read_result_max_chars = max(200, read_result_max_chars)
         self.turn_budget_seconds = max(1.0, float(turn_budget_seconds))
         self.final_reserve_seconds = min(max(0.0, float(final_reserve_seconds)), self.turn_budget_seconds)
         self.clock = clock
@@ -232,6 +291,13 @@ class AgentService:
         guide = {"role": "system", "content": self.defense.agent_guide(AGENT_GUIDE)}
         insert_at = 1 if working and working[0].get("role") == "system" else 0
         working.insert(insert_at, guide)
+        # The turn's own copy, so the caller's dict is never written to. It carries what
+        # read_document may open: a document search_documents showed in THIS turn, or one
+        # the caller allows outright (ticket 20 #1, A2).
+        tool_context = {
+            **(tool_context or {}),
+            "readable_documents": set((tool_context or {}).get("readable_documents") or ()),
+        }
 
         steps: list[dict[str, object]] = []
         model_used = ""
@@ -434,20 +500,94 @@ class AgentService:
         chunks = self.retrieval_service.retrieve(query, min(max(top_k, 1), 8), None)
         if not chunks:
             return self._dump({"result": "không tìm thấy đoạn tài liệu nào phù hợp"}), None, None
-        return self._dump([
+        readable = (tool_context or {}).get("readable_documents")
+        items = []
+        for chunk in chunks:
+            content = str(chunk.get("content") or "")
+            item: dict[str, object] = {"filename": chunk.get("filename"), "page": chunk.get("page")}
+            # The handle read_document takes (ticket 20 #1, H1). A chunk without a document
+            # behind it (a hand-written eval fixture) gets none: it cannot be read further.
+            if chunk.get("document_id"):
+                item["document_id"] = str(chunk["document_id"])
+                item["chunk_index"] = chunk.get("chunk_index")
+                if isinstance(readable, set):
+                    readable.add(item["document_id"])
+            item["excerpt"] = _clip(content, SEARCH_EXCERPT_CHARS)
+            # How long the whole chunk is, so the model knows the excerpt stopped short.
+            item["chars"] = len(content)
+            item["score"] = round(float(chunk.get("score") or 0.0), 3)
+            items.append(item)
+        return self._dump(items), None, None
+
+    def _read_document(self, arguments: dict[str, Any], tool_context: dict[str, Any] | None) -> ToolOutput:
+        if self.document_reader is None:
+            return self._error(
+                TOOL_UNAVAILABLE_HERE,
+                "read_document chưa dùng được ở đây; trả lời bằng các trích đoạn search_documents đã cho.",
+            )
+        document_id = str(arguments.get("document_id") or "").strip()
+        if not document_id or document_id not in (tool_context or {}).get("readable_documents", ()):
+            return self._error(BAD_ARGUMENTS, NOT_READABLE)
+        n = _bounded(arguments.get("n"), 2, 1, READ_MAX_CHUNKS)
+        page = _bounded(arguments.get("page"), 0, 0)
+        if page:
+            # A page, when given, wins over from_chunk: a model that sends both by habit
+            # should not lose a round to an error.
+            found = self.document_reader.chunks_on_page(document_id, page, n)
+        else:
+            found = self.document_reader.read_chunks(document_id, _bounded(arguments.get("from_chunk"), 0, 0), n)
+        if found is None:
+            return self._error(BAD_ARGUMENTS, NOT_READABLE)
+        total = int(found.get("total_chunks") or 0)
+        if not found.get("chunks"):
+            if page:
+                return self._dump({
+                    "result": f"không có đoạn nào ở trang {page} (tài liệu ngắn hơn, hoặc không chia trang); đọc theo from_chunk",
+                    "total_chunks": total,
+                }), None, None
+            return self._dump({"result": "đã hết tài liệu", "total_chunks": total}), None, None
+        return self._fit_chunks(found, total), None, None
+
+    def _fit_chunks(self, found: dict[str, object], total: int) -> str:
+        """As many whole chunks as fit read_result_max_chars, with next_from_chunk at the
+        first one left out. Fitted here, where each chunk's length is known: _dump drops
+        items only from a list, and could not say where the reading goes on."""
+        shown = [
             {
-                "filename": chunk.get("filename"),
-                "page": chunk.get("page"),
-                "excerpt": _clip(str(chunk.get("content") or ""), 400),
-                "score": round(float(chunk.get("score") or 0.0), 3),
+                "chunk_index": chunk.get("chunk_index"),
+                "page_start": chunk.get("page_start"),
+                "page_end": chunk.get("page_end"),
+                "content": _clip(str(chunk.get("content") or ""), READ_CHUNK_MAX_CHARS),
             }
-            for chunk in chunks
-        ]), None, None
+            for chunk in found["chunks"]  # type: ignore[union-attr]
+        ]
+
+        def text(count: int) -> str:
+            last = shown[count - 1]["chunk_index"]
+            following = last + 1 if isinstance(last, int) and last + 1 < total else None
+            return json.dumps({
+                "document_id": found.get("document_id"),
+                "filename": found.get("filename"),
+                "total_chunks": total,
+                "chunks": shown[:count],
+                "next_from_chunk": following,
+            }, ensure_ascii=False, default=str)
+
+        limit = self.read_result_max_chars
+        count = len(shown)
+        while count > 1 and len(text(count)) > limit:
+            count -= 1
+        # One chunk alone over a cap set below a chunk's size: shorten it rather than
+        # cut the JSON, so the model still reads valid JSON and a next_from_chunk.
+        while len(text(1)) > limit and len(shown[0]["content"]) > 1 and count == 1:
+            excess = len(text(1)) - limit
+            shown[0]["content"] = _clip(shown[0]["content"], max(1, len(shown[0]["content"]) - excess))
+        return self._dump(json.loads(text(count)), limit=limit)
 
     def _system_status(self, arguments: dict[str, Any], tool_context: dict[str, Any] | None) -> ToolOutput:
         return self._dump(self.operational_service.health()), None, None
 
-    def _dump(self, payload: object, *, drop: str = "last") -> str:
+    def _dump(self, payload: object, *, drop: str = "last", limit: int | None = None) -> str:
         """JSON for the model, at most tool_result_max_chars.
 
         A list that does not fit loses WHOLE items and says how many, never
@@ -462,7 +602,7 @@ class AgentService:
         a note placed INSIDE the list could be counted as one more message
         when the model is asked to summarise N of them (review 27/10)."""
         text = json.dumps(payload, ensure_ascii=False, default=str)
-        limit = self.tool_result_max_chars
+        limit = self.tool_result_max_chars if limit is None else limit
         if len(text) <= limit or not isinstance(payload, list):
             return _clip(text, limit)
         items = list(payload)
@@ -488,6 +628,7 @@ class AgentService:
 # without a handler, nor run without being declared.
 REGISTRY: dict[str, AgentTool] = {tool.name: tool for tool in (
     AgentTool(SEARCH_DOCUMENTS_SCHEMA, AgentService._search_documents),
+    AgentTool(READ_DOCUMENT_SCHEMA, AgentService._read_document),
     AgentTool(SEARCH_HISTORY_SCHEMA, AgentService._search_history),
     AgentTool(SYSTEM_STATUS_SCHEMA, AgentService._system_status),
 )}
