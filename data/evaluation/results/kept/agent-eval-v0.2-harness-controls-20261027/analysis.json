@@ -1,0 +1,82 @@
+{
+ "hashes_equal": {
+  "agent_guide_sha256": true,
+  "system_prompt_sha256": true,
+  "discord_context_sha256": true,
+  "tools_sha256": true
+ },
+ "commits": {
+  "A": "49c696f",
+  "B": "2306d07"
+ },
+ "dirty": {
+  "A": false,
+  "B": false
+ },
+ "A_same_as_2231": 40,
+ "same_before_hist08": 27,
+ "of_before_hist08": 27,
+ "first_answer_diff": "hist-08",
+ "answers_differ": [
+  "hist-08",
+  "hist-09",
+  "hist-10"
+ ],
+ "passed": {
+  "A": 34,
+  "B": 34
+ },
+ "flips": {
+  "gained": [],
+  "lost": []
+ },
+ "targets": {
+  "hist-08": {
+   "A": true,
+   "B": true
+  },
+  "hist-09": {
+   "A": true,
+   "B": true
+  },
+  "hist-10": {
+   "A": true,
+   "B": true
+  }
+ },
+ "rule": {
+  "total_not_lower": true,
+  "no_target_lost": true,
+  "no_regression": true
+ },
+ "budget": {
+  "stop_reasons": {
+   "final": 40,
+   "max_steps": 0,
+   "turn_budget": 0,
+   "turn_budget_exhausted": 0
+  },
+  "finals": 40,
+  "slowest_task_ms": [
+   9353,
+   "doc-04"
+  ]
+ },
+ "summary_checks": {
+  "1_missing_latency": [],
+  "2_final_without_stop_reason": [],
+  "3_tool_call_without_declared_or_shape": [],
+  "4_targets_without_unavailable_code": [],
+  "5_outside_vocabulary": []
+ },
+ "summary_checks_pass": true,
+ "summary_rows": 102,
+ "error_codes_seen": [
+  "TOOL_UNAVAILABLE_HERE"
+ ],
+ "tokens": {
+  "steps_with_tokens": 0,
+  "model_rounds": 71,
+  "model_rounds_with_tokens": 71
+ }
+}
