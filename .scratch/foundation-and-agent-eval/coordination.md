@@ -86,6 +86,13 @@ dự án gõ** (fable 5.1 đếm được, 27/10). Ban đêm không có người
 lần khi xong việc, không báo tiến độ. Lần đầu bị giữ (fable 5.1 sau khoảng 10
 tin, 27/10; chủ dự án phải mở lại). Gom kết luận: mỗi nhánh một tin, đủ để không cần hỏi lại.
 
+## Duyệt qua tệp thay vì tin nhắn (28/10 00:55)
+
+Giới hạn khoảng 10 tin của mỗi phiên không chỉnh được từ đây (không có trong cài đặt của app; nó đặt lại khi chủ
+dự án gõ vào chính phiên đó). Để fable không cạn lượt: fable ghi mỗi kết luận duyệt vào
+`reviews/<nhánh>-<sha ngắn>.md` (trong checkout chính, chỉ thư mục này), dòng đầu là **GỘP ĐƯỢC** hoặc **CẦN SỬA**.
+Nhân viên tự đọc tệp đó; điều phối đọc trước khi gộp. Fable chỉ nhắn khi có điều chặn hoặc cần quyết định.
+
 ## Gộp
 
 Nhánh → fable 5.1 duyệt diff (đúng ticket? có hồi quy? test có kiểm đúng điều cần kiểm?) → opus gộp
