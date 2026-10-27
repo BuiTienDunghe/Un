@@ -67,11 +67,17 @@ def record(
     client: httpx.Client,
     *,
     task_ids: list[str] | None = None,
+    rerecord: bool = False,
     max_context_chunks: int | None = None,
     commit: str = "unknown",
     progress: Any = print,
 ) -> dict[str, Any]:
-    """Record the chosen fixtures (default: every `pending` one) and return the manifest."""
+    """Record the chosen fixtures (default: every `pending` one) and return the manifest.
+
+    Refused before any request: a hand-written fixture, ever (the traps must
+    stay deterministic), and an already recorded one unless `rerecord` (its
+    chunks are part of a citable dataset hash, so replacing them is a version
+    bump someone has to mean)."""
     fixtures = _read_jsonl(dataset_dir / "retrieval.jsonl")
     tasks = {task["id"]: task for task in _read_jsonl(dataset_dir / "tasks.jsonl")}
     chosen = [f for f in fixtures if (f["task_id"] in task_ids if task_ids else f["source"] == "pending")]
@@ -79,6 +85,12 @@ def record(
         unknown = sorted(set(task_ids) - {f["task_id"] for f in chosen})
         if unknown:
             raise ValueError(f"không có fixture cho: {', '.join(unknown)}")
+    handwritten = [f["task_id"] for f in chosen if f["source"] == "handwritten"]
+    if handwritten:
+        raise ValueError(f"không bao giờ ghi đè bài viết tay: {', '.join(handwritten)}")
+    recorded_already = [f["task_id"] for f in chosen if f["source"] == "recorded"]
+    if recorded_already and not rerecord:
+        raise ValueError(f"đã ghi rồi: {', '.join(recorded_already)} (ghi lại cần --rerecord và nâng version)")
     if not chosen:
         raise ValueError("không có fixture nào cần ghi")
 
@@ -126,7 +138,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--dataset", type=Path, default=DATASET_DIR)
     parser.add_argument("--api", default="http://127.0.0.1:8100", help="the lab API (training.common.eval_stack --profile lab)")
-    parser.add_argument("--tasks", help="comma-separated task ids to (re-)record (default: every pending fixture)")
+    parser.add_argument("--tasks", help="comma-separated task ids to record (default: every pending fixture)")
+    parser.add_argument("--rerecord", action="store_true", help="allow replacing already recorded fixtures (then bump the dataset version)")
     parser.add_argument("--env-file", type=Path, help="the .env holding LOCAL_AI_API_KEY (default: this checkout's)")
     args = parser.parse_args(argv)
 
@@ -138,6 +151,7 @@ def main(argv: list[str] | None = None) -> int:
             args.dataset,
             client,
             task_ids=[t.strip() for t in args.tasks.split(",") if t.strip()] if args.tasks else None,
+            rerecord=args.rerecord,
             max_context_chunks=int(settings.load_config().get("rag", {}).get("max_context_chunks", 5)),
             commit=commit,
         )

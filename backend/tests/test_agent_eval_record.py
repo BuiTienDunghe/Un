@@ -172,6 +172,23 @@ def test_an_answer_past_the_agents_400_characters_counts_as_missing():
     assert answer_in_chunks(computed, [{"content": "Bảo trì từ 8 giờ đến 10 giờ sáng."}]) is True
 
 
+def test_naming_a_trap_or_a_recorded_fixture_is_refused_before_any_request(tmp_path):
+    recorded = {**FIXTURES[0], "source": "recorded", "chunks": [{"filename": "b.md", "page": None, "content": "2 giờ", "score": 0.9}]}
+    dataset = write_dataset(tmp_path / "ds", [recorded, FIXTURES[1], FIXTURES[2]])
+    before = (dataset / "retrieval.jsonl").read_bytes()
+    client, seen = fake_api({"giờ chạy backup tự động": [source("Backup lúc 2 giờ.", "c9", 0.9)]})
+
+    with pytest.raises(ValueError, match="không bao giờ ghi đè bài viết tay: doc-h1"):
+        record(dataset, client, task_ids=["doc-h1", "doc-r2"], progress=lambda line: None)
+    with pytest.raises(ValueError, match="đã ghi rồi: doc-r1"):
+        record(dataset, client, task_ids=["doc-r1"], progress=lambda line: None)
+    assert seen == [] and (dataset / "retrieval.jsonl").read_bytes() == before
+
+    # Deliberate re-recording is allowed, and only then.
+    record(dataset, client, task_ids=["doc-r1"], rerecord=True, progress=lambda line: None)
+    assert [body["message"] for body in seen] == ["giờ chạy backup tự động"]
+
+
 def test_a_failed_query_writes_nothing(tmp_path):
     dataset = write_dataset(tmp_path / "ds")
     before = (dataset / "retrieval.jsonl").read_bytes()

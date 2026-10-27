@@ -56,3 +56,33 @@ Blocked by: 06 (đã gộp); phần chạy GPU chờ 11 (11 đang đo p50 /rag/s
   không cần stack, GPU hay Postgres.
 - Chưa làm: ghi truy xuất, baseline 3 lần ở t0+seed và 1 lần ở t0.4, chấm tay ≥5 bài, RESULTS.md.
   Tất cả chờ fable duyệt 12 bài và opus báo 11 xong.
+
+**27/10 — bổ sung (người duyệt + opus).**
+
+- Công cụ ghi giờ từ chối `--tasks` nhắm vào bài viết tay (luôn luôn), và nhắm vào bài đã ghi nếu
+  không có `--rerecord`. Ghi lại một bài đã ghi nghĩa là đổi hash dataset đang được trích dẫn, nên
+  phải nâng version. Việc từ chối xảy ra trước mọi request. Test:
+  `test_naming_a_trap_or_a_recorded_fixture_is_refused_before_any_request`. Tổng: 64 passed.
+- **`--probe` không nhẹ, cần opus xác nhận cho baseline.** `ProductionProbes` làm những việc sau:
+  - Gọi `/api/embed` một lần (embedding, chạy GPU).
+  - Gọi `/api/chat` một lần lên mô hình OCR (GPU).
+  - Đọc độ rộng vector và số điểm của các collection Qdrant.
+  - Chạy 2 câu `COUNT` trên `DATABASE_URL` của `.env` thật, tức DB `local_ai_core` (dữ liệu
+    thật, chỉ đọc).
+  
+  Ticket này mục 5 yêu cầu "cấu hình thật của máy", nên đó là chủ ý. Nhưng ticket 11 lại cấm dùng DB
+  thật cho các lần chạy của nó, nên ghi rõ ra đây. Cũng vì vậy, không chạy thử `--probe` trước khi
+  11 xong.
+- Stack lab (`eval_stack --profile lab`, gồm uvicorn và worker, không phải container): Nhân viên 3
+  bật để ghi, ghi xong thì `--stop`, kiểm không còn tiến trình trên cổng 8100. **Phải tắt trước khi
+  chạy baseline**, vì reranker và embedding của lab chiếm GPU sẽ làm sai cột độ trễ của mô hình
+  general.
+- Sau khi ghi, chạy thêm một phép kiểm offline: mỗi bài recorded phải có ít nhất một đoạn từ đúng
+  tệp `corpus_source.file`. `answer_in_chunks` chỉ chứng minh đáp án nhìn thấy được, không chứng
+  minh nó đến từ đúng tệp mà `must_cite` đòi.
+- Báo cáo baseline cần đếm hai thứ:
+  - Số bài recorded nhận phải đoạn có phần đầu trùng nhau (opus yêu cầu, để biết lỗi 400 ký tự ảnh
+    hưởng tới điểm cỡ nào).
+  - Số `tool_result` bị cắt bởi `tool_result_max_chars` 2400. Giới hạn này được tính cho 4 trích
+    đoạn, trong khi bản ghi có 5. Mục đích là tách "model trả lời sai" khỏi "model nhìn thấy JSON bị
+    cắt".
