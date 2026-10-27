@@ -396,6 +396,30 @@ The nightly still passes and still reproduces the baseline exactly, because thos
 frozen chunks are unchanged. Rebuilding the lab corpus from the fixtures is the
 prerequisite, and it is an operator decision.
 
+## Agent eval — the agent itself, exploratory baseline (27/10/2026)
+
+The first measurement of the agent loop rather than of retrieval: `AgentService.run()`
+with its three tools and the real `qwen3.5:9b` (`general-v0`, registry probed,
+`verified: true`), on 40 tasks (`agent-eval-v0.1`): 20 document, 10 Discord history,
+5 system status, 5 no-tool or refuse. Twelve document tasks replay retrieval recorded
+once from the lab API (contextual retrieval ON, reranker ON); the traps are
+hand-written. Deterministic rule-based grading, no model judge. **Exploratory: 40
+tasks, and the 0.4 run is a single run.**
+
+| Run | Passed | Report |
+| --- | ---: | --- |
+| temperature 0, seed 42 — first run, cold model load | 33/40 | `results/kept/agent-eval-v0.1-baseline-20261027/` |
+| temperature 0, seed 42 — warm, two runs byte-identical | 34/40 | same |
+| temperature 0.4, no seed (as shipped) | 29/40 | same |
+
+Hand grading of 16 tasks agrees with the grader on 15; the one grader error (doc-18,
+a regex too narrow) would make the warm runs 35/40. The largest failure class is the
+agent **not calling** document search for a question that sounds generic, and
+answering from general knowledge instead (3 of 12 recorded-retrieval tasks, every
+temperature-0 run). The seed only makes runs repeatable once the model is warm: the
+cold first run differs from the warm ones on 15 of 40 answers, so a before/after
+comparison needs a discarded warm-up run on each side.
+
 ## Engineering
 
 | | |

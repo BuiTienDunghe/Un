@@ -1,6 +1,6 @@
 # 07 — Agent Eval v0: ghi truy xuất thật, chạy baseline 3 lần (M2)
 
-Status: phần code + 12 bài mới (v0.1) xong trên `wip/07-agent-eval-baseline`; chờ fable duyệt 12 bài, rồi chờ 11 xong mới ghi truy xuất + chạy baseline
+Status: xong trên `wip/07-agent-eval-baseline` — truy xuất ghi + baseline 4 lần + chấm tay 16; chờ fable duyệt, chờ chốt doc-18
 Type: task
 Blocked by: 06 (đã gộp); phần chạy GPU chờ 11 (11 đang đo p50 /rag/search, mà 09 dùng số đó làm ngưỡng)
 
@@ -104,3 +104,26 @@ embed và một lần chat OCR đúng là những gì API làm mỗi lần khở
 - C4: README ghi rằng v0.1 đo "dùng kết quả để tính" bằng một bài, chỉ có tính chỉ báo.
 - Dataset sha256 `6d3db491…`, vẫn là `agent-eval-v0.1` vì chưa gộp. Test: 74 passed. Đã kiểm lại
   `evidence` của 12 bài trên nội dung DB lab: đạt cả 12.
+
+**27/10 tối — ghi truy xuất + baseline (GPU 18:40–18:54).**
+
+- fable duyệt v0.1 ở `6896cf1`: đạt.
+- Ghi truy xuất: stack lab chạy từ worktree, `DATABASE_URL` đọc từ `.env` thật mà không in ra. Kết
+  quả 12/12 recorded, không bài nào giữ `pending`. Đoạn chứa đáp án luôn ở hạng 1–3. Đã tắt stack,
+  cổng 8100 trống. Commit `6a2c3f9`, dataset sha256 `19d59249…`. Manifest của bản ghi thiếu tên
+  model reranker (`/models` không có vai trò này), nhưng có cờ `rag.reranker: true`.
+- Baseline (`--probe`, PYTHONUTF8=1, cây sạch, `verified: true`): r1 33/40 (model nạp lạnh), r2
+  34/40, r3 34/40, t0.4 29/40. Báo cáo ở
+  `data/evaluation/results/kept/agent-eval-v0.1-baseline-20261027/REPORT.md`, và có một mục trong
+  `docs/RESULTS.md`.
+- Hai con số opus yêu cầu:
+  - Số bài recorded nhận phải đoạn có phần đầu trùng: 3 mỗi lần ở t0 (doc-23, 26, 28), 4 ở t0.4
+    (thêm doc-25). Không đoạn nào là đoạn chứa đáp án.
+  - Số `tool_result` bị cắt ở 2400 ký tự: r1 7, r2 6, r3 6, t0.4 7. Ở bài tài liệu, việc cắt không
+    làm mất đáp án. Ở hist-05 thì có: chế độ "tin mới nhất" của `search_history` mất 8/18 tin, đúng
+    những tin mới nhất.
+- Chấm tay 16 lượt, khớp kết luận 15/16. Lệch duy nhất là doc-18, lỗi bộ chấm do regex quá hẹp.
+- Phát hiện cho 09: r2 và r3 giống hệt nhau từng byte, còn r1 (lạnh) khác ở 15/40 câu trả lời. So
+  trước/sau ở t0 + seed phải có một lần khởi động bỏ đi. Nguyên nhân chưa đo.
+- Chờ chốt: doc-18 nên (a) sửa và chạy lại ngay, hay (b) để nguyên và sửa ở v0.2. Danh sách đầy đủ
+  ở mục "Cần chủ dự án hoặc điều phối chốt" trong REPORT.md.

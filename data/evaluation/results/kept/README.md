@@ -26,3 +26,13 @@ Two cautions, because a number without its measuring conditions is a rumour:
 
 To promote another report: copy it in, add a row above, and cite it from
 `docs/RESULTS.md`. Nothing else in `results/` is tracked.
+
+## Agent Eval
+
+`agent-eval-v0.1-baseline-20261027/` is the first measurement of the agent itself
+(`AgentService.run()`, three tools, real `qwen3.5:9b`) on the 40-task set in
+`data/benchmarks/agent_eval/v0/` (`agent-eval-v0.1`, sha256 `19d59249…`). Four runs:
+three at temperature 0 + seed 42, one at 0.4 as shipped. Each run directory carries
+every task's answer, tool calls and per-check grade; `REPORT.md` has the reading,
+including 16 hand-graded tasks against the automatic grader. An exploratory baseline,
+not a statistical claim.

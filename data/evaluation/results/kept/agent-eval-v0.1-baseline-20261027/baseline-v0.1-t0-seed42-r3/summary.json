@@ -1,0 +1,125 @@
+{
+  "overall": {
+    "passed": 34,
+    "total": 40,
+    "rate": 0.85
+  },
+  "errors": 0,
+  "by_category": {
+    "documents": {
+      "passed": 16,
+      "total": 20,
+      "rate": 0.8
+    },
+    "history": {
+      "passed": 8,
+      "total": 10,
+      "rate": 0.8
+    },
+    "no_tool": {
+      "passed": 5,
+      "total": 5,
+      "rate": 1.0
+    },
+    "status": {
+      "passed": 5,
+      "total": 5,
+      "rate": 1.0
+    }
+  },
+  "by_check": {
+    "args_expected": {
+      "passed": 1,
+      "total": 2,
+      "rate": 0.5
+    },
+    "args_valid": {
+      "passed": 30,
+      "total": 30,
+      "rate": 1.0
+    },
+    "citation": {
+      "passed": 12,
+      "total": 15,
+      "rate": 0.8
+    },
+    "completed": {
+      "passed": 40,
+      "total": 40,
+      "rate": 1.0
+    },
+    "must_mention": {
+      "passed": 29,
+      "total": 34,
+      "rate": 0.8529
+    },
+    "must_not_mention": {
+      "passed": 12,
+      "total": 12,
+      "rate": 1.0
+    },
+    "no_access": {
+      "passed": 3,
+      "total": 3,
+      "rate": 1.0
+    },
+    "not_found": {
+      "passed": 4,
+      "total": 4,
+      "rate": 1.0
+    },
+    "refusal": {
+      "passed": 2,
+      "total": 2,
+      "rate": 1.0
+    },
+    "tool_budget": {
+      "passed": 3,
+      "total": 3,
+      "rate": 1.0
+    },
+    "tools_forbidden": {
+      "passed": 35,
+      "total": 36,
+      "rate": 0.9722
+    },
+    "tools_required": {
+      "passed": 25,
+      "total": 29,
+      "rate": 0.8621
+    }
+  },
+  "by_retrieval_source": {
+    "handwritten": {
+      "passed": 6,
+      "total": 6,
+      "rate": 1.0
+    },
+    "recorded": {
+      "passed": 9,
+      "total": 12,
+      "rate": 0.75
+    }
+  },
+  "citation_verbatim": {
+    "verbatim": 11,
+    "of_tasks_with_citation": 15
+  },
+  "failed_tasks": [
+    "doc-18",
+    "doc-22",
+    "doc-25",
+    "doc-30",
+    "hist-05",
+    "hist-07"
+  ],
+  "latency_ms": {
+    "mean": 3181,
+    "p50": 3020,
+    "max": 6309
+  },
+  "tokens_in_total": 91002,
+  "tokens_out_total": 6843,
+  "mean_tool_calls": 0.78,
+  "budget_exhausted": 0
+}
