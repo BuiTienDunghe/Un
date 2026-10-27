@@ -1,3 +1,8 @@
+import contextvars
+import logging
+import queue
+import threading
+from collections.abc import Callable
 from time import perf_counter
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -13,6 +18,69 @@ from app.security.api_key import require_api_key
 from app.security.auth import ensure_conversation_access, resolve_identity
 
 router = APIRouter(tags=["chat"])
+_LOG = logging.getLogger(__name__)
+_TURN_DONE = object()
+
+
+def start_in_request_context(work: Callable[[], None]) -> threading.Thread:
+    """Run `work` on a new thread inside a copy of the caller's context. A new thread starts
+    with an empty context, and the turn's deadline (llm_clients/deadline.py) and token counts
+    (llm_clients/usage.py) are ContextVars; the copy keeps whatever the request set, and the
+    agent sets its own deadline inside it."""
+    thread = threading.Thread(target=contextvars.copy_context().run, args=(work,), daemon=True, name="agent-turn")
+    thread.start()
+    return thread
+
+
+def _stream_failure(request: Request, error: Exception, started: float) -> dict[str, str]:
+    """A turn that failed after its stream began: the codes the JSON path answers with."""
+    if isinstance(error, ConversationNotFoundError):
+        return {"error_code": "CONVERSATION_NOT_FOUND", "message": f"Conversation {error} does not exist"}
+    for kind, code in ((OllamaModelNotLoadedError, "MODEL_NOT_LOADED"), (OllamaTimeoutError, "MODEL_TIMEOUT"), (OllamaUnavailableError, "OLLAMA_UNAVAILABLE")):
+        if isinstance(error, kind):
+            request.app.state.logging_service.log_request("/chat", None, int((perf_counter() - started) * 1000), "error", code)
+            return {"error_code": code, "message": str(error)}
+    _LOG.error("agent turn failed after its stream began", exc_info=error)
+    return {"error_code": "INTERNAL_ERROR", "message": "An unexpected server error occurred"}
+
+
+def _agent_stream(request: Request, payload: ChatRequest, owner: str | None, started: float) -> StreamingResponse:
+    """Agent mode over SSE (ticket 20 #4, W1): the turn runs on a worker thread and its
+    progress goes out as `progress` events while it runs, then meta → steps → answer → done
+    as before. The chat service opens a database session per store call, so the thread
+    shares none with the request. A client that leaves early leaves the turn running: it is
+    persisted as the JSON path would persist it."""
+    events: queue.Queue = queue.Queue()
+    outcome: dict[str, object] = {}
+
+    def work() -> None:
+        try:
+            outcome["result"] = request.app.state.chat_service.respond(
+                payload.message, payload.conversation_id, payload.use_memory, payload.system_prompt,
+                payload.use_tools, user_id=owner, on_step=events.put,
+            )
+        except Exception as error:  # reported as an SSE error event
+            outcome["error"] = error
+        finally:
+            events.put(_TURN_DONE)
+
+    start_in_request_context(work)
+
+    def stream():
+        while (event := events.get()) is not _TURN_DONE:
+            if event.get("label"):
+                yield sse_event("progress", {key: event[key] for key in ("kind", "round", "tool", "label") if event.get(key) is not None})
+        if "error" in outcome:
+            yield sse_event("error", _stream_failure(request, outcome["error"], started))
+            return
+        answer, model_used, conversation_id, _latency_ms, agent_steps = outcome["result"]
+        yield sse_event("meta", {"conversation_id": conversation_id, "model_used": model_used})
+        if agent_steps:
+            yield sse_event("steps", {"steps": agent_steps})
+        yield sse_event("token", {"content": answer})
+        yield sse_event("done", {})
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
 
 
 @router.post("/chat", response_model=ChatResponse, dependencies=[Depends(require_api_key)])
@@ -44,20 +112,13 @@ def chat(payload: ChatRequest, request: Request) -> ChatResponse | StreamingResp
                     yield sse_event("error", {"error_code": "STREAM_FAILED", "message": str(error)})
 
             return StreamingResponse(events(), media_type="text/event-stream")
+        if payload.stream:
+            # Agent mode has no token stream (the loop runs whole rounds), but SSE clients
+            # keep one code path; what the turn is doing streams ahead of it (ticket 20 #4).
+            return _agent_stream(request, payload, owner, started)
         answer, model_used, conversation_id, latency_ms, agent_steps = request.app.state.chat_service.respond(
             payload.message, payload.conversation_id, payload.use_memory, payload.system_prompt, payload.use_tools, user_id=owner
         )
-        if payload.stream:
-            # Agent mode has no token stream (the loop runs whole rounds), but
-            # SSE clients keep one code path: meta → steps → answer → done.
-            def agent_events():
-                yield sse_event("meta", {"conversation_id": conversation_id, "model_used": model_used})
-                if agent_steps:
-                    yield sse_event("steps", {"steps": agent_steps})
-                yield sse_event("token", {"content": answer})
-                yield sse_event("done", {})
-
-            return StreamingResponse(agent_events(), media_type="text/event-stream")
         return ChatResponse(answer=answer, model_used=model_used, conversation_id=conversation_id, latency_ms=latency_ms, agent_steps=agent_steps)
     except ConversationNotFoundError as error:
         raise HTTPException(status_code=404, detail={"error_code": "CONVERSATION_NOT_FOUND", "message": f"Conversation {error} does not exist"}) from error

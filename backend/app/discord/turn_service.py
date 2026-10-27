@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 import threading
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from uuid import UUID, uuid4
 
@@ -13,6 +15,7 @@ from app.discord.repositories import DiscordSessionRepository
 from app.postgres.models import DiscordConversationSession, DiscordSessionTurn
 from app.services.chat_service import ChatService, ConversationNotFoundError
 from app.discord.session_service import DiscordSessionService
+from app.discord.turn_progress import TurnProgress
 from app.discord.memory_completion_service import (
     DiscordMemoryCompletionService,
 )
@@ -70,8 +73,11 @@ class DiscordTurnService:
         agent_tools_guild_allowlist: frozenset[str] | None = None,
         condensation_service: object | None = None,
         recap_limit: int = 6,
+        progress: TurnProgress | None = None,
     ) -> None:
         self.sessions = sessions
+        # Ticket 20 #4: what a running turn is doing, for the bot's progress endpoint.
+        self.progress = progress
         self.session_service = session_service
         self.chat_service = chat_service
         self.lease_seconds = max(3, lease_seconds)
@@ -340,6 +346,19 @@ class DiscordTurnService:
             turns = DiscordSessionRepository(database).recover_stale(limit=limit)
             return [self._result(turn) for turn in turns]
 
+    @contextmanager
+    def _tracked(self, turn_id: UUID) -> Iterator[dict[str, object]]:
+        """The keyword that hands the agent this turn's progress recorder (ticket 20 #4), and
+        the store entry dropped when the turn ends, however it ends. No store, no keyword: a
+        chat service that takes no on_step is called exactly as before."""
+        if self.progress is None:
+            yield {}
+            return
+        try:
+            yield {"on_step": self.progress.recorder(str(turn_id))}
+        finally:
+            self.progress.finish(str(turn_id))
+
     def _heartbeat_loop(
         self,
         turn_id: UUID,
@@ -591,18 +610,20 @@ class DiscordTurnService:
         )
         heartbeat.start()
         try:
-            answer, used_model, _, _ = self.chat_service.respond_with_context(
-                request_text,
-                conversation_id,
-                model_history=model_history,
-                current_model_message=speaker_context.current_message,
-                context_system_prompt=context_system_prompt,
-                system_prompt=system_prompt,
-                use_tools=use_tools_for_turn,
-                # search_history scopes to THIS session's guild, server-side —
-                # a model-supplied guild id is never trusted (§3.1 lesson).
-                tool_context={"guild_id": session.guild_id},
-            )
+            with self._tracked(turn_id) as progress:
+                answer, used_model, _, _ = self.chat_service.respond_with_context(
+                    request_text,
+                    conversation_id,
+                    model_history=model_history,
+                    current_model_message=speaker_context.current_message,
+                    context_system_prompt=context_system_prompt,
+                    system_prompt=system_prompt,
+                    use_tools=use_tools_for_turn,
+                    # search_history scopes to THIS session's guild, server-side —
+                    # a model-supplied guild id is never trusted (§3.1 lesson).
+                    tool_context={"guild_id": session.guild_id},
+                    **progress,
+                )
         except ConversationNotFoundError:
             return self._orphan_and_requeue(turn, execution_token)
         except Exception as error:

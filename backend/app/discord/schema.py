@@ -78,6 +78,20 @@ class DiscordTurnExecuteResponse(BaseModel):
     replacement_turn_id: UUID | None = None
 
 
+class DiscordTurnProgressResponse(BaseModel):
+    """What a turn is doing while its execute call runs (ticket 20 #4): a kind of work and
+    counts, never content. running=False once the turn ended, or for a turn not running here."""
+    turn_id: UUID
+    running: bool
+    label: str | None = None
+    kind: str | None = None
+    round: int | None = None
+    # How many progress events the turn has sent (every kind, thinking included): not the
+    # trace's step count.
+    events: int = 0
+    updated_at: str | None = None
+
+
 class DiscordTurnOwnershipRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

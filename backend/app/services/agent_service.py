@@ -144,6 +144,13 @@ STOP_TURN_BUDGET_EXHAUSTED = "turn_budget_exhausted"
 ANSWER_CHECK = True
 ANSWER_CHECK_STEP = "answer_check"
 UNSUPPORTED_FIGURES = "UNSUPPORTED_FIGURES"
+# What a watching client is told while a turn runs (ticket 20 #4). A tool brings its own
+# label (AgentTool.label); TOOL_LABEL stands in for one without, or a name never declared.
+THINKING_LABEL = "Đang suy nghĩ…"
+REVIEWING_LABEL = "Đang xem lại những gì đã tra…"
+TOOL_LABEL = "Đang dùng công cụ…"
+ANSWER_CHECK_LABEL = "Đang kiểm lại các con số trong câu trả lời…"
+ANSWERING_LABEL = "Đang viết câu trả lời…"
 
 
 # What a handler returns: (text for the model, error code, exception type).
@@ -152,10 +159,12 @@ ToolOutput = tuple[str, str | None, str | None]
 
 @dataclass(frozen=True)
 class AgentTool:
-    """One tool in the registry: what the model is shown and what runs when it calls it."""
+    """One tool in the registry: what the model is shown, what runs when it calls it, and
+    what a watching client is told while it runs (ticket 20 #4: a kind of work, no content)."""
 
     schema: dict[str, Any]
     run: Callable[["AgentService", dict[str, Any], dict[str, Any] | None], ToolOutput]
+    label: str | None = None
 
     @property
     def name(self) -> str:
@@ -271,13 +280,29 @@ class AgentService:
         self,
         messages: list[dict[str, Any]],
         tool_context: dict[str, Any] | None = None,
+        on_step: Callable[[dict[str, object]], None] | None = None,
     ) -> tuple[str, str, list[dict[str, object]]]:
         """Run the loop on caller-built messages; returns (answer, model, steps).
 
         `messages` arrives exactly as the plain-chat path would send it
         (persona system prompt, optional context blocks, history, user turn);
         the agent only adds its tool guidance and the tool traffic.
+
+        `on_step`, when given, hears what the turn is doing while it runs (ticket 20 #4):
+        {"kind", "round", "label", ...} with a kind of work and counts, never an argument,
+        a result or an answer. It is called on the turn's own thread, and a listener that
+        raises is ignored: showing progress must never cost the answer.
         """
+        round_index = 0
+
+        def emit(kind: str, **fields: object) -> None:
+            if on_step is None:
+                return
+            try:
+                on_step({"kind": kind, "round": round_index, **fields})
+            except Exception:
+                pass
+
         # A paste longer than PASTE_THRESHOLD reaches the model as a slip, and is read
         # through read_document from this turn's own pastes (ticket 20 #3).
         working, pastes = take_pastes(list(messages))
@@ -305,7 +330,7 @@ class AgentService:
         last: dict[str, int | None] = {"tokens_in": None, "tokens_out": None}
         # The answer check (ticket 20 #2) may grant one more round, for its single retry;
         # `checked_out` are the messages it added, which never count as something seen.
-        rounds, round_index, retried = self.max_steps, 0, False
+        rounds, retried = self.max_steps, False
         checked_out: set[int] = set()
         while round_index < rounds:
             round_index += 1
@@ -315,6 +340,7 @@ class AgentService:
             if left < self.final_reserve_seconds or left <= 0:
                 stop_reason = STOP_TURN_BUDGET
                 break
+            emit("thinking", label=THINKING_LABEL if round_index == 1 else REVIEWING_LABEL)
             started = perf_counter()
             try:
                 with call_within(left - self.final_reserve_seconds):
@@ -344,6 +370,7 @@ class AgentService:
                     working.append({"role": "assistant", "content": answer})
                     working.append({"role": "system", "content": retry_instruction(check["unsupported"])})
                     retried, rounds = True, rounds + 1
+                    emit("answer_check", label=ANSWER_CHECK_LABEL)
                     continue
                 steps.append({
                     "kind": "final", "tool_name": None, "arguments": None,
@@ -351,13 +378,15 @@ class AgentService:
                     "stop_reason": STOP_FINAL, **check["trace"], **last,
                 })
                 record_usage(last["tokens_in"], last["tokens_out"])
+                emit("final", stop_reason=STOP_FINAL)
                 return answer, model_used, steps
             # The model must see its own calls on the next round, verbatim.
             working.append({"role": "assistant", "content": result["content"], "tool_calls": result["raw_tool_calls"]})
             for index, call in enumerate(calls):
                 # A name the model invented can carry the user's words: the content-free
                 # trace keeps a tool's name only when the step says it is a declared one.
-                declared = call["name"] in self.registry.names()
+                tool = self.registry.get(call["name"])
+                declared = tool is not None
                 steps.append({
                     "kind": "tool_call", "tool_name": call["name"], "tool_declared": declared,
                     "arguments": call["arguments"], "content": None, "latency_ms": round_latency,
@@ -365,6 +394,9 @@ class AgentService:
                     # One model round, however many calls it made: counted once.
                     **(last if index == 0 else {"tokens_in": None, "tokens_out": None}),
                 })
+                # An invented tool name can carry the user's words: progress names a tool
+                # only when it is a declared one, like the trace.
+                emit("tool_call", tool=call["name"] if declared else None, label=(tool.label if tool and tool.label else TOOL_LABEL))
                 tool_started = perf_counter()
                 text, error_code, error_type = self._run_tool(call["name"], call["arguments"], tool_context)
                 # D5: tool output is untrusted data (document chunks, memory
@@ -375,6 +407,7 @@ class AgentService:
                     "content": output, "latency_ms": int((perf_counter() - tool_started) * 1000),
                     "error_code": error_code, "error_type": error_type,
                 })
+                emit("tool_result", tool=call["name"] if declared else None, ok=error_code is None)
                 working.append({"role": "tool", "tool_name": call["name"], "content": output})
 
         # Out of tool rounds or out of time: force a plain answer from what was
@@ -388,6 +421,7 @@ class AgentService:
                 else "Hết thời gian dùng công cụ. Trả lời ngay bằng những gì đã thu thập được."
             ),
         })
+        emit("answering", label=ANSWERING_LABEL)
         started = perf_counter()
         left = self.turn_budget_seconds - (self.clock() - turn_started)
         usage: dict[str, int | None] = {"tokens_in": None, "tokens_out": None}
@@ -411,6 +445,7 @@ class AgentService:
             "stop_reason": stop_reason, **check["trace"], **usage,
         })
         record_usage(last["tokens_in"], last["tokens_out"])
+        emit("final", stop_reason=stop_reason)
         return answer, model_used, steps
 
     @staticmethod
@@ -617,7 +652,7 @@ def core_tools() -> ToolRegistry:
     each tool is a schema and the handler that runs it, so none can be declared without a
     handler, nor run without being declared."""
     registry = ToolRegistry()
-    registry.register(AgentTool(SEARCH_DOCUMENTS_SCHEMA, AgentService._search_documents), SEARCH_DOCUMENTS_ORDER)
-    registry.register(AgentTool(READ_DOCUMENT_SCHEMA, AgentService._read_document), READ_DOCUMENT_ORDER)
-    registry.register(AgentTool(SYSTEM_STATUS_SCHEMA, AgentService._system_status), SYSTEM_STATUS_ORDER)
+    registry.register(AgentTool(SEARCH_DOCUMENTS_SCHEMA, AgentService._search_documents, "Đang tra tài liệu…"), SEARCH_DOCUMENTS_ORDER)
+    registry.register(AgentTool(READ_DOCUMENT_SCHEMA, AgentService._read_document, "Đang đọc tài liệu…"), READ_DOCUMENT_ORDER)
+    registry.register(AgentTool(SYSTEM_STATUS_SCHEMA, AgentService._system_status, "Đang xem trạng thái hệ thống…"), SYSTEM_STATUS_ORDER)
     return registry
