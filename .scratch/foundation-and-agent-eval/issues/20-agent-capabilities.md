@@ -107,3 +107,6 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
   2 lên. Không bài cũ nào gọi công cụ mới. doc-36 trượt: model đọc từ đoạn 0 thay vì đoạn 9.
 - 28/10 00:35 (opus 5.5): chọn (B) — bỏ câu mới trong lời dặn, để mô tả công cụ tự nói, đo lại; quyết định đăng ký
   trước: #1-B giữ ≥ 4/5 bài đọc dài và 40 bài cũ ≥ 33 → đề xuất ship #1-B, không thì (C) nhiều seed.
+- 28/10 00:55 (opus 5.5): #1-B gộp vào main bằng merge commit (2d4a830), fable duyệt GỘP ĐƯỢC (reviews/
+  wip-20-agent-reading-8cc0f73.md). Luật đăng ký đạt: 38/48, đọc dài 4/5, bài cũ 33 (= ngưỡng). Còn: #2 kiểm câu trả
+  lời, #3 input dài thành tài liệu tạm, #4 stream. doc-10 bịa số khi không tra → đưa vào lý do cần #2.
