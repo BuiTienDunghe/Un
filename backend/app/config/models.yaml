@@ -81,6 +81,13 @@ agent:
   # 4 excerpt x ~400 ky tu + metadata JSON ~ 2000+ ky tu; tran thap hon se cat
   # giua chung JSON (model van doc duoc nhung mat doan cuoi).
   tool_result_max_chars: 2400
+  # Ticket 16: the whole turn's wall clock, every model call and retry included.
+  # Measured 27/10 (Agent Eval v0.2, GPU): 3.2-3.6 s median, 9.2 s worst. 90 s is
+  # ~10x that and half the Discord bot's 180 s wait. A tool round starts only while
+  # final_reserve_seconds are still free for the answer. A CPU-only machine is far
+  # slower: raise both here.
+  turn_budget_seconds: 90
+  final_reserve_seconds: 20
 
 storage:
   # Original source files are retained by default. Only documents explicitly marked

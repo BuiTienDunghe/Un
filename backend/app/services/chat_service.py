@@ -7,6 +7,7 @@ from uuid import uuid4
 from collections.abc import Iterator
 
 from app.llm_clients.usage import consume_usage
+from app.services.agent_service import STOP_TURN_BUDGET_EXHAUSTED
 from app.services.logging_service import LoggingService
 from app.services.model_router import ModelRouter
 from app.services.memory_service import MemoryService
@@ -153,8 +154,12 @@ class ChatService:
         if agent_steps:
             # Trace rows attach to the persisted answer they explain (P2-2).
             self.store.add_agent_traces(conversation_id, assistant_message_id, agent_steps)
+        # Ticket 16: a turn that ran out of time replied with a fixed sentence, not an
+        # answer; the dashboard counts it as an error, under its own code.
+        out_of_time = bool(agent_steps) and agent_steps[-1].get("stop_reason") == STOP_TURN_BUDGET_EXHAUSTED
         self.logging_service.log_request(
-            "/chat", model_used, latency_ms, "ok",
+            "/chat", model_used, latency_ms, "error" if out_of_time else "ok",
+            "AGENT_TURN_BUDGET" if out_of_time else None,
             message_id=assistant_message_id, tokens_in=usage["tokens_in"], tokens_out=usage["tokens_out"],
             # Hashed per turn: /chat accepts a caller-supplied system prompt
             # (the Discord bot sends its own), so one constant would lie.

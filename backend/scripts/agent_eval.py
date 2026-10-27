@@ -41,7 +41,7 @@ from types import SimpleNamespace
 from typing import Any
 
 from app.llm_clients.usage import consume_usage
-from app.services.agent_service import AGENT_GUIDE, AGENT_TOOLS, AgentService
+from app.services.agent_service import AGENT_GUIDE, AGENT_TOOLS, FINAL_RESERVE_SECONDS, TURN_BUDGET_SECONDS, AgentService
 from app.services.discord_history_service import _SAFE_LEXEME, DiscordHistoryHit
 from app.services.discord_speaker_context import DISCORD_SPEAKER_SYSTEM_INSTRUCTION, attributed_user_content
 from app.services.injection_defense import InjectionDefense
@@ -305,7 +305,7 @@ def run_eval(
     router: Any,
     *,
     out_dir: Path,
-    agent_config: dict[str, int],
+    agent_config: dict[str, float],
     defense: InjectionDefense,
     system_prompt: str,
     run_meta: dict[str, Any],
@@ -330,10 +330,14 @@ def run_eval(
     out_dir.mkdir(parents=True, exist_ok=False)
     max_steps = int(agent_config["max_steps"])
     tool_result_max_chars = int(agent_config["tool_result_max_chars"])
+    turn_budget_seconds = float(agent_config.get("turn_budget_seconds", TURN_BUDGET_SECONDS))
+    final_reserve_seconds = float(agent_config.get("final_reserve_seconds", FINAL_RESERVE_SECONDS))
     manifest = {
         **run_meta,
         "max_steps": max_steps,
         "tool_result_max_chars": tool_result_max_chars,
+        "turn_budget_seconds": turn_budget_seconds,
+        "final_reserve_seconds": final_reserve_seconds,
         "injection_defense": defense.enabled,
         # The guide as the model reads it, i.e. AFTER the defense appended its rule.
         "agent_guide_sha256": _sha256(defense.agent_guide(AGENT_GUIDE)),
@@ -366,6 +370,8 @@ def run_eval(
             tool_result_max_chars=tool_result_max_chars,
             defense=defense,
             history_service=history,
+            turn_budget_seconds=turn_budget_seconds,
+            final_reserve_seconds=final_reserve_seconds,
         )
         tool_context = {"guild_id": history.guild_id} if task.get("surface") == "discord" else None
         answer: str | None = None
@@ -505,6 +511,8 @@ def main(argv: list[str] | None = None) -> int:
     agent_config = {
         "max_steps": int(agent_section.get("max_steps", 3)),
         "tool_result_max_chars": int(agent_section.get("tool_result_max_chars", 1200)),
+        "turn_budget_seconds": float(agent_section.get("turn_budget_seconds", TURN_BUDGET_SECONDS)),
+        "final_reserve_seconds": float(agent_section.get("final_reserve_seconds", FINAL_RESERVE_SECONDS)),
     }
     defense = InjectionDefense.from_config(config.get("rag", {}), enabled_override=settings.rag_injection_defense_enabled)
 

@@ -29,7 +29,7 @@ from app.services.ocr_job_service import OcrJobService
 from app.services.ocr_service import OCRService
 from app.services.rag_service import RagService
 from app.services.research_service import ResearchService
-from app.services.agent_service import AgentService
+from app.services.agent_service import FINAL_RESERVE_SECONDS, TURN_BUDGET_SECONDS, AgentService
 from app.services.memory_service import MemoryService
 from app.services.postgres_retrieval_service import PostgresRetrievalService
 from app.services.job_queue_service import JobQueueService
@@ -270,6 +270,8 @@ async def lifespan(app: FastAPI):
         tool_result_max_chars=int(agent_config.get("tool_result_max_chars", 1200)),
         defense=injection_defense,
         history_service=app.state.discord_history_service,
+        turn_budget_seconds=float(agent_config.get("turn_budget_seconds", TURN_BUDGET_SECONDS)),
+        final_reserve_seconds=float(agent_config.get("final_reserve_seconds", FINAL_RESERVE_SECONDS)),
     )
     # ChatService is built before the retrieval stack the agent needs, so the
     # agent is handed over here instead of through the constructor.
