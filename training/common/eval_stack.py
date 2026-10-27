@@ -16,6 +16,10 @@ prefix, so that starting the real system while this runs cannot cross jobs.
     python -m training.common.eval_stack --profile lab --start
     python -m training.common.eval_stack --profile lab --status
     python -m training.common.eval_stack --profile lab --stop
+
+An A/B on the embedding model starts both arms with the same --collection-base,
+so both sides are embedded on the same runtime instead of comparing against
+vectors an older Ollama produced (see documents_collection).
 """
 from __future__ import annotations
 
@@ -87,8 +91,27 @@ def version_pins(model_versions: list[str] | None) -> dict[str, str]:
     return pins
 
 
+def documents_collection(profile: str, collection_base: str | None) -> str:
+    """--collection-base NAME -> the stack's QDRANT_DOCUMENTS_COLLECTION; absent = the profile's.
+
+    It is the BASE: the registry appends the pinned embedding version's suffix, so
+    v0 and a `qi` candidate started with the same base land side by side in NAME and
+    NAME_qi, embedded on the same runtime (m3-preregistration.md, Bổ sung 2). A name
+    outside the profile's own namespace is refused, so a stack never searches or
+    writes production's collection; a name that aliases a version's suffix is refused
+    by the registry when the API boots.
+    """
+    own = PROFILES[profile]["collection"]
+    if collection_base is None or collection_base == own:
+        return own
+    if not collection_base.startswith(own + "_"):
+        raise SystemExit(f"--collection-base phai bat dau bang {own}_ (vung ten cua profile {profile}), nhan duoc {collection_base!r}")
+    return collection_base
+
+
 def stack_env(profile: str, reranker: bool | None, mode: str | None = None,
-              contextual: bool | None = None, model_versions: list[str] | None = None) -> dict[str, str]:
+              contextual: bool | None = None, model_versions: list[str] | None = None,
+              collection_base: str | None = None) -> dict[str, str]:
     spec = PROFILES[profile]
     from app.config.settings import get_settings
 
@@ -98,7 +121,7 @@ def stack_env(profile: str, reranker: bool | None, mode: str | None = None,
         **os.environ,
         "PYTHONUTF8": "1",
         "DATABASE_URL": f"{base}/{spec['database']}",
-        "QDRANT_DOCUMENTS_COLLECTION": spec["collection"],
+        "QDRANT_DOCUMENTS_COLLECTION": documents_collection(profile, collection_base),
         "RQ_QUEUE_PREFIX": spec["queue"],
         # Settings.logs_path of the stack's API and workers (relative to the repo root):
         # the API writes data/logs/<LOG_DIR>/ATTENTION_model_fallback.txt when a role
@@ -134,14 +157,14 @@ def healthy(port: int, timeout: float = 240.0) -> bool:
 
 
 def start(profile: str, reranker: bool | None, mode: str | None = None, contextual: bool | None = None,
-          model_versions: list[str] | None = None) -> int:
+          model_versions: list[str] | None = None, collection_base: str | None = None) -> int:
     spec = PROFILES[profile]
     port = spec["port"]
     if listening(port):
         print(f"Da co tien trinh nghe cong {port}. Chay --stop truoc.")
         return 1
     LOG_DIR.mkdir(parents=True, exist_ok=True)
-    env = stack_env(profile, reranker, mode, contextual, model_versions)
+    env = stack_env(profile, reranker, mode, contextual, model_versions, collection_base)
     processes = {}
     api_log = (LOG_DIR / f"eval_{profile}_api.log").open("w", encoding="utf-8")
     processes["api"] = subprocess.Popen(
@@ -160,8 +183,8 @@ def start(profile: str, reranker: bool | None, mode: str | None = None, contextu
         print("\n".join((LOG_DIR / f"eval_{profile}_api.log").read_text(encoding="utf-8", errors="replace").splitlines()[-20:]))
         stop(profile)
         return 1
-    print(f"[{profile}] san sang tren cong {port} · db={spec['database']} · collection={spec['collection']} · "
-          f"queue={spec['queue']} · contextual={'ON' if spec['contextual'] else 'OFF'} · "
+    print(f"[{profile}] san sang tren cong {port} · db={spec['database']} · collection(goc)={env['QDRANT_DOCUMENTS_COLLECTION']} · "
+          f"queue={spec['queue']} · contextual={'ON' if env['RAG_CONTEXTUAL_RETRIEVAL_ENABLED'] == 'true' else 'OFF'} · "
           f"reranker={'ON' if (spec['reranker'] if reranker is None else reranker) else 'OFF'} · "
           f"mode={mode or spec.get('mode') or 'theo models.yaml'}")
     pins = version_pins(model_versions)
@@ -218,9 +241,13 @@ def main() -> int:
     parser.add_argument("--model-version", action="append", default=None, metavar="ROLE=ID",
                         help="Ghim mot phien ban trong model_versions.yaml cho RIENG stack nay "
                              "(MODEL_VERSION_<ROLE> trong env cua stack, khong dong vao .env). Lap lai duoc.")
+    parser.add_argument("--collection-base", default=None, metavar="NAME",
+                        help="Goc ten collection tai lieu cho RIENG stack nay, phai bat dau bang collection cua profile + '_'. "
+                             "Registry noi them hau to cua phien ban embedding dang ghim (NAME, NAME_qi). Bo trong = collection cua profile.")
     arguments = parser.parse_args()
     if arguments.start:
-        return start(arguments.profile, arguments.reranker, arguments.mode, arguments.contextual, arguments.model_version)
+        return start(arguments.profile, arguments.reranker, arguments.mode, arguments.contextual, arguments.model_version,
+                     arguments.collection_base)
     if arguments.stop:
         return stop(arguments.profile)
     return status(arguments.profile)

@@ -134,3 +134,33 @@ Nguyên nhân, kiểm chỉ đọc:
 Hệ quả: so qi với v0 trên chỉ mục 08/09 thì Δ gồm hai thứ cùng lúc, chỉ dẫn và việc vector tài liệu bị
 nhúng lại bằng runtime khác, nên không quy được cho chỉ dẫn. Theo luật thì phải dừng ở đây.
 `documents_drill_heldout_qi` (3 896 điểm) để nguyên trong Qdrant, không xoá.
+
+#### Sau khi dừng: cờ `--collection-base` cho eval_stack (27/10 tối, không dùng GPU)
+
+Theo Bổ sung 2 (cách A): `eval_stack --collection-base NAME` đặt gốc tên collection tài liệu cho riêng
+một stack. Registry nối hậu tố của phiên bản embedding đang ghim vào gốc đó, nên v0 tìm trong `NAME`
+còn qi tìm trong `NAME_qi`. Hai bên được nhúng mới cạnh nhau, trên cùng runtime.
+
+| Điểm | Cách làm |
+|---|---|
+| Mặc định | không có cờ (hoặc NAME trùng collection của profile) thì hành vi giữ nguyên |
+| Vùng tên | NAME phải bắt đầu bằng `<collection của profile>_` (`documents_drill_heldout_r2`, `documents_lab_r2`). Tên khác bị từ chối trước khi bật tiến trình nào, nên stack đo không bao giờ tìm hay ghi vào collection của production |
+| Tên trùng hậu tố một phiên bản (`…_qi`, `…_e5l`) | cờ cho qua vì vẫn trong vùng tên; registry từ chối lúc API boot (`docs/model_registry.md:75`), `start` in ra đuôi log. Có test ghim hành vi này |
+| Dòng "san sang" | in gốc collection đang dùng; sửa luôn lỗi in "contextual=OFF" khi có `--contextual` (giờ in theo env thật của stack) |
+
+Test (`backend/tests/test_eval_stack_model_version.py`, 19 xanh): mặc định của cả ba profile; tên ngoài
+vùng bị từ chối; với gốc `_r2`, v0 và qi suy ra `NAME` / `NAME_qi` qua `Settings().qdrant_collections()`
+cho cả heldout lẫn lab; gốc kết thúc bằng `_qi` bị registry từ chối. Kiểm đột biến: bỏ cờ khỏi
+`stack_env` thì 2 bài đỏ; bỏ rào vùng tên thì 6 bài đỏ. CLI với `--collection-base documents` bị từ chối
+ở cả heldout lẫn lab, không bật tiến trình nào.
+
+**Đề xuất cho sau này (ngoài phạm vi 09): manifest của mỗi lần đo ghi phiên bản Ollama.** Lý do:
+Bước 2b cho thấy cùng weights, cùng văn bản, cùng code nhưng nhúng ở hai thời điểm thì cosine thấp
+nhất chỉ còn 0,99912, và không file nào ghi bản Ollama của lần 08/09. Có thể làm theo một trong ba
+cách sau.
+
+| Cách | Ưu | Nhược |
+|---|---|---|
+| `eval_heldout` / `evaluate_rag` đọc `GET /api/version` của Ollama và ghi vào JSON kết quả | rẻ, mọi file kết quả từ nay đều tự mang bản Ollama | file cũ vẫn thiếu |
+| `/models` của API trả thêm bản Ollama; script đo chép từ `/models` như đang chép `versions` | một nguồn sự thật, xem được cả khi chạy production | đụng API, cần test cho trường mới |
+| Registry ghi bản Ollama đã dùng khi nhúng mỗi collection (vd. trong `eval.reports` hoặc khi rebuild) | bắt được đúng chuyện vector cũ do runtime cũ sinh ra | phải đổi lược đồ registry, nặng nhất |
