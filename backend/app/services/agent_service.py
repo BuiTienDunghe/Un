@@ -12,9 +12,11 @@ works on in-memory messages and returns; persistence belongs to the caller.
 from __future__ import annotations
 
 import json
-from time import perf_counter
+from collections.abc import Callable
+from time import monotonic, perf_counter
 from typing import Any, Protocol
 
+from app.llm_clients.deadline import ModelCallTimeoutError, call_within
 from app.services.discord_history_service import history_hit_payload
 from app.services.injection_defense import InjectionDefense
 from app.services.model_router import ModelRouter
@@ -123,6 +125,20 @@ TOOL_FAILED = "TOOL_FAILED"
 TOOL_TIMEOUT = "TOOL_TIMEOUT"
 TOOL_NAMES = tuple(tool["function"]["name"] for tool in AGENT_TOOLS)
 
+# The whole turn's wall clock (ticket 16). Agent Eval v0.2 measured 3.2-3.6 s median and
+# 9.2 s at worst per answer, warm or cold; the Discord bot waits 180 s for a turn. 90 s is
+# ~10x the worst and half the bot's wait, so the backend answers before the bot gives up.
+# A tool round may start only while the reserve for the final answer is still free.
+TURN_BUDGET_SECONDS = 90.0
+FINAL_RESERVE_SECONDS = 20.0
+# Why the loop ended, on the final step: "final" (the model answered), "max_steps" (tool
+# rounds used up), "turn_budget" (time ran short, answered from what was gathered),
+# "turn_budget_exhausted" (even the final answer did not fit: the fixed reply below).
+STOP_FINAL = "final"
+STOP_MAX_STEPS = "max_steps"
+STOP_TURN_BUDGET = "turn_budget"
+STOP_TURN_BUDGET_EXHAUSTED = "turn_budget_exhausted"
+
 
 def _clip(text: str, limit: int) -> str:
     return text if len(text) <= limit else text[: limit - 1] + "…"
@@ -144,6 +160,9 @@ class AgentService:
         tool_result_max_chars: int = 2400,
         defense: InjectionDefense | None = None,
         history_service: HistoryBackend | None = None,
+        turn_budget_seconds: float = TURN_BUDGET_SECONDS,
+        final_reserve_seconds: float = FINAL_RESERVE_SECONDS,
+        clock: Callable[[], float] = monotonic,
     ) -> None:
         self.defense = defense or InjectionDefense(enabled=False)
         self.router = router
@@ -152,6 +171,12 @@ class AgentService:
         self.history_service = history_service
         self.max_steps = max(1, max_steps)
         self.tool_result_max_chars = max(200, tool_result_max_chars)
+        self.turn_budget_seconds = max(1.0, float(turn_budget_seconds))
+        self.final_reserve_seconds = min(max(0.0, float(final_reserve_seconds)), self.turn_budget_seconds)
+        self.clock = clock
+
+    def _out_of_time_reply(self) -> str:
+        return f"Mình chưa trả lời kịp trong {round(self.turn_budget_seconds)} giây. Bạn hỏi lại, hoặc hỏi hẹp hơn nhé."
 
     def run(
         self,
@@ -171,15 +196,30 @@ class AgentService:
 
         steps: list[dict[str, object]] = []
         model_used = ""
+        turn_started = self.clock()
+        stop_reason = STOP_MAX_STEPS
         for _ in range(self.max_steps):
+            left = self.turn_budget_seconds - (self.clock() - turn_started)
+            # A tool round must leave the final answer its reserve: started any later,
+            # it would spend the time the answer needs.
+            if left < self.final_reserve_seconds or left <= 0:
+                stop_reason = STOP_TURN_BUDGET
+                break
             started = perf_counter()
-            result, model_used = self.router.chat_tools("general", working, AGENT_TOOLS)
+            try:
+                with call_within(left - self.final_reserve_seconds):
+                    result, model_used = self.router.chat_tools("general", working, AGENT_TOOLS)
+            except ModelCallTimeoutError:
+                # The round ran into the reserve's edge: answer from what is gathered.
+                stop_reason = STOP_TURN_BUDGET
+                break
             round_latency = int((perf_counter() - started) * 1000)
             calls = result["tool_calls"]
             if not calls:
                 steps.append({
                     "kind": "final", "tool_name": None, "arguments": None,
                     "content": _clip(result["content"], 4000), "latency_ms": round_latency,
+                    "stop_reason": STOP_FINAL,
                 })
                 return result["content"], model_used, steps
             # The model must see its own calls on the next round, verbatim.
@@ -201,16 +241,32 @@ class AgentService:
                 })
                 working.append({"role": "tool", "tool_name": call["name"], "content": output})
 
-        # Tool budget exhausted: force a plain answer from what was gathered.
+        # Out of tool rounds or out of time: force a plain answer from what was
+        # gathered — the structured stop that keeps the work done, not an exception
+        # that throws it away (the Claude SDK / smolagents / Inspect family).
         working.append({
             "role": "system",
-            "content": "Đã dùng tối đa số lượt công cụ. Trả lời ngay bằng những gì đã thu thập được.",
+            "content": (
+                "Đã dùng tối đa số lượt công cụ. Trả lời ngay bằng những gì đã thu thập được."
+                if stop_reason == STOP_MAX_STEPS
+                else "Hết thời gian dùng công cụ. Trả lời ngay bằng những gì đã thu thập được."
+            ),
         })
         started = perf_counter()
-        answer, model_used = self.router.chat("general", working)
+        left = self.turn_budget_seconds - (self.clock() - turn_started)
+        try:
+            if left <= 0:
+                raise ModelCallTimeoutError("no time left for the final answer")
+            with call_within(left):
+                answer, model_used = self.router.chat("general", working)
+        except ModelCallTimeoutError:
+            # Only running out of time ends here: an unreachable or broken model still
+            # raises as before, because "not in time" would then be a false reply.
+            answer, stop_reason = self._out_of_time_reply(), STOP_TURN_BUDGET_EXHAUSTED
         steps.append({
             "kind": "final", "tool_name": None, "arguments": None,
             "content": _clip(answer, 4000), "latency_ms": int((perf_counter() - started) * 1000),
+            "stop_reason": stop_reason,
         })
         return answer, model_used, steps
 

@@ -34,6 +34,11 @@ def call_deadline(at: float | None) -> Iterator[None]:
         _DEADLINE.reset(token)
 
 
+def call_within(seconds: float):
+    """call_deadline `seconds` from now, on this module's clock."""
+    return call_deadline(time.monotonic() + max(0.0, seconds))
+
+
 def _left() -> float | None:
     at = _DEADLINE.get()
     return None if at is None else at - time.monotonic()
