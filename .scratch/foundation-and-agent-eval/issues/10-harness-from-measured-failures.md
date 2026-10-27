@@ -39,3 +39,7 @@ Tiêu chí nghiệm thu theo `spec.md` Mốc 4.
   giống hệt" chỉ đúng với p3_progress 0–2. Ở backup_restore, đoạn 0 dài 388 ký tự và đoạn 1 chỉ thêm
   11 ký tự. Vì vậy định nghĩa là chung ≥ 350/399 ký tự đầu; với định nghĩa này, kết quả phân tích
   giống hệt bản đã commit.
+- 27/10 — opus chốt: không đo riêng tác dụng của 3a. Báo cáo phải ghi đúng câu: **"mốc v0.2 = bộ bài
+  v0.2 + 3a; tác dụng của 3a lên điểm chưa đo"**. Lý do thật: lợi ích của 3a đã được kiểm tất định,
+  còn GPU tối nay dành cho 1a và 2b. Lý do mình nêu trước đó ("3a không đổi hành vi model") là sai:
+  3a CÓ đổi những gì model thấy ở 6–7 lượt mỗi lần chạy (JSON không còn gãy, giữ tin mới nhất).
