@@ -52,6 +52,57 @@ Tiêu chí nghiệm thu theo `spec.md` Mốc 4.
   800 ký tự)", con số lấy từ `HISTORY_MESSAGE_MAX_CHARS`, có test giữ hai thứ khớp nhau.
   `tools_sha256` đổi (`872acc92…`), nên thay đổi này thuộc mốc v0.2: **mốc v0.2 = bộ bài v0.2 + 3a +
   mô tả này.**
+- 27/10 20:07 — **Đăng ký trước cách đo 1a và 2b**, viết TRƯỚC khi chạy 1a hay 2b. Mốc v0.2 (A =
+  `d434c82`) đã chạy xong:
+  - r1 lạnh (gỡ mọi model): 34/40.
+  - r2, r3 nóng: 31/40, giống hệt nhau từng byte.
+  - r4 (chỉ gỡ OCR và embedding): 31/40, giống hệt r2.
+  
+  Lỗi bộ chấm đã biết, sửa ở v0.3, không sửa giữa chừng: câu "kết quả tìm kiếm không trả về thông tin
+  về ngân sách…" của doc-19 là câu đúng nhưng `NOT_FOUND_PATTERN` chưa nhận.
+  - Điều kiện: A = mốc v0.2; B = A + 1a; C = B + 2b. **Luật chồng:** nếu B làm mất nhiều bài ngoài
+    mục tiêu hơn số bài mục tiêu nó cứu được, thì 2b đo trên A chứ không trên B.
+  - Giao thức đã duyệt: mỗi điều kiện 1 lần khởi động bỏ đi + 1 lần đo nóng, t0, seed 42. Commit trước
+    khi đo, để `worktree_dirty` = false.
+  - Hai phép kiểm, chạy trước khi đăng ký:
+    - **Seed không có tác dụng ở t0**: r5 (seed 43) giống hệt r2 (seed 42), 40/40 câu trả lời. Đo nhiều
+      seed ở t0 không cho thêm thông tin.
+    - **Chỉ gỡ model chính** (r6) cho kết quả giống hệt r1 lạnh, 40/40. Nguyên nhân lạnh/nóng đã khoanh
+      vào lần nạp đầu tiên của model chính; cơ chế chưa được chỉ ra. Quy tắc "khởi động bỏ đi" vì vậy
+      có bằng chứng.
+  - Phần bổ sung, ghi rõ là bổ sung: 3 lần ở nhiệt độ 0.4 (như ship, không seed) cho mỗi điều kiện A,
+    B, C, để có độ dao động thật của từng điều kiện.
+  - Mục tiêu của 1a: các bài ở mốc A nóng trượt vì KHÔNG gọi công cụ khi cần, gồm doc-10, doc-22,
+    doc-25, doc-30 (`search_documents`) và stat-02 (`system_status`), tổng 5 bài. Mục tiêu của 2b:
+    hist-07 (và hist-03 nếu chạy ở 0.4).
+  - Báo cáo mỗi điều kiện theo thứ tự: (1) số bài mục tiêu đạt, trước và sau; (2) số bài NGOÀI mục
+    tiêu được thêm hoặc bị mất (đây là sàn nhiễu do đổi prompt; ở mốc A, chỉ đổi mô tả công cụ và
+    hình dạng kết quả khi tràn mà đã lật 5 bài không liên quan); (3) tổng điểm, sau cùng.
+  - Mốc A ở 0.4 (bổ sung, đã chạy trước khi đăng ký): 31, 29, 33/40, tức dao động khoảng ±2 bài chỉ do lấy mẫu.
+- 27/10 20:41 — **Đo xong** (GPU 19:42–20:41, không còn tiến trình nào chạy). Báo cáo:
+  `data/evaluation/results/kept/agent-eval-v0.2-harness-20261027/REPORT.md`.
+  - Lạnh/nóng: seed không có tác dụng ở t0. Gỡ OCR và embedding không đổi kết quả; chỉ gỡ model chính
+    thì tái tạo đúng lần lạnh. Một lời dặn mới cũng làm lần đầu khác đi. Khớp giả thuyết "dùng lại
+    phần đầu prompt", chưa chứng minh. Hệ quả: khởi động bỏ đi cho **mỗi** biến thể prompt mới.
+  - Luật chồng kích hoạt (1a: mất 5 bài ngoài mục tiêu, cứu 3 bài mục tiêu), nên C = A + 2b. D = A + 1a
+    + 2b là phần bổ sung.
+  - Kết quả t0 / 0.4: A 31 / 31,29,33. B 31 / 28,31,27. C 32 / 30,32,31. D 31 / 29,30,29; D đếm tay
+    (hist-03/07 trả lời đúng 8/8, trượt chỉ vì tiêu chí cấm search_documents) là 31,32,31.
+  - KS (3a): 0/748 kết quả công cụ bị cắt giữa JSON, 85 lần bỏ bớt theo mục. Tác dụng lên điểm chưa đo.
+  - Chưa làm registry, ngân sách token/thời gian, chuẩn hoá lỗi, tracing: không lỗi đo được nào đòi.
+  - Nhánh hiện ở trạng thái D (`4beb9ba`: 1a + 2b). Chưa có quyết định ship thay đổi chất lượng nào;
+    các phương án nằm trong REPORT.
+- 27/10 20:55 — **Đính chính báo cáo `8848e67`** (sau khi người duyệt gợi ý kiểm mã băm):
+  - A-r2 nóng và C-t0 nóng có cùng mọi mã băm prompt (2b không đổi prompt của bài web), nhưng chỉ
+    trùng 3/33 câu trả lời bài web, và 7 bài lật. Vậy các lần đo nóng ở t0 của A, B, C, D ở bốn trạng
+    thái máy chủ khác nhau, không so với nhau được. Bản đầu đọc nhầm thành tác dụng của việc đổi prompt.
+  - Lần chạy lạnh mới lặp lại được: r1 = r6; A lạnh = C lạnh trên 33/33 bài web. Bổ sung đã chạy: B,
+    C, D mỗi cái một lần lạnh, checkout đúng commit (20:47–20:55).
+  - So sánh lạnh: A 34, B 30, C 34, D 30 (D đếm tay 32). Mục tiêu 1a: 2/5 → 4/5, nhưng mất 6–7 bài
+    ngoài mục tiêu, chủ yếu do thiếu tên tệp khi trích nguồn. 2b một mình không đổi gì (C = A).
+  - Quy tắc trong README của bộ bài đã sửa: so sánh ở t0 thì **gỡ model chính trước mỗi lần đo**;
+    "khởi động bỏ đi" một mình là không đủ. Seed không có tác dụng ở t0.
+  - Đề xuất đổi từ "cân nhắc" sang (c): chưa ship 1a hay 2b, thử 1a-v2. Chi tiết trong REPORT.
 - 27/10 21:00 (opus 5.5, chốt theo báo cáo 59aed01 của Nhân viên 3): **không ship 1a hay 2b**. 1a cứu
   bài "không tra" (lạnh 2/5 → 4/5) nhưng mất 6–7 bài khác, chủ yếu vì thiếu tên tệp khi trích nguồn
   (lạnh 34 → 30); 2b một mình không đổi gì (model đọc gợi ý rồi hỏi xin phép). Chỉ gộp d434c82 (mô tả

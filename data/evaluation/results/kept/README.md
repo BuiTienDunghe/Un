@@ -36,3 +36,11 @@ three at temperature 0 + seed 42, one at 0.4 as shipped. Each run directory carr
 every task's answer, tool calls and per-check grade; `REPORT.md` has the reading,
 including 16 hand-graded tasks against the automatic grader. An exploratory baseline,
 not a statistical claim.
+
+`agent-eval-v0.2-harness-20261027/` is ticket 10: the same agent on `agent-eval-v0.2`
+before and after two prompt changes (1a: look it up first; 2b: point a Discord turn
+at the history when documents come back empty), one warm temperature-0 run and three
+runs at 0.4 per condition, judged as pre-registered in the ticket. It also holds the
+runs showing that temperature 0 is reproducible only from a cold model (unloaded
+before each run), not from warm runs separated by other work. 27 runs; `events.jsonl`
+only for the eight that the report quotes.

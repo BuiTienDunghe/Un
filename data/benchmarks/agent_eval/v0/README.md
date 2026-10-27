@@ -146,10 +146,17 @@ Quy tắc (chốt 27/10):
 - Một lần chạy chỉ được trích dẫn khi manifest có cây sạch và sha256 của dataset khớp với phiên bản
   đang trích.
 - Đổi tiêu chí thì phải chạy lại model, không chấm lại offline câu trả lời cũ.
-- **Mọi lần so trước/sau ở nhiệt độ 0 + seed phải có một lần khởi động bỏ đi ở mỗi phía** (chốt
-  27/10). Baseline v0.1 cho thấy lý do: hai lần chạy khi model đã nóng giống hệt nhau từng byte,
-  còn lần chạy lạnh (model vừa được nạp) khác chúng ở 15/40 câu trả lời. Nguyên nhân chưa được đo.
-  Không có lần khởi động thì phần chênh do lạnh/nóng sẽ bị đọc thành tác dụng của thay đổi đang thử.
+- **So sánh ở nhiệt độ 0 thì gỡ model chính trước mỗi lần đo** (sửa 27/10, ticket 10, thay cho quy
+  tắc "một lần khởi động bỏ đi" chốt ở ticket 07). Bằng chứng ở
+  `data/evaluation/results/kept/agent-eval-v0.2-harness-20261027/`:
+  - Lần chạy lạnh (gỡ model chính rồi chạy) lặp lại được: r1 = r6 từng byte dù cách nhau 14 phút và 4
+    lần chạy khác; A lạnh = C lạnh trên 33/33 bài web dù cách nhau khoảng 1 giờ.
+  - Lần chạy nóng chỉ lặp lại khi các lần nối tiếp nhau. Hai khối nóng cách nhau bởi việc khác thì khác
+    nhau dù prompt giống hệt: A-r2 và C-t0 có cùng mọi mã băm prompt, nhưng chỉ trùng 3/33 câu trả lời
+    bài web, và 7 bài lật kết quả. Vì vậy "khởi động bỏ đi" một mình không cho một điểm neo dùng chung
+    giữa các điều kiện.
+  - Seed không có tác dụng ở nhiệt độ 0 (seed 43 = seed 42 từng byte).
+  - Cơ chế chưa được chỉ ra. Giả thuyết hợp nhất là Ollama dùng lại phần prompt đã xử lý.
 
 | Ngày | Bài | Thay đổi | Vì sao |
 |---|---|---|---|

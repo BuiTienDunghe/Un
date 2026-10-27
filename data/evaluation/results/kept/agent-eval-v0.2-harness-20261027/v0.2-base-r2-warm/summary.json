@@ -1,0 +1,128 @@
+{
+  "overall": {
+    "passed": 31,
+    "total": 40,
+    "rate": 0.775
+  },
+  "errors": 0,
+  "by_category": {
+    "documents": {
+      "passed": 13,
+      "total": 20,
+      "rate": 0.65
+    },
+    "history": {
+      "passed": 9,
+      "total": 10,
+      "rate": 0.9
+    },
+    "no_tool": {
+      "passed": 5,
+      "total": 5,
+      "rate": 1.0
+    },
+    "status": {
+      "passed": 4,
+      "total": 5,
+      "rate": 0.8
+    }
+  },
+  "by_check": {
+    "args_expected": {
+      "passed": 2,
+      "total": 2,
+      "rate": 1.0
+    },
+    "args_valid": {
+      "passed": 28,
+      "total": 28,
+      "rate": 1.0
+    },
+    "citation": {
+      "passed": 10,
+      "total": 15,
+      "rate": 0.6667
+    },
+    "completed": {
+      "passed": 40,
+      "total": 40,
+      "rate": 1.0
+    },
+    "must_mention": {
+      "passed": 27,
+      "total": 34,
+      "rate": 0.7941
+    },
+    "must_not_mention": {
+      "passed": 12,
+      "total": 12,
+      "rate": 1.0
+    },
+    "no_access": {
+      "passed": 3,
+      "total": 3,
+      "rate": 1.0
+    },
+    "not_found": {
+      "passed": 3,
+      "total": 4,
+      "rate": 0.75
+    },
+    "refusal": {
+      "passed": 2,
+      "total": 2,
+      "rate": 1.0
+    },
+    "tool_budget": {
+      "passed": 3,
+      "total": 3,
+      "rate": 1.0
+    },
+    "tools_forbidden": {
+      "passed": 35,
+      "total": 36,
+      "rate": 0.9722
+    },
+    "tools_required": {
+      "passed": 23,
+      "total": 29,
+      "rate": 0.7931
+    }
+  },
+  "by_retrieval_source": {
+    "handwritten": {
+      "passed": 4,
+      "total": 6,
+      "rate": 0.6667
+    },
+    "recorded": {
+      "passed": 8,
+      "total": 12,
+      "rate": 0.6667
+    }
+  },
+  "citation_verbatim": {
+    "verbatim": 10,
+    "of_tasks_with_citation": 15
+  },
+  "failed_tasks": [
+    "doc-10",
+    "doc-17",
+    "doc-19",
+    "doc-22",
+    "doc-25",
+    "doc-29",
+    "doc-30",
+    "hist-07",
+    "stat-02"
+  ],
+  "latency_ms": {
+    "mean": 3229,
+    "p50": 3288,
+    "max": 5912
+  },
+  "tokens_in_total": 88335,
+  "tokens_out_total": 7025,
+  "mean_tool_calls": 0.72,
+  "budget_exhausted": 0
+}
