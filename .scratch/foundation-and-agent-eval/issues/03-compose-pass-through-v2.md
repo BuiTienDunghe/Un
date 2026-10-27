@@ -1,6 +1,6 @@
 # 03 — Compose chỉ chuyển tiếp, Docker sang v2 (M1c, đổi hành vi có chủ đích)
 
-Status: xong trên nhánh `wip/03-compose-pass-through-v2` — chờ fable 5.1 duyệt diff
+Status: xong — đã gộp vào main (27/10), fable 5.1 duyệt
 Type: task
 Blocked by: —
 
@@ -111,3 +111,9 @@ Ngoài phạm vi, chưa sửa:
   Settings nếu Settings đổi mặc định. Ai có `.env` chép từ bản `.env.example` cũ thì vẫn ghim v1 ở
   cả hai đường.
 - 14 mặc định của discord-bot trùng với `discord_bot/main.py`: điều phối đã chuyển sang ticket 04.
+
+**fable 5.1, 27/10 — duyệt: gộp được.** Kiểm đỏ trước/xanh sau; `--env-file` thử cho thấy khoá chỉ
+tên vẫn nhận giá trị từ `.env` (bot không mất khoá API). Khẳng định "worker v1 từ chối mọi job v2"
+đúng (`discord_memory_worker_service.py:177,188`, `retryable=False`). Gọi `_prepare()` chấp nhận được.
+Điểm yếu: bài hạ nguồn tự cài luật nội suy của compose; cái bảo vệ thật là test tĩnh + `compose config`.
+Đã sửa trong lúc gộp: `docs/model_registry.md:78` còn nhắc `${MODEL_VERSION_X:-}`.

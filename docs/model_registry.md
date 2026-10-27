@@ -75,7 +75,7 @@ demotion on eval numbers (the 82-question gate moved ±0.02 between replicates o
 | `QDRANT_DOCUMENTS_COLLECTION` / `QDRANT_MEMORIES_COLLECTION` | still the **base** names (`documents`, `documents_lab`, `documents_test`). The served name is `base` + `_<collection_suffix>` of the embedding version the pointer names; v0 has an empty suffix, so nothing changed on landing. A base that ends with the `_<suffix>` of any registered version refuses boot (it would alias that version's collection) |
 | `HF_HUB_OFFLINE=1` | every reranker load is `local_files_only` |
 
-An empty value (`set MODEL_VERSION_X=`, `${MODEL_VERSION_X:-}` in compose) means unset.
+An empty value (`set MODEL_VERSION_X=`) means unset. Compose lists every Settings field by name only (`MODEL_VERSION_X:`), so a variable the operator never set is absent from the container and Settings decides.
 
 ## What happens at start
 

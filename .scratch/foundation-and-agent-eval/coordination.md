@@ -56,7 +56,7 @@ ticket mới, chờ các ticket đang chạy xong, rồi báo chủ dự án.
 |---|---|---|---|---|
 | 01 | Eval đêm dừng sớm, báo rõ (M1a) | — | Nhân viên 1 | đã giao |
 | 02 | Một cách cài, xoá hack sys.path (M1b) | 01 đã gộp | — | chờ |
-| 03 | Compose chỉ chuyển tiếp, Docker sang v2 (M1c) | — | Nhân viên 2 | xong, chờ fable duyệt (wip/03, 4b4e767) |
+| 03 | Compose chỉ chuyển tiếp, Docker sang v2 (M1c) | — | Nhân viên 2 | **đã gộp** |
 | 04 | Một cơ chế bật bot + panel 401 (M1d) | 02 đã gộp | — | chờ |
 | 05 | Dời job_*, query dashboard vào service (M1d) | 02 đã gộp | — | chờ |
 | 06 | Agent Eval v0: khung chạy + bộ bài (M2) | — | Nhân viên 3 | đã giao |
