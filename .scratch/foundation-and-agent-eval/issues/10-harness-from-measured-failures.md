@@ -172,3 +172,7 @@ Tiêu chí nghiệm thu theo `spec.md` Mốc 4.
   giữa hai điều kiện chỉ chắc cho các bài đứng **trước** chỗ khác đầu tiên (E/F: 0 lệch trước hist-07,
   12/13 lệch sau, dù prompt giống hệt). Lệch lan không do 09 (lượt cuối của 09 xong 22:28:10, 1a-v2 chạy
   22:31–22:39); khác biệt còn lại là model nhúng còn nạp cùng Ollama — chưa tách.
+- 28/10 01:10 (Nhân viên 3, đính chính): đính chính 23:15 ở trên sai một chỗ — lúc 1a-v2 chạy (22:31–22:39), ticket
+  09 **có** đo song song (lượt v0r2-hybrid 22:30–22:55; mốc 22:28:10 là của lượt chỉ-dense trước đó). Các lần
+  A/E/F ghi "GPU dùng chung: có" trong lịch sử bảng điểm. Kết luận không ship không đổi (quyết theo điểm, không theo
+  độ trễ).
