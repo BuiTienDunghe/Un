@@ -75,6 +75,11 @@ worktree, nên không lẫn với checkout chính. Mọi URL phụ thuộc trỏ
 | Gỡ bản cài rồi chạy lại | `No module named 'app'`; đoạn launcher cài lại, sau đó exit 0 |
 | Bộ test ở gốc (bot + tools), venv sạch | 65 xanh |
 | 4 file test backend không cần DB, `.venv` + `PYTHONPATH=<worktree>\backend` | 24 xanh |
+| 14 file test backend đụng module đã sửa (migration, schema drift, evaluate_rag, …), DB test | 47 xanh, 0 skip |
 
-Chưa kiểm: chạy trọn launcher (nó bật container và DB, ngoài quy tắc); các test backend dùng
-Postgres (đang chờ giờ chạy).
+Chưa kiểm: chạy trọn launcher (nó bật container và DB, ngoài quy tắc).
+
+Hệ quả cần biết: `discord-bot-control.bat` chạy `tools\discord_bot_control.py` dạng file bằng
+`pythonw`, và giờ cần bản cài editable. Trên một máy có `.venv` cũ mà chưa chạy launcher mới lần
+nào, bảng điều khiển sẽ không hiện, và cũng không báo lỗi (`pythonw` không có console). Máy này
+không dính, vì `.venv` đã có bản cài. File `.bat` đó nằm ngoài ticket; đã báo điều phối.
