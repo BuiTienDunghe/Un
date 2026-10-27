@@ -48,6 +48,11 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   `read_document`. Đoạn dán chỉ mở được trong chính hội thoại đó và không vào kho tài liệu chung. Chat thường vẫn
   giới hạn 10 000 ký tự và trả 422 `INPUT_TOO_LONG` kèm lời nhắc bật chế độ công cụ; muốn hỏi tiếp về một đoạn dán thì
   phải ở chế độ công cụ, vì chat thường chỉ thấy đoạn dán cũ như một dòng ghi chú. Chưa đo bằng Agent Eval (hoãn).
+- **Thấy agent đang làm gì** (28/10, ticket 20 #4). Trong lúc agent tra cứu, chat web thay dòng "đang suy nghĩ…" bằng
+  nhãn của bước đang chạy ("Đang tra tài liệu…", "Đang kiểm lại các con số trong câu trả lời…"), gửi qua sự kiện SSE mới `progress`;
+  client cũ bỏ qua sự kiện này. Nhãn chỉ nói loại việc, không chứa nội dung tra được. Gói Discord giữ tiến độ của lượt
+  đang chạy và mở `GET /api/discord/sessions/turns/{id}/progress` cho bot; bot chưa dùng (cách hiển thị chờ chọn).
+  Câu trả lời và prompt không đổi: không truyền `on_step` thì agent chạy y như cũ.
 - **Bảng điểm harness** (28/10, ticket 23). Mỗi lần chạy Agent Eval in ra bốn nhóm chỉ số (đúng, hiệu quả, bền,
   minh bạch) tính từ chính tệp kết quả của lần chạy, ghi điều kiện chạy (model đã nạp sẵn hay chưa, GPU có dùng chung
   không) và thêm một dòng vào `data/evaluation/results/kept/agent-eval-scorecard-history.jsonl`; 38 lần chạy đã giữ
