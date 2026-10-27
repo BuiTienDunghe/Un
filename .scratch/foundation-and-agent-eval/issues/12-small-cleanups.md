@@ -18,3 +18,6 @@ Gom các phát hiện ngoài phạm vi khi làm và duyệt ticket 03:
    đếm bản ghi do chính nó tạo.
 
 ## Comments
+- 27/10 (từ duyệt 01): (5) kiểm Ollama trước trong `nightly_eval.py` (hiện chỉ Postgres/Qdrant/Redis);
+  (6) docstring `_qdrant_ok` nên ghi: Qdrant chậm hơn 3 s thì báo `unavailable`, nên
+  `check_operational_alerts` buổi sáng có thể báo động một lần.

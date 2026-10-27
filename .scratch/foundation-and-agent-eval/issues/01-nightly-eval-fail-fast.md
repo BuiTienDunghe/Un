@@ -1,6 +1,6 @@
 # 01 — Eval đêm dừng sớm và nói rõ phụ thuộc nào tắt (M1a)
 
-Status: chờ duyệt — Nhân viên của Ún 1, nhánh `wip/01-nightly-eval-fail-fast`
+Status: đã gộp vào main (27/10), fable 5.1 duyệt — còn: một đêm 03:00 thật exit 0
 Type: task
 Blocked by: —
 

@@ -11,6 +11,23 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+### Changed
+- **Đường chạy bằng Docker đổi hành vi: worker trí nhớ trong container theo schema v2 như máy chủ**
+  (27/10). `docker-compose.yml` từng tự khai 16 mặc định trùng Settings, trong đó
+  `DISCORD_MEMORY_EXTRACTOR_SCHEMA_VERSION` lệch (compose v1, Settings v2 từ 28/08). Vì vậy worker
+  trong container không "trích theo v1" mà từ chối **mọi** job do API trên máy gửi
+  (`MEMORY_SCHEMA_VERSION_STALE`, không thử lại). Giờ compose chỉ ghi tên biến, biến chưa đặt thì vắng
+  trong container và Settings quyết định. `test_compose_defaults.py` chặn lệch lại. Riêng tên hàng
+  đợi trong `command:` vẫn có mặc định, nhưng có test bắt phải bằng mặc định của Settings.
+
+### Fixed
+- **Eval đêm không còn đỏ câm** (27/10). Từ 16/09 có 51 đêm exit 97. Mỗi lần hỏi `/health`, job chỉ
+  chờ 3 s, mà `/health` mất 10–270 s khi phụ thuộc chết, vì phép thử Postgres/Redis không có timeout.
+  Giờ job hỏi Postgres, Qdrant, Redis **trước** khi bật lab API. Thiếu cái nào thì dừng với **exit 93**
+  (mới) sau vài giây, và ATTENTION nêu phụ thuộc nào tắt, Docker có trả lời không, container lạ nào
+  giữ cổng 5432. Mỗi phép thử của `/health` dừng sau 3 s và báo `degraded`, thay vì treo.
+  `wait_for_health` chờ 30 s mỗi lần hỏi.
+
 ## [1.3.0] - 2026-10-12
 
 ### Added
