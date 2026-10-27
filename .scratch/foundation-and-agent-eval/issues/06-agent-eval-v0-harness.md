@@ -157,3 +157,8 @@ test của nó.
   `test_history_limit_range_follows_the_mode`.
 - Test: 47 passed (test_agent_eval + test_model_router). Không chạy test dùng Postgres. Dataset
   sha256 `cfb724b2…`.
+
+**27/10 — fable soát 023c92c: nhóm A đạt.** Siết theo góp ý: trong `NOT_FOUND_PATTERN`, "không có"
+phải đi kèm thứ bị thiếu (ai, thông tin, dữ liệu, tài liệu, tệp, quy định, nội dung, kết quả, tin
+nhắn, gì về, đề cập, nhắc), vì câu sai tự tin "Quy trình không có gì phức tạp…" đã lọt doc-12. Có
+test cho cả câu bị chặn lẫn 4 cách nói đúng mới. 51 passed. Dataset không đổi (sha256 `cfb724b2…`).

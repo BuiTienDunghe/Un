@@ -132,6 +132,7 @@ Quy tắc (chốt 27/10):
 | 27/10 | 15 bài có `must_cite` | So tên tệp sau khi bỏ dấu; đếm nguyên văn riêng | Quyết định B8 |
 | 27/10 | doc-19 | Số gây nhiễu chỉ sai khi cùng câu với "ngân sách"; bắt buộc một câu nói không thấy tệp hoặc ngân sách | Quyết định B9 |
 | 27/10 | `search_history.limit` | Tìm theo từ khoá 1–10, lấy tin mới nhất 1–25 (trước đây 1–25 cho cả hai) | Quyết định B11 |
+| 27/10 | `NOT_FOUND_PATTERN` (doc-11, doc-12, doc-19, hist-06) | "không có" phải đi kèm thứ bị thiếu (thông tin, tài liệu, tệp, ai...) | fable soát: câu sai tự tin "không có gì phức tạp" đã lọt |
 
 Artifact `smoke-20261027-t0-seed42` có dataset trước tất cả các thay đổi này và cây bẩn: **không
 được trích dẫn**.

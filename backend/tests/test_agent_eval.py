@@ -385,6 +385,10 @@ def test_history_limit_range_follows_the_mode():
     "Không ai nhắc đến chuyện mua máy in mới.",
     "Tài liệu không nói gì về quy trình cấp laptop.",
     "Chưa thấy tài liệu nào đề cập.",
+    "Không có thông tin nào về chuyện này.",
+    "Không có gì về tiền gửi xe trong tài liệu.",
+    "Không có ai nhắc đến máy in mới.",
+    "Không có tệp ke_hoach_marketing_2027.pdf trong kết quả.",
 ])
 def test_not_found_accepts_the_phrasings_review_listed(answer):
     assert grade({"must_say_not_found": True}, steps_for(), answer, SCHEMAS)["passed"] is True
@@ -404,6 +408,9 @@ def test_not_found_and_no_access_fail_a_confident_answer():
     answer = "Hôm qua Lan và Minh bàn về lịch họp và deadline."
     assert grade({"must_say_not_found": True}, steps_for(), answer, SCHEMAS)["passed"] is False
     assert grade({"must_say_no_access": True}, steps_for(), answer, SCHEMAS)["passed"] is False
+    # fable's review of 023c92c: a bare "không có" let this one through.
+    invented = "Quy trình không có gì phức tạp: nộp đơn cho IT là xong."
+    assert grade({"must_say_not_found": True}, steps_for(), invented, SCHEMAS)["passed"] is False
 
 
 def test_grader_refusal_and_errors():

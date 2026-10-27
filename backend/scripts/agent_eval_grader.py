@@ -30,8 +30,12 @@ REFUSAL_PATTERN = (
 # "Nothing on that" — the honest answer to an empty or off-topic result.
 # One constant rather than a regex copied into each task, so the phrasings it
 # accepts cannot drift apart between tasks (review 27/10).
+# A bare "không có" would also pass the confident wrong answer "quy trình không
+# có gì phức tạp", so it needs the thing that is missing after it.
 NOT_FOUND_PATTERN = (
-    r"không (ai |tìm thấy|thấy|có|nói|ghi|đề cập|nhắc|xuất hiện|tồn tại)|chưa (có|thấy|tìm)"
+    r"không (ai |tìm thấy|thấy|nói|ghi|đề cập|nhắc|xuất hiện|tồn tại"
+    r"|có (ai|thông tin|dữ liệu|tài liệu|tệp|quy định|nội dung|kết quả|tin nhắn|gì về|đề cập|nhắc))"
+    r"|chưa (có|thấy|tìm)"
 )
 
 # "That tool does not work here" — search_history on a turn without a guild.
