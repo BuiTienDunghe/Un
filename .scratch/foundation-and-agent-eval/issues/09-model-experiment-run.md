@@ -351,12 +351,14 @@ Tải ngoài lúc đo: Ollama nhận các lệnh `/api/chat` tới `qwen3.5:9b` 
 145 lệnh trong khoảng 22:57–23:03), kèm nạp lại `glm-ocr`. GPU lúc đó dùng khoảng 9,8 GB, 90 %. Các lệnh
 này không đến từ stack đo: log API chỉ có 788 lượt `/rag/search` cùng `/health` và `/models`, worker
 không nhận việc nào, độ trễ từng câu đều nhau từ câu đầu tới câu cuối (trung vị theo từng khúc 100 câu
-1 788–1 992 ms). Lúc đo hai lượt chỉ-dense thì không có lệnh chat nào. Cả hai đợt đều bắt đầu chưa
-tới 2 phút sau khi stack hybrid sẵn sàng (sẵn sàng 22:30:20, đợt bắt đầu khoảng 22:31:51; sẵn sàng
-22:57:17, đợt bắt đầu khoảng 22:57:52). Không tính lệnh chat lúc stack khởi động: đó là probe dừng của
-OCR. Tôi chưa xác định được nguồn.
-Thứ hạng không bị ảnh hưởng, vì đường tìm không gọi model sinh. Sau Bước 4, chỉ mục heldout vẫn nguyên:
-`rebuild_qdrant --dry-run` trả 3 896 mảnh, 3 896 điểm.
+1 788–1 992 ms). Lúc đo hai lượt chỉ-dense thì không có lệnh chat nào. Không tính lệnh chat lúc stack
+khởi động: đó là probe dừng của OCR.
+
+**Nguồn tải là do điều phối** (opus 5.5 xác nhận 28/10): đó là Agent Eval của Nhân viên 3, gồm 1a-v2 lúc
+22:31–22:39 và bước 5 của ticket 16 lúc 22:57–23:0x, trong đó `--probe` nạp cả OCR. Điều phối đo thấy GPU
+rỗi lúc 22:28 nên cho chạy song song, nhưng không báo phiên đo này. Thứ hạng không bị ảnh hưởng vì đường
+tìm không gọi model sinh, và các lần lặp cho hạng trùng nhau. Điều kiện p50 vẫn qua: 1 806 ≤ 2 × 1 886 ms.
+Sau Bước 4 chỉ mục heldout vẫn nguyên: `rebuild_qdrant --dry-run` trả 3 896 mảnh, 3 896 điểm.
 
 So riêng việc nhúng lại, cùng model (`heldout-ctxON-rerankerON-20261027-173610.json` của ticket 11 với
 lượt control mới): 1 câu lên hạng 1, không câu nào rời top-5. Tức chỉ mục production, vốn nhúng bằng
