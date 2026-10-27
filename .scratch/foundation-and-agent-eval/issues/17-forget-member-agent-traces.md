@@ -1,6 +1,6 @@
 # 17 — `forget_member` phải xoá cả trích đoạn của thành viên trong agent_traces
 
-Status: chờ duyệt — Nhân viên của Ún 1, nhánh `wip/17-forget-member-traces`
+Status: đã gộp vào main (27/10 23:45), fable 5.1 duyệt
 Type: task
 Blocked by: 16
 
