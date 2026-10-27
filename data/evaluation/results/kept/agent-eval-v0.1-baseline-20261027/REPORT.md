@@ -47,9 +47,14 @@ là 34/40.
 - r1 là lần model được nạp lạnh: bài đầu tiên mất 8,4 s, còn ở r2 là 2,6 s.
 
 Vậy độ dao động giữa "3 lần cùng cấu hình" gần như **hoàn toàn** đến từ chuyện lạnh hay nóng, không
-phải từ lấy mẫu ngẫu nhiên. **Nguyên nhân chưa được đo.** Giả thuyết là Ollama dùng lại phần prompt
-đã xử lý từ các lượt trước, làm phép tính chia lô khác đi. Hệ quả cho ticket 09: so trước/sau ở
-nhiệt độ 0 + seed thì mỗi phía phải **chạy một lần khởi động rồi bỏ**, hoặc so lần nóng với lần nóng.
+phải từ lấy mẫu ngẫu nhiên. **Nguyên nhân chưa được đo.** Có hai giả thuyết, và ticket 10 sẽ tách
+chúng ra:
+1. Ollama dùng lại phần prompt đã xử lý từ các lượt trước, làm phép tính chia lô khác đi.
+2. Probe đã nạp cả embedding lẫn OCR lên GPU, nằm cạnh general trong suốt 4 lần chạy, nên trạng thái
+   bộ nhớ GPU của lần lạnh khác các lần sau (góp ý của fable 27/10).
+
+Hệ quả cho ticket 09: so trước/sau ở nhiệt độ 0 + seed thì mỗi phía phải **chạy một lần khởi động
+rồi bỏ**, hoặc so lần nóng với lần nóng.
 
 ### Theo nhóm bài
 
@@ -117,7 +122,7 @@ Chỉ có ở t0.4: doc-26 (không nêu tên tệp), hist-02 và hist-03 (gọi 
 |---|---|---|
 | `search_documents` với `top_k=5`: 5 trích đoạn vượt 2400 ký tự nên JSON bị cắt | 6–7 kết quả công cụ mỗi lần; agent xin `top_k=5` ở khoảng một nửa số lần tìm | **Không**: đoạn chứa đáp án luôn ở hạng 1–3 |
 | `search_history` "tin mới nhất": thứ tự cũ trước, cắt ở cuối | hist-05 ở cả 4 lần | **Có**: mất 8/18 tin, đúng những tin mới nhất |
-| Đoạn có 400 ký tự đầu trùng nhau (backup_restore 0–1, p3_progress 0–2) | 3 bài mỗi lần (4 bài ở t0.4) nhận phải một đoạn như vậy | Không đoạn nào là đoạn chứa đáp án. Hai bài trùng với bài trượt ở t0.4 (doc-25, doc-26) trượt vì không tìm hoặc thiếu trích nguồn, không vì thiếu nội dung |
+| Đoạn mà phần agent thấy gần như chỉ lặp lại đoạn khác, tức chung ≥ 350/399 ký tự đầu. p3_progress 0–2 trùng hoàn toàn. backup_restore 0 là phần mở đầu dài 388 ký tự, và 1 chỉ thêm 11 ký tự đầu một cái bảng | 3 bài mỗi lần (4 bài ở t0.4) nhận phải một đoạn như vậy | Không đoạn nào là đoạn chứa đáp án. Hai bài trùng với bài trượt ở t0.4 (doc-25, doc-26) trượt vì không tìm hoặc thiếu trích nguồn, không vì thiếu nội dung |
 
 Trích nguồn: agent viết **nguyên văn** tên tệp ở 11/15 bài có `must_cite` (r2). Con số này chỉ để
 tham khảo, không tính vào điểm.

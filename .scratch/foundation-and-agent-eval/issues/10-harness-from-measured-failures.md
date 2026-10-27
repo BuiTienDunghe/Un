@@ -27,3 +27,15 @@ Tiêu chí nghiệm thu theo `spec.md` Mốc 4.
   `GRADER_VERSION` lên `agent-eval-grader-v0.2`; dataset `agent-eval-v0.2`, sha256 `99b2e915…`.
   Từ v0.2, bộ bài trong repo là nguồn sự thật: script sinh dữ liệu ở scratchpad không còn dùng được,
   vì chạy lại sẽ xoá các đoạn đã ghi thật.
+- 27/10 (Nhân viên 3) — Bước 1 (3a), commit riêng `2d6c247`. `_dump` bỏ trọn từng phần tử, không
+  cắt giữa JSON, và ghi `{"omitted": N, "note": "đã bỏ N mục …"}`. Chế độ "tin mới nhất" bỏ tin cũ
+  nhất trước; danh sách xếp hạng bỏ từ cuối. Thứ gì không chia được thành phần tử thì vẫn cắt theo
+  ký tự như cũ. Chạy lại bằng đầu vào của baseline: hist-05 giữ 9 tin mới nhất (tới 20/10), có ghi
+  "đã bỏ 9 mục cũ nhất". `top_k=5` trên 12 bài ghi thật: 0/12 JSON gãy (trước là 12/12). Test
+  `tests/test_agent_tool_results.py` không cần stack. Chưa đo với model; việc đó nằm trong lần chạy
+  GPU.
+- 27/10 — Theo góp ý của fable cho REPORT v0.1: ghi thêm giả thuyết "embedding + OCR nằm cạnh
+  trên GPU"; `analyze.py` tự tính tập đoạn trùng từ `retrieval.jsonl`. **Đính chính:** "400 ký tự đầu
+  giống hệt" chỉ đúng với p3_progress 0–2. Ở backup_restore, đoạn 0 dài 388 ký tự và đoạn 1 chỉ thêm
+  11 ký tự. Vì vậy định nghĩa là chung ≥ 350/399 ký tự đầu; với định nghĩa này, kết quả phân tích
+  giống hệt bản đã commit.

@@ -1,5 +1,6 @@
-"""Analyse the ticket-07 baseline runs. Usage: python analyze_baseline07.py <results_dir> <dataset_dir> <out_json>"""
+"""Analyse the ticket-07 baseline runs. Usage: python analyze.py <results_dir> <dataset_dir> <out_json>"""
 import json
+import os
 import statistics
 import sys
 from collections import Counter, defaultdict
@@ -8,7 +9,7 @@ from pathlib import Path
 results_dir, dataset_dir, out_path = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])
 RUNS = ["baseline-v0.1-t0-seed42-r1", "baseline-v0.1-t0-seed42-r2", "baseline-v0.1-t0-seed42-r3", "baseline-v0.1-t0.4-noseed-r1"]
 T0 = RUNS[:3]
-DUP = {("backup_restore.md", 0), ("backup_restore.md", 1), ("p3_progress.md", 0), ("p3_progress.md", 1), ("p3_progress.md", 2)}
+EXCERPT = 399  # agent_service clips each chunk to 400 characters, the last being "…"
 
 
 def jsonl(path):
@@ -16,6 +17,21 @@ def jsonl(path):
 
 
 fixtures = {f["task_id"]: f for f in jsonl(dataset_dir / "retrieval.jsonl")}
+# Chunks whose agent-visible excerpt says almost nothing another chunk's does not,
+# computed from the recorded fixtures rather than listed by hand (fable's review,
+# 27/10). "Almost": a shared opening of at least SHARED characters. An exact match
+# would miss backup_restore.md 0-1: chunk 0 is the whole 388-character preamble and
+# chunk 1's excerpt is that preamble plus 11 characters of a table header.
+SHARED = 350
+_excerpts = {}
+for _fixture in fixtures.values():
+    if _fixture["source"] == "recorded":
+        for _chunk in _fixture["chunks"]:
+            _excerpts[(_chunk["filename"], _chunk["chunk_index"])] = str(_chunk.get("content") or "")[:EXCERPT]
+DUP = {
+    a for a in _excerpts for b in _excerpts
+    if a != b and len(os.path.commonprefix([_excerpts[a], _excerpts[b]])) >= SHARED
+}
 tasks = {t["id"]: t for t in jsonl(dataset_dir / "tasks.jsonl")}
 data = {}
 for run in RUNS:
