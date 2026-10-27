@@ -65,3 +65,10 @@ ticket mới, chờ các ticket đang chạy xong, rồi báo chủ dự án.
 | 09 | Thí nghiệm B, nhánh 0 trước (M3) | 11; stack | fable 5.1 viết đăng ký trước | đang chuẩn bị |
 | 10 | Nâng harness theo lỗi đo được (M4) | 07 | — | chờ |
 | 11 | Đo dao động 788 câu held-out (tiền đề M3) | stack | Nhân viên 2 | đã giao |
+
+## Mốc so sánh của bộ test
+
+27/10, main ed51b4b, stack Ún bật, DB `local_ai_core_test` + Redis DB 15: backend 1045 xanh / 1 đỏ /
+1 skip (2 phút 45 giây); root 65 xanh. Cái đỏ có sẵn trên main, không do nhánh nào gây ra:
+`test_postgres_cleanup_lifecycle.py::test_postgres_log_and_ocr_retention_execute_only_due_rows`
+(`assert 3 == 1`). DB test còn sót bản ghi OcrRun cũ, mà test lại đếm cả bản ghi không phải của nó.
