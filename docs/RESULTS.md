@@ -479,6 +479,14 @@ after. Answers are identical word for word except on the three web tasks whose t
 text changed; there the agent stops asking which server (2 of 3 before, 0 after, by hand;
 the grader passes both). The budget never fired; the slowest turn took 9.4 s.
 
+Agent Eval v0.3 (ticket 20, `results/kept/agent-eval-v0.3-baseline-20261028/`) adds tasks
+whose answer lies past the 400 characters of each chunk the agent reads, a paste longer than
+the API accepts, and a Discord answer in the message next to the one a search finds. Baseline,
+two cold runs, identical: 35/48. The 40 old tasks give ticket 16's answers word for word
+(34/40); the six long-reading tasks all fail (mostly an honest "not found", once a fabricated
+answer), the paste is refused, the control passes. A tool that reads past the preview is
+measured against this.
+
 Hand grading of 16 tasks agrees with the grader on 15; the one grader error (doc-18,
 a regex too narrow) would make the warm runs 35/40. The largest failure class is the
 agent **not calling** document search for a question that sounds generic, and

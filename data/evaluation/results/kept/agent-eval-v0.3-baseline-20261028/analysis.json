@@ -1,0 +1,196 @@
+{
+ "manifest": {
+  "commit": "c87cfa115bbe714646d9075b47d71aba26e26e73",
+  "worktree_dirty": false,
+  "temperature": 0.0,
+  "seed": 42,
+  "grader_version": "agent-eval-grader-v0.3",
+  "verified": true,
+  "dataset": "agent-eval-v0.3",
+  "dataset_sha256": "6f69ddc3c6db"
+ },
+ "prompt_hashes_equal_16B": {
+  "agent_guide_sha256": true,
+  "system_prompt_sha256": true,
+  "discord_context_sha256": true,
+  "tools_sha256": true
+ },
+ "passed": {
+  "r1": 35,
+  "r2": 35,
+  "of": 48
+ },
+ "r1_equals_r2": 48,
+ "old40": {
+  "passed_r1": 34,
+  "passed_16B_v02_grader": 34,
+  "answers_same_as_16B": 40,
+  "answers_differ_from_16B": [],
+  "verdict_flips_vs_16B": {}
+ },
+ "new": {
+  "doc-33": {
+   "passed": false,
+   "failed_checks": [
+    "must_mention"
+   ],
+   "calls": [
+    "search_documents",
+    "search_documents"
+   ],
+   "error": null,
+   "model_rounds": 3
+  },
+  "doc-34": {
+   "passed": false,
+   "failed_checks": [
+    "must_mention"
+   ],
+   "calls": [
+    "search_documents",
+    "search_documents",
+    "search_documents"
+   ],
+   "error": null,
+   "model_rounds": 4
+  },
+  "doc-35": {
+   "passed": false,
+   "failed_checks": [
+    "must_mention"
+   ],
+   "calls": [
+    "search_documents",
+    "search_documents"
+   ],
+   "error": null,
+   "model_rounds": 3
+  },
+  "doc-36": {
+   "passed": false,
+   "failed_checks": [
+    "must_mention",
+    "citation"
+   ],
+   "calls": [
+    "search_documents"
+   ],
+   "error": null,
+   "model_rounds": 2
+  },
+  "doc-37": {
+   "passed": false,
+   "failed_checks": [
+    "must_mention"
+   ],
+   "calls": [
+    "search_documents"
+   ],
+   "error": null,
+   "model_rounds": 2
+  },
+  "doc-38": {
+   "passed": true,
+   "failed_checks": [],
+   "calls": [
+    "search_documents"
+   ],
+   "error": null,
+   "model_rounds": 2
+  },
+  "doc-39": {
+   "passed": false,
+   "failed_checks": [
+    "completed",
+    "must_mention"
+   ],
+   "calls": [],
+   "error": "INPUT_TOO_LONG: 10164 > 10000 ký tự, API từ chối trước khi agent chạy",
+   "model_rounds": 0
+  },
+  "hist-11": {
+   "passed": false,
+   "failed_checks": [
+    "must_mention"
+   ],
+   "calls": [
+    "search_history"
+   ],
+   "error": null,
+   "model_rounds": 2
+  }
+ },
+ "by_check": {
+  "args_expected": {
+   "passed": 2,
+   "total": 2,
+   "rate": 1.0
+  },
+  "args_valid": {
+   "passed": 37,
+   "total": 37,
+   "rate": 1.0
+  },
+  "citation": {
+   "passed": 16,
+   "total": 21,
+   "rate": 0.7619
+  },
+  "completed": {
+   "passed": 47,
+   "total": 48,
+   "rate": 0.9792
+  },
+  "must_mention": {
+   "passed": 32,
+   "total": 42,
+   "rate": 0.7619
+  },
+  "must_not_mention": {
+   "passed": 12,
+   "total": 12,
+   "rate": 1.0
+  },
+  "no_access": {
+   "passed": 3,
+   "total": 3,
+   "rate": 1.0
+  },
+  "no_ask_back": {
+   "passed": 3,
+   "total": 3,
+   "rate": 1.0
+  },
+  "not_found": {
+   "passed": 4,
+   "total": 4,
+   "rate": 1.0
+  },
+  "refusal": {
+   "passed": 2,
+   "total": 2,
+   "rate": 1.0
+  },
+  "tool_budget": {
+   "passed": 4,
+   "total": 4,
+   "rate": 1.0
+  },
+  "tools_forbidden": {
+   "passed": 44,
+   "total": 44,
+   "rate": 1.0
+  },
+  "tools_required": {
+   "passed": 32,
+   "total": 36,
+   "rate": 0.8889
+  }
+ },
+ "prediction": {
+  "long_read_all_fail": true,
+  "doc39_refused": true,
+  "doc38_passes": true,
+  "r1_equals_r2": true
+ }
+}
