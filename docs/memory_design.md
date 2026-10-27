@@ -872,4 +872,5 @@ của họ, nên với người viết rất nhiều có thể tốn vài chục
 Bổ sung 27/10 (ticket 19, chủ dự án chốt): "quên tôi" chỉ xoá trong server nơi thành viên yêu cầu
 (`--guild-id`), ở MỌI bước. Trước đó hai bước bỏ sót lọc guild: lượt hỏi (bước 6) và nguồn ký ức do họ
 viết (bước 2). Muốn quên ở mọi server thì phải ghi tường minh `--all-guilds`; không bao giờ là mặc định.
-Output có `scope`: các server được xoá, và `left_alone` đếm những gì của họ còn lại ở các server khác.
+Output có `scope`: các server được xoá, và `left_alone` đếm các dòng ghi tên họ còn lại ở từng server khác
+(không đếm bản chép).

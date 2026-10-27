@@ -35,16 +35,19 @@ một turn mà bước 6 sắp xoá đều đi trước, đúng thứ tự RESTR
   guild mà A có dữ liệu (`_member_guilds`: tin nhắn kênh, turn, candidate, ký ức, mệnh đề).
 - Bước 3 (dịch vụ condensation) chỉ nhận một guild, nên gọi lần lượt từng guild. Bước 8 (bản chép, ticket
   17) dò từng guild bằng chính lời A viết ở guild đó. Mọi lệnh xoá Postgres vẫn nằm trong MỘT transaction.
-- Output có `scope`: `all_guilds`, `guilds` (các guild được xoá), `left_alone` (số dòng của A còn lại ở
-  từng guild khác). `remaining` chỉ đếm trong phạm vi, nên phần để lại không làm exit 1.
+- Output có `scope`: `all_guilds`, `guilds` (các guild được xoá), `left_alone` (số dòng ghi tên A còn lại
+  ở từng guild khác; không đếm bản chép). `remaining` chỉ đếm trong phạm vi, nên phần để lại không làm exit 1.
 - Tham số `all_guilds` của `forget()` mặc định False, chỉ dùng theo tên, nên các lời gọi cũ không đổi.
 
 | Kiểm | Kết quả |
 |---|---|
-| `tests/test_forget_member_guild_scope.py` (DB, A có turn + tin nhắn ở X và Y): dry-run ở X nêu `left_alone` của Y; quên ở X thì Y còn nguyên; chạy lại với `--all-guilds` thì Y mất; `--all-guilds` ngay từ đầu thì cả hai mất; CLI chỉ mở rộng khi có cờ | 4 xanh |
-| Cùng chạy test của 17 và condensation | 30 xanh |
-| Kiểm ngược: bỏ lọc ở bước 6 / bỏ lọc ở bước 7 / cho `--all-guilds` không có tác dụng | 1/4 đỏ / 1/4 đỏ / 3/4 đỏ |
+| `tests/test_forget_member_guild_scope.py` (DB, A có turn + tin nhắn ở X và Y): dry-run ở X nêu `left_alone` của Y; quên ở X thì Y còn nguyên; chạy lại với `--all-guilds` thì Y mất; `--all-guilds` ngay từ đầu thì cả hai mất; CLI chỉ mở rộng khi có cờ; ký ức về A ở Y (nguồn trích turn của A ở Y) còn nguyên khi quên ở X | 5 xanh |
+| Cùng chạy test của 17, condensation và `test_discord_memory_foundation` | 68 xanh |
+| Kiểm ngược: bỏ lọc bước 6 / bỏ lọc bước 7 / cho `--all-guilds` không có tác dụng / bỏ lọc nguồn ký ức | 1 đỏ / 1 đỏ / 3 đỏ / 1 đỏ (trên 4–5 test) |
 
-Giới hạn: test không dựng ký ức và nguồn, vì cần Qdrant. Việc lọc bước 2 theo guild của turn chỉ được kiểm
-bằng đọc code. Nếu có nguồn nào trích chéo guild, lệnh xoá turn sẽ hỏng ồn ào và rollback cả transaction;
-code ghi nguồn (`attach_source`) đã từ chối ghép chéo guild.
+Giới hạn: test chỉ dựng ký ức ở guild KHÔNG bị xoá. Xoá ký ức thật sẽ gọi Qdrant, mà test không có
+Qdrant. Nếu có nguồn nào trích chéo guild, lệnh xoá turn sẽ hỏng ồn ào và rollback cả transaction; code
+ghi nguồn (`attach_source`) đã từ chối ghép chéo guild.
+
+Một lựa chọn để chủ dự án quyết: `--guild-id` vẫn bắt buộc cả khi có `--all-guilds`, để output ghi nơi
+người đó yêu cầu. Cách khác là cho hai cờ loại trừ nhau. Đổi thì chỉ sửa phần đọc tham số.

@@ -2,7 +2,9 @@
 
 Member A spoke in two guilds, X and Y: a turn and a channel message in each. Forgetting
 A in X leaves Y exactly as it was, and the dry-run names what it leaves there; running
-again with --all-guilds takes Y too. Real PostgreSQL; no Qdrant (A has no memories).
+again with --all-guilds takes Y too. A memory about A in Y, with the source citing A's
+turn there, checks step 2's scope — memory sources carry no guild of their own. Real
+PostgreSQL; no Qdrant (forgetting in X finds no memory there, so no vector is deleted).
 """
 from __future__ import annotations
 
@@ -15,9 +17,13 @@ import pytest
 from sqlalchemy import delete, func, select
 
 from app.postgres.database import create_postgres_engine, create_session_factory
+from app.postgres.discord_memory_repositories import DiscordMemoryIdentity, DiscordMemoryRepository
 from app.postgres.models import (
     DiscordChannelMessage,
     DiscordConversationSession,
+    DiscordMemory,
+    DiscordMemoryCandidate,
+    DiscordMemorySource,
     DiscordSessionTurn,
 )
 from scripts.forget_member import forget, main
@@ -51,6 +57,32 @@ def world(factory):
     with factory.begin() as database:
         database.execute(delete(DiscordChannelMessage).where(DiscordChannelMessage.guild_id.in_([x, y])))
         database.execute(delete(DiscordConversationSession).where(DiscordConversationSession.id.in_(list(sessions.values()))))
+
+
+@pytest.fixture
+def remembered(factory, world):
+    """A memory about A in Y, its source citing A's turn in Y."""
+    y = world["y"]
+    with factory.begin() as database:
+        turn = database.scalar(select(DiscordSessionTurn).where(DiscordSessionTurn.session_id == world["sessions"][y]))
+        repository = DiscordMemoryRepository(database)
+        candidate, _ = repository.create_or_get_candidate(
+            source_turn_id=turn.id, session_id=turn.session_id, source_discord_message_id=turn.discord_message_id,
+            source_author_id=world["a"], source_author_display_name="Lan", guild_id=y, channel_id="c1", thread_id=None,
+            extractor_schema_version="discord-memory-v1", filter_decision="candidate", filter_reason_code="explicit_remember")
+        database.flush()
+        memory, _ = repository.create_active_version(
+            candidate_id=candidate.id,
+            identity=DiscordMemoryIdentity(guild_id=y, scope="member_in_guild", subject_type="discord_member",
+                                           subject_id=world["a"], fact_key="preference.drink", channel_id=None, thread_id=None),
+            canonical_fact="Thích trà sữa", memory_type="preference", extractor_model="test-extractor",
+            extractor_schema_version="discord-memory-v1", evidence_hash=f"sha256:{uuid4().hex}")
+        memory_id, candidate_id = memory.id, candidate.id
+    yield memory_id
+    with factory.begin() as database:
+        database.execute(delete(DiscordMemorySource).where(DiscordMemorySource.memory_id == memory_id))
+        database.execute(delete(DiscordMemory).where(DiscordMemory.id == memory_id))
+        database.execute(delete(DiscordMemoryCandidate).where(DiscordMemoryCandidate.id == candidate_id))
 
 
 def left(factory, world, guild: str) -> tuple[int, int]:
@@ -104,3 +136,14 @@ def test_the_command_line_widens_only_when_told(factory, world, capsys):
     assert main(["--guild-id", world["x"], "--author-id", world["a"], "--all-guilds"]) == 0
     assert json.loads(capsys.readouterr().out)["scope"]["guilds"] == sorted([world["x"], world["y"]])
     assert left(factory, world, world["x"]) == (1, 1), "a dry run, both times"
+
+
+def test_a_memory_source_in_y_stays_when_forgetting_in_x(factory, world, remembered):
+    report = forget(world["x"], world["a"], apply=False)
+    assert report["planned"]["memory_sources"] == 0 and report["planned"]["memories"] == 0
+    assert report["scope"]["left_alone"][world["y"]]["memory_sources"] == 1
+
+    forget(world["x"], world["a"], apply=True)
+    with factory() as database:
+        sources = database.scalar(select(func.count()).select_from(DiscordMemorySource).where(DiscordMemorySource.memory_id == remembered))
+    assert sources == 1 and left(factory, world, world["y"]) == (1, 1)
