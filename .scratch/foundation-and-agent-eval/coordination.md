@@ -49,7 +49,9 @@ cổng 8100 và cần GPU; đêm 27→28/10 là đêm nghiệm thu của ticket 
 
 ## Tin nhắn
 
-Ứng dụng giữ lại tin của một phiên khi nó gửi quá nhiều tin liên tiếp (fable 5.1 bị giữ sau khoảng 10
+Ứng dụng giữ lại tin của một phiên khi nó gửi quá nhiều tin liên tiếp: khoảng **10 tin sau mỗi lần chủ
+dự án gõ** (fable 5.1 đếm được, 27/10). Ban đêm không có người gõ, nên mỗi phiên chỉ còn ít tin; báo một
+lần khi xong việc, không báo tiến độ. Lần đầu bị giữ (fable 5.1 sau khoảng 10
 tin, 27/10; chủ dự án phải mở lại). Gom kết luận: mỗi nhánh một tin, đủ để không cần hỏi lại.
 
 ## Gộp
