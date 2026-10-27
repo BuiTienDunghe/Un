@@ -120,6 +120,20 @@ AGENT_TOOLS: list[dict[str, Any]] = [
 ]
 
 
+NO_DOCUMENTS_FOUND = {"result": "không tìm thấy đoạn tài liệu nào phù hợp"}
+
+# Ticket 10 (2b): on a Discord turn the model searched the documents for a thing
+# the server had discussed, got nothing, and gave up without trying the history
+# (Agent Eval v0.1 and v0.2: hist-07 at every run, hist-03 at 0.4). Added only on
+# that path, and AFTER the defense's data wrapper: it is the harness speaking, not
+# tool output, and inside the wrapper the model is told to ignore instructions.
+HISTORY_HINT = (
+    "Gợi ý của hệ thống (không phải dữ liệu): tài liệu không có nội dung này. "
+    "Nếu câu hỏi là về chuyện đã được bàn hoặc thông báo trong server Discord "
+    "này, hãy thử `search_history` trước khi trả lời là không tìm thấy."
+)
+
+
 def _clip(text: str, limit: int) -> str:
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
@@ -188,9 +202,15 @@ class AgentService:
                 tool_started = perf_counter()
                 # D5: tool output is untrusted data (document chunks, memory
                 # text); the defense marks it so before the model reads it.
-                output = self.defense.wrap_tool_result(
-                    self._execute_tool(call["name"], call["arguments"], tool_context)
-                )
+                raw = self._execute_tool(call["name"], call["arguments"], tool_context)
+                output = self.defense.wrap_tool_result(raw)
+                if (
+                    call["name"] == "search_documents"
+                    and raw == self._dump(NO_DOCUMENTS_FOUND)
+                    and self.history_service is not None
+                    and (tool_context or {}).get("guild_id")
+                ):
+                    output += "\n" + HISTORY_HINT
                 steps.append({
                     "kind": "tool_result", "tool_name": call["name"], "arguments": None,
                     "content": output, "latency_ms": int((perf_counter() - tool_started) * 1000),
@@ -280,7 +300,7 @@ class AgentService:
                     top_k = 4
                 chunks = self.retrieval_service.retrieve(query, min(max(top_k, 1), 8), None)
                 if not chunks:
-                    return self._dump({"result": "không tìm thấy đoạn tài liệu nào phù hợp"})
+                    return self._dump(NO_DOCUMENTS_FOUND)
                 return self._dump([
                     {
                         "filename": chunk.get("filename"),
