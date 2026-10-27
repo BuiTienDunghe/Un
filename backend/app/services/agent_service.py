@@ -108,6 +108,18 @@ def _clip(text: str, limit: int) -> str:
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
+# A Discord message may run to 2000 characters (4000 with Nitro). Capped the way a
+# document excerpt is capped at 400, so the whole-item truncation in _dump always
+# has an item that fits instead of falling back to cutting the JSON mid-string.
+HISTORY_MESSAGE_MAX_CHARS = 800
+
+
+def _history_item(hit: object) -> dict[str, object]:
+    payload = history_hit_payload(hit)
+    payload["message"] = _clip(str(payload["message"]), HISTORY_MESSAGE_MAX_CHARS)
+    return payload
+
+
 class AgentService:
     def __init__(
         self,
@@ -226,7 +238,7 @@ class AgentService:
                         )
                     # Chronological, so an overflow must give up the OLDEST
                     # messages: they are the ones a "latest N" read cares least about.
-                    return self._dump([history_hit_payload(hit) for hit in hits], drop="first")
+                    return self._dump([_history_item(hit) for hit in hits], drop="first")
                 try:
                     limit = int(arguments.get("limit", 5))
                 except (TypeError, ValueError):
@@ -247,7 +259,7 @@ class AgentService:
                     return self._dump(
                         {"result": "không tìm thấy tin nhắn cũ nào khớp"}
                     )
-                return self._dump([history_hit_payload(hit) for hit in hits])
+                return self._dump([_history_item(hit) for hit in hits])
             if name == "search_documents":
                 query = str(arguments.get("query") or "").strip()
                 if not query:

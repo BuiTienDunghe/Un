@@ -14,11 +14,11 @@ from app.services.agent_service import AgentService
 from app.services.discord_history_service import DiscordHistoryHit, history_hit_payload
 
 
-def hit(index: int) -> DiscordHistoryHit:
+def hit(index: int, content: str | None = None) -> DiscordHistoryHit:
     return DiscordHistoryHit(
         discord_message_id=str(7000 + index), channel_id="50", thread_id=None,
         author_id="1001", author_display_name="Lan", is_bot=False,
-        content=f"Tin số {index}: " + "nội dung khá dài để đầy giới hạn " * 3,
+        content=content or f"Tin số {index}: " + "nội dung khá dài để đầy giới hạn " * 3,
         sent_at=datetime(2026, 10, 1, tzinfo=UTC) + timedelta(hours=index),
         link=f"https://discord.com/channels/1/50/{7000 + index}",
     )
@@ -80,6 +80,21 @@ def test_a_result_that_fits_is_byte_identical_to_before():
 
     four = agent()._execute_tool("search_documents", {"query": "q", "top_k": 4}, None)
     assert isinstance(json.loads(four), list) and len(json.loads(four)) == 4 and "omitted" not in four
+
+
+def test_a_discord_length_message_is_capped_so_whole_items_still_fit():
+    # 2000 characters, Discord's limit, with the newlines and quotes that double in JSON.
+    long_text = 'Tin dài "có nháy"\n' * 112
+    history = History(0)
+    history.hits = [hit(i, f"Tin số {i}: {long_text}") for i in range(1, 4)]
+
+    output = agent(history)._execute_tool("search_history", {"limit": 3}, {"guild_id": "g"})
+
+    payload = json.loads(output)  # valid JSON: no fallback to cutting mid-string
+    assert len(output) <= 2400
+    messages = payload["items"] if isinstance(payload, dict) else payload
+    assert all(len(m["message"]) == 800 and m["message"].endswith("…") for m in messages)
+    assert messages[-1]["message"].startswith("Tin số 3:"), "still the newest that survives"
 
 
 def test_what_cannot_be_split_into_items_keeps_the_character_cut():
