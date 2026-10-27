@@ -1,0 +1,250 @@
+{
+  "A": {
+    "t0": {
+      "passed": 31,
+      "tools_required_fail": [
+        "doc-10",
+        "doc-22",
+        "doc-25",
+        "doc-30",
+        "hist-07",
+        "stat-02"
+      ],
+      "tools_forbidden_fail": [
+        "hist-07"
+      ]
+    },
+    "t04_totals": [
+      31,
+      29,
+      33
+    ],
+    "t04_target_pass": {
+      "1a": "4/15",
+      "2b": "3/6"
+    },
+    "t04_tools_forbidden_fails": [
+      3,
+      2,
+      1
+    ],
+    "t04_per_task_failrate": {
+      "doc-10": 2,
+      "doc-12": 1,
+      "doc-19": 1,
+      "doc-20": 2,
+      "doc-21": 1,
+      "doc-22": 3,
+      "doc-25": 2,
+      "doc-26": 1,
+      "doc-29": 1,
+      "doc-30": 3,
+      "doc-32": 2,
+      "hist-05": 2,
+      "hist-07": 3,
+      "hist-09": 2,
+      "stat-02": 1
+    }
+  },
+  "B": {
+    "t0": {
+      "passed": 31,
+      "tools_required_fail": [
+        "doc-22",
+        "doc-30",
+        "hist-03",
+        "hist-07"
+      ],
+      "tools_forbidden_fail": [
+        "hist-03",
+        "hist-07"
+      ]
+    },
+    "warmup_vs_t0_same_answers": 22,
+    "t0_vs_A": {
+      "targets_passed_A": [],
+      "targets_passed": [
+        "doc-10",
+        "doc-25",
+        "stat-02"
+      ],
+      "non_target_gained": [
+        "doc-17",
+        "doc-29"
+      ],
+      "non_target_lost": [
+        "doc-26",
+        "doc-27",
+        "doc-28",
+        "hist-03",
+        "hist-10"
+      ]
+    },
+    "t04_totals": [
+      28,
+      31,
+      27
+    ],
+    "t04_target_pass": {
+      "1a": "8/15",
+      "2b": "0/6"
+    },
+    "t04_tools_forbidden_fails": [
+      2,
+      2,
+      2
+    ],
+    "t04_per_task_failrate": {
+      "doc-04": 1,
+      "doc-12": 1,
+      "doc-20": 1,
+      "doc-22": 3,
+      "doc-26": 3,
+      "doc-27": 3,
+      "doc-28": 1,
+      "doc-29": 3,
+      "doc-30": 2,
+      "doc-31": 1,
+      "doc-32": 2,
+      "hist-03": 3,
+      "hist-05": 1,
+      "hist-07": 3,
+      "hist-09": 1,
+      "hist-10": 3,
+      "stat-02": 2
+    }
+  },
+  "C": {
+    "t0": {
+      "passed": 32,
+      "tools_required_fail": [
+        "doc-22",
+        "doc-25",
+        "doc-30",
+        "hist-07"
+      ],
+      "tools_forbidden_fail": [
+        "hist-07"
+      ]
+    },
+    "warmup_vs_t0_same_answers": 40,
+    "t0_vs_A": {
+      "targets_passed_A": [
+        "hist-03"
+      ],
+      "targets_passed": [
+        "hist-03"
+      ],
+      "non_target_gained": [
+        "doc-10",
+        "doc-17",
+        "doc-19",
+        "stat-02"
+      ],
+      "non_target_lost": [
+        "doc-20",
+        "doc-26",
+        "doc-31"
+      ]
+    },
+    "t04_totals": [
+      30,
+      32,
+      31
+    ],
+    "t04_target_pass": {
+      "1a": "4/15",
+      "2b": "3/6"
+    },
+    "t04_tools_forbidden_fails": [
+      1,
+      1,
+      1
+    ],
+    "t04_per_task_failrate": {
+      "doc-10": 2,
+      "doc-17": 1,
+      "doc-19": 1,
+      "doc-20": 2,
+      "doc-22": 3,
+      "doc-25": 2,
+      "doc-26": 2,
+      "doc-29": 2,
+      "doc-30": 2,
+      "hist-01": 1,
+      "hist-05": 1,
+      "hist-07": 3,
+      "hist-08": 2,
+      "hist-10": 1,
+      "stat-02": 2
+    }
+  },
+  "D": {
+    "t0": {
+      "passed": 31,
+      "tools_required_fail": [
+        "doc-22",
+        "doc-30"
+      ],
+      "tools_forbidden_fail": [
+        "hist-03",
+        "hist-07"
+      ]
+    },
+    "warmup_vs_t0_same_answers": 40,
+    "t0_vs_A": {
+      "targets_passed_A": [
+        "hist-03"
+      ],
+      "targets_passed": [
+        "doc-10",
+        "doc-25",
+        "stat-02"
+      ],
+      "non_target_gained": [
+        "doc-17",
+        "doc-29"
+      ],
+      "non_target_lost": [
+        "doc-26",
+        "doc-27",
+        "doc-28",
+        "hist-10"
+      ]
+    },
+    "t04_totals": [
+      29,
+      30,
+      29
+    ],
+    "t04_target_pass": {
+      "1a": "11/15",
+      "2b": "0/6"
+    },
+    "t04_tools_forbidden_fails": [
+      2,
+      2,
+      2
+    ],
+    "t04_per_task_failrate": {
+      "doc-04": 1,
+      "doc-19": 1,
+      "doc-20": 1,
+      "doc-22": 2,
+      "doc-25": 1,
+      "doc-26": 3,
+      "doc-27": 3,
+      "doc-28": 2,
+      "doc-29": 2,
+      "doc-30": 1,
+      "doc-31": 1,
+      "doc-32": 2,
+      "hist-03": 3,
+      "hist-07": 3,
+      "hist-08": 2,
+      "hist-09": 1,
+      "hist-10": 2,
+      "stat-05": 1
+    }
+  }
+}

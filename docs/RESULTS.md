@@ -412,6 +412,21 @@ tasks, and the 0.4 run is a single run.**
 | temperature 0, seed 42 — warm, two runs byte-identical | 34/40 | same |
 | temperature 0.4, no seed (as shipped) | 29/40 | same |
 
+Ticket 10, on `agent-eval-v0.2` (a different task set: v0.1 numbers do not compare),
+`results/kept/agent-eval-v0.2-harness-20261027/`. Warm temperature 0 / three runs at 0.4:
+
+| Condition | t0 | 0.4 |
+| --- | ---: | --- |
+| baseline v0.2 (item-wise truncation included, its own effect unmeasured) | 31/40 | 31, 29, 33 |
+| + "look it up first" guide (1a) | 31/40 | 28, 31, 27 |
+| + empty-search history hint (2b) | 32/40 | 30, 32, 31 |
+| + both (supplementary) | 31/40 | 29, 30, 29 |
+
+Both together raise the "did not search" targets from 4/15 to 11/15 at 0.4 and answer
+the two Discord-routing tasks correctly in 8/8 runs — which the grader still fails,
+because those tasks forbid searching documents first — but lose file-name citations
+on three lookups. Not shipped as of this measurement.
+
 Hand grading of 16 tasks agrees with the grader on 15; the one grader error (doc-18,
 a regex too narrow) would make the warm runs 35/40. The largest failure class is the
 agent **not calling** document search for a question that sounds generic, and

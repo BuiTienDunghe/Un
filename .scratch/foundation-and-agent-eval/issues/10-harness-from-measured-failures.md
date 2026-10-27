@@ -1,6 +1,6 @@
 # 10 — Nâng harness theo lỗi đo được (M4)
 
-Status: đã giao — Nhân viên của Ún 3; phần GPU sau 09
+Status: đo xong (A, B, C, D) trên `wip/10-harness`; báo cáo ở kept/agent-eval-v0.2-harness-20261027; chờ chốt ship thay đổi nào
 Type: task
 Blocked by: 07
 
@@ -79,3 +79,16 @@ Tiêu chí nghiệm thu theo `spec.md` Mốc 4.
     tiêu được thêm hoặc bị mất (đây là sàn nhiễu do đổi prompt; ở mốc A, chỉ đổi mô tả công cụ và
     hình dạng kết quả khi tràn mà đã lật 5 bài không liên quan); (3) tổng điểm, sau cùng.
   - Mốc A ở 0.4 (bổ sung, đã chạy trước khi đăng ký): 31, 29, 33/40, tức dao động khoảng ±2 bài chỉ do lấy mẫu.
+- 27/10 20:41 — **Đo xong** (GPU 19:42–20:41, không còn tiến trình nào chạy). Báo cáo:
+  `data/evaluation/results/kept/agent-eval-v0.2-harness-20261027/REPORT.md`.
+  - Lạnh/nóng: seed không có tác dụng ở t0. Gỡ OCR và embedding không đổi kết quả; chỉ gỡ model chính
+    thì tái tạo đúng lần lạnh. Một lời dặn mới cũng làm lần đầu khác đi. Khớp giả thuyết "dùng lại
+    phần đầu prompt", chưa chứng minh. Hệ quả: khởi động bỏ đi cho **mỗi** biến thể prompt mới.
+  - Luật chồng kích hoạt (1a: mất 5 bài ngoài mục tiêu, cứu 3 bài mục tiêu), nên C = A + 2b. D = A + 1a
+    + 2b là phần bổ sung.
+  - Kết quả t0 / 0.4: A 31 / 31,29,33. B 31 / 28,31,27. C 32 / 30,32,31. D 31 / 29,30,29; D đếm tay
+    (hist-03/07 trả lời đúng 8/8, trượt chỉ vì tiêu chí cấm search_documents) là 31,32,31.
+  - KS (3a): 0/748 kết quả công cụ bị cắt giữa JSON, 85 lần bỏ bớt theo mục. Tác dụng lên điểm chưa đo.
+  - Chưa làm registry, ngân sách token/thời gian, chuẩn hoá lỗi, tracing: không lỗi đo được nào đòi.
+  - Nhánh hiện ở trạng thái D (`4beb9ba`: 1a + 2b). Chưa có quyết định ship thay đổi chất lượng nào;
+    các phương án nằm trong REPORT.
