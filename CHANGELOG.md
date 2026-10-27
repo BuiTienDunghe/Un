@@ -42,6 +42,16 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   làm lại một lần, có công cụ, để tra trước. Câu bị loại chỉ ghi thành một bước `answer_check` trong trace, không lưu
   chữ. Kiểm lại trên 144 câu đã lưu: bắt đúng 3 câu đang trượt, không chặn câu đạt nào. Chưa đo bằng Agent Eval (hoãn,
   gom vào đợt đo chung). Điểm mù đã biết: số thập phân ngắn như "3,5 triệu" không được kiểm.
+- **Dán văn bản dài vào chế độ công cụ** (28/10, ticket 20 #3). Ở chế độ công cụ, tin nhắn giờ dài được tới 100 000
+  ký tự (trước là 10 000; `maxLength` của `ChatRequest.message` trong OpenAPI đổi theo). Đoạn dán được lưu nguyên
+  trong hội thoại; model chỉ thấy một phiếu gồm khoảng 600 ký tự đầu, 600 ký tự cuối và mã để đọc phần giữa bằng
+  `read_document`. Đoạn dán chỉ mở được trong chính hội thoại đó và không vào kho tài liệu chung. Chat thường vẫn
+  giới hạn 10 000 ký tự và trả 422 `INPUT_TOO_LONG` kèm lời nhắc bật chế độ công cụ; muốn hỏi tiếp về một đoạn dán thì
+  phải ở chế độ công cụ, vì chat thường chỉ thấy đoạn dán cũ như một dòng ghi chú. Chưa đo bằng Agent Eval (hoãn).
+- **Bảng điểm harness** (28/10, ticket 23). Mỗi lần chạy Agent Eval in ra bốn nhóm chỉ số (đúng, hiệu quả, bền,
+  minh bạch) tính từ chính tệp kết quả của lần chạy, ghi điều kiện chạy (model đã nạp sẵn hay chưa, GPU có dùng chung
+  không) và thêm một dòng vào `data/evaluation/results/kept/agent-eval-scorecard-history.jsonl`; 38 lần chạy đã giữ
+  được nạp lại làm lịch sử. Đây là số của bộ bài nội bộ, dùng để so các phiên bản harness với nhau.
 
 ### Changed
 - **Discord thành một gói riêng** (28/10, ticket 22): 26 module Discord dời vào `backend/app/discord/`
