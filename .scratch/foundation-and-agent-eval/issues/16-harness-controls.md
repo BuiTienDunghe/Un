@@ -1,6 +1,6 @@
 # 16 — Kiểm soát harness: ngân sách cả lượt, lỗi công cụ có mã, trace bền (M4, cách B)
 
-Status: thiết kế đã duyệt (27/10, opus 5.5); Nhân viên 1 code sau khi 10 gộp
+Status: commit 1–4 chờ duyệt (Nhân viên của Ún 1, nhánh `wip/16-harness-controls`); commit 5 (Agent Eval so mốc) cần GPU
 Type: task
 Blocked by: 10 (cùng đụng `backend/app/services/agent_service.py`; đổi harness giữa chừng làm bẩn phép đo của 10)
 
@@ -247,3 +247,49 @@ Duyệt mọi chỗ "Ý tôi" ở trên, kèm 3 chỉnh:
   bằng `alembic upgrade head` khi gộp ticket 16; DB thật để launcher tự nâng. Fable duyệt dceaaab: gộp
   được. Thứ tự sáng 28/10 (sau eval đêm và sau khi 09 xong): nâng DB test → chạy riêng
   `test_agent_trace_summaries.py` → gộp → bộ đầy đủ.
+
+### 27/10 — Nhân viên của Ún 1: commit 1–4 (trên main 49c696f)
+
+Bản chất: giờ mỗi câu trả lời của agent có một đồng hồ. Hết giờ thì agent dừng gọn và trả lời bằng
+những gì đã có, hoặc nói thẳng là chưa kịp. Một lần gọi model cũng không còn chờ quá phần thời gian còn
+lại. Khi một công cụ hỏng, model được nói rõ nên làm gì, còn mã lỗi đi vào dấu vết. Mỗi bước để lại
+một bản ghi "khung xương" không có câu chữ, và bản ghi đó còn lại sau khi người dùng xoá hội thoại.
+
+| Commit | Việc |
+|---|---|
+| a7964f9 (1) | 5 mã lỗi; model nhận `{"error": <câu>, "code": <MÃ>}`; tên lớp ngoại lệ chỉ vào bước trace (`error_type`). `_execute_tool` vẫn trả `str` (test cũ không đổi); `_run_tool` trả thêm mã |
+| 8630db1 (2) | `app/llm_clients/deadline.py`: hạn chót cho `chat`/`chat_tools` của Ollama, và `chat` của Gemini/DeepSeek — timeout = min(của client, phần còn lại), không thử lại sau hạn, không ngủ chờ quá hạn. Ngoài lượt agent: không đổi gì |
+| 60e718c (3) | `agent.turn_budget_seconds: 90` / `final_reserve_seconds: 20` trong `models.yaml`; `stop_reason` ở bước final; câu cố định lấy số giây từ cấu hình; `request_logs` ghi `error` + `AGENT_TURN_BUDGET` |
+| ad9fed1 (4) | bảng `agent_trace_summaries` + migration `20261027_35`; store ghi hai bảng trong một transaction; `source` web/discord; token từng vòng gọi model |
+
+Lệch so với thiết kế đã duyệt:
+- Hạn chót đi qua một **ContextVar**, không qua tham số `timeout=`. Hành vi giữ y (m2), nhưng không phải
+  đổi chữ ký của `model_router`, của các bản giả trong test, hay của `UsageRecordingRouter` trong
+  `agent_eval` — đúng lý do `usage.py` đã ghi cho cách làm này. File đụng: `deadline.py` mới cùng 3 client,
+  còn `model_router.py` giữ nguyên.
+- "Lần gọi cuối hết giờ **hoặc hỏng**" → chỉ **hết giờ** mới trả câu cố định. Model không với tới được
+  hay hỏng thì vẫn ném lỗi như trước, vì câu "chưa trả lời kịp" khi đó là sai sự thật. Có test khẳng định.
+- `scripts/agent_eval.py` phải đọc và ghi hai khoá ngân sách giống hệt `main.py`; script này tự ghi nó là
+  "đọc giống main.py để chạy đúng cái API chạy".
+- `arguments_shape` chặt hơn mô tả: chỉ giữ các khoá mà công cụ khai báo; khoá lạ chỉ được đếm
+  (`_undeclared`), vì model có thể bịa ra một khoá chứa chữ. Số chỉ giữ nguyên khi tham số khai báo là integer.
+- Token của một vòng gọi model ghi một lần, ở bước `tool_call` đầu tiên của vòng đó. `request_logs` vẫn
+  đọc token của lần gọi cuối (k2); có test khẳng định.
+
+| Kiểm | Kết quả |
+|---|---|
+| Test mới không cần DB: lỗi có mã (9), hạn chót (10), ngân sách + token + log (10) | xanh |
+| Kiểm ngược: bỏ điều kiện "chừa phần dự trữ" | bài vòng chậm đỏ |
+| Test trace rút gọn (DB): mồi chèn vào câu hỏi, kết quả và câu trả lời; quét mọi cột text/JSONB đọc từ `information_schema`; xoá hội thoại thì nội dung mất, khung xương còn; Discord mang `source=discord` | xanh; phép quét không rỗng, vì bản trace đầy đủ thật sự chứa cả ba mồi |
+| Cả bộ backend trên DB test đã nâng lên `20261027_35` | 1199 xanh, 1 skip; `alembic check`: không lệch |
+| Bộ ở gốc | 74 xanh, 1 skip |
+| `alembic downgrade 20261011_34` | chạy được; DB test đã trả về revision cũ, bảng mới không còn |
+
+Ghi chú DB test: lần chạy đầu thiếu bảng (chưa nâng migration), nên 7 hội thoại test bị bỏ lại; đã xoá
+đúng 7 hội thoại đó. Sau đó DB được nâng lên, chạy test, rồi hạ về `20261011_34`, nên DB dùng chung
+trở lại như cũ. Gộp vào `main` thì cần `alembic upgrade head` như mọi migration.
+
+Chưa làm: commit 5 (Agent Eval v0.2 so với mốc của ticket 10) cần GPU. Theo quy tắc đo mới thì gỡ
+model chính trước MỖI lần đo. Báo cáo eval phải ghi rõ: commit 1 đổi lời model đọc ở hist-08..10, nên
+lần đo sau commit 1 nhắm đúng những bài đó. Ghi chú của hist-08 trong `tasks.jsonl` vẫn trích câu từ
+chối cũ; tôi không sửa bộ dữ liệu, vì nó có hash trong manifest.
