@@ -4,6 +4,11 @@ Chủ dự án giao (27/10/2026): "opus 5.5 của Ún" và "fable 5.1 của Ún"
 `spec.md`, hoặc tới khi hạn mức tuần (tất cả model, hoặc riêng Fable) vượt 85%. Có ba phiên thực
 hiện: "Nhân viên của Ún 1", "Nhân viên của Ún 2", "Nhân viên của Ún 3".
 
+## Ưu tiên (chủ dự án, 28/10)
+
+**Harness là điểm nổi bật nhất của dự án** — xử lý tốt, hiệu quả. Khi phải chọn, việc harness (ticket 20, 22, và
+mọi khả năng agent) đi trước thí nghiệm model (M3). Mọi cải tiến harness phải có số đo trên Agent Eval.
+
 ## Vai trò
 
 | Phiên | Việc |
