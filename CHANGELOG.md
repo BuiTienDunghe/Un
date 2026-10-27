@@ -32,6 +32,11 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   lại nguồn (sha từng file HF, commit converter); các lần sau từ chối mọi bản dựng khác nguồn. Chưa
   chạy, chưa tải gì. `run_mteb.py` thêm `--query-prefix` / `--passage-prefix` gắn tiền tố cả hai phía;
   trước đây mteb 2.20.5 lặng lẽ bỏ tiền tố nếu chỉ truyền `prompt_dict`.
+- **Agent đọc được tài liệu dài** (28/10, ticket 20 #1). `search_documents` trả kèm "dấu trang" (`document_id`,
+  `chunk_index`, độ dài đoạn); công cụ mới `read_document` mở trọn đoạn đó, đọc tiếp sang đoạn sau, hoặc đọc theo số
+  trang, tối đa 6 000 ký tự mỗi lần (`agent.read_result_max_chars`), chỉ mở được tài liệu đã hiện trong lần tra của
+  chính lượt đó. Ba công cụ của agent thành một registry. Agent Eval v0.3 (test hồi quy nội bộ): 35 → 38/48, 4/5 bài
+  đọc dài từ 0/5; mô tả công cụ mới làm 39/40 câu trả lời cũ đổi chữ, một bài (doc-10) trả lời bằng số bịa.
 
 ### Changed
 - `seed` trong cấu hình model general được gửi tới Ollama khi được đặt. Không phiên bản nào đang ship
