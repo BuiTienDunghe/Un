@@ -1,6 +1,6 @@
 # 16 — Kiểm soát harness: ngân sách cả lượt, lỗi công cụ có mã, trace bền (M4, cách B)
 
-Status: đã gộp vào main (27/10 22:40), fable 5.1 duyệt; DB test đã nâng lên 20261027_35 (chủ dự án cho phép); còn bước 5 (Agent Eval)
+Status: **xong** (27/10 23:35) — commit 1–4 gộp; bước 5 không suy giảm (A 34/40, sau 16 34/40; hist-08..10 thôi hỏi lại "server nào"; ngân sách 90 s không chạm)
 Type: task
 Blocked by: 10 (cùng đụng `backend/app/services/agent_service.py`; đổi harness giữa chừng làm bẩn phép đo của 10)
 
@@ -361,3 +361,7 @@ qua ngày không. Mục tiêu là hist-08..10.
     đã đăng ký (runner đọc trước); token mỗi vòng có ở 71/71 `model_round`.
   - Lỡ tay: `decide.py` bị ghi vào worktree lúc 22:58, khi A đang chạy, rồi chuyển ra trước 22:58:19; manifest
     A vẫn sạch, runner không đọc thư mục đó.
+- 27/10 23:35 (opus 5.5): đóng theo (a). Gom vào v0.3: tiêu chí "không hỏi lại server nào" cho
+  hist-08..10 (đọc tay: A 2/3 hỏi lại, sau 16 0/3; bộ chấm v0.2 không thấy). Runner `agent_eval` đọc token
+  trước AgentService nên eval không thấy token từng bước — cột đó do test 957962c bảo đảm; sửa runner để
+  sau, không chặn.
