@@ -102,7 +102,8 @@ def test_the_slip_carries_both_edges_and_how_to_open_it_and_not_the_middle():
     text = slip(PASTED)
     assert paste_id(PASTED) in text and "read_document" in text and str(len(PASTED)) in text
     assert PASTED[:SLIP_EDGE_CHARS].rstrip() in text and QUESTION in text, "the question at the end survives"
-    assert SECRET not in text and len(text) < 2 * SLIP_EDGE_CHARS + 900
+    # The slip's own words: ~840 characters on #3-C, ~1 030 since #3-D gave search its own call.
+    assert SECRET not in text and len(text) < 2 * SLIP_EDGE_CHARS + 1100
 
 
 def framing(text: str) -> tuple[str, str]:
@@ -112,14 +113,26 @@ def framing(text: str) -> tuple[str, str]:
     return shown[: shown.index(head)], shown[shown.index(tail) + len(tail):]
 
 
-def test_the_slip_never_calls_the_paste_a_document_and_says_search_finds_its_chunks():
+def test_the_slip_never_calls_the_paste_a_document_and_gives_search_an_exact_call():
     # #3-B: on "lưu thành tài liệu tạm" doc-39 searched the library and asked the user
     # whether to read on (kept/agent-eval-v0.3-pastes/REPORT.md). #3-D, 3': search now
-    # finds the paste, and the slip says it hands back the chunk to read.
+    # finds the paste; on #3-C the first read made the slip's one exact call 5 of 5, so
+    # search gets an exact call of its own (kept/agent-eval-v0.6-paste-slip-c/REPORT.md).
     before, after = framing(PASTED)
-    assert "tài liệu" not in before + after
-    assert "không tìm thấy" not in after and "search_documents tìm được trong nó" in after
-    assert "trả chunk_index để đọc thẳng đoạn đó bằng read_document" in after and "hỏi lại người dùng" in after
+    pid = paste_id(PASTED)
+    assert "tài liệu" not in before + after and "hỏi lại người dùng" in after
+    assert "không tìm thấy" not in after and "không cần search_documents" not in after
+    assert "search_documents với query là điều cần tìm" in after and f'chunk_index ở kết quả có document_id "{pid}"' in after
+    assert f'read_document(document_id="{pid}", from_chunk=chunk_index, n={READ_MAX_CHUNKS})' in after
+
+
+def test_the_slip_searches_for_a_detail_and_reads_from_the_start_for_the_whole_text():
+    _, after = framing(PASTED)
+    pid = paste_id(PASTED)
+    enough = after.index("đã đủ để trả lời thì trả lời luôn")
+    detail = after.index("Cần một chi tiết: gọi search_documents")
+    whole = after.index("Cần cả văn bản (tóm tắt, liệt kê) hoặc tìm không ra")
+    assert enough < detail < whole < after.index(f'read_document(document_id="{pid}", from_chunk=0,')
 
 
 def test_the_slip_gives_the_exact_call_after_the_question_the_user_asked():
@@ -262,6 +275,39 @@ def test_search_finds_the_pasted_chunk_holding_the_querys_words_first():
     assert len({row["chunk_index"] for row in found}) == len(found) <= 4, "each chunk once, at most top_k"
 
 
+def test_a_search_in_the_users_own_words_finds_the_unseen_chunk_not_the_question():
+    # On f497da6 this query ranked [8, 4, 0]: the last chunk, which holds the question the
+    # slip already shows, above the answer's.
+    chunks = _chunks(PASTED)
+    assert QUESTION in chunks[-1] and len(chunks[-1]) < SLIP_EDGE_CHARS and len(chunks[0]) < SLIP_EDGE_CHARS
+    found = [row["chunk_index"] for row in search_pastes({paste_id(PASTED): PASTED}, QUESTION, 4)]
+    assert found[0] == middle_index()
+    assert 0 not in found and len(chunks) - 1 not in found, "a chunk the slip shows whole is never a result"
+    assert search_pastes({paste_id(PASTED): PASTED}, "Mình dán biên bản dưới đây", 4) == [], "words only in the head"
+
+
+def spilling(n: int = 181, alpha: int = 6, bravo: int = 11) -> str:
+    """A paste of distinct lines whose last chunk is shorter than the tail the slip shows,
+    so the tail reaches into the chunk before: ALPHA9 lies in that reach, BRAVO7 before it."""
+    lines = [f"Mục {i} ghi nhận ý kiến thứ {i} của tổ {i % 7} về kế hoạch quý." for i in range(1, n)]
+    lines[-alpha] = "Mục chốt ghi rằng lô ALPHA9 nằm ở kho nam."
+    lines[-bravo] = "Mục cuối ghi rằng lô BRAVO7 đã chuyển về kho bắc."
+    return "Biên bản tổng hợp ý kiến.\n\n" + " ".join(lines) + "\n\nCâu hỏi: lô hàng nào nằm ở kho nam?"
+
+
+def test_the_tail_the_slip_shows_is_left_out_of_the_chunk_before_the_last_too():
+    text = spilling()
+    chunks, tail = _chunks(text), text[-SLIP_EDGE_CHARS:]
+    before = len(chunks) - 2
+    # The layout the test needs; if the chunker moves, find new n, alpha, bravo.
+    assert is_paste({"role": "user", "content": text}) and len(chunks[-1]) < SLIP_EDGE_CHARS
+    assert "ALPHA9" in chunks[before] and "ALPHA9" not in chunks[-1] and "ALPHA9" in tail
+    assert "BRAVO7" in chunks[before] and "BRAVO7" not in chunks[-1] and "BRAVO7" not in tail
+    pastes = {paste_id(text): text}
+    assert search_pastes(pastes, "ALPHA9", 4) == [], "seen in the slip's tail"
+    assert [row["chunk_index"] for row in search_pastes(pastes, "BRAVO7", 4)] == [before]
+
+
 def test_a_pasted_result_carries_the_paste_id_and_chunk_and_opens_with_read_document():
     pid, middle = paste_id(PASTED), middle_index()
     library = Library()
@@ -272,7 +318,7 @@ def test_a_pasted_result_carries_the_paste_id_and_chunk_and_opens_with_read_docu
     assert first["document_id"] == pid and first["chunk_index"] == middle
     assert first["excerpt"] == _chunks(PASTED)[middle][: SEARCH_EXCERPT_CHARS - 1] + "…" and "14/11" not in first["excerpt"]
     assert first["filename"] == read_paste(pid, PASTED, 0, 1)["filename"] and first["chars"] == len(_chunks(PASTED)[middle])
-    assert first["read"] == f'đọc trọn đoạn này bằng read_document(document_id="{pid}", from_chunk={middle})'
+    assert first["read"] == f'đọc trọn đoạn này bằng read_document(document_id="{pid}", from_chunk={middle}, n={READ_MAX_CHUNKS})'
     assert "score" not in first and "page" not in first, "a BM25 score is not on the library's scale; a paste has no pages"
     assert library.asked == [("hạn nộp hồ sơ dự thầu", 4, None)], "the library is still asked, once, as before"
 

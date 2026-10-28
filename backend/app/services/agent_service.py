@@ -528,7 +528,7 @@ class AgentService:
                 "chunk_index": chunk["chunk_index"],
                 "excerpt": _clip(content, SEARCH_EXCERPT_CHARS),
                 "chars": len(content),
-                "read": f'đọc trọn đoạn này bằng read_document(document_id="{chunk["document_id"]}", from_chunk={chunk["chunk_index"]})',
+                "read": f'đọc trọn đoạn này bằng read_document(document_id="{chunk["document_id"]}", from_chunk={chunk["chunk_index"]}, n={READ_MAX_CHUNKS})',
             })
         readable = (tool_context or {}).get("readable_documents")
         for chunk in chunks:

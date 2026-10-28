@@ -71,10 +71,12 @@ def slip(text: str) -> str:
 
     Ticket 20 #3-D, 3' (owner's choice): reading on from chunk 0, three at a time, cannot
     reach an answer past the third read, so search_documents now finds a paste's chunks
-    (search_pastes) and the slip says so in place of "search_documents không tìm thấy nó":
-    a search hands back the chunk_index to read straight away. The rest of #3-C's slip
-    stands, "không cần search_documents trước" included: reading from chunk 0 still needs
-    no search, which is what read_document's own description would otherwise suggest.
+    (search_pastes). On #3-C's slip the first read made the slip's one exact call, (0, 3),
+    on 5 of 5 (kept/agent-eval-v0.6-paste-slip-c/), so search is an exact call of its own
+    here, not a remark: a detail is searched and read from the chunk_index found; the whole
+    text (a summary, a list), or a search that finds nothing, is read from chunk 0. "Không
+    cần search_documents trước" is gone. The cap, the next_from_chunk sentence and answering
+    from the edges stay; the chunk count stays out.
     """
     document_id = paste_id(text)
     head, tail = text[:SLIP_EDGE_CHARS].rstrip(), text[-SLIP_EDGE_CHARS:].lstrip()
@@ -85,11 +87,14 @@ def slip(text: str) -> str:
         f"[Người dùng dán vào tin nhắn này một văn bản dài {len(text)} ký tự. Bạn chỉ thấy phần đầu và "
         f"phần cuối; phần giữa chưa hiện ra.]\n\nĐẦU VĂN BẢN:\n{head}\n\n[… phần giữa chưa thấy …]\n\n"
         f"CUỐI VĂN BẢN:\n{tail}\n\n"
-        f"[Văn bản dán nằm trong tin nhắn, không phải tệp đã tải lên. search_documents tìm được trong nó và "
-        f"trả chunk_index để đọc thẳng đoạn đó bằng read_document. "
+        f"[Văn bản dán nằm trong tin nhắn, không phải tệp đã tải lên. "
         f"Nếu phần đầu và phần cuối đã đủ để trả lời thì trả lời luôn, không đọc thêm. "
-        f"Nếu câu hỏi cần phần chưa thấy, hãy tự đọc trước khi trả lời hay hỏi lại người dùng: gọi thẳng "
-        f'read_document(document_id="{document_id}", from_chunk=0, n={most}), không cần search_documents trước. '
+        f"Nếu câu hỏi cần phần chưa thấy, hãy tự đọc trước khi trả lời hay hỏi lại người dùng. "
+        f"Cần một chi tiết: gọi search_documents với query là điều cần tìm (nó tìm cả trong văn bản dán), lấy "
+        f'chunk_index ở kết quả có document_id "{document_id}", rồi gọi '
+        f'read_document(document_id="{document_id}", from_chunk=chunk_index, n={most}). '
+        f"Cần cả văn bản (tóm tắt, liệt kê) hoặc tìm không ra: đọc lần lượt, bắt đầu bằng "
+        f'read_document(document_id="{document_id}", from_chunk=0, n={most}). '
         f"read_document chỉ nhận n từ 1 đến {most}, tức mỗi lần đọc tối đa {most} đoạn, và văn bản không có "
         f"trang; muốn đọc tiếp thì gọi lại với from_chunk bằng next_from_chunk trong kết quả, tới khi thấy "
         f"điều cần tìm hoặc next_from_chunk là null.]"
@@ -146,21 +151,65 @@ def _terms(text: str) -> list[str]:
     return _WORD.findall(unicodedata.normalize("NFC", text).lower())
 
 
+def _flat(text: str) -> str:
+    return " ".join(text.split())
+
+
+def _overlap(left: str, right: str) -> int:
+    """How long the longest end of `left` is that `right` starts with."""
+    for size in range(min(len(left), len(right)), 0, -1):
+        if right.startswith(left[-size:]):
+            return size
+    return 0
+
+
+@lru_cache(maxsize=8)
+def _unseen(text: str) -> tuple[str, ...]:
+    """Each chunk without what the slip already shows: the text's first and last
+    SLIP_EDGE_CHARS characters. Empty for a chunk the slip shows whole.
+
+    A chunk knows its paragraph, not where in it it starts, and a paste repeats itself
+    (a filler line, a form's headings), so a chunk is not placed by searching the text.
+    It is matched against the edges instead, with whitespace flattened as the chunker
+    flattens it: from the first chunk on, the part of each that is the head, or ends it,
+    until a chunk holds none of it; the same for the tail from the last chunk back. On
+    plain prose that cuts exactly where the edges end; on a repeated line it may cut a
+    little more, all of it words the slip shows."""
+    head, tail = _flat(text[:SLIP_EDGE_CHARS]), _flat(text[-SLIP_EDGE_CHARS:])
+    chunks = [_flat(chunk) for chunk in _chunks(text)]
+    starts, ends = [0] * len(chunks), [len(chunk) for chunk in chunks]
+    for index, chunk in enumerate(chunks):
+        seen = len(chunk) if chunk in head else _overlap(head, chunk)
+        if not seen:
+            break
+        starts[index] = seen
+    for index in range(len(chunks) - 1, -1, -1):
+        chunk = chunks[index]
+        seen = len(chunk) if chunk in tail else _overlap(chunk, tail)
+        if not seen:
+            break
+        ends[index] = min(ends[index], len(chunk) - seen)
+    return tuple(chunk[start:end] if start < end else "" for chunk, start, end in zip(chunks, starts, ends))
+
+
 def search_pastes(pastes: dict[str, str], query: str, top_k: int) -> list[dict[str, object]]:
     """search_documents' view of this turn's pastes (ticket 20 #3-D, 3'): their chunks by
     BM25 against the query, best first, at most top_k, shaped like retrieval chunks.
 
     Plain Python, no model and no GPU: Vietnamese syllables split on \\w+, no word
-    segmentation. A word in half the chunks or more weighs nothing (Robertson's IDF,
-    clamped at zero, where Lucene's log(1 + …) stays positive), and a chunk scoring zero is
-    left out. `pastes` holds every paste of the conversation, not only the last message's,
-    so a chunk sharing only "là" or "của" with a question about the library must not sit
-    above the library's results."""
+    segmentation. Only what the slip has not shown counts (_unseen): the question sits at
+    an edge, and its chunk ranked first on its own words, a read spent on text the model
+    already had; a chunk the slip shows whole is never a result. A word in half the chunks
+    or more weighs nothing (Robertson's IDF, clamped at zero, where Lucene's log(1 + …)
+    stays positive), and a chunk scoring zero is left out. `pastes` holds every paste of
+    the conversation, not only the last message's, so a chunk sharing only "là" or "của"
+    with a question about the library must not sit above the library's results."""
     wanted = set(_terms(query))
     rows = [
-        (document_id, len(text), index, content, Counter(_terms(content)))
+        (document_id, len(text), index, content, Counter(_terms(unseen)))
         for document_id, text in pastes.items()
-        for index, content in enumerate(_chunks(text))
+        for index, (content, unseen) in enumerate(zip(_chunks(text), _unseen(text)))
+        if unseen
     ]
     if not wanted or not rows:
         return []
