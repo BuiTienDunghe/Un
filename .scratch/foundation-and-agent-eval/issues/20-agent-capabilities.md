@@ -1,6 +1,6 @@
 # 20 — Khả năng cơ bản cho agent: đọc dài, kiểm câu trả lời, báo tiến độ
 
-Status: đang làm — cách A (chủ dự án 28/10 00:20): v0.3 → #1 → #2 → #3 → #4; bỏ #5. #3-B trượt luật (15:13); #3-C trượt điều 3 (19:02): 6/9 trên 9 bài đoạn dán (cũ 2/9), `n` sạch, nhưng bài mới chỉ 1/3; phiếu cũ giữ. Gói #3-D duyệt 21:20 (bước 1 nhắc lại + 3' tìm trong đoạn dán, ba nhánh, bài mới mù): dừng giữa lần đo (22:45), câu trả lời một bài phụ thuộc bài chạy trước nó; chờ chủ dự án chọn cách đo 1–3 và phiếu (b)
+Status: đang làm — cách A (chủ dự án 28/10 00:20): v0.3 → #1 → #2 → #3 → #4; bỏ #5. #3-B trượt luật (15:13); #3-C trượt điều 3 (19:02): 6/9 trên 9 bài đoạn dán (cũ 2/9), `n` sạch, nhưng bài mới chỉ 1/3; phiếu cũ giữ. Gói #3-D duyệt 21:20 (bước 1 nhắc lại + 3' tìm trong đoạn dán, ba nhánh, bài mới mù): dừng giữa lần đo (22:45), câu trả lời một bài phụ thuộc bài chạy trước nó; chủ dự án chọn cách 2 (cô lập từng bài) và bỏ phiếu (b): đang sửa runner, đăng ký lại, đo lại cả ba nhánh
 Type: task
 Blocked by: — (cần bộ bài v0.3 có bài đọc dài để đo)
 
@@ -391,3 +391,22 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
     3. Không sửa code: chạy từng bài riêng như lần chẩn đoán (15 bài × 3 nhánh × 2 lần, ~40 phút). Sửa đăng ký chỉ ở thủ tục.
     - Ý kiến opus: cách 2, vì lệch thứ tự đè lên mọi phép đo Agent Eval so hai nhánh, không riêng #3-D; sửa runner một lần
       thì các lần đo sau dùng được. Phiếu (b) gộp vào lần đăng ký lại.
+- 28/10 23:05 (opus) — **Chủ dự án chọn cách 2** (qua fable, nguyên văn): "Chọn cách 2: runner gỡ model khỏi Ollama trước
+  mỗi bài để mỗi bài chạy như chạy riêng; sửa riêng mục Quy trình của bản đăng ký, fable duyệt lại, chạy lại cả ba nhánh
+  #3-D. Ghi rõ mọi số đo cũ là số theo chuỗi." Phiếu (b) của 3': "vậy bỏ". NV2 đã thu hẹp phiếu ở `92f5796` (lệnh cụ thể duy
+  nhất vẫn là đọc từ đoạn 0, thêm một câu nói search_documents tìm được trong văn bản dán), chờ fable.
+  - **Nhân viên của Ún 3 — runner cô lập từng bài**, nhánh `wip/20-eval-isolate` cắt từ main `7907260`, worktree
+    `local-ai-core-wt/20-eval-isolate`.
+    - `backend/scripts/agent_eval.py`: cờ `--unload-between-tasks`. Trước **mỗi** bài, kể cả bài đầu: gỡ model vai trò
+      general khỏi Ollama (`/api/generate` với `keep_alive: 0`, như `run_cold.sh`), chờ `/api/ps` không còn model đó, rồi
+      nạp lại (`/api/generate` không prompt) và đo thời gian nạp, để bài chạy trên model vừa nạp, chưa có gì trong bộ nhớ đệm.
+    - Manifest luôn có `unload_between_tasks` (true/false). Mỗi dòng `task_results` có `reload_ms` (null khi tắt cờ).
+    - Không đổi gì model thấy: `tools_sha256`, `agent_guide_sha256`, `system_prompt_sha256`, bộ bài, bộ chấm giữ nguyên.
+    - Mặc định tắt, để lần chạy khác không đổi; so hai nhánh từ nay dùng cờ này.
+    - Test với Ollama giả: thứ tự gỡ → chờ → nạp → chạy bài, cho từng bài kể cả bài đầu; manifest có trường mới; tắt cờ thì
+      không gọi gỡ; `reload_ms` có mặt khi bật.
+    - Không mở `wip/20-paste-nudge`, `wip/20-paste-search`. Không chạy `agent_eval` thật; test với luật giữ im. Không push.
+  - **fable**: duyệt nhánh runner, `92f5796`, và phần sửa bản đăng ký.
+  - **opus**: sửa mục Quy trình và các dự đoán bị ảnh hưởng của bản đăng ký #3-D, đăng ký lại phần +1+3' theo phiếu mới (C3,
+    C4 giữ); thêm ghi chú "số theo chuỗi" ở `kept/README.md`; khi mọi thứ GỘP ĐƯỢC thì dựng lại ba commit đo trên main có
+    runner mới và chạy lại cả ba nhánh với cờ. Các lần chạy 22:16–22:37 giữ làm bằng chứng "theo chuỗi", không dùng cho luật.

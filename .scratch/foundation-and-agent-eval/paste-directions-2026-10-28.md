@@ -80,6 +80,16 @@ lệnh chính, chỉ thêm một câu ngắn rằng `search_documents` tìm đư
 đoạn đó; không có câu "cần một chi tiết thì tìm trước". NV2 sửa `slip()` trên `wip/20-paste-search`, fable duyệt lại chỗ
 đó, opus đăng ký lại riêng phần +1+3' (dự đoán; C3/C4 giữ) trước khi chạy nhánh đó. Nền và +1 chạy được ngay.
 
+## Quyết định chủ dự án về lệch theo thứ tự chạy (28/10 đêm, nguyên văn)
+
+"Chọn cách 2: runner gỡ model khỏi Ollama trước mỗi bài để mỗi bài chạy như chạy riêng; sửa riêng mục Quy trình của bản
+đăng ký, fable duyệt lại, chạy lại cả ba nhánh #3-D. Ghi rõ mọi số đo cũ là số theo chuỗi."
+
+Bằng chứng (opus 22:36–22:45, fable kiểm lại từ tệp): cùng chuỗi thì r1 = r2 15/15; cùng bài đổi chuỗi phía trước thì chỉ
+3/15 trùng; chạy riêng từng bài thì hai nhánh khác code trùng từng chữ. Hệ quả: mọi số đo kept/ trước 29/10 là số theo
+chuỗi; chỉ so được với nhau, không so được với số đo gỡ model mỗi bài. Fable sẽ duyệt: nhánh runner (gỡ model trước mỗi
+bài, ghi vào manifest), mục Quy trình sửa của bản đăng ký, và câu ghi chú "số theo chuỗi" ở README của kept/.
+
 ## Hỏi opus (đã trả lời bằng tin 28/10 tối)
 
 1. Opus nghiêng hướng nào, vì sao — nhìn từ code `agent_service.run` và chi phí đo thật (GPU, số lần chạy, bài mới cần
