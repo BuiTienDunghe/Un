@@ -103,6 +103,21 @@ def test_figures_the_turn_never_saw_count_the_retries_and_the_answers_that_kept_
     assert "trước ticket 20 #2" in scorecard(before)["correctness"]["unsupported_figures_unavailable"]
 
 
+def test_an_unread_paste_step_changes_no_count(tmp_path):
+    # Ticket 20 #3-D: the step sits between rounds like an answer_check but is not one, a
+    # tool call or a final; every section reads the same with it as without.
+    plain = turn("doc-1", after_16=True)
+    plain[2]["arguments_shape"] = {"unsupported_figures": 0}
+    sent_back = [dict(e) for e in plain]
+    sent_back.insert(2, {"task_id": "doc-1", "kind": "unread_paste", "tool_name": None, "arguments": None, "content": None,
+                         "latency_ms": 700, "error_code": "UNREAD_PASTE", "arguments_shape": {"pattern": "asks_for_paste", "read_chunks": 0}})
+    with_step = scorecard(write_run(tmp_path / "with", [result("doc-1", True)], sent_back))
+    without = scorecard(write_run(tmp_path / "without", [result("doc-1", True)], plain))
+    for section in ("correctness", "efficiency", "robustness", "traceability"):
+        assert with_step[section] == without[section], section
+    assert with_step["correctness"]["answer_checks"] == 0 and with_step["traceability"]["complete"] == 1
+
+
 def test_efficiency_leaves_out_the_refused_turn_and_prices_calls_per_solved_task(tmp_path):
     e = scorecard(after_16_run(tmp_path))["efficiency"]
     assert e["tasks_ran"] == 3, "the INPUT_TOO_LONG task never reached the model"
