@@ -115,7 +115,7 @@ def test_efficiency_leaves_out_the_refused_turn_and_prices_calls_per_solved_task
 
 def test_robustness_reads_codes_after_ticket_16_and_counts_uncoded_errors_before(tmp_path):
     r = scorecard(after_16_run(tmp_path))["robustness"]
-    assert r["stop_reasons"] == {"final": 3, "max_steps": 0, "turn_budget": 0, "turn_budget_exhausted": 0}
+    assert r["stop_reasons"] == {"final": 3, "max_steps": 0, "turn_budget": 0, "turn_budget_exhausted": 0, "tool_call_error": 0}
     assert r["max_steps_matches_budget_exhausted"] is True
     assert r["tool_error_codes"] == {"BAD_ARGUMENTS": 1, "TOOL_UNAVAILABLE_HERE": 1} and r["tool_errors_uncoded"] is None
     assert r["bad_arguments_rate"] == 0.25 and r["results_trimmed_by_item"] == 1
@@ -125,6 +125,35 @@ def test_robustness_reads_codes_after_ticket_16_and_counts_uncoded_errors_before
     old = scorecard(before)["robustness"]
     assert old["stop_reasons"] is None and "trước ticket 16" in old["stop_reasons_unavailable"]
     assert old["tool_error_codes"] is None and old["tool_errors_uncoded"] == 1 and old["bad_arguments_rate"] is None
+
+
+def test_a_tool_call_ollama_could_not_parse_is_its_own_stop_reason(tmp_path):
+    """Ticket 27, as the runner records it: each failed round is a tool_call_error step and a
+    model_round with no token counts (Ollama answered 500, counting nothing)."""
+    def failed(task_id):
+        return {"task_id": task_id, "kind": "tool_call_error", "tool_name": None, "arguments": None, "content": None,
+                "latency_ms": 40, "error_code": "TOOL_CALL_PARSE", "tokens_in": None, "tokens_out": None}
+
+    def round_(task_id, index, call="chat_tools", counted=True):
+        return {"task_id": task_id, "kind": "model_round", "round_index": index, "call": call,
+                "tokens_in": 1000 if counted else None, "tokens_out": 100 if counted else None, "latency_ms": 40}
+
+    final = {"kind": "final", "tool_name": None, "arguments": None, "content": "đáp án", "latency_ms": 800}
+    # doc-1 fails once and the retry answers; doc-2 fails twice and answers without tools.
+    events = [failed("doc-1"), {"task_id": "doc-1", **final, "stop_reason": "final"}, round_("doc-1", 0, counted=False), round_("doc-1", 1),
+              failed("doc-2"), failed("doc-2"), {"task_id": "doc-2", **final, "stop_reason": "tool_call_error"},
+              round_("doc-2", 0, counted=False), round_("doc-2", 1, counted=False), round_("doc-2", 2, call="chat")]
+    results = [result("doc-1", True, calls=0), result("doc-2", True, calls=0, rounds=3) | {"budget_exhausted": True}]
+    card = scorecard(write_run(tmp_path / "parse", results, events))
+
+    r = card["robustness"]
+    assert r["stop_reasons"] == {"final": 1, "max_steps": 0, "turn_budget": 0, "turn_budget_exhausted": 0, "tool_call_error": 1}
+    assert r["tool_error_codes"] is None and r["task_errors"] == {}, "the failed call reached no tool, and the turn ran"
+    # Two checks read these turns as gaps, and are left as they are: the runner marks a turn
+    # budget_exhausted for any plain chat round, as it does a turn_budget one; and a failed
+    # round has no token counts to give.
+    assert r["max_steps_matches_budget_exhausted"] is False
+    assert card["traceability"]["parts"]["rounds_timed_and_counted"] == 0
 
 
 def test_traceability_is_complete_only_with_every_field_and_says_why_per_part(tmp_path):
