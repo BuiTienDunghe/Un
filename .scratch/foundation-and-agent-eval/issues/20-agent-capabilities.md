@@ -1,6 +1,6 @@
 # 20 — Khả năng cơ bản cho agent: đọc dài, kiểm câu trả lời, báo tiến độ
 
-Status: đang làm — cách A (chủ dự án 28/10 00:20): v0.3 → #1 → #2 → #3 → #4; bỏ #5. #3-B trượt luật (15:13); #3-C trượt điều 3 (19:02): 6/9 trên 9 bài đoạn dán (cũ 2/9), `n` sạch, nhưng bài mới chỉ 1/3; phiếu cũ giữ, chờ chủ dự án chọn A–E
+Status: đang làm — cách A (chủ dự án 28/10 00:20): v0.3 → #1 → #2 → #3 → #4; bỏ #5. #3-B trượt luật (15:13); #3-C trượt điều 3 (19:02): 6/9 trên 9 bài đoạn dán (cũ 2/9), `n` sạch, nhưng bài mới chỉ 1/3; phiếu cũ giữ. Gói #3-D duyệt 21:20 (bước 1 nhắc lại + 3' tìm trong đoạn dán, ba nhánh, bài mới mù): đang làm
 Type: task
 Blocked by: — (cần bộ bài v0.3 có bài đọc dài để đo)
 
@@ -290,3 +290,72 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
     câu đó có thật trong code; quan hệ nhân quả chưa đo. Thêm một cách:
     - F. Sửa mô tả `read_document` để nhận cả id `paste_…` trong phiếu. Đổi `tools_sha256`, nên phải đo đủ 56 bài; cũng
       cần bài mới chưa ai xem.
+- 28/10 21:25 (opus) — **Chủ dự án duyệt gói #3-D** (qua fable; nguyên văn ở `paste-directions-2026-10-28.md`, mục
+  "Quyết định chủ dự án"): "Duyệt gói: đo trên int/20-3c, không gộp #3-C trước; bước 1 nhắc lại một lần với lượt thử lại
+  riêng; 3' cho search_documents tìm trong đoạn dán; một bản đăng ký ba nhánh; NV3 viết bài mới mù, có ít nhất một bài đáp
+  án sau đoạn 8. Opus điều phối, fable duyệt." Ba việc song song, không ai thấy việc của người khác. Chỉ opus sửa tệp
+  ticket này; xong thì báo opus bằng một tin ngắn.
+  - **Nhân viên của Ún 1 — bước 1, nhắc lại khi đoạn dán còn đoạn chưa đọc**, nhánh `wip/20-paste-nudge` cắt từ
+    `int/20-3c` (`ed210e4`), worktree `local-ai-core-wt/20-paste-nudge`.
+    - Chỗ sửa: `AgentService.run`, ở nhánh model tự trả lời (`if not calls`), sau bước kiểm con số #2 khi #2 không thử
+      lại. Không ở nhánh câu trả lời ép (hết lượt công cụ hay hết giờ, `agent_service.py:413–449`).
+    - Bắn khi đủ cả hai: (a) đoạn dán của lượt còn đoạn chưa đọc, đếm từ các đoạn `read_document` thật sự trả về trong
+      lượt (đoạn trích của `search_documents` không tính); (b) câu trả lời khớp mẫu chữ: nhờ người dùng dán, gửi, tải
+      lên hay cung cấp văn bản hoặc một phần của nó; hoặc nói đã đọc hết, toàn bộ, đầy đủ văn bản.
+    - Lượt thử lại **riêng**: cờ riêng, không dùng `retried` của #2 (bằng chứng: doc-47 phía sau #3-C, #2 tiêu lượt
+      thử lại ở vòng 1 rồi vòng 3 nói "đã đọc đầy đủ"). Cho thêm đúng một vòng, chỉ khi còn ≥ `final_reserve_seconds`.
+      Một lượt có thể có cả hai lần thử lại (#2 rồi bước 1), mỗi loại tối đa một.
+    - Lời nhắc (tin system): đoạn dán đã nằm trong tin nhắn, đừng nhờ người dùng dán lại; tự đọc bằng một lệnh
+      `read_document` cụ thể (document_id của đoạn dán, `from_chunk` = đoạn chưa đọc nhỏ nhất, `n=3`). Không nêu tổng số
+      đoạn hay số đoạn còn lại (#3-B: nêu số thì model xin `n` bằng số đó).
+    - Vết: một bước riêng như `answer_check`, không giữ chữ của câu bị trả lại (kind, mã lỗi, `arguments_shape` chỉ có số
+      đếm và loại mẫu). Nhãn tiến độ riêng. Kiểm `agent_eval_scorecard.py` vẫn đếm đúng khi có kind mới.
+    - Mẫu chữ viết được từ câu trả lời doc-40, doc-44, doc-47 trong `kept/agent-eval-v0.6-paste-slip-c/` (bài đã công
+      khai); vì vậy ba bài đó thành bài đã thấy với bước này.
+    - Không đổi `AGENT_GUIDE`, mô tả công cụ (`tools_sha256` phải còn `153209…a75e500`), `slip()`, bước kiểm #2, bộ
+      chấm, bộ bài. Không đụng `_search_documents` (NV2 sửa ở đó).
+    - Test: nhờ dán + còn đoạn chưa đọc → thêm một vòng có lời nhắc; nói đã đọc hết khi mọi đoạn đã đọc → không bắn;
+      #2 thử lại rồi bước 1 trong cùng lượt; không có đoạn dán → các bước giống hệt trước; nhánh ép không bắn; thiếu
+      giờ không bắn; lời nhắc không chứa tổng số đoạn.
+  - **Nhân viên của Ún 2 — 3', `search_documents` tìm trong đoạn dán**, nhánh `wip/20-paste-search` cắt từ `int/20-3c`
+    (`ed210e4`), worktree `local-ai-core-wt/20-paste-search`.
+    - `_search_documents`: nếu lượt có đoạn dán, xếp hạng các đoạn của nó (`pastes._chunks`) theo truy vấn bằng BM25 viết
+      thuần Python, không gọi model, không GPU. Gộp **trước** khi gọi backend: kết quả ở đoạn dán đứng đầu, rồi tới kết
+      quả thư viện; câu "không tìm thấy" chỉ khi cả hai rỗng. `ReplayRetrieval` của eval không đổi.
+    - Mỗi kết quả ở đoạn dán mang `document_id` = paste_id, `chunk_index`, đoạn trích như kết quả thư viện, và một câu
+      "đọc trọn đoạn này bằng read_document(document_id=…, from_chunk=i)" (chữ trong kết quả công cụ, không đổi schema).
+    - `slip()`: thay câu "search_documents không tìm thấy nó" bằng câu nói `search_documents` tìm được trong đoạn dán và
+      trả `chunk_index` để đọc thẳng đoạn đó. Giữ phần còn lại của phiếu #3-C (trần 3 đoạn, đủ thì trả lời luôn, lệnh
+      đọc từ đoạn 0). Không nêu số đoạn.
+    - Không đổi `AGENT_GUIDE`, mô tả công cụ (`tools_sha256` còn `153209…a75e500`), `read_document`, `read_paste`,
+      `PASTE_*`, `paste_id`. Không đụng `AgentService.run` (NV1 sửa ở đó).
+    - Test: đoạn chứa từ của truy vấn đứng đầu; kết quả ở đoạn dán có paste_id + chunk_index và mở được bằng
+      `read_document`; không có đoạn dán thì kết quả `search_documents` giống hệt trước; phiếu không có số đoạn.
+  - NV1 và NV2: **không mở `wip/20-paste-tasks-d`, không đọc bài mới**, không mở nhánh của người kia. Không chạy
+    `agent_eval`; test với luật giữ im (`env -u POSTGRES_TEST_URL -u REDIS_TEST_URL`, `OLLAMA_BASE_URL=http://127.0.0.1:9`,
+    `MODEL_STARTUP_PROBES=false`, `CUDA_VISIBLE_DEVICES=-1`). Không push.
+  - **Nhân viên của Ún 3 — bài mới mù**, nhánh `wip/20-paste-tasks-d` cắt từ main ngay sau commit này, worktree
+    `local-ai-core-wt/20-paste-tasks-d`.
+    - Bộ `agent-eval-v0.7` = v0.6 + 6 bài đoạn dán doc-48..53; 56 bài cũ không đổi byte nào; bộ chấm giữ v0.4.
+    - Sáu kiểu; chủ đề và cách hỏi khác doc-39..47; có số gây nhiễu ở đoạn khác:
+      - (i) đáp án ở một đoạn giữa (đoạn 3–6);
+      - (j) đáp án ở đoạn ≥ 10 của đoạn dán ≥ 14 đoạn: đọc lần lượt từ đoạn 0, mỗi lần 3, không tới được (mọi lần thử
+        lại đều tốn một vòng trả lời, nên lượt nào cũng đọc được nhiều nhất 3 lần);
+      - (k) như (j), chủ đề khác, đoạn dán 30 000–60 000 ký tự;
+      - (l) hai mảnh đáp án, một ở đoạn 0–2, một ở đoạn ≥ 5;
+      - (m) đáp án nằm trọn trong mép đầu hoặc mép cuối mà phiếu cho thấy, `max_tool_calls: 0` (bài chứng: không đọc,
+        không tìm khi không cần);
+      - (n) đáp án ở đoạn 4–8, câu hỏi diễn đạt khác hẳn chữ trong đoạn đó (ít từ chung); có một đoạn khác nhiều từ chung
+        với câu hỏi nhưng không chứa đáp án.
+    - Vị trí tính bằng `pastes._chunks` + `SLIP_EDGE_CHARS`, test tính lại mỗi lần chạy (mở rộng
+      `test_paste_answers_lie_where_the_notes_say`). Dài 10 001–60 000 ký tự. Trừ (m), không mẫu `must_mention` nào khớp
+      mép đầu hay mép cuối.
+    - Ghi lại truy xuất như doc-39..47 để `--tasks` chạy được. README bộ bài thêm mục v0.7.
+    - **Không mở `wip/20-paste-nudge`, `wip/20-paste-search`, không đọc `paste-directions-2026-10-28.md`.** Không chạy
+      `agent_eval`; test với luật giữ im. Không push.
+  - **fable**: duyệt ba nhánh theo giao thức tệp; không chuyển code cho NV3, không chuyển bài mới cho NV1, NV2. Sau đó
+    duyệt bản đăng ký.
+  - **opus**: ba nhánh GỘP ĐƯỢC thì gộp bài mới vào main, dựng ba commit đo: nền = `int/20-3c` gộp main có bài mới;
+    nền + bước 1; nền + bước 1 + 3'. Đăng ký trước trên 15 bài đoạn dán (doc-39..53), cùng `--tasks` cùng thứ tự, 2 lần
+    lạnh mỗi nhánh, cộng một lần đủ 62 bài ở nền và ở nhánh đủ để chứng minh 47 bài không dán trùng nguyên. Luật phải
+    đứng được trên riêng 6 bài mới và nói trước mục chấm nào quyết. Fable duyệt rồi mới chạy.
