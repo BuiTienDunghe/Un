@@ -73,6 +73,13 @@ Opus điều phối, fable duyệt."
 Fable chuyển cho opus bằng tin ngay sau đó. Giao thức như #3-B/#3-C: người làm harness không thấy bài mới, NV3 không thấy
 code harness; mỗi nhánh và bản đăng ký qua tệp duyệt của fable trước lần chạy đầu.
 
+## Quyết định chủ dự án về phiếu (b) của nhánh 3' (28/10 đêm, sau khi xem ví dụ doc-39 và doc-49)
+
+Nguyên văn: "vậy bỏ". Nghĩa là chọn phương án "Bỏ (b)" như đã trình bày: phiếu giữ lệnh đọc từ đoạn 0 như #3-C làm
+lệnh chính, chỉ thêm một câu ngắn rằng `search_documents` tìm được trong văn bản dán và cho `chunk_index` để đọc thẳng
+đoạn đó; không có câu "cần một chi tiết thì tìm trước". NV2 sửa `slip()` trên `wip/20-paste-search`, fable duyệt lại chỗ
+đó, opus đăng ký lại riêng phần +1+3' (dự đoán; C3/C4 giữ) trước khi chạy nhánh đó. Nền và +1 chạy được ngay.
+
 ## Hỏi opus (đã trả lời bằng tin 28/10 tối)
 
 1. Opus nghiêng hướng nào, vì sao — nhìn từ code `agent_service.run` và chi phí đo thật (GPU, số lần chạy, bài mới cần
