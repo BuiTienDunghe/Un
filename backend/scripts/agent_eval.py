@@ -706,7 +706,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"refusing to run: --unload-between-tasks unloads an Ollama model, and general is served by {provider}", file=sys.stderr)
             return 2
         # num_ctx sizes the runner: a load with another context would make the
-        # first chat load the model a second time.
+        # first chat load the model a second time. --probe has already run by
+        # now (it reads /api/tags and embeds with the embedding model, never
+        # loading general), so the first task's unload comes after it.
         reloader = OllamaReloader(
             settings.ollama_base_url,
             general["name"],
