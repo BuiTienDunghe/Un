@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 
 import app.routers.chat as chat_router
 from app.security.api_key import require_api_key
-from app.services.agent_service import ANSWER_CHECK_STEP, BAD_ARGUMENTS, NOT_READABLE, READ_MAX_CHUNKS, AgentService
+from app.services.agent_service import ANSWER_CHECK_STEP, BAD_ARGUMENTS, NOT_READABLE, READ_MAX_CHUNKS, SEARCH_EXCERPT_CHARS, AgentService
 from app.services.chat_service import ChatService
 from app.services.pastes import (
     PASTE_MAX,
@@ -25,6 +25,7 @@ from app.services.pastes import (
     note,
     paste_id,
     read_paste,
+    search_pastes,
     search_text,
     shorten_pastes,
     slip,
@@ -111,12 +112,14 @@ def framing(text: str) -> tuple[str, str]:
     return shown[: shown.index(head)], shown[shown.index(tail) + len(tail):]
 
 
-def test_the_slip_never_calls_the_paste_a_document_and_says_search_cannot_see_it():
+def test_the_slip_never_calls_the_paste_a_document_and_says_search_finds_its_chunks():
     # #3-B: on "lưu thành tài liệu tạm" doc-39 searched the library and asked the user
-    # whether to read on (kept/agent-eval-v0.3-pastes/REPORT.md).
+    # whether to read on (kept/agent-eval-v0.3-pastes/REPORT.md). #3-D, 3': search now
+    # finds the paste, and the slip says it hands back the chunk to read.
     before, after = framing(PASTED)
     assert "tài liệu" not in before + after
-    assert "search_documents không tìm thấy" in after and "hỏi lại người dùng" in after
+    assert "không tìm thấy" not in after and "search_documents tìm được trong nó" in after
+    assert "trả chunk_index để đọc thẳng đoạn đó bằng read_document" in after and "hỏi lại người dùng" in after
 
 
 def test_the_slip_gives_the_exact_call_after_the_question_the_user_asked():
@@ -221,6 +224,105 @@ def test_a_figure_only_in_the_unread_middle_sends_the_agent_back_to_read_it():
     service, router = agent([final("Hạn là ngày 14/11."), call("read_document", {"document_id": pid, "n": 3}), final("Hạn 14/11.")])
     _, _, steps = service.run([{"role": "user", "content": PASTED}])
     assert [s["kind"] for s in steps][:2] == [ANSWER_CHECK_STEP, "tool_call"]
+
+
+class Library:
+    """A document library that records what it was asked."""
+
+    def __init__(self, chunks=()):
+        self.chunks, self.asked = list(chunks), []
+
+    def retrieve(self, query, top_k, document_id=None):
+        self.asked.append((query, top_k, document_id))
+        return [dict(chunk) for chunk in self.chunks[:top_k]]
+
+
+SHELF = [
+    {"filename": "so-tay.pdf", "page": 3, "document_id": "doc-1", "chunk_index": 5, "content": "Quy trình bảo hành thiết bị. " * 20, "score": 0.81234},
+    {"filename": "ghi-chu.txt", "page": None, "content": "Một đoạn không có tài liệu phía sau.", "score": 0.4},
+]
+
+
+def searched(library, messages, query, top_k=4):
+    """The search result the agent's model reads, parsed, after one search_documents call."""
+    service = AgentService(Router([call("search_documents", {"query": query, "top_k": top_k}), final("xong")]), library, None)
+    _, _, steps = service.run(messages)
+    result = [s for s in steps if s["kind"] == "tool_result"][0]
+    assert result["error_code"] is None
+    return json.loads(result["content"])
+
+
+def middle_index(text: str = PASTED) -> int:
+    return next(i for i, chunk in enumerate(_chunks(text)) if "14/11" in chunk)
+
+
+def test_search_finds_the_pasted_chunk_holding_the_querys_words_first():
+    found = search_pastes({paste_id(PASTED): PASTED}, "hạn nộp hồ sơ dự thầu, ai phụ trách", 4)
+    assert found[0]["chunk_index"] == middle_index() and SECRET in found[0]["content"]
+    assert len({row["chunk_index"] for row in found}) == len(found) <= 4, "each chunk once, at most top_k"
+
+
+def test_a_pasted_result_carries_the_paste_id_and_chunk_and_opens_with_read_document():
+    pid, middle = paste_id(PASTED), middle_index()
+    library = Library()
+    items = searched(library, [{"role": "user", "content": PASTED}], "hạn nộp hồ sơ dự thầu")
+    first = items[0]
+    # The excerpt is the chunk's head, as the library's is; here the matching sentence lies
+    # past it, which is what the read sentence is for.
+    assert first["document_id"] == pid and first["chunk_index"] == middle
+    assert first["excerpt"] == _chunks(PASTED)[middle][: SEARCH_EXCERPT_CHARS - 1] + "…" and "14/11" not in first["excerpt"]
+    assert first["filename"] == read_paste(pid, PASTED, 0, 1)["filename"] and first["chars"] == len(_chunks(PASTED)[middle])
+    assert first["read"] == f'đọc trọn đoạn này bằng read_document(document_id="{pid}", from_chunk={middle})'
+    assert "score" not in first and "page" not in first, "a BM25 score is not on the library's scale; a paste has no pages"
+    assert library.asked == [("hạn nộp hồ sơ dự thầu", 4, None)], "the library is still asked, once, as before"
+
+    service, _ = agent([call("read_document", {"document_id": first["document_id"], "from_chunk": first["chunk_index"], "n": 1}), final("Hạn 14/11.")])
+    _, _, steps = service.run([{"role": "user", "content": PASTED}])
+    read = [s for s in steps if s["kind"] == "tool_result"][0]
+    assert read["error_code"] is None and SECRET in json.loads(read["content"])["chunks"][0]["content"]
+
+
+def test_pasted_results_come_before_the_librarys_and_not_found_needs_both_empty():
+    pid = paste_id(PASTED)
+    items = searched(Library(SHELF), [{"role": "user", "content": PASTED}], "hạn nộp hồ sơ dự thầu bảo hành thiết bị")
+    sources = [item.get("document_id") for item in items]
+    assert sources[0] == pid and sources[-2:] == ["doc-1", None], "the paste first, then the library in its own order"
+
+    nothing = searched(Library(), [{"role": "user", "content": PASTED}], "lịch bảo dưỡng máy phát điện")
+    assert nothing == {"result": "không tìm thấy đoạn tài liệu nào phù hợp"}
+
+
+def test_without_a_paste_search_documents_answers_exactly_as_before():
+    library = Library(SHELF)
+    items = searched(library, [{"role": "user", "content": "bảo hành thiết bị thế nào?"}], "quy trình bảo hành", top_k=12)
+    # Built the way search_documents built it before #3-D: the library's chunks alone.
+    assert items == [
+        {"filename": "so-tay.pdf", "page": 3, "document_id": "doc-1", "chunk_index": 5,
+         "excerpt": SHELF[0]["content"][: SEARCH_EXCERPT_CHARS - 1] + "…", "chars": len(SHELF[0]["content"]), "score": 0.812},
+        {"filename": "ghi-chu.txt", "page": None, "excerpt": SHELF[1]["content"], "chars": len(SHELF[1]["content"]), "score": 0.4},
+    ]
+    assert library.asked == [("quy trình bảo hành", 8, None)]
+    assert searched(Library(), [{"role": "user", "content": "có gì không?"}], "bất kỳ") == {"result": "không tìm thấy đoạn tài liệu nào phù hợp"}
+
+
+def test_a_paste_earlier_in_the_conversation_does_not_crowd_a_library_question():
+    # `pastes` holds every paste of the conversation. A question about the library shares
+    # only words that sit in half the paste's chunks or more (here the filler, in every
+    # chunk), which weigh nothing: the result is the library's alone.
+    history = [{"role": "user", "content": PASTED}, {"role": "assistant", "content": "Đã đọc."}]
+    question = {"role": "user", "content": "Quy trình bảo hành trong sổ tay thế nào?"}
+    query = "quy trình bảo hành thiết bị trong đoạn họp thường lệ"
+    assert search_pastes({paste_id(PASTED): PASTED}, "mục họp thường lệ, không có gì đáng chú ý", 4) == []
+    assert searched(Library(SHELF), [*history, question], query) == searched(Library(SHELF), [question], query)
+
+
+def test_a_decomposed_paste_still_matches_a_composed_query():
+    import unicodedata
+
+    text = unicodedata.normalize("NFD", PASTED)
+    assert text != PASTED
+    found = search_pastes({paste_id(text): text}, "hạn nộp hồ sơ dự thầu", 1)
+    assert found and "14/11" in found[0]["content"]
 
 
 def client(chat_service) -> TestClient:

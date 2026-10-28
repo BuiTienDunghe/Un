@@ -21,7 +21,7 @@ from typing import Any, Protocol
 from app.llm_clients.deadline import ModelCallTimeoutError, call_within
 from app.llm_clients.usage import consume_usage, record_usage
 from app.services.answer_figures import grounding_summary, retry_instruction, turn_texts, unsupported_figures
-from app.services.pastes import read_paste, take_pastes
+from app.services.pastes import read_paste, search_pastes, take_pastes
 from app.services.injection_defense import InjectionDefense
 from app.services.model_router import ModelRouter
 
@@ -510,11 +510,27 @@ class AgentService:
             top_k = int(arguments.get("top_k", 4))
         except (TypeError, ValueError):
             top_k = 4
-        chunks = self.retrieval_service.retrieve(query, min(max(top_k, 1), 8), None)
-        if not chunks:
+        size = min(max(top_k, 1), 8)
+        # This turn's pastes first, then the library (ticket 20 #3-D, 3'): merged here, so no
+        # RetrievalBackend (the eval's ReplayRetrieval included) learns about pastes. A paste
+        # is already readable (run() adds every paste id), has no pages, and gets no score:
+        # BM25's is not on the scale of the library's.
+        in_pastes = search_pastes((tool_context or {}).get("pastes") or {}, query, size)
+        chunks = self.retrieval_service.retrieve(query, size, None)
+        if not chunks and not in_pastes:
             return self._dump({"result": "không tìm thấy đoạn tài liệu nào phù hợp"}), None, None
+        items: list[dict[str, object]] = []
+        for chunk in in_pastes:
+            content = str(chunk["content"])
+            items.append({
+                "filename": chunk["filename"],
+                "document_id": chunk["document_id"],
+                "chunk_index": chunk["chunk_index"],
+                "excerpt": _clip(content, SEARCH_EXCERPT_CHARS),
+                "chars": len(content),
+                "read": f'đọc trọn đoạn này bằng read_document(document_id="{chunk["document_id"]}", from_chunk={chunk["chunk_index"]})',
+            })
         readable = (tool_context or {}).get("readable_documents")
-        items = []
         for chunk in chunks:
             content = str(chunk.get("content") or "")
             item: dict[str, object] = {"filename": chunk.get("filename"), "page": chunk.get("page")}

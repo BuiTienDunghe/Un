@@ -8,13 +8,18 @@ and how to open it. read_document reads a paste only from the running turn's
 tool_context["pastes"], chunked on the fly by the chunker uploaded documents use. Nothing
 is indexed, so no GPU is needed, and a paste opens only in the conversation that holds it
 (ticket 20 #1, A2). The same text always gets the same id, so a later turn of the same
-conversation reads it again.
+conversation reads it again. search_documents ranks the same chunks by the words they share
+with the query (search_pastes), on the fly too.
 
 Plain chat has no tool to open a slip: there PASTE_THRESHOLD stays the limit, and a paste
 already in the history becomes a one-line note.
 """
 from __future__ import annotations
 
+import math
+import re
+import unicodedata
+from collections import Counter
 from functools import lru_cache
 from hashlib import sha256
 from typing import Any
@@ -27,6 +32,9 @@ SLIP_EDGE_CHARS = 600
 # The chunker's own defaults, which are models.yaml's rag.chunk_tokens / chunk_overlap_tokens:
 # a paste reads in chunks the size of an uploaded document's (median ~1 700 characters).
 CHUNK_TOKENS, CHUNK_OVERLAP_TOKENS = 480, 80
+# Okapi BM25's usual constants.
+BM25_K1, BM25_B = 1.2, 0.75
+_WORD = re.compile(r"\w+")
 
 
 def is_paste(message: dict[str, Any]) -> bool:
@@ -60,6 +68,13 @@ def slip(text: str) -> str:
     that reading on is another call, no longer states the chunk count, and says to answer at
     once when the two edges are enough. Later reads asked n = total_chunks - from_chunk on
     4 of 5, a count the read result itself carries; only the cap sentence speaks to those.
+
+    Ticket 20 #3-D, 3' (owner's choice): reading on from chunk 0, three at a time, cannot
+    reach an answer past the third read, so search_documents now finds a paste's chunks
+    (search_pastes) and the slip says so in place of "search_documents không tìm thấy nó":
+    a search hands back the chunk_index to read straight away. The rest of #3-C's slip
+    stands, "không cần search_documents trước" included: reading from chunk 0 still needs
+    no search, which is what read_document's own description would otherwise suggest.
     """
     document_id = paste_id(text)
     head, tail = text[:SLIP_EDGE_CHARS].rstrip(), text[-SLIP_EDGE_CHARS:].lstrip()
@@ -70,7 +85,8 @@ def slip(text: str) -> str:
         f"[Người dùng dán vào tin nhắn này một văn bản dài {len(text)} ký tự. Bạn chỉ thấy phần đầu và "
         f"phần cuối; phần giữa chưa hiện ra.]\n\nĐẦU VĂN BẢN:\n{head}\n\n[… phần giữa chưa thấy …]\n\n"
         f"CUỐI VĂN BẢN:\n{tail}\n\n"
-        f"[Văn bản dán nằm trong tin nhắn, không phải tệp đã tải lên: search_documents không tìm thấy nó. "
+        f"[Văn bản dán nằm trong tin nhắn, không phải tệp đã tải lên. search_documents tìm được trong nó và "
+        f"trả chunk_index để đọc thẳng đoạn đó bằng read_document. "
         f"Nếu phần đầu và phần cuối đã đủ để trả lời thì trả lời luôn, không đọc thêm. "
         f"Nếu câu hỏi cần phần chưa thấy, hãy tự đọc trước khi trả lời hay hỏi lại người dùng: gọi thẳng "
         f'read_document(document_id="{document_id}", from_chunk=0, n={most}), không cần search_documents trước. '
@@ -122,3 +138,51 @@ def read_paste(document_id: str, text: str, from_chunk: int, n: int, page: int =
         "total_chunks": len(chunks),
         "chunks": [{"chunk_index": index, "page_start": None, "page_end": None, "content": content} for index, content in picked],
     }
+
+
+def _terms(text: str) -> list[str]:
+    # NFC first: a paste copied from macOS can arrive decomposed, and \w+ would cut its
+    # vowels at the combining mark, so no word of it would match a composed query.
+    return _WORD.findall(unicodedata.normalize("NFC", text).lower())
+
+
+def search_pastes(pastes: dict[str, str], query: str, top_k: int) -> list[dict[str, object]]:
+    """search_documents' view of this turn's pastes (ticket 20 #3-D, 3'): their chunks by
+    BM25 against the query, best first, at most top_k, shaped like retrieval chunks.
+
+    Plain Python, no model and no GPU: Vietnamese syllables split on \\w+, no word
+    segmentation. A word in half the chunks or more weighs nothing (Robertson's IDF,
+    clamped at zero, where Lucene's log(1 + …) stays positive), and a chunk scoring zero is
+    left out. `pastes` holds every paste of the conversation, not only the last message's,
+    so a chunk sharing only "là" or "của" with a question about the library must not sit
+    above the library's results."""
+    wanted = set(_terms(query))
+    rows = [
+        (document_id, len(text), index, content, Counter(_terms(content)))
+        for document_id, text in pastes.items()
+        for index, content in enumerate(_chunks(text))
+    ]
+    if not wanted or not rows:
+        return []
+    count = len(rows)
+    average = sum(sum(terms.values()) for *_, terms in rows) / count or 1.0
+    weight = {}
+    for word in wanted:
+        holding = sum(1 for *_, terms in rows if word in terms)
+        weight[word] = max(0.0, math.log((count - holding + 0.5) / (holding + 0.5)))
+    ranked = []
+    for order, (document_id, length, index, content, terms) in enumerate(rows):
+        size = sum(terms.values())
+        score = sum(
+            weight[word] * terms[word] * (BM25_K1 + 1) / (terms[word] + BM25_K1 * (1 - BM25_B + BM25_B * size / average))
+            for word in wanted
+            if terms[word]
+        )
+        if score > 0:
+            ranked.append((-score, order, document_id, length, index, content))
+    ranked.sort()
+    return [
+        # The name read_paste gives the same paste.
+        {"document_id": document_id, "filename": f"đoạn dán ({length} ký tự)", "chunk_index": index, "content": content}
+        for _, _, document_id, length, index, content in ranked[: max(1, top_k)]
+    ]
