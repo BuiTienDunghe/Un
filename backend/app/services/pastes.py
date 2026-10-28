@@ -52,21 +52,31 @@ def slip(text: str) -> str:
     description says its id comes from search_documents, and only the slip can say otherwise.
     What the paste is comes first; what to do comes after the tail, next to the question the
     user asked last, because doc-39 quoted the tail and passed over the line above the head.
+
+    Ticket 20 #3-C (owner's choice B): on #3-B's slip the model's first read asked n = the
+    chunk count the slip stated (8, 15, 10) on 4 of 5 paste tasks, over the cap of 3, and
+    doc-42 read three times with its answer already in the tail
+    (kept/agent-eval-v0.5-paste-slip-b/). So the slip says what n read_document accepts and
+    that reading on is another call, no longer states the chunk count, and says to answer at
+    once when the two edges are enough. Later reads asked n = total_chunks - from_chunk on
+    4 of 5, a count the read result itself carries; only the cap sentence speaks to those.
     """
     document_id = paste_id(text)
-    chunks = len(_chunks(text))
     head, tail = text[:SLIP_EDGE_CHARS].rstrip(), text[-SLIP_EDGE_CHARS:].lstrip()
-    # n=3 is read_document's most chunks a call (agent_service.READ_MAX_CHUNKS, which this
-    # module cannot import, agent_service importing it); a test keeps the two equal.
+    # read_document's most chunks a call (agent_service.READ_MAX_CHUNKS, which this module
+    # cannot import, agent_service importing it); a test keeps the two equal.
+    most = 3
     return (
         f"[Người dùng dán vào tin nhắn này một văn bản dài {len(text)} ký tự. Bạn chỉ thấy phần đầu và "
         f"phần cuối; phần giữa chưa hiện ra.]\n\nĐẦU VĂN BẢN:\n{head}\n\n[… phần giữa chưa thấy …]\n\n"
         f"CUỐI VĂN BẢN:\n{tail}\n\n"
         f"[Văn bản dán nằm trong tin nhắn, không phải tệp đã tải lên: search_documents không tìm thấy nó. "
+        f"Nếu phần đầu và phần cuối đã đủ để trả lời thì trả lời luôn, không đọc thêm. "
         f"Nếu câu hỏi cần phần chưa thấy, hãy tự đọc trước khi trả lời hay hỏi lại người dùng: gọi thẳng "
-        f'read_document(document_id="{document_id}", from_chunk=0, n=3), không cần search_documents trước. '
-        f"Văn bản có {chunks} đoạn (from_chunk từ 0 đến {chunks - 1}, không có trang); đọc tiếp bằng "
-        f"next_from_chunk trong kết quả tới khi thấy điều cần tìm hoặc next_from_chunk là null.]"
+        f'read_document(document_id="{document_id}", from_chunk=0, n={most}), không cần search_documents trước. '
+        f"read_document chỉ nhận n từ 1 đến {most}, tức mỗi lần đọc tối đa {most} đoạn, và văn bản không có "
+        f"trang; muốn đọc tiếp thì gọi lại với from_chunk bằng next_from_chunk trong kết quả, tới khi thấy "
+        f"điều cần tìm hoặc next_from_chunk là null.]"
     )
 
 

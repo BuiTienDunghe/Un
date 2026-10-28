@@ -121,10 +121,27 @@ def test_the_slip_never_calls_the_paste_a_document_and_says_search_cannot_see_it
 
 def test_the_slip_gives_the_exact_call_after_the_question_the_user_asked():
     before, after = framing(PASTED)
-    pid, total = paste_id(PASTED), len(_chunks(PASTED))
+    pid = paste_id(PASTED)
     assert f'read_document(document_id="{pid}", from_chunk=0, n={READ_MAX_CHUNKS})' in after, "n is the most a call reads"
-    assert f"từ 0 đến {total - 1}" in after and "next_from_chunk" in after
+    assert "from_chunk bằng next_from_chunk" in after and "next_from_chunk là null" in after
     assert "read_document" not in before, "what to do comes after the tail, not above the head"
+
+
+def test_the_slip_states_the_cap_and_not_the_chunk_count():
+    # #3-C: on #3-B's "Văn bản có N đoạn" the first read asked n = N on 4 of 5 paste tasks,
+    # over the cap (kept/agent-eval-v0.5-paste-slip-b/REPORT.md).
+    before, after = framing(PASTED)
+    total = len(_chunks(PASTED))
+    assert f"{total} đoạn" not in before + after and "từ 0 đến" not in before + after
+    assert f"chỉ nhận n từ 1 đến {READ_MAX_CHUNKS}" in after and f"tối đa {READ_MAX_CHUNKS} đoạn" in after
+    assert "gọi lại với from_chunk" in after, "reading on is another call, not a bigger n"
+
+
+def test_the_slip_says_to_answer_at_once_when_the_edges_are_enough_before_how_to_read():
+    # #3-C: doc-42 read three times with its answer already in the tail.
+    _, after = framing(PASTED)
+    enough = after.index("đã đủ để trả lời thì trả lời luôn")
+    assert enough < after.index("read_document(")
 
 
 def test_only_a_message_past_the_threshold_becomes_a_slip():
