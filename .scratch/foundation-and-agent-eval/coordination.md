@@ -109,6 +109,10 @@ Quản lý báo đã xong GPU từ khoảng 04:10 và tới sáng không dùng n
 "hôm nay chưa cần chạy GPU nhiều", và đợt đo gom chung chờ họ duyệt (`joint-measurement-plan.md`). Luật giữ im giữ
 nguyên tới khi chủ dự án cho đo.
 
+**07:58 — chủ dự án cho chạy đợt A+B** ("Chạy A+B", theo `joint-measurement-plan.md`). Luật giữ im chỉ gỡ cho các
+lần `agent_eval` của opus trong đợt này, chạy từng lần một. Mọi phiên khác vẫn giữ bộ biến giữ im và không chạy gì
+nạp model cho tới khi opus ghi "đợt A+B xong" ở đây. Đợt C (e5, ~3 giờ) và D (BFCL) chưa được duyệt.
+
 ## Xây trước, đo sau (chủ dự án, 28/10 00:58)
 
 "Hôm nay chưa cần chạy GPU nhiều quá, hãy xây dựng trước đã." Từ giờ: ưu tiên code (ticket 20 #2–#4, 22, 23,
