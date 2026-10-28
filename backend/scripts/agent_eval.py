@@ -13,6 +13,7 @@ memory context or the SSE path: those have their own evals or none yet.
     python -m scripts.agent_eval --temperature 0 --seed 42        # repeatable, for before/after
     python -m scripts.agent_eval --tasks doc-01,hist-01,hist-07   # a subset
     python -m scripts.agent_eval --probe --temperature 0 --seed 42  # a citable baseline
+    python -m scripts.agent_eval --temperature 0 --seed 42 --unload-between-tasks  # each task as if run alone
 
 Each run writes data/evaluation/results/agent_eval/<run_id>/ (gitignored):
 manifest.json, task_results.jsonl, events.jsonl, summary.json. The agent's
@@ -36,7 +37,7 @@ import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from time import perf_counter
+from time import perf_counter, sleep
 from types import SimpleNamespace
 from typing import Any
 
@@ -381,11 +382,15 @@ def run_eval(
     run_meta: dict[str, Any],
     task_ids: list[str] | None = None,
     progress: Any = print,
+    reloader: Any = None,
 ) -> dict[str, Any]:
     """Run the tasks, grade them, write the four artifacts; returns the summary.
 
     Lines are appended task by task, so a run that dies half-way still leaves
-    a readable manifest and every finished task on disk."""
+    a readable manifest and every finished task on disk. With a reloader
+    (--unload-between-tasks) the general model is unloaded and loaded again
+    before every task, the first included; the load's time is the task's
+    reload_ms, kept out of its latency_ms."""
     tasks = dataset.tasks
     if task_ids:
         unknown = sorted(set(task_ids) - {task["id"] for task in tasks})
@@ -430,6 +435,9 @@ def run_eval(
             "tasks_run": [task["id"] for task in tasks],
         },
         "grader_version": GRADER_VERSION,
+        # Without it, a task's answer can depend on the task run just before it
+        # (ticket 20 #3-D, 28/10), so only runs that agree here compare task by task.
+        "unload_between_tasks": reloader is not None,
         "started_at": datetime.now(UTC).isoformat(),
     }
     manifest_path = out_dir / "manifest.json"
@@ -459,6 +467,7 @@ def run_eval(
         model: str | None = None
         steps: list[dict[str, object]] = []
         error: str | None = None
+        reload_ms = reloader.reload() if reloader is not None else None
         started = perf_counter()
         limit = INPUT_MAX_CHARS[task.get("surface", "web")]
         if len(task["input"]) > limit:
@@ -485,6 +494,7 @@ def run_eval(
             "tokens_in": _sum([round_["tokens_in"] for round_ in rounds]),
             "tokens_out": _sum([round_["tokens_out"] for round_ in rounds]),
             "latency_ms": latency_ms,
+            "reload_ms": reload_ms,
             "retrieval_source": retrieval.get("source"),
             "grade": graded,
         }
@@ -495,7 +505,11 @@ def run_eval(
             handle.write(json.dumps(result, ensure_ascii=False) + "\n")
         with (out_dir / "events.jsonl").open("a", encoding="utf-8") as handle:
             handle.writelines(json.dumps(event, ensure_ascii=False, default=str) + "\n" for event in events)
-        progress(f"{task['id']:<10} {'PASS' if result['passed'] else 'FAIL'} {latency_ms / 1000:6.1f}s" + (" ERROR" if error else ""))
+        progress(
+            f"{task['id']:<10} {'PASS' if result['passed'] else 'FAIL'} {latency_ms / 1000:6.1f}s"
+            + (f" (nạp {reload_ms / 1000:.1f}s)" if reload_ms is not None else "")
+            + (" ERROR" if error else "")
+        )
 
     summary = {**summarize(results), **_aggregates(results)}
     (out_dir / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -533,6 +547,11 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--gpu-shared", choices=("yes", "no"),
         help="declare whether another job (another project included) uses the GPU during this run; recorded, never guessed",
+    )
+    parser.add_argument(
+        "--unload-between-tasks", action="store_true",
+        help="unload the general model from Ollama and load it again before every task, so each task runs as if alone; "
+        "compare two arms task by task only with this on (ticket 20 #3-D)",
     )
     return parser.parse_args(argv)
 
@@ -580,6 +599,61 @@ def ollama_loaded(base_url: str) -> list[str] | None:
         return None
 
 
+class OllamaReloader:
+    """--unload-between-tasks (ticket 20 #3-D, the owner's option 2): before a task,
+    take the general model out of Ollama (keep_alive 0, as run_cold.sh does), wait
+    until /api/ps stops listing it, and load it again with an empty prompt. The
+    task then runs on a model just loaded, with nothing left from the task before
+    it: on 28/10 the same code and tasks gave doc-51 a passing answer alone and a
+    failing one after doc-50."""
+
+    def __init__(
+        self,
+        base_url: str,
+        model: str,
+        *,
+        keep_alive: str,
+        options: dict[str, Any],
+        timeout: float = 300.0,
+        wait_seconds: float = 60.0,
+        poll_seconds: float = 0.25,
+        client: Any = None,
+        pause: Any = sleep,
+    ) -> None:
+        import httpx
+
+        self.model = model
+        self.keep_alive = keep_alive
+        self.options = options
+        self.polls = int(wait_seconds / poll_seconds) + 1
+        self.poll_seconds = poll_seconds
+        self.wait_seconds = wait_seconds
+        self.client = client or httpx.Client(base_url=base_url.rstrip("/"), timeout=timeout)
+        self.pause = pause
+
+    def _listed(self) -> bool:
+        response = self.client.get("/api/ps")
+        response.raise_for_status()
+        names = {str(model.get("name")) for model in response.json().get("models", [])}
+        return self.model in names or f"{self.model}:latest" in names
+
+    def reload(self) -> int:
+        """Unload, wait, load; returns the load's wall time in ms. Raises when Ollama
+        refuses or still lists the model after wait_seconds: a task run on a model
+        that was not reloaded is not the isolated run the flag promises."""
+        self.client.post("/api/generate", json={"model": self.model, "keep_alive": 0, "stream": False}).raise_for_status()
+        for _ in range(self.polls):
+            if not self._listed():
+                break
+            self.pause(self.poll_seconds)
+        else:
+            raise RuntimeError(f"{self.model} vẫn còn trong /api/ps sau {self.wait_seconds:.0f} giây")
+        started = perf_counter()
+        payload = {"model": self.model, "keep_alive": self.keep_alive, "options": self.options, "stream": False}
+        self.client.post("/api/generate", json=payload).raise_for_status()
+        return int((perf_counter() - started) * 1000)
+
+
 def gpu_snapshot() -> dict[str, Any] | None:
     """GPU load, memory and compute processes as nvidia-smi sees them now: the
     measured half of "was the GPU shared" (the declared half is --gpu-shared).
@@ -625,6 +699,21 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     models = override_general(resolved.flat_models(), temperature=args.temperature, seed=args.seed)
     general = models["general"]
+    reloader = None
+    if args.unload_between_tasks:
+        provider = general.get("provider", "ollama")
+        if provider != "ollama":
+            print(f"refusing to run: --unload-between-tasks unloads an Ollama model, and general is served by {provider}", file=sys.stderr)
+            return 2
+        # num_ctx sizes the runner: a load with another context would make the
+        # first chat load the model a second time.
+        reloader = OllamaReloader(
+            settings.ollama_base_url,
+            general["name"],
+            keep_alive=str(general.get("keep_alive", "5m")),
+            options={"num_ctx": general["context"]} if "context" in general else {},
+            timeout=settings.ollama_chat_timeout_seconds,
+        )
     router = ModelRouter(
         {"ollama": OllamaClient(settings.ollama_base_url, settings.ollama_chat_timeout_seconds, settings.ollama_health_timeout_seconds, settings.ollama_retry_count)},
         models,
@@ -686,6 +775,7 @@ def main(argv: list[str] | None = None) -> int:
         system_prompt=SYSTEM_PROMPT_PATH.read_text(encoding="utf-8"),
         run_meta=run_meta,
         task_ids=[task_id.strip() for task_id in args.tasks.split(",") if task_id.strip()] if args.tasks else None,
+        reloader=reloader,
     )
     overall = summary["overall"]
     card = scorecard(out_dir)

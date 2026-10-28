@@ -101,7 +101,7 @@ DOC_FIXTURE = {
 }
 
 
-def _run(tmp_path, tasks, retrieval, router, *, run_meta=None):
+def _run(tmp_path, tasks, retrieval, router, *, run_meta=None, reloader=None):
     dataset = load_dataset(write_dataset(tmp_path / "ds", tasks, retrieval))
     out_dir = tmp_path / "run"
     summary = run_eval(
@@ -113,6 +113,7 @@ def _run(tmp_path, tasks, retrieval, router, *, run_meta=None):
         system_prompt="Bạn là trợ lý.",
         run_meta=run_meta or {"run_id": "t", "seed": NO_SEED, "temperature": 0.4},
         progress=lambda line: None,
+        reloader=reloader,
     )
     return out_dir, summary
 
@@ -146,6 +147,128 @@ def test_a_run_writes_all_four_artifacts_with_usage_from_every_round(tmp_path):
     # The replayed chunk reached the model through the real tool path, wrapped by the defense.
     assert "12 ngày phép" in events[1]["content"] and "KẾT QUẢ CÔNG CỤ" in events[1]["content"]
     assert summary["overall"] == {"passed": 1, "total": 1, "rate": 1.0}
+    # The default run reloads nothing, and says so.
+    assert manifest["unload_between_tasks"] is False and result["reload_ms"] is None
+
+
+# ── --unload-between-tasks (ticket 20 #3-D): each task on a model just loaded ──
+
+CHAT_TASK = {"id": "chat-x", "category": "no_tool", "input": "Chào bạn", "expect": {"must_mention": ["Chào"]}}
+
+
+def _fake_ollama(log: list, *, lingers: int):
+    """An Ollama that keeps listing the model in /api/ps for `lingers` polls after
+    each unload; every request lands in `log` with its JSON body."""
+    import httpx
+
+    state = {"listed_for": 0}
+
+    def handler(request):
+        if request.url.path == "/api/ps":
+            log.append(("ps", None))
+            listed = state["listed_for"] > 0
+            state["listed_for"] -= 1
+            return httpx.Response(200, json={"models": [{"name": "qwen3.5:9b"}] if listed else []})
+        assert request.url.path == "/api/generate"
+        body = json.loads(request.content)
+        if body["keep_alive"] == 0:
+            state["listed_for"] = lingers
+            log.append(("unload", body))
+        else:
+            log.append(("load", body))
+        return httpx.Response(200, json={"model": "qwen3.5:9b", "done": True})
+
+    return httpx.Client(base_url="http://ollama.test", transport=httpx.MockTransport(handler))
+
+
+class LoggingRouter(ScriptedRouter):
+    def __init__(self, turns, log):
+        super().__init__(turns)
+        self.log = log
+
+    def chat_tools(self, mode, messages, tools):
+        self.log.append(("chat", None))
+        return super().chat_tools(mode, messages, tools)
+
+
+def test_unload_between_tasks_unloads_waits_and_loads_before_every_task_the_first_included(tmp_path):
+    from scripts.agent_eval import OllamaReloader
+
+    log: list = []
+    reloader = OllamaReloader(
+        "http://ollama.test", "qwen3.5:9b", keep_alive="5m", options={"num_ctx": 16384},
+        client=_fake_ollama(log, lingers=1), pause=lambda seconds: log.append(("pause", seconds)),
+    )
+    router = LoggingRouter([call("search_documents", {"query": "nghỉ phép năm"}), final("Bạn có 12 ngày phép."), final("Chào bạn!")], log)
+
+    out_dir, _ = _run(tmp_path, [DOC_TASK, CHAT_TASK], [DOC_FIXTURE], router, reloader=reloader)
+
+    once = ["unload", "ps", "pause", "ps", "load"]
+    assert [kind for kind, _ in log] == once + ["chat", "chat"] + once + ["chat"]
+    unload, load = log[0][1], log[4][1]
+    assert unload == {"model": "qwen3.5:9b", "keep_alive": 0, "stream": False}
+    # An empty load: no prompt, and the context the chats ask for, so the first chat does not load again.
+    assert load == {"model": "qwen3.5:9b", "keep_alive": "5m", "options": {"num_ctx": 16384}, "stream": False}
+    assert json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))["unload_between_tasks"] is True
+    results = _jsonl(out_dir / "task_results.jsonl")
+    assert [r["passed"] for r in results] == [True, True]
+    assert all(isinstance(r["reload_ms"], int) and r["reload_ms"] >= 0 for r in results)
+
+
+def test_a_model_ollama_keeps_listing_stops_the_run_before_the_task(tmp_path):
+    from scripts.agent_eval import OllamaReloader
+
+    log: list = []
+    reloader = OllamaReloader(
+        "http://ollama.test", "qwen3.5:9b", keep_alive="5m", options={},
+        client=_fake_ollama(log, lingers=10), wait_seconds=1.0, poll_seconds=0.5, pause=lambda seconds: None,
+    )
+
+    with pytest.raises(RuntimeError, match="vẫn còn trong /api/ps"):
+        _run(tmp_path, [DOC_TASK], [DOC_FIXTURE], LoggingRouter([final("12")], log), reloader=reloader)
+
+    assert [kind for kind, _ in log] == ["unload", "ps", "ps", "ps"]
+    assert not (tmp_path / "run" / "task_results.jsonl").exists()
+
+
+def test_the_cli_builds_a_reloader_only_with_the_flag(tmp_path, monkeypatch, capsys):
+    import scripts.agent_eval as agent_eval
+
+    env = tmp_path / ".env"
+    env.write_text("", encoding="utf-8")
+    seen = {}
+
+    class Stop(Exception):
+        pass
+
+    def capture(*args, **kwargs):
+        seen["reloader"] = kwargs["reloader"]
+        raise Stop  # before the scorecard reads a run that never happened
+
+    monkeypatch.setattr(agent_eval, "run_eval", capture)
+    base = ["--env-file", str(env), "--out", str(tmp_path / "runs")]
+    with pytest.raises(Stop):
+        agent_eval.main(base)
+    assert seen["reloader"] is None
+
+    with pytest.raises(Stop):
+        agent_eval.main([*base, "--unload-between-tasks"])
+    reloader = seen["reloader"]
+    general = agent_eval.resolve_registry(agent_eval.build_settings(env, probe=False), None).flat_models()["general"]
+    assert isinstance(reloader, agent_eval.OllamaReloader) and reloader.model == general["name"]
+    assert reloader.options == {"num_ctx": general["context"]} and reloader.keep_alive == str(general.get("keep_alive", "5m"))
+
+    # A general model Ollama does not serve cannot be unloaded from Ollama.
+    real_override = agent_eval.override_general
+
+    def anthropic_general(models, **kwargs):
+        overridden = real_override(models, **kwargs)
+        return {**overridden, "general": {**overridden["general"], "provider": "anthropic"}}
+
+    monkeypatch.setattr(agent_eval, "override_general", anthropic_general)
+    seen.clear()
+    assert agent_eval.main([*base, "--unload-between-tasks"]) == 2
+    assert "refusing to run" in capsys.readouterr().err and not seen
 
 
 def test_an_exhausted_budget_is_recorded_with_the_forced_answers_tokens(tmp_path):
