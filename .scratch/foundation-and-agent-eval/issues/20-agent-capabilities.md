@@ -1,6 +1,6 @@
 # 20 — Khả năng cơ bản cho agent: đọc dài, kiểm câu trả lời, báo tiến độ
 
-Status: đang làm — cách A (chủ dự án 28/10 00:20): v0.3 → #1 → #2 → #3 → #4; bỏ #5. #3-B trượt luật (15:13); chủ dự án chọn B → #3-C: lời phiếu `wip/20-paste-slip-c` (NV1), bài mới `wip/20-paste-tasks-c` (NV3)
+Status: đang làm — cách A (chủ dự án 28/10 00:20): v0.3 → #1 → #2 → #3 → #4; bỏ #5. #3-B trượt luật (15:13); #3-C trượt điều 3 (19:02): 6/9 trên 9 bài đoạn dán (cũ 2/9), `n` sạch, nhưng bài mới chỉ 1/3; phiếu cũ giữ, chờ chủ dự án chọn A–E
 Type: task
 Blocked by: — (cần bộ bài v0.3 có bài đọc dài để đo)
 
@@ -264,3 +264,23 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
   - **opus**: khi cả hai nhánh có GỘP ĐƯỢC, gộp bài mới vào main trước, viết đăng ký trước (luật, dự đoán) trước khi chạy,
     nhờ fable duyệt, rồi đo 9 bài đoạn dán (doc-39..47): main (phiếu cũ) so với main + phiếu #3-C, mỗi bên 2 lần lạnh.
     Luật sẽ đòi kết quả đứng được trên riêng bốn bài mới, không chỉ trên năm bài đã thấy.
+- 28/10 19:10 (opus) — **#3-C đo xong: trượt luật ở điều 3, không đề xuất gộp.** Báo cáo:
+  `data/evaluation/results/kept/agent-eval-v0.6-paste-slip-c/REPORT.md`. Đăng ký trước `9f2a23a`, fable duyệt. Trước
+  `01daa42` (main), sau `ed210e4` (`int/20-3c`, chưa vào main), 2 lần lạnh mỗi phía, r1 = r2 từng chữ; điều kiện so đúng.
+  - Điểm 9 bài: trước 2/9, sau 6/9; không bài nào đạt → trượt. Bài đã thấy từ trượt thành đạt 3/4 (39, 41, 43). Bài
+    **mới** cần phần giữa từ trượt thành đạt **1/3** (doc-46, và ở phía trước nó đã đủ ý, chỉ trượt vì `n`).
+  - `n` sạch: lần đọc đầu 5/5 ≤ 3, các lần sau 5/5 ≤ 3. Đọc tiếp đúng 3/6 (cũ 1/6). doc-42, doc-45 không đọc lần nào.
+  - Mở đoạn dán trên 7 bài cần phần giữa: cũ 4/7, mới 5/7, nhưng doc-47 mở chỉ sau khi bị kiểm con số bác → của phiếu 4/7.
+  - Ba bài trượt phía sau, ba cách: doc-40 hiểu sai phiếu (gọi `search_history` bị cấm, nói không dùng được
+    `read_document` cho đoạn dán, nhờ người dùng dán phần giữa; ở #3-B nó có mở); doc-44 biết phần giữa chưa thấy mà vẫn
+    nhờ người dùng dán lại; doc-47 đọc một lần, thấy một mảnh, nói "đã đọc… đầy đủ".
+  - Dự đoán sai một: doc-44, 46, 47 mở cả ba. Dự đoán 1 đúng: phía trước doc-39..43 trùng từng chữ #3-B, ủng hộ giải
+    thích "thứ tự chạy" cho lệch doc-39 lần trước.
+  - Cách cho chủ dự án (chưa làm gì):
+    - A. Dừng, giữ phiếu cũ trên main; `int/20-3c` giữ làm nhánh.
+    - B. Gộp #3-C dù trượt điều 3 (chủ dự án ghi đè luật).
+    - C. Sửa lời phiếu lần ba, thêm bài mới lần nữa (doc-44..47 đã bị nhìn thấy), đăng ký lại.
+    - D. Harness nhắc một lần: câu trả lời nhờ người dùng dán phần giữa, hoặc nói đã đọc hết trong khi đoạn dán còn
+      đoạn chưa đọc, thì trả lại model kèm lời nhắc đọc, như bước kiểm con số đã có. Cần bài mới để đo.
+    - E. Harness tự tìm trong đoạn dán những đoạn hợp câu hỏi, đưa vào phiếu cùng phần đầu, cuối. Thay đổi lớn nhất,
+      tốn nhúng mỗi lần dán.
