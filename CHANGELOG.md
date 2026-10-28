@@ -11,6 +11,8 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-29
+
 ### Added
 - **Agent Eval v0** (27/10): `backend/scripts/agent_eval.py` chạy agent thật (cùng model, cùng
   vòng lặp) trên 40 bài tiếng Việt với dữ liệu giả hoàn toàn (20 tài liệu, 10 lịch sử Discord kể cả
@@ -1081,7 +1083,8 @@ dẫn nguồn đã đo được chất lượng, hai kênh web và Discord dùng
 - Bộ eval mới phủ một tài liệu và đã bão hòa ở 100%, chưa đo được tiến bộ tiếp theo (G7).
 - BM25 chạy trong tiến trình, giới hạn quy mô corpus (G8).
 
-[Unreleased]: https://github.com/BuiTienDunghe/Un/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/BuiTienDunghe/Un/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/BuiTienDunghe/Un/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/BuiTienDunghe/Un/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/BuiTienDunghe/Un/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/BuiTienDunghe/Un/compare/v1.0.0...v1.1.0
