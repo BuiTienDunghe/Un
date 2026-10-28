@@ -1,0 +1,139 @@
+{
+ "commit": "7b44b03ab4e4f22855056995cc0d743c35fdf17f",
+ "dataset": "agent-eval-v0.4",
+ "grader": "agent-eval-grader-v0.4",
+ "gpu_shared": false,
+ "score": {
+  "r1": {
+   "passed": 39,
+   "total": 48,
+   "rate": 0.8125
+  },
+  "r2": {
+   "passed": 39,
+   "total": 48,
+   "rate": 0.8125
+  }
+ },
+ "new_8_passed": {
+  "doc-33": false,
+  "doc-34": true,
+  "doc-35": true,
+  "doc-36": false,
+  "doc-37": true,
+  "doc-38": true,
+  "doc-39": false,
+  "hist-11": false
+ },
+ "figures_without_lookup_failed": {
+  "doc-22": "số liệu không tra: ['140']"
+ },
+ "read_document": {
+  "doc-33": {
+   "calls": [
+    {
+     "document_id": "doc_81b634bd8252454ea9d0a471c780be1c",
+     "from_chunk": 0,
+     "n": 5
+    }
+   ],
+   "args_valid": false,
+   "detail": "read_document: n=5 ngoài khoảng 1-3"
+  },
+  "doc-34": {
+   "calls": [
+    {
+     "document_id": "doc_81b634bd8252454ea9d0a471c780be1c",
+     "from_chunk": 3,
+     "n": 3
+    }
+   ],
+   "args_valid": true,
+   "detail": ""
+  },
+  "doc-35": {
+   "calls": [
+    {
+     "document_id": "doc_81b634bd8252454ea9d0a471c780be1c",
+     "from_chunk": 8,
+     "n": 3
+    }
+   ],
+   "args_valid": true,
+   "detail": ""
+  },
+  "doc-37": {
+   "calls": [
+    {
+     "document_id": "doc_81b634bd8252454ea9d0a471c780be1c",
+     "from_chunk": 1,
+     "n": 3
+    }
+   ],
+   "args_valid": true,
+   "detail": ""
+  }
+ },
+ "doc39": {
+  "passed": false,
+  "error": null,
+  "model_rounds": 2,
+  "tool_calls": [
+   {
+    "name": "search_documents",
+    "arguments": {
+     "query": "hạn chót nộp hồ sơ dự thầu gói hộp giấy Minh Phát ai phụ trách",
+     "top_k": 5
+    }
+   }
+  ],
+  "failed_checks": [
+   {
+    "check": "must_mention",
+    "passed": false,
+    "detail": "thiếu: ['14\\\\s*/\\\\s*11|14 tháng 11', 'Thu Hà']"
+   }
+  ],
+  "answer": "Tôi đã tìm kiếm trong văn bản nhưng không tìm thấy thông tin cụ thể về hạn chót nộp hồ sơ dự thầu gói hộp giấy cho Minh Phát và người phụ trách. \n\nTuy nhiên, từ phần cuối của văn bản bạn cung cấp, tôi có thể thấy:\n- Trong quý IV, ưu tiên số một là **hồ sơ dự thầu gói hộp giấy của Minh Phát**\n- Các phòng phải hỗ trợ đầu mối đúng hạn và báo ngay cho ban điều hành nếu có vướng mắc\n\nNhưng thông tin chi tiết về **hạn chót cụ thể** và **ai phụ trách hồ sơ này** không được đề cập trong phần cuối văn bản mà bạn đã cung cấp. Để có câu trả lời chính xác, tôi cần đọc toàn bộ văn bản để tìm thông tin này.\n\nBạn có muốn tôi đọc toàn bộ văn bản để tìm thông tin chi tiết hơn không?"
+ },
+ "failed": {
+  "doc-22": [
+   "tools_required",
+   "must_mention",
+   "citation",
+   "figures_without_lookup"
+  ],
+  "doc-25": [
+   "tools_required",
+   "must_mention",
+   "citation"
+  ],
+  "doc-26": [
+   "citation"
+  ],
+  "doc-30": [
+   "tools_required",
+   "must_mention",
+   "citation"
+  ],
+  "doc-33": [
+   "args_valid"
+  ],
+  "doc-36": [
+   "must_mention",
+   "citation"
+  ],
+  "doc-39": [
+   "must_mention"
+  ],
+  "hist-05": [
+   "args_expected:search_history"
+  ],
+  "hist-11": [
+   "must_mention",
+   "must_not_mention"
+  ]
+ },
+ "r1_equals_r2": true,
+ "answers_differ_r1_r2": []
+}

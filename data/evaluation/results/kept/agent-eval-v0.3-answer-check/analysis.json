@@ -1,0 +1,85 @@
+{
+ "hashes_equal_to_1B": {
+  "tools_sha256": true,
+  "agent_guide_sha256": true,
+  "system_prompt_sha256": true
+ },
+ "score": {
+  "1B": {
+   "total": 38,
+   "old_40": 33,
+   "long_5": 4
+  },
+  "r1": {
+   "total": 39,
+   "old_40": 34,
+   "long_5": 4
+  },
+  "r2": {
+   "total": 39,
+   "old_40": 34,
+   "long_5": 4
+  }
+ },
+ "answers_differ_from_1B": [
+  "doc-10",
+  "doc-22"
+ ],
+ "passed_to_failed": [],
+ "failed_to_passed": [
+  "doc-10"
+ ],
+ "answer_check_steps": {
+  "doc-10": [
+   {
+    "unsupported_figures": 6,
+    "latency_ms": 4442
+   }
+  ],
+  "doc-22": [
+   {
+    "unsupported_figures": 1,
+    "latency_ms": 7955
+   }
+  ]
+ },
+ "tools_after_retry": {
+  "doc-10": [
+   "search_documents"
+  ],
+  "doc-22": []
+ },
+ "doc10_final_shape": {
+  "unsupported_figures": 0,
+  "grounding": "ungrounded",
+  "judged": 5,
+  "grounded": 4,
+  "weak": 0,
+  "ungrounded": 1
+ },
+ "doc22_final_shape": {
+  "unsupported_figures": 1
+ },
+ "grounding_on_finals_with_tools": {
+  "grounded": 15,
+  "ungrounded": 14,
+  "weak": 8
+ },
+ "r1_equals_r2": true,
+ "latency_ms": {
+  "doc-10": [
+   4514,
+   9588
+  ],
+  "doc-22": [
+   8096,
+   12828
+  ]
+ },
+ "prediction_46_identical": true,
+ "rule": {
+  "no_pass_to_fail": true,
+  "doc10_final_no_unsupported": true,
+  "propose_ship": true
+ }
+}

@@ -105,3 +105,7 @@ trí nhớ Discord thành một gói riêng, đăng ký công cụ của mình q
       Redis: `0 0`.
     - `FAILURE_MODES.md` đổi đường dẫn của guard.
     - Việc xoá shim và allowlist làm sau C4.
+- 28/10 08:21 (opus 5.5) — **Lần đo "trùng câu trả lời" của C4 xong** (đợt A+B, chủ dự án duyệt 07:58): trước C4
+  (`ced5e0b`) và sau C4 (`79065d7`) cùng buổi, mỗi bên một lần lạnh. `tools_sha256` cả hai = 153209… như đã tính lúc code;
+  48/48 câu trùng từng chữ; mọi bước trace trùng; 11 bài hist gọi `search_history`, hist-08..10 nhận
+  `TOOL_UNAVAILABLE_HERE`. **Đạt luật: C4 giữ hành vi.** `kept/agent-eval-v0.3-c4-registry/`.

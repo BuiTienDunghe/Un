@@ -151,3 +151,12 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
       (`take_pastes`), nên đây là lần đầu doc-39 đo được #3.
     - Không đưa con số dự đoán cho tổng. Code trên main khác mọi lần đã lưu (#2, #3, #4 vào sau #1-B), và mỗi lần đổi mô
       tả công cụ đã xáo 37–39/40 câu trả lời. Bảng chấm lại chỉ cho biết bộ chấm v0.4 xử lý câu cũ thế nào.
+- 28/10 08:29 (opus 5.5) — **Đo #2, #3 và mốc v0.4 xong** (đợt A+B, chủ dự án duyệt 07:58; GPU không dùng chung).
+  - #2 (`86c419c`): 39/48; mọi dự đoán đúng (46/48 câu trùng #1-B, không bài đạt nào thành trượt, doc-10 6 → 0 số không
+    nguồn). **Đạt luật → giữ.** Ngoài luật: lần làm lại của doc-22 không tra, và câu cuối viết cho người dùng "tôi cần
+    điều chỉnh lại câu trả lời". Chủ dự án quyết có sửa `retry_instruction` không. `kept/agent-eval-v0.3-answer-check/`.
+  - #3 (`80cd369`): 39/48; 47/47 câu trùng #2; doc-39 tới agent nhưng gọi `search_documents` thay vì `read_document`,
+    rồi hỏi lại người dùng. **Trượt 1/3 điều kiện → không đề xuất giữ.** Code đã trên main, nên bốn cách (giữ, sửa lời
+    trong phiếu, harness tự đọc, lùi) chờ chủ dự án chọn. `kept/agent-eval-v0.3-pastes/`.
+  - Mốc v0.4 (`7b44b03`): 39/48, r1 = r2; dự đoán đúng; 0/48 câu khác lần đo C4, nên #4 không đổi hành vi model.
+    `kept/agent-eval-v0.4-baseline-20261028/`.

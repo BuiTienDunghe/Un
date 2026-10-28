@@ -320,6 +320,40 @@
    "source": "agent-eval-v0.3-read-20261028/ollama_ps.jsonl (00:24:00, sau khi gỡ, ngay trước lần chạy)",
    "gpu_shared": false,
    "gpu_shared_source": "REPORT agent-eval-v0.3-read: điều phối báo GPU trống trong lúc đo"
+  },
+  "v0.3-check-r1-cold": {
+   "loaded_at_start": [],
+   "unload": "general",
+   "source": "agent-eval-v0.3-answer-check/ollama_ps.jsonl (08:00:14, sau khi gỡ, ngay trước lần chạy)",
+   "gpu_shared": false,
+   "gpu_shared_source": "phiên Quản lý (dự án khác) xác nhận bên đó không dùng GPU trong đợt A+B (08:00–08:45); commit này chưa có --gpu-shared"
+  },
+  "v0.3-check-r2-cold": {
+   "loaded_at_start": [
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "general",
+   "source": "agent-eval-v0.3-answer-check/ollama_ps.jsonl (08:03:56, sau khi gỡ, ngay trước lần chạy)",
+   "gpu_shared": false,
+   "gpu_shared_source": "phiên Quản lý (dự án khác) xác nhận bên đó không dùng GPU trong đợt A+B (08:00–08:45); commit này chưa có --gpu-shared"
+  },
+  "v0.3-paste-r1-cold": {
+   "loaded_at_start": [
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "general",
+   "source": "agent-eval-v0.3-pastes/ollama_ps.jsonl (08:07:29, sau khi gỡ, ngay trước lần chạy)",
+   "gpu_shared": false,
+   "gpu_shared_source": "phiên Quản lý (dự án khác) xác nhận bên đó không dùng GPU trong đợt A+B (08:00–08:45); commit này chưa có --gpu-shared"
+  },
+  "v0.3-paste-r2-cold": {
+   "loaded_at_start": [
+    "qwen3-embedding:0.6b"
+   ],
+   "unload": "general",
+   "source": "agent-eval-v0.3-pastes/ollama_ps.jsonl (08:11:02, sau khi gỡ, ngay trước lần chạy)",
+   "gpu_shared": false,
+   "gpu_shared_source": "phiên Quản lý (dự án khác) xác nhận bên đó không dùng GPU trong đợt A+B (08:00–08:45); commit này chưa có --gpu-shared"
   }
  }
 }

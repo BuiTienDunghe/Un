@@ -89,7 +89,9 @@ chưa rõ phiên nào.
 | 2 | BFCL: nhiệt độ khi đo | NV3 đề xuất 0, chạy lạnh; Ún đang dùng 0,4 |
 | 3 | BFCL (nếu cắm vòng lặp): ba công cụ của Ún ở lại hay bị thay trong lượt BFCL | |
 | 4 | BFCL: cài venv | phiên NV3 bị bộ phân loại quyền chặn `pip install`; 119 gói, 94,5 MB; hai lệnh ở mục 1 của thiết kế. Opus không chạy thay |
-| 5 | Đợt đo GPU gom lại | kế hoạch `joint-measurement-plan.md`: đợt A hồi quy #2, #3, C4 (6 lần lạnh, ~25–30 phút), B mốc v0.4 (~8 phút), C ba nhánh e5 (~3 giờ), D BFCL (chưa chạy được) |
+| 5 | Đợt đo GPU gom lại | **A+B xong 08:29** (duyệt 07:58); C ba nhánh e5 (~3 giờ) và D BFCL chưa duyệt |
+| 5b | Ticket 20 #3 trượt luật: giữ, sửa lời trong phiếu, harness tự đọc, hay lùi | `kept/agent-eval-v0.3-pastes/REPORT.md` có bảng 4 cách; opus nghiêng sửa phiếu + thêm bài đoạn dán |
+| 5c | Ticket 20 #2: câu làm lại để lộ "tôi cần điều chỉnh lại câu trả lời" ra người dùng (doc-22) | ngoài luật; `kept/agent-eval-v0.3-answer-check/REPORT.md` |
 | 6 | Ticket 25 — nợ Discord sau 22 (3 món, mỗi món 2–3 cách) | `issues/25-discord-debt.md`; NV2 nghiêng 1B (test chặn lõi đọc thêm `discord_*`), 2A, 3A (để nguyên) |
 | 7 | Ticket 20 #4 — Discord hiện tiến độ thế nào: D1 giữ "đang nhập", D2 một tin "⏳ Ún đang làm…" sửa dần rồi thay bằng câu trả lời, D3 đổi emoji trên tin người hỏi (👀→🔎→✅) | NV1 nghiêng D2. Đêm nay chỉ code móc lõi + web (SSE `progress`) + endpoint tiến độ, chưa code phía bot |
 | 8 | `POSTGRES_TEST_URL` (và có thể `REDIS_TEST_URL`) trong biến môi trường người dùng Windows | giữ thì mọi phiên phải nhớ bỏ khi chạy test; xoá khỏi `HKCU\Environment` thì chỉ ai đặt tường minh mới chạm DB test (opus đặt trong script của mình) |
@@ -112,6 +114,10 @@ nguyên tới khi chủ dự án cho đo.
 **07:58 — chủ dự án cho chạy đợt A+B** ("Chạy A+B", theo `joint-measurement-plan.md`). Luật giữ im chỉ gỡ cho các
 lần `agent_eval` của opus trong đợt này, chạy từng lần một. Mọi phiên khác vẫn giữ bộ biến giữ im và không chạy gì
 nạp model cho tới khi opus ghi "đợt A+B xong" ở đây. Đợt C (e5, ~3 giờ) và D (BFCL) chưa được duyệt.
+
+**08:29 — đợt A+B xong.** 8 lần lạnh 08:00–08:29, từng lần một, GPU không dùng chung; cao nhất opus thấy 73 °C (A1 r1,
+tải 91%). Đã gỡ cả `qwen3.5:9b` lẫn `qwen3-embedding:0.6b`; `/api/ps` trống, VRAM 0 MiB. **Luật giữ im trở lại** cho
+mọi phiên tới khi chủ dự án duyệt đợt khác. Kết quả: `joint-measurement-plan.md`, mục "Kết quả A+B".
 
 ## Xây trước, đo sau (chủ dự án, 28/10 00:58)
 
@@ -198,9 +204,9 @@ GPU nóng do dự án khác thì opus báo cả phiên Quản lý. Thay ngưỡn
 | 17 | forget_member xoá cả trích đoạn thành viên trong agent_traces | 16 gộp | Nhân viên 1 | **đã gộp** |
 | 18 | test_debt_t1_t2_t3 tự deadlock lúc teardown | — | Nhân viên 1 | **đã gộp** |
 | 19 | forget_member bước 6 xoá turn ở mọi guild | 17 | Nhân viên 1 | **đã gộp** (cả test bổ sung) |
-| 20 | Khả năng cơ bản cho agent: đọc dài, kiểm câu trả lời, báo tiến độ | — | NV3 (v0.3), NV1 (#1–#4) | **xong phần code**: #1 2d4a830, #2 86c419c, #3 80cd369, #4 7a2d71b; bộ test có DB 1 315 xanh; đo #2/#3 hoãn; bot hiển thị tiến độ chờ chủ dự án |
+| 20 | Khả năng cơ bản cho agent: đọc dài, kiểm câu trả lời, báo tiến độ | — | NV3 (v0.3), NV1 (#1–#4) | **xong phần code**: #1 2d4a830, #2 86c419c, #3 80cd369, #4 7a2d71b; bộ test có DB 1 315 xanh; đo 28/10 08:00–08:14: #2 **đạt** luật (39/48, doc-10 hết số bịa), #3 **trượt** luật (doc-39 tới agent nhưng không mở đoạn dán; 4 cách chờ chủ dự án); bot hiển thị tiến độ chờ chủ dự án |
 | 21 | Tài liệu không có chủ: agent đọc mọi tài liệu, kể cả PDF Nghiên cứu của người khác | — | — | chờ chủ dự án |
-| 22 | Tách mềm Discord: lõi không import Discord; Discord tự cắm qua registry | 20 #1 (1) | NV2 (C1–C3, C5–C6), NV1 (C4) | **xong**: C1–C3 + tài liệu gộp d1711e7, C4 gộp 79065d7 (shim đã xoá); bộ test có DB 1 300 xanh; lần Agent Eval "trùng câu trả lời" hoãn; nợ còn lại ở ticket 25 |
+| 22 | Tách mềm Discord: lõi không import Discord; Discord tự cắm qua registry | 20 #1 (1) | NV2 (C1–C3, C5–C6), NV1 (C4) | **xong**: C1–C3 + tài liệu gộp d1711e7, C4 gộp 79065d7 (shim đã xoá); bộ test có DB 1 300 xanh; Agent Eval "trùng câu trả lời" đo 08:14–08:21: **48/48 trùng**, trace trùng từng bước; nợ còn lại ở ticket 25 |
 | 23 | Bảng điểm harness: đúng, hiệu quả, bền, minh bạch + lịch sử | — | Nhân viên 3 | **xong** — gộp 2818573 + cột số liệu không tra 8bfaf46 |
 | 24 | Đo harness bằng benchmark uy tín có điểm công bố | — | Nhân viên 3 | BFCL cách A; thiết kế gộp 2f362cd; chờ chủ dự án: chỗ cắm, nhiệt độ, cài venv |
 

@@ -49,3 +49,18 @@ Chờ chủ dự án chọn chỗ cắm, nhiệt độ, và cho cài venv (`tick
 - Thời gian A, B là ước từ một lần đo v0.3; lần lạnh đầu mỗi buổi có thể lâu hơn vì nạp model.
 - A1–A3 chạy trên commit cũ: số đo nói về đúng thay đổi đó, không phải về main hiện tại. Một lần v0.3 trên main mới
   nhất có thể thêm sau nếu chủ dự án muốn mốc tổng.
+
+## Kết quả A+B (28/10, 08:00–08:29, chủ dự án duyệt 07:58)
+
+Mọi lần: worktree sạch tách đúng commit, gỡ model trước mỗi lần, t0, seed 42, `--probe`, GPU không dùng chung
+(phiên Quản lý xác nhận). Lặp lại cho kết quả trùng từng chữ ở cả ba cặp r1/r2.
+
+| # | Commit | Kết quả | Theo luật đăng ký | Báo cáo |
+|---|---|---|---|---|
+| A1 #2 kiểm con số | 86c419c | 39/48 (+1 so #1-B); 46/48 câu trùng; doc-10 hết 6 số bịa và đạt | **đạt** → giữ | `kept/agent-eval-v0.3-answer-check/` |
+| A2 #3 đoạn dán | 80cd369 | 39/48; 47/47 câu trùng; doc-39 tới agent nhưng **không mở đoạn dán** | **trượt** 1/3 điều kiện → chủ dự án chọn | `kept/agent-eval-v0.3-pastes/` |
+| A3 C4 registry | ced5e0b → 79065d7 | 48/48 câu và mọi bước trace trùng | **đạt** → giữ hành vi | `kept/agent-eval-v0.3-c4-registry/` |
+| B mốc v0.4 | 7b44b03 | 39/48; 0/48 câu khác lần C4 (nên #4 không đổi hành vi); `figures_without_lookup` bắt 1 bài (doc-22) | không có luật | `kept/agent-eval-v0.4-baseline-20261028/` |
+
+Thời gian thật: 8 lần × 3 phút 20 giây – 3 phút 45 giây, cả đợt 29 phút. Các lần đều đã thêm vào
+`kept/agent-eval-scorecard-history.jsonl`.
