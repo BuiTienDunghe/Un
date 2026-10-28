@@ -1,6 +1,7 @@
 # 20 — Khả năng cơ bản cho agent: đọc dài, kiểm câu trả lời, báo tiến độ
 
-Status: đang làm — cách A (chủ dự án 28/10 00:20): v0.3 → #1 → #2 → #3 → #4; bỏ #5
+Status: đang làm — cách A (chủ dự án 28/10 00:20): v0.3 → #1 → #2 → #3 → #4; bỏ #5. #3-B: bài đoạn dán v0.5 xong trên
+`wip/20-paste-tasks`, chờ duyệt; lời phiếu ở `wip/20-paste-slip-b`
 Type: task
 Blocked by: — (cần bộ bài v0.3 có bài đọc dài để đo)
 
@@ -194,3 +195,16 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
     khi chạy**, nhờ fable duyệt bản đăng ký, rồi đo trên 5 bài đoạn dán (doc-39 + 4 bài mới): main (phiếu cũ) và
     `wip/20-paste-slip-b` rebase lên main (phiếu mới), mỗi bên 2 lần lạnh, `--tasks`. 48 bài cũ không cần chạy lại:
     phiếu chỉ thay tin dài, và ba băm trong manifest phải bằng nhau.
+- 28/10 10:50 (Nhân viên 3) — **#3-B, bài đoạn dán: xong trên `wip/20-paste-tasks`** (cắt từ main `ad09916`). Không mở
+  `wip/20-paste-slip-b`, không chạy `agent_eval`.
+  - Bộ bài `agent-eval-v0.5` = v0.4 + doc-40..43; 48 bài cũ không đổi byte nào; bộ chấm giữ v0.4. Bảng vị trí và giới
+    hạn ở README của bộ bài, mục v0.5.
+  - Vị trí (đo bằng `pastes._chunks` và `SLIP_EDGE_CHARS` ở `ad09916`): (a) doc-40 đoạn 3/8; (b) doc-41 đoạn 6/15, đọc
+    lần lượt từ 0 thì tới lượt công cụ thứ ba mới thấy; (c) doc-42 trong 600 ký tự cuối; (d) doc-43 đoạn 1 và 5/10.
+    Dài 10 474–21 342 ký tự.
+  - Test mới `test_paste_answers_lie_where_the_notes_say` tính lại vị trí mỗi lần chạy; kiểm ngược: trượt khi sai chỉ
+    số, khi mép phiếu 2 000 ký tự, khi chunk 300 token. Thêm 8 câu đúng/sai vào bảng tiêu chí.
+  - Tự chọn, ticket không nói: câu hỏi của (a), (d) đặt ở đầu đoạn dán (doc-39, (b), (c) ở cuối), vì phiếu cho thấy cả
+    hai mép; (b) ở đoạn 6 chứ không từ đoạn 9 trở đi, để bài làm được mà không phải đoán.
+  - Không thêm vào `expect` ngoài mẫu doc-39. Có thể thêm nếu điều phối muốn: `must_not_mention` cho gây nhiễu thấy
+    trong phiếu, `max_tool_calls: 0` cho (c) (đối chứng đọc thừa, như doc-38).

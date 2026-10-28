@@ -7,6 +7,7 @@ so the per-round usage read is exercised for real.
 from __future__ import annotations
 
 import json
+import re
 import unicodedata
 from pathlib import Path
 
@@ -351,11 +352,59 @@ MENTION_KEYS = ("must_mention", "must_not_mention", "must_say_not_found", "must_
     # v0.4: hist-11's baseline answer merged the meeting's room and hour into the trip.
     ("hist-11", "Phương án dã ngoại: Tam Đảo, homestay Đồi Sim, 9h sáng thứ Năm tại phòng B203.", False),
     ("hist-11", "Nhóm chốt lên Tam Đảo, ở homestay Đồi Sim hai ngày một đêm.", True),
+    # v0.5: each paste task against an answer read from the paste and one taken from what
+    # the slip shows or a distractor beside the answer.
+    ("doc-40", "Máy chủ và tủ mạng chuyển riêng vào thứ Bảy 12/12, do anh Lạc Quốc Bảo, trưởng nhóm hạ tầng, giám sát.", True),
+    ("doc-40", "Máy chủ chuyển cùng đợt 4, thứ Bảy 19/12, anh Phí Văn Tùng phụ trách.", False),
+    ("doc-41", "Gọi ngay anh Tạ Minh Khôi (máy lẻ 214); ngưỡng là cao hơn -15°C liên tục quá 20 phút.", True),
+    ("doc-41", "Gọi quản lý bếp, chị Đàm Thu Hằng (máy lẻ 201); kho đặt ở âm 18 độ C.", False),
+    ("doc-42", "Người dẫn chương trình là chị Kha Ngọc Diệp; tổng duyệt lúc 14 giờ 30 ngày 11/12.", True),
+    ("doc-42", "Chuỗi email chưa chốt người dẫn chương trình; hội nghị diễn ra ngày 12/12.", False),
+    ("doc-43", "Chị Lương Diệu Linh (phòng Hành chính) phụ trách, hồ sơ phải nộp xong trước ngày 10/12.", True),
+    ("doc-43", "Bà Nghiêm Thị Thu Vân phụ trách; mời nghiệm thu ngày 12/01/2027.", False),
 ])
 def test_shipped_criteria_on_correct_and_wrong_phrasings(task_id, answer, passes):
     task = next(t for t in load_dataset(DATASET_DIR).tasks if t["id"] == task_id)
     expect = {key: value for key, value in task["expect"].items() if key in MENTION_KEYS}
     assert grade(expect, steps_for(), answer, SCHEMAS)["passed"] is passes
+
+
+# v0.5 (ticket 20 #3-B): the chunk each paste's answer lies in, cut by the chunker the agent
+# reads the paste with. "tail" is inside the slip's last edge. The notes give these numbers,
+# so a changed chunker or slip edge fails here before a run measures the wrong thing.
+PASTE_ANSWER_CHUNKS = {
+    "doc-40": [3, 3],  # (a) one middle chunk
+    "doc-41": [6, 6],  # (b) far from the start: the third round, reading on from chunk 0
+    "doc-42": "tail",  # (c) shown by the slip, nothing to read
+    "doc-43": [1, 5],  # (d) two middle chunks one read cannot span
+}
+
+
+def test_paste_answers_lie_where_the_notes_say():
+    from app.services.agent_service import READ_MAX_CHUNKS
+    from app.services.pastes import PASTE_THRESHOLD, SLIP_EDGE_CHARS, _chunks
+    from scripts.agent_eval_grader import _matches
+
+    tasks = {task["id"]: task for task in load_dataset(DATASET_DIR).tasks}
+    for task_id, where in PASTE_ANSWER_CHUNKS.items():
+        task = tasks[task_id]
+        text, note = task["input"], task["note"]
+        assert task["long_input"] and PASTE_THRESHOLD < len(text) <= min(30_000, INPUT_MAX_CHARS["web"])
+        chunks = _chunks(text)
+        assert f"{len(text)} ký tự, {len(chunks)} đoạn" in note
+        head, tail = text[:SLIP_EDGE_CHARS], text[-SLIP_EDGE_CHARS:]
+        for index, pattern in enumerate(task["expect"]["must_mention"]):
+            # Once in the whole paste, so no copy elsewhere answers it.
+            assert len(re.findall(unicodedata.normalize("NFC", pattern), text, re.IGNORECASE)) == 1, (task_id, pattern)
+            found = [i for i, chunk in enumerate(chunks) if _matches(pattern, chunk)]
+            assert not _matches(pattern, head), (task_id, pattern)
+            if where == "tail":
+                assert _matches(pattern, tail) and found == [len(chunks) - 1], (task_id, pattern)
+            else:
+                assert not _matches(pattern, tail) and found == [where[index]], (task_id, pattern, found)
+                assert f"đoạn {where[index]}" in note
+        if task_id == "doc-43":
+            assert where[1] - where[0] >= READ_MAX_CHUNKS
 
 
 # ── grader ───────────────────────────────────────────────────────────────

@@ -45,7 +45,7 @@ khi băm, nên Windows và CI ra cùng một hash).
 | `corpus_source` | Chỉ có ở bài hỏi về tài liệu thật: `{file, chunk_index, corpus}`, tức đoạn mà đáp án nằm trong **400 ký tự đầu**. Agent chỉ đọc 400 ký tự đầu của mỗi đoạn (`agent_service`) |
 | `evidence` | Tuỳ chọn: những regex mà đoạn ghi được phải chứa, khi đáp án là kết quả tính toán hoặc dịch (doc-22, doc-27). Không có thì dùng `must_mention` |
 | `long_read` | Từ v0.3: đáp án **không** nằm trong 400 ký tự đầu của bất kỳ đoạn nào; phải đọc tiếp mới thấy (doc-33..37, hist-11). Với bài tài liệu, `corpus_source` khi đó trỏ tới đoạn có đáp án và thêm `char_offset` |
-| `long_input` | Từ v0.3: câu hỏi dài hơn giới hạn của API (doc-39) |
+| `long_input` | Từ v0.3: tin dài hơn 10 000 ký tự, tức đoạn dán (doc-39; doc-40..43 từ v0.5). Lúc thêm doc-39 đó là giới hạn của API; từ #3 (ticket 20), agent chỉ thấy phiếu (600 ký tự đầu và cuối) và mở phần giữa bằng `read_document` |
 
 `expect`: mọi khoá đều tuỳ chọn. Một bài đạt khi **mọi** kiểm tra áp dụng cho nó đều đạt.
 
@@ -273,3 +273,32 @@ trích dẫn của v0.4 phải từ lần chạy mới.
 
 hist-11 không lật, vì ở cả 6 lần nó đã trượt `must_mention`; giờ nó trượt thêm `must_not_mention` ở các lần
 có bịa.
+
+**agent-eval-v0.5** (ticket 20 #3-B, 28/10). Thêm 4 bài đoạn dán; 48 bài cũ và bộ chấm v0.4 giữ nguyên. #3 trượt
+trên bài đoạn dán duy nhất (doc-39), nên muốn đánh giá lời phiếu mới thì phải có thêm bài. Các bài viết **trước**
+mọi lần chạy có chúng. Người viết không xem lời phiếu mới (`wip/20-paste-slip-b`), để bài không bị viết cho khớp lời phiếu.
+
+| Bài | Loại | Ký tự | Đoạn | Đáp án ở đoạn | Câu hỏi ở | Phiếu cho thấy gì gây nhiễu |
+|---|---|---:|---:|---|---|---|
+| doc-40 | (a) giữa, một đoạn | 10 928 | 8 | 3 | đầu | ngày bàn giao, ngày hết hợp đồng; tên người ký |
+| doc-41 | (b) giữa, xa đầu | 21 342 | 15 | 6 | cuối | danh bạ khẩn cấp (quản lý bếp, phòng Chất lượng) |
+| doc-42 | (c) trong 600 ký tự cuối | 10 474 | 8 | 7, tức đoạn cuối | cuối | không có: đáp án đã ở phiếu |
+| doc-43 | (d) hai đoạn giữa không liền | 14 837 | 10 | 1 và 5 | đầu | trưởng ban dự án ký ở cuối |
+
+- Vị trí đo bằng `pastes._chunks` (480 token, chồng 80) và `SLIP_EDGE_CHARS` 600 ở main `ad09916`. Test
+  `test_paste_answers_lie_where_the_notes_say` tính lại mỗi lần chạy, nên đổi chunker hay mép phiếu thì test trượt ngay.
+- Mỗi regex `must_mention` khớp đúng một lần trong đoạn dán và không khớp câu hỏi. Ở (a), (b), (d), regex không khớp phần
+  đầu hay phần cuối mà phiếu cho thấy.
+- (b) đặt ở đoạn 6: đọc lần lượt từ đoạn 0, mỗi lần 3 đoạn, thì tới lượt công cụ thứ ba (lượt cuối, `max_steps` 3) mới
+  thấy. Từ đoạn 9 trở đi, đọc lần lượt không bao giờ tới, và bài thành bài đoán.
+- (d) hai đoạn cách nhau 4, hơn `READ_MAX_CHUNKS` 3: phải có hai lệnh đọc.
+- Mọi lần đọc 3 đoạn liền nhau đều vừa trần 6 000 ký tự của kết quả đọc (rộng nhất 5 750), nên mỗi lần đọc trả đủ 3 đoạn.
+- `expect` theo mẫu doc-39: cấm `search_history`, `system_status`; `must_mention` cho đáp án; không cấm
+  `search_documents`. Bài không có `tools_required`, nên `figures_without_lookup` không áp (giống doc-39).
+- Nội dung hư cấu; mỗi cặp thứ–ngày khớp lịch 2026.
+
+Giới hạn:
+- Không có `must_not_mention`: câu trả lời nêu cả đáp án lẫn gây nhiễu vẫn đạt.
+- (c) không có `max_tool_calls`: agent đọc thừa vẫn đạt. Số lần gọi công cụ chỉ hiện ở chiều hiệu quả của bảng điểm.
+- Băm bộ bài đổi, nên bảng điểm (ticket 23) không so một lần chạy v0.4 với một lần v0.5. 48 bài cũ không đổi một byte nào,
+  nên vẫn so được từng bài.
