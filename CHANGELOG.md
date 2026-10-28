@@ -68,6 +68,10 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   mép cuối và ở hai đoạn cách nhau; 48 bài cũ không đổi, bộ chấm vẫn v0.4. Đo lời phiếu đoạn dán mới (ticket 20 #3-B) trên
   5 bài này: model mở đoạn dán 5/5 (phiếu cũ 2/5) nhưng xin đọc quá trần 3 đoạn, điểm 1/5 cả hai bên, trượt luật đăng
   ký trước; phiếu cũ giữ nguyên.
+- **Agent Eval v0.6** (28/10, test hồi quy nội bộ). Thêm 4 bài đoạn dán chưa ai xem (doc-44..47), viết mà không thấy
+  lời phiếu mới; 52 bài cũ không đổi, bộ chấm vẫn v0.4. Đo lời phiếu lần hai (ticket 20 #3-C) trên 9 bài đoạn dán: 2/9 →
+  6/9, model xin đọc đúng trần ở mọi lần, nhưng trên bài mới cần phần giữa chỉ 1/3 từ trượt thành đạt, trượt luật đăng
+  ký trước; phiếu cũ giữ nguyên.
 
 ### Changed
 - **Discord thành một gói riêng** (28/10, ticket 22): 26 module Discord dời vào `backend/app/discord/`

@@ -102,6 +102,25 @@ tasks of `agent-eval-v0.5` only (`--tasks`), two cold runs per side, identical. 
 so the grader fails four of five: 1/5 on both sides, and doc-42 goes from pass to fail. Misses its rule; not merged.
 Not in the scorecard history, since it is not a full run.
 
+`agent-eval-v0.6-paste-slip-c/` is ticket 20 #3-C: the second paste slip against the old one on the nine paste tasks
+of `agent-eval-v0.6` only (`--tasks`), two cold runs per side, identical. Every read now asks for at most three chunks,
+the score goes 2/9 → 6/9 and no task goes from pass to fail, but of the three unseen tasks whose answer needs the
+middle only one goes from fail to pass (doc-46). Misses its rule; not merged. Not in the scorecard history.
+
+`agent-eval-v0.7-paste-nudge-search/` is ticket 20 #3-D: the unread-paste nudge and search inside the paste against #3-C's
+slip, three arms on the fifteen paste tasks of `agent-eval-v0.7`. It holds five runs made in sequence, which stopped the
+measurement, the three single-task runs in `diagnostics/` that showed why, and the rerun with the model unloaded before
+every task.
+
+**Every Agent Eval run above, and the five sequence runs of #3-D, is a sequence figure.** A task's answer depends on the
+task run just before it on the same Ollama model: doc-41 alone is identical on two commits but differs from doc-41 inside
+a sequence, and the 62-task base run of #3-D matches its 15-task run on 3 of 15 paste answers
+(`agent-eval-v0.7-paste-nudge-search/diagnostics/`). "r1 = r2" in the reports above holds for the same sequence of tasks,
+and a comparison between two arms is clean only up to the first task whose answer differs. Compare sequence figures only
+with runs of the same task list in the same order, and never with runs made with `--unload-between-tasks`, which unloads
+the general model before every task and records `unload_between_tasks: true` in the manifest. The first 62-task run made
+that way is #3-D's base full run.
+
 ## Agent Eval scorecard history
 
 `agent-eval-scorecard-history.jsonl` is one line per kept agent-eval run (ticket 23): commit,

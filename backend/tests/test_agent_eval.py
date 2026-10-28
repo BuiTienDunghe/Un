@@ -101,7 +101,7 @@ DOC_FIXTURE = {
 }
 
 
-def _run(tmp_path, tasks, retrieval, router, *, run_meta=None):
+def _run(tmp_path, tasks, retrieval, router, *, run_meta=None, reloader=None):
     dataset = load_dataset(write_dataset(tmp_path / "ds", tasks, retrieval))
     out_dir = tmp_path / "run"
     summary = run_eval(
@@ -113,6 +113,7 @@ def _run(tmp_path, tasks, retrieval, router, *, run_meta=None):
         system_prompt="Bạn là trợ lý.",
         run_meta=run_meta or {"run_id": "t", "seed": NO_SEED, "temperature": 0.4},
         progress=lambda line: None,
+        reloader=reloader,
     )
     return out_dir, summary
 
@@ -146,6 +147,128 @@ def test_a_run_writes_all_four_artifacts_with_usage_from_every_round(tmp_path):
     # The replayed chunk reached the model through the real tool path, wrapped by the defense.
     assert "12 ngày phép" in events[1]["content"] and "KẾT QUẢ CÔNG CỤ" in events[1]["content"]
     assert summary["overall"] == {"passed": 1, "total": 1, "rate": 1.0}
+    # The default run reloads nothing, and says so.
+    assert manifest["unload_between_tasks"] is False and result["reload_ms"] is None
+
+
+# ── --unload-between-tasks (ticket 20 #3-D): each task on a model just loaded ──
+
+CHAT_TASK = {"id": "chat-x", "category": "no_tool", "input": "Chào bạn", "expect": {"must_mention": ["Chào"]}}
+
+
+def _fake_ollama(log: list, *, lingers: int):
+    """An Ollama that keeps listing the model in /api/ps for `lingers` polls after
+    each unload; every request lands in `log` with its JSON body."""
+    import httpx
+
+    state = {"listed_for": 0}
+
+    def handler(request):
+        if request.url.path == "/api/ps":
+            log.append(("ps", None))
+            listed = state["listed_for"] > 0
+            state["listed_for"] -= 1
+            return httpx.Response(200, json={"models": [{"name": "qwen3.5:9b"}] if listed else []})
+        assert request.url.path == "/api/generate"
+        body = json.loads(request.content)
+        if body["keep_alive"] == 0:
+            state["listed_for"] = lingers
+            log.append(("unload", body))
+        else:
+            log.append(("load", body))
+        return httpx.Response(200, json={"model": "qwen3.5:9b", "done": True})
+
+    return httpx.Client(base_url="http://ollama.test", transport=httpx.MockTransport(handler))
+
+
+class LoggingRouter(ScriptedRouter):
+    def __init__(self, turns, log):
+        super().__init__(turns)
+        self.log = log
+
+    def chat_tools(self, mode, messages, tools):
+        self.log.append(("chat", None))
+        return super().chat_tools(mode, messages, tools)
+
+
+def test_unload_between_tasks_unloads_waits_and_loads_before_every_task_the_first_included(tmp_path):
+    from scripts.agent_eval import OllamaReloader
+
+    log: list = []
+    reloader = OllamaReloader(
+        "http://ollama.test", "qwen3.5:9b", keep_alive="5m", options={"num_ctx": 16384},
+        client=_fake_ollama(log, lingers=1), pause=lambda seconds: log.append(("pause", seconds)),
+    )
+    router = LoggingRouter([call("search_documents", {"query": "nghỉ phép năm"}), final("Bạn có 12 ngày phép."), final("Chào bạn!")], log)
+
+    out_dir, _ = _run(tmp_path, [DOC_TASK, CHAT_TASK], [DOC_FIXTURE], router, reloader=reloader)
+
+    once = ["unload", "ps", "pause", "ps", "load"]
+    assert [kind for kind, _ in log] == once + ["chat", "chat"] + once + ["chat"]
+    unload, load = log[0][1], log[4][1]
+    assert unload == {"model": "qwen3.5:9b", "keep_alive": 0, "stream": False}
+    # An empty load: no prompt, and the context the chats ask for, so the first chat does not load again.
+    assert load == {"model": "qwen3.5:9b", "keep_alive": "5m", "options": {"num_ctx": 16384}, "stream": False}
+    assert json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))["unload_between_tasks"] is True
+    results = _jsonl(out_dir / "task_results.jsonl")
+    assert [r["passed"] for r in results] == [True, True]
+    assert all(isinstance(r["reload_ms"], int) and r["reload_ms"] >= 0 for r in results)
+
+
+def test_a_model_ollama_keeps_listing_stops_the_run_before_the_task(tmp_path):
+    from scripts.agent_eval import OllamaReloader
+
+    log: list = []
+    reloader = OllamaReloader(
+        "http://ollama.test", "qwen3.5:9b", keep_alive="5m", options={},
+        client=_fake_ollama(log, lingers=10), wait_seconds=1.0, poll_seconds=0.5, pause=lambda seconds: None,
+    )
+
+    with pytest.raises(RuntimeError, match="vẫn còn trong /api/ps"):
+        _run(tmp_path, [DOC_TASK], [DOC_FIXTURE], LoggingRouter([final("12")], log), reloader=reloader)
+
+    assert [kind for kind, _ in log] == ["unload", "ps", "ps", "ps"]
+    assert not (tmp_path / "run" / "task_results.jsonl").exists()
+
+
+def test_the_cli_builds_a_reloader_only_with_the_flag(tmp_path, monkeypatch, capsys):
+    import scripts.agent_eval as agent_eval
+
+    env = tmp_path / ".env"
+    env.write_text("", encoding="utf-8")
+    seen = {}
+
+    class Stop(Exception):
+        pass
+
+    def capture(*args, **kwargs):
+        seen["reloader"] = kwargs["reloader"]
+        raise Stop  # before the scorecard reads a run that never happened
+
+    monkeypatch.setattr(agent_eval, "run_eval", capture)
+    base = ["--env-file", str(env), "--out", str(tmp_path / "runs")]
+    with pytest.raises(Stop):
+        agent_eval.main(base)
+    assert seen["reloader"] is None
+
+    with pytest.raises(Stop):
+        agent_eval.main([*base, "--unload-between-tasks"])
+    reloader = seen["reloader"]
+    general = agent_eval.resolve_registry(agent_eval.build_settings(env, probe=False), None).flat_models()["general"]
+    assert isinstance(reloader, agent_eval.OllamaReloader) and reloader.model == general["name"]
+    assert reloader.options == {"num_ctx": general["context"]} and reloader.keep_alive == str(general.get("keep_alive", "5m"))
+
+    # A general model Ollama does not serve cannot be unloaded from Ollama.
+    real_override = agent_eval.override_general
+
+    def anthropic_general(models, **kwargs):
+        overridden = real_override(models, **kwargs)
+        return {**overridden, "general": {**overridden["general"], "provider": "anthropic"}}
+
+    monkeypatch.setattr(agent_eval, "override_general", anthropic_general)
+    seen.clear()
+    assert agent_eval.main([*base, "--unload-between-tasks"]) == 2
+    assert "refusing to run" in capsys.readouterr().err and not seen
 
 
 def test_an_exhausted_budget_is_recorded_with_the_forced_answers_tokens(tmp_path):
@@ -234,13 +357,34 @@ def test_a_far_paste_answer_arrives_on_the_third_read_from_chunk_0(tmp_path):
     assert "Sóng Biếc" not in first + second and "Sóng Biếc" in third
 
 
-def test_a_paste_answer_the_slip_shows_passes_only_without_a_read(tmp_path):
-    # v0.6: doc-45's answer sits in the slip's first edge and the task allows no tool call,
-    # so the same answer after one read fails on the tool budget alone.
+def test_a_paste_answer_past_three_reads_from_chunk_0_never_arrives_that_way(tmp_path):
+    # v0.7 (j): doc-49 read on from chunk 0, three chunks a read, spends every tool round
+    # and ends at chunk 8; the answer is in chunk 10.
+    from app.services.pastes import paste_id
+    from scripts.agent_eval_grader import _matches
+
+    task = next(t for t in load_dataset(DATASET_DIR).tasks if t["id"] == "doc-49")
+    reads = [call("read_document", {"document_id": paste_id(task["input"]), "from_chunk": start, "n": 3}) for start in (0, 3, 6)]
+    out_dir, _ = _run(tmp_path, [task], [], ScriptedRouter(reads))
+
+    [result] = _jsonl(out_dir / "task_results.jsonl")
+    assert result["passed"] is False and result["budget_exhausted"] is True
+    contents = [e["content"] for e in _jsonl(out_dir / "events.jsonl") if e["kind"] == "tool_result"]
+    assert len(contents) == 3 and '"next_from_chunk": 9' in contents[-1]
+    assert not any(_matches(pattern, content) for pattern in task["expect"]["must_mention"] for content in contents)
+
+
+@pytest.mark.parametrize("task_id, answer", [
+    # v0.6: doc-45's answer sits in the slip's first edge; v0.7: doc-52's in its last edge.
+    ("doc-45", "Không đúng: nhận số báo danh vào thứ Bảy 28/11/2026, từ 8 giờ đến 18 giờ, tại sảnh B nhà thi đấu Phú Lâm."),
+    ("doc-52", "Mặc theo tông màu xanh ngọc; xe đón lúc 16 giờ 45 ở sảnh Sao Khuê, tầng trệt tòa văn phòng công ty."),
+])
+def test_a_paste_answer_the_slip_shows_passes_only_without_a_read(tmp_path, task_id, answer):
+    # The task allows no tool call, so the same answer after one read fails on the tool
+    # budget alone.
     from app.services.pastes import paste_id
 
-    task = next(t for t in load_dataset(DATASET_DIR).tasks if t["id"] == "doc-45")
-    answer = "Không đúng: nhận số báo danh vào thứ Bảy 28/11/2026, từ 8 giờ đến 18 giờ, tại sảnh B nhà thi đấu Phú Lâm."
+    task = next(t for t in load_dataset(DATASET_DIR).tasks if t["id"] == task_id)
     read = call("read_document", {"document_id": paste_id(task["input"]), "from_chunk": 0, "n": 3})
     results = {}
     for name, turns in {"direct": [final(answer)], "read": [read, final(answer)]}.items():
@@ -433,6 +577,20 @@ MENTION_KEYS = ("must_mention", "must_not_mention", "must_say_not_found", "must_
     ("doc-46", "Bạn được học bổng Hải Đăng, 5.000.000 đồng mỗi học kỳ.", False),
     ("doc-47", "Phải báo trước bằng văn bản ít nhất 75 ngày; chủ nhà được giữ lại 36.000.000 đồng tiền cọc.", True),
     ("doc-47", "Báo trước 30 ngày; chủ nhà giữ toàn bộ 54.000.000 đồng tiền cọc.", False),
+    # v0.7: the same, for six more paste tasks no one had seen.
+    ("doc-48", "Tự xử lý được: tắt máy, rút điện, lau ô cảm biến bụi ở hông trái bằng tăm bông khô, rồi bật máy và giữ nút Hẹn giờ 8 giây để xoá lỗi.", True),
+    ("doc-48", "Giữ cùng lúc nút Hẹn giờ và nút Tốc độ 10 giây để về cài đặt gốc; vẫn lỗi thì gọi 1800 6045.", False),
+    ("doc-49", "Được nuôi, tối đa hai con; đăng ký ở Tổ Cư dân, nhà sinh hoạt cộng đồng Cỏ May, và đóng 90.000 đồng mỗi con mỗi tháng.", True),
+    ("doc-49", "Đăng ký với Ban quản lý vận hành ở phòng 105 tòa A, phí 150.000 đồng mỗi tháng.", False),
+    ("doc-50", "Bạn được nghỉ 6 ngày làm việc hưởng nguyên lương, và Công đoàn mừng 2,5 triệu đồng.", True),
+    ("doc-50", "Bạn được nghỉ 3 ngày có lương; Công đoàn mừng 1.500.000 đồng.", False),
+    ("doc-51", "Set Hội thảo B giá 145.000 đồng một suất; đơn 120 suất phải xác nhận trước ít nhất 7 ngày làm việc.", True),
+    ("doc-51", "Mỗi suất 115.000 đồng; chốt trước 15 ngày để được giảm 5%.", False),
+    ("doc-52", "Mặc theo tông xanh ngọc; xe đón ở sảnh Sao Khuê lúc 16 giờ 45.", True),
+    ("doc-52", "Mặc áo dài đỏ đô; xe đón ở cổng chính Trung tâm hội nghị Hồng Hạc.", False),
+    ("doc-53", "Có: khởi hành muộn từ 6 giờ trở lên được trả 400.000 đồng cho mỗi quãng sáu giờ, nên trễ 7 tiếng bạn nhận 400.000 đồng.", True),
+    ("doc-53", "Trễ từ 6h trở lên là được trả, 7 tiếng thì bạn nhận 400k.", True),
+    ("doc-53", "Được 300.000 đồng cho mỗi 4 tiếng trễ.", False),
 ])
 def test_shipped_criteria_on_correct_and_wrong_phrasings(task_id, answer, passes):
     task = next(t for t in load_dataset(DATASET_DIR).tasks if t["id"] == task_id)
@@ -440,10 +598,10 @@ def test_shipped_criteria_on_correct_and_wrong_phrasings(task_id, answer, passes
     assert grade(expect, steps_for(), answer, SCHEMAS)["passed"] is passes
 
 
-# v0.5 (ticket 20 #3-B) and v0.6 (#3-C): the chunk each paste's answer lies in, cut by the
-# chunker the agent reads the paste with. "head" and "tail" are inside the slip's first and
-# last edge. The notes give these numbers, so a changed chunker or slip edge fails here
-# before a run measures the wrong thing.
+# v0.5 (ticket 20 #3-B), v0.6 (#3-C) and v0.7 (#3-D): the chunk each paste's answer lies in,
+# cut by the chunker the agent reads the paste with. "head" and "tail" are inside the slip's
+# first and last edge. The notes give these numbers, so a changed chunker or slip edge fails
+# here before a run measures the wrong thing.
 PASTE_ANSWER_CHUNKS = {
     "doc-40": [3, 3],  # (a) one middle chunk
     "doc-41": [6, 6],  # (b) far from the start: the third round, reading on from chunk 0
@@ -453,7 +611,18 @@ PASTE_ANSWER_CHUNKS = {
     "doc-45": "head",  # (f) shown by the slip's first edge, and no tool call allowed
     "doc-46": [7, 7],  # (g) far: the third read from chunk 0
     "doc-47": [2, 5],  # (h) two chunks one read cannot span
+    "doc-48": [5, 5],  # (i) one middle chunk
+    "doc-49": [10, 10],  # (j) past chunk 8, where three reads from chunk 0 end
+    "doc-50": [14, 14],  # (k) the same in a paste of 30 000 to 60 000 characters
+    "doc-51": [0, 6],  # (l) chunk 0 past the slip's first edge, and a far chunk
+    "doc-52": "tail",  # (m) shown by the slip's last edge, and no tool call allowed
+    "doc-53": [6, 6],  # (n) a middle chunk worded unlike the question
 }
+# The answer is in the slip, so any tool call fails the task (doc-42 has no such cap).
+PASTE_NO_TOOL_CALLS = {"doc-45", "doc-52"}
+# Three reads of three chunks from chunk 0 end at chunk 8, so these answers need a read
+# that starts further on.
+PASTE_PAST_THREE_READS = {"doc-49", "doc-50"}
 
 
 def test_paste_answers_lie_where_the_notes_say():
@@ -465,10 +634,11 @@ def test_paste_answers_lie_where_the_notes_say():
     for task_id, where in PASTE_ANSWER_CHUNKS.items():
         task = tasks[task_id]
         text, note = task["input"], task["note"]
-        assert task["long_input"] and PASTE_THRESHOLD < len(text) <= min(30_000, INPUT_MAX_CHARS["web"])
-        # Only an answer in the slip's first edge forbids reading (v0.6 (f)).
-        assert task["expect"].get("max_tool_calls") == (0 if where == "head" else None), task_id
+        assert task["long_input"] and PASTE_THRESHOLD < len(text) <= min(60_000, INPUT_MAX_CHARS["web"])
+        assert task["expect"].get("max_tool_calls") == (0 if task_id in PASTE_NO_TOOL_CALLS else None), task_id
         chunks = _chunks(text)
+        if task_id in PASTE_PAST_THREE_READS:
+            assert len(chunks) >= 14 and min(where) > 3 * READ_MAX_CHUNKS, (task_id, len(chunks))
         assert f"{len(text)} ký tự, {len(chunks)} đoạn" in note
         head, tail = text[:SLIP_EDGE_CHARS], text[-SLIP_EDGE_CHARS:]
         for index, pattern in enumerate(task["expect"]["must_mention"]):
@@ -486,6 +656,26 @@ def test_paste_answers_lie_where_the_notes_say():
                 assert f"đoạn {where[index]}" in note
         if isinstance(where, list) and where[0] != where[1]:
             assert where[1] - where[0] >= READ_MAX_CHUNKS, task_id
+
+
+def test_the_reworded_paste_question_shares_its_words_with_a_decoy_chunk_not_the_answer():
+    # v0.7 (n): doc-53 asks in everyday words ("máy bay trễ", "đền"); the answer chunk says
+    # "khởi hành muộn", "chi trả", and a decoy chunk repeats the question's words around a
+    # different payout. Words in more than half the chunks (bảo, hiểm, có...) do not count.
+    from app.services.pastes import _chunks
+    from scripts.agent_eval_grader import _matches
+
+    task = next(t for t in load_dataset(DATASET_DIR).tasks if t["id"] == "doc-53")
+    chunks = _chunks(task["input"])
+    question = task["input"].split("\n\n")[-1]
+    words = [set(re.findall(r"\w+", chunk.lower())) for chunk in chunks]
+    rare = {w for w in re.findall(r"\w+", question.lower()) if sum(w in chunk for chunk in words) <= len(chunks) / 2}
+    shared = [len(rare & chunk) for chunk in words]
+    answer, decoy, own = PASTE_ANSWER_CHUNKS["doc-53"][0], 8, len(chunks) - 1
+    assert question in chunks[own]
+    assert shared[answer] == 0 and shared[decoy] == max(s for i, s in enumerate(shared) if i != own), shared
+    assert f"Đoạn mồi {decoy}" in task["note"]
+    assert not any(_matches(pattern, chunks[decoy]) for pattern in task["expect"]["must_mention"])
 
 
 # ── grader ───────────────────────────────────────────────────────────────
