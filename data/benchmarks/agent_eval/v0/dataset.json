@@ -1,5 +1,5 @@
 {
-  "version": "agent-eval-v0.5",
+  "version": "agent-eval-v0.6",
   "created": "2026-10-27",
   "note": "Dữ liệu giả, trừ doc-21..doc-32: các bài này hỏi về tài liệu thật của corpus lab. Trong đó xuong_in_anh_duong.txt là tài liệu hư cấu, còn p3_progress.md và versioned_ingestion.md là tài liệu của chính dự án, không có thông tin nhạy cảm.",
   "guild": {
