@@ -22,6 +22,7 @@ from app.llm_clients.deadline import ModelCallTimeoutError, call_within
 from app.llm_clients.usage import consume_usage, record_usage
 from app.services.answer_figures import grounding_summary, retry_instruction, turn_texts, unsupported_figures
 from app.services.pastes import read_paste, take_pastes
+from app.services.unread_paste import read_on_instruction, unread_paste
 from app.services.injection_defense import InjectionDefense
 from app.services.model_router import ModelRouter
 
@@ -144,12 +145,18 @@ STOP_TURN_BUDGET_EXHAUSTED = "turn_budget_exhausted"
 ANSWER_CHECK = True
 ANSWER_CHECK_STEP = "answer_check"
 UNSUPPORTED_FIGURES = "UNSUPPORTED_FIGURES"
+# The unread-paste step (ticket 20 #3-D, app/services/unread_paste.py). An answer that asks the
+# user for the paste the turn holds, or says it read all of one, while a chunk of it is unread
+# gets one more round with tools and the exact call to read on; its retry is its own, not #2's.
+UNREAD_PASTE_STEP = "unread_paste"
+UNREAD_PASTE = "UNREAD_PASTE"
 # What a watching client is told while a turn runs (ticket 20 #4). A tool brings its own
 # label (AgentTool.label); TOOL_LABEL stands in for one without, or a name never declared.
 THINKING_LABEL = "Đang suy nghĩ…"
 REVIEWING_LABEL = "Đang xem lại những gì đã tra…"
 TOOL_LABEL = "Đang dùng công cụ…"
 ANSWER_CHECK_LABEL = "Đang kiểm lại các con số trong câu trả lời…"
+UNREAD_PASTE_LABEL = "Đang đọc tiếp văn bản đã dán…"
 ANSWERING_LABEL = "Đang viết câu trả lời…"
 
 
@@ -331,6 +338,9 @@ class AgentService:
         # The answer check (ticket 20 #2) may grant one more round, for its single retry;
         # `checked_out` are the messages it added, which never count as something seen.
         rounds, retried = self.max_steps, False
+        # The unread-paste step's own retry (ticket 20 #3-D): #2 may spend its retry first, as
+        # doc-47 did on #3-C's slip before saying in round 3 that it had read the contract whole.
+        nudged = False
         checked_out: set[int] = set()
         while round_index < rounds:
             round_index += 1
@@ -371,6 +381,22 @@ class AgentService:
                     working.append({"role": "system", "content": retry_instruction(check["unsupported"])})
                     retried, rounds = True, rounds + 1
                     emit("answer_check", label=ANSWER_CHECK_LABEL)
+                    continue
+                unread = unread_paste(answer, working, pastes) if not nudged and left >= self.final_reserve_seconds else None
+                if unread is not None:
+                    # Asked for the paste, or said it was read whole, with a chunk unread (ticket
+                    # 20 #3-D): one retry, with tools, in a round of its own, given the exact call.
+                    # Like #2's, the trace keeps which pattern and how many chunks, not the text.
+                    steps.append({
+                        "kind": UNREAD_PASTE_STEP, "tool_name": None, "arguments": None, "content": None,
+                        "latency_ms": round_latency, "error_code": UNREAD_PASTE,
+                        "arguments_shape": {"pattern": unread["pattern"], "read_chunks": unread["read"]}, **last,
+                    })
+                    checked_out.update((len(working), len(working) + 1))
+                    working.append({"role": "assistant", "content": answer})
+                    working.append({"role": "system", "content": read_on_instruction(unread, READ_MAX_CHUNKS)})
+                    nudged, rounds = True, rounds + 1
+                    emit(UNREAD_PASTE_STEP, label=UNREAD_PASTE_LABEL)
                     continue
                 steps.append({
                     "kind": "final", "tool_name": None, "arguments": None,
