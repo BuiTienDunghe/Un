@@ -284,3 +284,9 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
       đoạn chưa đọc, thì trả lại model kèm lời nhắc đọc, như bước kiểm con số đã có. Cần bài mới để đo.
     - E. Harness tự tìm trong đoạn dán những đoạn hợp câu hỏi, đưa vào phiếu cùng phần đầu, cuối. Thay đổi lớn nhất,
       tốn nhúng mỗi lần dán.
+  - Fable kiểm lại báo cáo: ĐÚNG SỐ (`reviews/report-20-3c-67c43e0.md`). Fable thêm một giả thuyết cho doc-40, chưa kiểm:
+    mô tả công cụ `read_document` nói document_id lấy "trong kết quả search_documents" (`agent_service.py:88`, `:92`),
+    còn phiếu nói search_documents không tìm thấy đoạn dán; model nối hai câu thành "không dùng được read_document". Hai
+    câu đó có thật trong code; quan hệ nhân quả chưa đo. Thêm một cách:
+    - F. Sửa mô tả `read_document` để nhận cả id `paste_…` trong phiếu. Đổi `tools_sha256`, nên phải đo đủ 56 bài; cũng
+      cần bài mới chưa ai xem.
