@@ -90,7 +90,7 @@ chưa rõ phiên nào.
 | 3 | BFCL (nếu cắm vòng lặp): ba công cụ của Ún ở lại hay bị thay trong lượt BFCL | |
 | 4 | BFCL: cài venv | phiên NV3 bị bộ phân loại quyền chặn `pip install`; 119 gói, 94,5 MB; hai lệnh ở mục 1 của thiết kế. Opus không chạy thay |
 | 5 | Đợt đo GPU gom lại | **A+B xong 08:29** (duyệt 07:58); C ba nhánh e5 (~3 giờ) và D BFCL chưa duyệt |
-| 5b | ~~Ticket 20 #3 trượt luật~~ | **chủ dự án chọn sửa lời phiếu, hai người độc lập (08:45)**: NV3 bài đoạn dán `wip/20-paste-tasks`, NV1 lời phiếu `wip/20-paste-slip-b`; chi tiết trong ticket 20, 08:50 |
+| 5b | ~~Ticket 20 #3 trượt luật~~ | **chủ dự án chọn sửa lời phiếu, hai người độc lập (08:45)**: NV3 bài đoạn dán `wip/20-paste-tasks`, NV1 lời phiếu `wip/20-paste-slip-b`; chi tiết trong ticket 20, 08:50. 13:20: fable GỘP ĐƯỢC cả hai nhánh và bản đăng ký; bài đã gộp main `8bb58e1`; phía sau `c54e3eb` trên `int/20-3b`. **15:13 đo xong: trượt điều 4** (doc-42 đạt → trượt vì `n` vượt trần); phiếu mới mở 5/5, đủ ý 4/5, nhưng điểm vẫn 1/5. Không gộp; chờ chủ dự án chọn A–E (ticket 20, 15:20) |
 | 5c | Ticket 20 #2: câu làm lại để lộ "tôi cần điều chỉnh lại câu trả lời" ra người dùng (doc-22) | ngoài luật; `kept/agent-eval-v0.3-answer-check/REPORT.md` |
 | 6 | Ticket 25 — nợ Discord sau 22 (3 món, mỗi món 2–3 cách) | `issues/25-discord-debt.md`; NV2 nghiêng 1B (test chặn lõi đọc thêm `discord_*`), 2A, 3A (để nguyên) |
 | 7 | Ticket 20 #4 — Discord hiện tiến độ thế nào: D1 giữ "đang nhập", D2 một tin "⏳ Ún đang làm…" sửa dần rồi thay bằng câu trả lời, D3 đổi emoji trên tin người hỏi (👀→🔎→✅) | NV1 nghiêng D2. Đêm nay chỉ code móc lõi + web (SSE `progress`) + endpoint tiến độ, chưa code phía bot |
@@ -266,4 +266,4 @@ cherry-pick** (v0.3 đã gộp như vậy).
 | Lúc | Ai xin | Khung | Ghi chú |
 |---|---|---|---|
 | 28/10 00:35 | phiên "Quản lý" (dự án decision model, `C:\Users\dungbt06\Fine-tune`) | ~00:40 → 02:55 (≈ 2 giờ) | chấm Qwen3.5-4B, đo độ trễ batch 1. Ún: Nhân viên 1 chạy xong `v0.3-read-B-r1-cold` rồi gỡ model; r2 chạy sau. Eval đêm 03:00 vẫn chạy (đã báo bên kia) |
-| 28/10 10:50 | phiên "Quản lý" (dự án VI) | 10:50 → ~16:00 (≈ 5 giờ) | train Qwen3-1.7B LoRA rồi chấm, người dùng đã duyệt. Ún: GPU trống lúc nhường (0 MiB, `/api/ps` trống); không nạp model qua Ollama tới khi bên kia báo xong. Lần đo #3-B (~5 phút) chờ |
+| 28/10 10:50 | phiên "Quản lý" (dự án VI) | 10:50 → ~16:00 (≈ 5 giờ) | train Qwen3-1.7B LoRA rồi chấm, người dùng đã duyệt. Ún: GPU trống lúc nhường (0 MiB, `/api/ps` trống); không nạp model qua Ollama tới khi bên kia báo xong. Lần đo #3-B (~5 phút) chờ. **Trả lúc 15:05** (Quản lý báo 15:07: 46 °C, tải 0%); #3-B bắt đầu 15:09 |

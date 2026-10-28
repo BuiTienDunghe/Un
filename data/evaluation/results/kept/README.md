@@ -96,6 +96,12 @@ each in the same session. 48/48 answers and every trace step identical. Meets it
 Two cold runs, identical, 39/48; no answer differs from the C4 run, so ticket 20 #4 left the model's
 input unchanged. No ship rule.
 
+`agent-eval-v0.5-paste-slip-b/` is ticket 20 #3-B: the reworded paste slip against the old one on the five paste
+tasks of `agent-eval-v0.5` only (`--tasks`), two cold runs per side, identical. The new slip opens the paste 5/5 (old
+2/5) and four answers carry what they must, but the model asks `read_document` for more chunks than its cap of three,
+so the grader fails four of five: 1/5 on both sides, and doc-42 goes from pass to fail. Misses its rule; not merged.
+Not in the scorecard history, since it is not a full run.
+
 ## Agent Eval scorecard history
 
 `agent-eval-scorecard-history.jsonl` is one line per kept agent-eval run (ticket 23): commit,

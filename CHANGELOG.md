@@ -64,6 +64,10 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   mẫu chấm "không tìm thấy" bị lọt, siết hist-11 (cấm dữ kiện mượn từ cuộc họp) và cho hist-03 tra tài liệu trước.
   Chấm lại các lần v0.3 đã lưu chỉ để chẩn đoán: mốc 35 → 35, #1-B 38 → 38. Mốc v0.4 chưa chạy (đăng ký trước, chờ đợt
   đo chung).
+- **Agent Eval v0.5** (28/10, test hồi quy nội bộ). Thêm 4 bài đoạn dán dài (doc-40..43) có đáp án ở giữa, ở xa, ở
+  mép cuối và ở hai đoạn cách nhau; 48 bài cũ không đổi, bộ chấm vẫn v0.4. Đo lời phiếu đoạn dán mới (ticket 20 #3-B) trên
+  5 bài này: model mở đoạn dán 5/5 (phiếu cũ 2/5) nhưng xin đọc quá trần 3 đoạn, điểm 1/5 cả hai bên, trượt luật đăng
+  ký trước; phiếu cũ giữ nguyên.
 
 ### Changed
 - **Discord thành một gói riêng** (28/10, ticket 22): 26 module Discord dời vào `backend/app/discord/`

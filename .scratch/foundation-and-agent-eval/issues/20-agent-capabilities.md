@@ -1,7 +1,6 @@
 # 20 — Khả năng cơ bản cho agent: đọc dài, kiểm câu trả lời, báo tiến độ
 
-Status: đang làm — cách A (chủ dự án 28/10 00:20): v0.3 → #1 → #2 → #3 → #4; bỏ #5. #3-B: bài đoạn dán v0.5 xong trên
-`wip/20-paste-tasks`, chờ duyệt; lời phiếu ở `wip/20-paste-slip-b`
+Status: đang làm — cách A (chủ dự án 28/10 00:20): v0.3 → #1 → #2 → #3 → #4; bỏ #5. #3-B đo 15:13: trượt luật (doc-42), chờ chủ dự án chọn A–E
 Type: task
 Blocked by: — (cần bộ bài v0.3 có bài đọc dài để đo)
 
@@ -209,3 +208,21 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
     hai mép; (b) ở đoạn 6 chứ không từ đoạn 9 trở đi, để bài làm được mà không phải đoán.
   - Không thêm vào `expect` ngoài mẫu doc-39. Có thể thêm nếu điều phối muốn: `must_not_mention` cho gây nhiễu thấy
     trong phiếu, `max_tool_calls: 0` cho (c) (đối chứng đọc thừa, như doc-38).
+- 28/10 15:20 (opus) — **#3-B đo xong: trượt luật ở điều 4, không đề xuất gộp.** Báo cáo:
+  `data/evaluation/results/kept/agent-eval-v0.5-paste-slip-b/REPORT.md`. Trước `8bb58e1`, sau `c54e3eb` (`int/20-3b`,
+  chưa vào main), 2 lần lạnh mỗi phía, r1 = r2 từng chữ; điều kiện so đúng.
+  - Phiếu mới làm model mở đoạn dán 5/5 (cũ 2/5), đọc tiếp đúng ở bài xa 2/3 (cũ 0/3). Đủ ý: sau 4/5 (39, 40, 41, 42),
+    trước 1/5 (42).
+  - Điểm vẫn 1/5 mỗi bên: doc-40, 41, 42 sau chỉ trượt `args_valid`, vì model xin `n` = số đoạn phiếu nêu (8, 15, 10…)
+    thay cho `n=3`; công cụ tự cắt về 3 nên model vẫn nhận đúng. doc-42 đang đạt thành trượt chính vì thế (đọc thừa 3
+    lần, câu trả lời vẫn đủ). doc-43 đọc một lần, thiếu ngày ở đoạn 5, nói "văn bản không nêu".
+  - Ba dự đoán sai: doc-39 phía trước khác #3 từ ký tự 525 (cùng lệnh, cùng token; nghi thứ tự chạy, chưa kiểm);
+    doc-40, 41 mở cả với phiếu cũ; doc-42 phía sau có mở.
+  - Cách cho chủ dự án (chưa làm gì):
+    - A. Dừng #3-B, giữ phiếu cũ.
+    - B. #3-C: sửa phiếu thêm (nói trần 3 đoạn mỗi lần, bỏ hoặc đổi câu "Văn bản có N đoạn", đã thấy đủ thì trả lời
+      luôn), đăng ký lại, đo lại 5 bài. Bài đã bị nhìn thấy nên nên có thêm bài mới chưa ai xem.
+    - C. Gộp dù trượt luật (chủ dự án ghi đè luật).
+    - D. Bộ chấm mới: `n` vượt trần thành ghi nhận, không chặn. Mất so sánh với mọi dòng v0.4.
+    - E. Công cụ báo cho model khi `n` bị cắt. Sửa được lời "đã đọc toàn bộ 15 đoạn" (doc-41 phía trước), không ngăn
+      lời xin; đổi kết quả công cụ của doc-33 nên phải đo đủ 52 bài.
