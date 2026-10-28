@@ -75,6 +75,27 @@ the runs for proposing it. 39 of the 40 old answers still change wording, and on
 five old tasks that fail now (doc-10) answers with made-up figures without searching.
 `analyze.py` recomputes `analysis.json` across the baseline, #1 and #1-B.
 
+The next four folders are the owner's batch A+B of 28/10 (08:00–08:29), each run on a clean
+worktree at the commit its PREREGISTRATION names, cold, GPU not shared. `analyze.py` in each
+recomputes `analysis.json`.
+
+`agent-eval-v0.3-answer-check/` is ticket 20 #2: the agent checks its answer's figures against
+what the turn saw and retries once with tools. Two cold runs, identical, 39/48: 46 answers repeat
+#1-B word for word, doc-10 searches on the retry and drops its six made-up figures, nothing that
+passed fails. Meets its rule.
+
+`agent-eval-v0.3-pastes/` is ticket 20 #3: a paste over 10 000 characters reaches the agent as a
+slip. Two cold runs, identical, 39/48: the other 47 answers repeat #2, doc-39 reaches the agent
+but searches the library instead of opening the paste, then asks back. Misses one of its three
+conditions.
+
+`agent-eval-v0.3-c4-registry/` is ticket 22 C4: main just before C4 and the C4 merge, one cold run
+each in the same session. 48/48 answers and every trace step identical. Meets its rule.
+
+`agent-eval-v0.4-baseline-20261028/` is the first `agent-eval-v0.4` baseline, on main `7b44b03`.
+Two cold runs, identical, 39/48; no answer differs from the C4 run, so ticket 20 #4 left the model's
+input unchanged. No ship rule.
+
 ## Agent Eval scorecard history
 
 `agent-eval-scorecard-history.jsonl` is one line per kept agent-eval run (ticket 23): commit,
