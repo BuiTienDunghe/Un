@@ -1,6 +1,6 @@
 # 20 — Khả năng cơ bản cho agent: đọc dài, kiểm câu trả lời, báo tiến độ
 
-Status: đang làm — cách A (chủ dự án 28/10 00:20): v0.3 → #1 → #2 → #3 → #4; bỏ #5. #3-B trượt luật (15:13); #3-C trượt điều 3 (19:02): 6/9 trên 9 bài đoạn dán (cũ 2/9), `n` sạch, nhưng bài mới chỉ 1/3; phiếu cũ giữ. Gói #3-D duyệt 21:20 (bước 1 nhắc lại + 3' tìm trong đoạn dán, ba nhánh, bài mới mù): dừng giữa lần đo (22:45), câu trả lời một bài phụ thuộc bài chạy trước nó; chủ dự án chọn cách 2 (cô lập từng bài) và bỏ phiếu (b): đang sửa runner, đăng ký lại, đo lại cả ba nhánh
+Status: đang làm — cách A (chủ dự án 28/10 00:20): v0.3 → #1 → #2 → #3 → #4; bỏ #5. #3-B trượt luật (15:13); #3-C trượt điều 3 (19:02): 6/9 trên 9 bài đoạn dán (cũ 2/9), `n` sạch, nhưng bài mới chỉ 1/3; phiếu cũ giữ. Gói #3-D duyệt 21:20 (bước 1 nhắc lại + 3' tìm trong đoạn dán, ba nhánh, bài mới mù): dừng giữa lần đo (22:45), câu trả lời một bài phụ thuộc bài chạy trước nó; #3-D đo lại dưới cô lập (23:42): cả hai đề xuất trượt (B ở B3, C ở C2 + C3), không gộp gì; mốc mới nền 50/62 cô lập; chờ chủ dự án chọn bước tiếp
 Type: task
 Blocked by: — (cần bộ bài v0.3 có bài đọc dài để đo)
 
@@ -410,3 +410,29 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
   - **opus**: sửa mục Quy trình và các dự đoán bị ảnh hưởng của bản đăng ký #3-D, đăng ký lại phần +1+3' theo phiếu mới (C3,
     C4 giữ); thêm ghi chú "số theo chuỗi" ở `kept/README.md`; khi mọi thứ GỘP ĐƯỢC thì dựng lại ba commit đo trên main có
     runner mới và chạy lại cả ba nhánh với cờ. Các lần chạy 22:16–22:37 giữ làm bằng chứng "theo chuỗi", không dùng cho luật.
+- 28/10 23:55 (opus) — **#3-D đo lại xong dưới cô lập: cả hai đề xuất trượt luật, không gộp gì.** Báo cáo:
+  `kept/agent-eval-v0.7-paste-nudge-search/REPORT.md`; đăng ký bản sửa `28df7c7`, fable duyệt `b103ef3`. Nền `94e321f`,
+  +1 `04b89a2`, +1+3' `2839b52` (`int/20-3d-iso`), 2 lần chạy cô lập mỗi nhánh, r1 = r2 cả ba; 47 bài không dán giống hệt
+  giữa hai lần đủ bộ; hai lớp kiểm cô lập đều qua.
+  - 15 bài: nền 10, +1 10, +1+3' 9. Bài mới: cả ba nhánh 4/6; doc-49, doc-50 (quá trần) trượt ở mọi nhánh.
+  - B trượt B3: doc-48, 51, 53 đạt sẵn ở nền (k = 0). Lời nhắc chỉ bật ở doc-40: model đọc tới đáp án, nhưng bài vẫn trượt
+    `tools_forbidden`, vì vòng đầu đã gọi `search_history`.
+  - C trượt C2 và C3. doc-43 tụt: model tìm, đọc một cửa sổ, sót hạn nộp ở đoạn 5. doc-49, doc-50 không gọi tìm. Model gọi
+    tìm ở 3/12 bài cần phần giữa; doc-41 đúng nhờ tìm, chỉ đọc một lần.
+  - Ngoài luật:
+    - doc-51 ở +1+3' đạt nhờ đoán "3-7 ngày" (mẫu `7\s*ngày` khớp).
+    - doc-44 ở +1+3' mất lượt cả ba lần vì lệnh công cụ hỏng, nên đây là hành vi thật, không do thứ tự chạy.
+    - doc-50 ở +1+3' nói ngược phiếu và nhờ người dùng copy lại văn bản.
+  - Mốc mới: nền đủ 62 bài cô lập 50/62 (v0.7, `94e321f`). Mọi số trước là số theo chuỗi.
+  - Cách cho chủ dự án (chưa làm gì):
+    - A. Dừng nhánh đoạn dán ở đây, main giữ phiếu #3; giữ `int/20-3d-iso` làm nhánh.
+    - B. Sửa lỗi lệnh công cụ hỏng: bắt Ollama 500 "tool call parsing failed", thử lại một lần không công cụ hoặc kèm lời
+      nhắc, và báo đúng tên lỗi. Có ca tái hiện chắc (doc-44 ở +1+3', doc-51 theo chuỗi), đo được dưới cô lập.
+    - C. Nới trần lượt công cụ khi lượt có đoạn dán (3 → 5 vòng, đọc tới đoạn 14). Nhắm thẳng doc-49, doc-50; tốn thêm
+      độ trễ và token, có thể đổi bài đang đạt.
+    - D. Cho phiếu lái sang tìm (bản (b) chủ dự án đã bỏ). Bằng chứng mới: khi model tìm thì 2/3 lần ra đúng đoạn, nhưng
+      doc-43 tụt vì đọc một cửa sổ; hai bài quá trần không ai tìm.
+    - E. Đo phiếu #3-C so với phiếu cũ dưới cô lập (chưa từng đo trên bài mới), rồi mới quyết gộp #3-C.
+    - F. Sửa bộ chia đoạn bỏ dòng tiêu đề đánh số (việc riêng).
+    - Ý kiến opus: B trước. Đó là lỗi làm người dùng mất câu trả lời, có ca tái hiện, và độc lập với chuyện đoạn dán. Sau đó C,
+      vì trần 9 đoạn là nguyên nhân duy nhất còn lại của hai bài trượt chung.

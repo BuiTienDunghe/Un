@@ -110,7 +110,8 @@ middle only one goes from fail to pass (doc-46). Misses its rule; not merged. No
 `agent-eval-v0.7-paste-nudge-search/` is ticket 20 #3-D: the unread-paste nudge and search inside the paste against #3-C's
 slip, three arms on the fifteen paste tasks of `agent-eval-v0.7`. It holds five runs made in sequence, which stopped the
 measurement, the three single-task runs in `diagnostics/` that showed why, and the rerun with the model unloaded before
-every task.
+every task. Under isolation both proposals miss their rules (each arm passes 4 of the 6 unseen tasks; the two tasks past
+chunk 8 fail on every arm), so nothing is merged; the base 62-task run, 50/62, is the first isolated baseline.
 
 **Every Agent Eval run above, and the five sequence runs of #3-D, is a sequence figure.** A task's answer depends on the
 task run just before it on the same Ollama model: doc-41 alone is identical on two commits but differs from doc-41 inside
