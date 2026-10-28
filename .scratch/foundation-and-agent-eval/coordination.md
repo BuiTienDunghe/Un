@@ -209,7 +209,7 @@ GPU nóng do dự án khác thì opus báo cả phiên Quản lý. Thay ngưỡn
 | 22 | Tách mềm Discord: lõi không import Discord; Discord tự cắm qua registry | 20 #1 (1) | NV2 (C1–C3, C5–C6), NV1 (C4) | **xong**: C1–C3 + tài liệu gộp d1711e7, C4 gộp 79065d7 (shim đã xoá); bộ test có DB 1 300 xanh; Agent Eval "trùng câu trả lời" đo 08:14–08:21: **48/48 trùng**, trace trùng từng bước; nợ còn lại ở ticket 25 |
 | 23 | Bảng điểm harness: đúng, hiệu quả, bền, minh bạch + lịch sử | — | Nhân viên 3 | **xong** — gộp 2818573 + cột số liệu không tra 8bfaf46 |
 | 24 | Đo harness bằng benchmark uy tín có điểm công bố | — | Nhân viên 3 | BFCL cách A; thiết kế gộp 2f362cd; chờ chủ dự án: chỗ cắm, nhiệt độ, cài venv |
-| 27 | Lệnh gọi công cụ viết hỏng làm mất cả lượt | — | Nhân viên 1 | chủ dự án chọn B sau #3-D (28/10 23:58); NV1 sửa `wip/27-tool-call-parse`; đo dưới cô lập |
+| 27 | Lệnh gọi công cụ viết hỏng làm mất cả lượt | — | Nhân viên 1 | chủ dự án chọn B sau #3-D (28/10 23:58); **đã gộp** `5f60277` (29/10): đo cô lập đạt 4/4 điều, doc-44 hết mất lượt, main 62/62 giống hệt |
 
 ## Mốc so sánh của bộ test
 

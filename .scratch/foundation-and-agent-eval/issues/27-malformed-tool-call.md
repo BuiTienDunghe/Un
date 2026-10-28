@@ -1,6 +1,6 @@
 # 27 — Lệnh gọi công cụ viết hỏng làm mất cả lượt
 
-Status: đang làm — chủ dự án chọn cách B sau #3-D (28/10 23:58); NV1 sửa trên `wip/27-tool-call-parse`
+Status: xong — gộp main `5f60277` (29/10, chủ dự án duyệt); còn mở: hai cột bảng điểm, mã log riêng, chữ lỗi parser khác
 Type: task
 Blocked by: —
 
@@ -61,3 +61,13 @@ main đủ 62 bài trước và sau bản sửa, mọi bài không có bước `
     im. Không push. Không sửa tệp ticket này.
   - **fable**: duyệt nhánh theo giao thức tệp, rồi duyệt bản đăng ký.
   - **opus**: đăng ký trước phép đo ở mục "Đo", chạy, báo cáo.
+- 29/10 00:40 (opus) — **Đo xong, đạt cả bốn điều.** Báo cáo `kept/agent-eval-v0.7-tool-call-parse/REPORT.md` (`3fdb452`),
+  đăng ký `26616b3`, fable GỘP ĐƯỢC nhánh và bản đăng ký, ĐÚNG SỐ báo cáo. doc-44 trên `2839b52`: trước mất lượt 2/2, sau có
+  câu trả lời 2/2, lần thử lại viết được lệnh đúng; câu trả lời vẫn trượt vì đọc chưa tới đoạn 4. Main M0 `53b1e80` / M1
+  `a2b7bde`: 62/62 giống hệt, 45/62, bước sửa không bật.
+- 29/10 00:50 (opus) — **Chủ dự án duyệt gộp** (nguyên văn): "Gộp ticket 27 vào main (merge --no-ff wip/27-tool-call-parse)."
+  Gộp `5f60277`; phần backend giống hệt M1 đã đo. Test agent/ollama/chat/eval xanh, trừ 8 bài `test_eval_stack_model_version`
+  thiếu `DATABASE_URL`, hỏng y hệt trước khi gộp. Còn mở, chưa làm:
+  - hai cột bảng điểm (`max_steps_matches_budget_exhausted`, `rounds_timed_and_counted`) coi lượt `tool_call_error` là thiếu;
+  - `chat_service.py:173` ghi lượt `tool_call_error` là "ok", không mã riêng;
+  - chỉ bắt chữ "XML syntax error"; parser khác từ chối bằng chữ khác thì vẫn mất lượt, nhưng báo đúng mã.

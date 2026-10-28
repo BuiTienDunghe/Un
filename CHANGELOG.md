@@ -136,6 +136,11 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   (launcher tự chạy); thiếu bảng thì mọi lượt agent trả 500.
 
 ### Fixed
+- **Lệnh gọi công cụ viết hỏng không còn làm mất cả lượt** (ticket 27, 29/10). Khi model viết sai cú pháp lệnh gọi công
+  cụ, Ollama trả lỗi 500 "XML syntax error". Trước đây client gửi lại y hệt ba lần, báo "Cannot connect to Ollama", và
+  người dùng không nhận được gì. Giờ lỗi này có tên riêng, agent nhắc model gọi lại một lần, không được thì trả lời bằng
+  những gì đã tra. Các lỗi 5xx khác báo đúng mã và chữ lỗi của server. Đo cô lập: ca tái hiện doc-44 có câu trả lời 2/2;
+  main 62 bài giống hệt trước và sau.
 - **Agent không còn mất tin Discord mới nhất khi kết quả công cụ quá dài** (27/10). Trước đây kết quả
   bị cắt ở 2 400 ký tự giữa chừng: "N tin mới nhất" mất đúng các tin mới nhất (hist-05 mất 8/18 tin),
   và tìm 5 đoạn tài liệu thì JSON gãy (12/12 lượt trong baseline). Giờ kết quả tràn bỏ trọn từng mục
