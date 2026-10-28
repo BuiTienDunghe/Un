@@ -1,7 +1,6 @@
 # 20 — Khả năng cơ bản cho agent: đọc dài, kiểm câu trả lời, báo tiến độ
 
-Status: đang làm — cách A (chủ dự án 28/10 00:20): v0.3 → #1 → #2 → #3 → #4; bỏ #5. #3-B: bài đoạn dán v0.5 xong trên
-`wip/20-paste-tasks`, chờ duyệt; lời phiếu ở `wip/20-paste-slip-b`
+Status: đang làm — cách A (chủ dự án 28/10 00:20): v0.3 → #1 → #2 → #3 → #4; bỏ #5. #3-B: bài v0.5 và lời phiếu đều fable GỘP ĐƯỢC; đo trên `int/20-3b`, chờ GPU
 Type: task
 Blocked by: — (cần bộ bài v0.3 có bài đọc dài để đo)
 
