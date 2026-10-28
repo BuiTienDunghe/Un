@@ -102,8 +102,7 @@ def test_the_slip_carries_both_edges_and_how_to_open_it_and_not_the_middle():
     text = slip(PASTED)
     assert paste_id(PASTED) in text and "read_document" in text and str(len(PASTED)) in text
     assert PASTED[:SLIP_EDGE_CHARS].rstrip() in text and QUESTION in text, "the question at the end survives"
-    # The slip's own words: ~840 characters on #3-C, ~1 030 since #3-D gave search its own call.
-    assert SECRET not in text and len(text) < 2 * SLIP_EDGE_CHARS + 1100
+    assert SECRET not in text and len(text) < 2 * SLIP_EDGE_CHARS + 900
 
 
 def framing(text: str) -> tuple[str, str]:
@@ -113,26 +112,20 @@ def framing(text: str) -> tuple[str, str]:
     return shown[: shown.index(head)], shown[shown.index(tail) + len(tail):]
 
 
-def test_the_slip_never_calls_the_paste_a_document_and_gives_search_an_exact_call():
+def test_the_slip_never_calls_the_paste_a_document_and_says_search_finds_its_chunks():
     # #3-B: on "lưu thành tài liệu tạm" doc-39 searched the library and asked the user
     # whether to read on (kept/agent-eval-v0.3-pastes/REPORT.md). #3-D, 3': search now
-    # finds the paste; on #3-C the first read made the slip's one exact call 5 of 5, so
-    # search gets an exact call of its own (kept/agent-eval-v0.6-paste-slip-c/REPORT.md).
+    # finds the paste, and one sentence says so; the owner dropped giving it an exact call.
     before, after = framing(PASTED)
-    pid = paste_id(PASTED)
     assert "tài liệu" not in before + after and "hỏi lại người dùng" in after
+    assert "search_documents tìm được trong văn bản dán, và kết quả cho chunk_index để đọc thẳng đoạn đó" in after
     assert "không tìm thấy" not in after and "không cần search_documents" not in after
-    assert "search_documents với query là điều cần tìm" in after and f'chunk_index ở kết quả có document_id "{pid}"' in after
-    assert f'read_document(document_id="{pid}", from_chunk=chunk_index, n={READ_MAX_CHUNKS})' in after
 
 
-def test_the_slip_searches_for_a_detail_and_reads_from_the_start_for_the_whole_text():
+def test_the_slips_one_exact_call_is_still_the_read_from_chunk_zero():
     _, after = framing(PASTED)
-    pid = paste_id(PASTED)
-    enough = after.index("đã đủ để trả lời thì trả lời luôn")
-    detail = after.index("Cần một chi tiết: gọi search_documents")
-    whole = after.index("Cần cả văn bản (tóm tắt, liệt kê) hoặc tìm không ra")
-    assert enough < detail < whole < after.index(f'read_document(document_id="{pid}", from_chunk=0,')
+    assert after.count("read_document(") == 1 and "search_documents(" not in after
+    assert "from_chunk=chunk_index" not in after and "Cần một chi tiết" not in after and "tóm tắt, liệt kê" not in after
 
 
 def test_the_slip_gives_the_exact_call_after_the_question_the_user_asked():

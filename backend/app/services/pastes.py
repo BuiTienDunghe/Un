@@ -71,12 +71,12 @@ def slip(text: str) -> str:
 
     Ticket 20 #3-D, 3' (owner's choice): reading on from chunk 0, three at a time, cannot
     reach an answer past the third read, so search_documents now finds a paste's chunks
-    (search_pastes). On #3-C's slip the first read made the slip's one exact call, (0, 3),
-    on 5 of 5 (kept/agent-eval-v0.6-paste-slip-c/), so search is an exact call of its own
-    here, not a remark: a detail is searched and read from the chunk_index found; the whole
-    text (a summary, a list), or a search that finds nothing, is read from chunk 0. "Không
-    cần search_documents trước" is gone. The cap, the next_from_chunk sentence and answering
-    from the edges stay; the chunk count stays out.
+    (search_pastes), and one sentence of the slip says so: a result's chunk_index is read
+    straight away. Giving search an exact call of its own (c270ded) the owner dropped
+    ("vậy bỏ"), so #3-C's read from chunk 0 stays the slip's one exact call; only its
+    "không cần search_documents trước" goes, search now finding the paste. The cap, the
+    next_from_chunk sentence and answering from the edges first stay; the chunk count
+    stays out.
     """
     document_id = paste_id(text)
     head, tail = text[:SLIP_EDGE_CHARS].rstrip(), text[-SLIP_EDGE_CHARS:].lstrip()
@@ -87,13 +87,10 @@ def slip(text: str) -> str:
         f"[Người dùng dán vào tin nhắn này một văn bản dài {len(text)} ký tự. Bạn chỉ thấy phần đầu và "
         f"phần cuối; phần giữa chưa hiện ra.]\n\nĐẦU VĂN BẢN:\n{head}\n\n[… phần giữa chưa thấy …]\n\n"
         f"CUỐI VĂN BẢN:\n{tail}\n\n"
-        f"[Văn bản dán nằm trong tin nhắn, không phải tệp đã tải lên. "
+        f"[Văn bản dán nằm trong tin nhắn, không phải tệp đã tải lên. search_documents tìm được trong văn "
+        f"bản dán, và kết quả cho chunk_index để đọc thẳng đoạn đó. "
         f"Nếu phần đầu và phần cuối đã đủ để trả lời thì trả lời luôn, không đọc thêm. "
-        f"Nếu câu hỏi cần phần chưa thấy, hãy tự đọc trước khi trả lời hay hỏi lại người dùng. "
-        f"Cần một chi tiết: gọi search_documents với query là điều cần tìm (nó tìm cả trong văn bản dán), lấy "
-        f'chunk_index ở kết quả có document_id "{document_id}", rồi gọi '
-        f'read_document(document_id="{document_id}", from_chunk=chunk_index, n={most}). '
-        f"Cần cả văn bản (tóm tắt, liệt kê) hoặc tìm không ra: đọc lần lượt, bắt đầu bằng "
+        f"Nếu câu hỏi cần phần chưa thấy, hãy tự đọc trước khi trả lời hay hỏi lại người dùng: gọi thẳng "
         f'read_document(document_id="{document_id}", from_chunk=0, n={most}). '
         f"read_document chỉ nhận n từ 1 đến {most}, tức mỗi lần đọc tối đa {most} đoạn, và văn bản không có "
         f"trang; muốn đọc tiếp thì gọi lại với from_chunk bằng next_from_chunk trong kết quả, tới khi thấy "
