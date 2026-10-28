@@ -98,7 +98,12 @@ def chunks_read(messages: list[dict[str, Any]], document_id: str) -> set[int]:
 def unread_paste(answer: str, messages: list[dict[str, Any]], pastes: dict[str, str]) -> dict[str, Any] | None:
     """{"pattern", "document_id", "from_chunk", "read"} when the answer should go back, else None.
     The paste is the turn's last one (take_pastes keeps message order): one a user pasted
-    further back is not what an answer to the new message is about."""
+    further back is not what an answer to the new message is about.
+
+    Reading goes on after the furthest chunk read, and only past the end does it go back to
+    the smallest unread one (fable's review of 2955861): a model that searched and jumped to
+    chunks 7-9 is sent on to 10, not back to the part its search passed over. Nothing read
+    is still 0 (doc-40, doc-44); chunks 0-2 read is still 3 (doc-47)."""
     if not pastes:
         return None
     pattern = claim(answer)
@@ -107,23 +112,27 @@ def unread_paste(answer: str, messages: list[dict[str, Any]], pastes: dict[str, 
     document_id = list(pastes)[-1]
     total = int(read_paste(document_id, pastes[document_id], 0, 1)["total_chunks"])
     read = chunks_read(messages, document_id)
-    first = next((index for index in range(total) if index not in read), None)
-    if first is None:
+    unread = [index for index in range(total) if index not in read]
+    if not unread:
         return None
+    furthest = max(read, default=-1)
+    first = next((index for index in unread if index > furthest), unread[0])
     return {"pattern": pattern, "document_id": document_id, "from_chunk": first, "read": len(read)}
 
 
 def read_on_instruction(found: dict[str, Any], n: int) -> str:
     """The system message for the one retry: the exact call to read on. No chunk count: on
-    #3-B's slip the model asked n = the count it was shown."""
+    #3-B's slip the model asked n = the count it was shown. It ends by asking not to mention
+    itself: doc-22's retry under #2 told the user "tôi cần điều chỉnh lại câu trả lời"."""
     call = f'read_document(document_id="{found["document_id"]}", from_chunk={found["from_chunk"]}, n={n})'
+    again = "Rồi trả lời lại như lần đầu, không nhắc tới lời nhắc này."
     if found["pattern"] == ASKS_FOR_PASTE:
         return (
             "Kiểm tra câu trả lời vừa viết: nó nhờ người dùng gửi văn bản, nhưng văn bản người dùng dán đã nằm "
             "sẵn trong tin nhắn, đừng nhờ dán, gửi hay cung cấp lại. Hãy tự đọc phần chưa đọc: gọi "
-            f"{call}. Rồi trả lời lại."
+            f"{call}. {again}"
         )
     return (
         "Kiểm tra câu trả lời vừa viết: nó nói đã đọc hết văn bản người dùng dán, nhưng văn bản còn phần "
-        f"chưa đọc. Hãy đọc tiếp: gọi {call}. Rồi trả lời lại."
+        f"chưa đọc. Hãy đọc tiếp: gọi {call}. {again}"
     )

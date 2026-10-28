@@ -145,6 +145,28 @@ def test_saying_it_read_all_after_one_read_points_at_the_first_chunk_not_returne
     assert f"from_chunk={first}, n={READ_MAX_CHUNKS})" in router.prompts[2][-1]["content"]
 
 
+LONG = paste(40_000)
+LONG_ID = paste_id(LONG)
+LONG_TOTAL = len(_chunks(LONG))
+
+
+def one_each(indexes) -> dict:
+    return calls(*({"document_id": LONG_ID, "from_chunk": i, "n": 1} for i in indexes))
+
+
+def test_after_a_jump_reading_goes_on_past_the_furthest_chunk_read():
+    # fable's review of 2955861: with search inside the paste, a model can jump to chunks 7-9
+    # and say it read it all; it is sent on to 10, not back to the part its search passed over.
+    assert LONG_TOTAL > 11
+    _, steps, router, _ = run([one_each((7, 8, 9)), final(READ_ALL), final(PLAIN)], user=LONG)
+    assert returned(steps) == {7, 8, 9} and kinds(steps)[-2:] == [UNREAD_PASTE_STEP, "final"]
+    assert f'document_id="{LONG_ID}", from_chunk=10, n={READ_MAX_CHUNKS})' in router.prompts[2][-1]["content"]
+
+    # Only once the end was read does it go back to the smallest chunk not read.
+    _, steps, router, _ = run([one_each(range(LONG_TOTAL - 3, LONG_TOTAL)), final(READ_ALL), final(PLAIN)], user=LONG)
+    assert f"from_chunk=0, n={READ_MAX_CHUNKS})" in router.prompts[2][-1]["content"]
+
+
 def test_saying_it_read_all_when_every_chunk_came_back_does_not_fire():
     # One round, one call per chunk: every chunk is returned without running out of rounds.
     answer, steps, router, _ = run([calls(*({"document_id": PID, "from_chunk": i, "n": 1} for i in range(TOTAL))), final(READ_ALL)])
@@ -201,3 +223,4 @@ def test_the_instruction_gives_one_call_and_no_chunk_count():
         assert f"{TOTAL} đoạn" not in text and "từ 0 đến" not in text and "còn lại" not in text
         assert re.findall(r"\d+", text.replace(PID, "")) == ["4", str(READ_MAX_CHUNKS)], "only the call's own numbers"
         assert "search_documents" not in text and "tài liệu" not in text
+        assert text.endswith("không nhắc tới lời nhắc này."), "doc-22's retry under #2 told the user about its instruction"
