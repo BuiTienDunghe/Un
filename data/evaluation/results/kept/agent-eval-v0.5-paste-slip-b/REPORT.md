@@ -47,6 +47,13 @@ sai không đổi gì model nhận được; mỗi lần đọc vẫn trả đú
 ở 4/5 bài (doc-40..43); riêng doc-39 (7 đoạn) dùng đúng lệnh gợi ý `n=3`. Đây là quan sát, chưa phải nguyên nhân đã kiểm.
 Phiếu cũ cũng có lời xin như vậy (doc-40 `n=4`, doc-41 `n=15`).
 
+| Lần đọc đầu (`from_chunk`, `n`) | doc-39 | doc-40 | doc-41 | doc-42 | doc-43 |
+|---|---|---|---|---|---|
+| Trước | không đọc | (4, 4) | (0, 15) | không đọc | không đọc |
+| Sau | (0, 3) | (0, 8) | (0, 15) | (0, 8) | (0, 10) |
+
+Phía sau, mọi bài bắt đầu từ đoạn 0 như lệnh gợi ý; chỉ `n` lệch.
+
 doc-42 chính là ca điều 4 được đặt ra để bắt. Bản đăng ký ghi "số lần đọc thừa ở doc-42 được ghi nhưng không chặn",
 nhưng `args_valid` trên chính các lần đọc thừa đó lại chặn. Hai câu này vênh nhau, và bản đăng ký không nói câu nào
 thắng; tôi áp đúng luật như viết.

@@ -1,6 +1,6 @@
 # 20 — Khả năng cơ bản cho agent: đọc dài, kiểm câu trả lời, báo tiến độ
 
-Status: đang làm — cách A (chủ dự án 28/10 00:20): v0.3 → #1 → #2 → #3 → #4; bỏ #5. #3-B đo 15:13: trượt luật (doc-42), chờ chủ dự án chọn A–E
+Status: đang làm — cách A (chủ dự án 28/10 00:20): v0.3 → #1 → #2 → #3 → #4; bỏ #5. #3-B trượt luật (15:13); chủ dự án chọn B → #3-C: lời phiếu `wip/20-paste-slip-c` (NV1), bài mới `wip/20-paste-tasks-c` (NV3)
 Type: task
 Blocked by: — (cần bộ bài v0.3 có bài đọc dài để đo)
 
@@ -226,3 +226,41 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
     - D. Bộ chấm mới: `n` vượt trần thành ghi nhận, không chặn. Mất so sánh với mọi dòng v0.4.
     - E. Công cụ báo cho model khi `n` bị cắt. Sửa được lời "đã đọc toàn bộ 15 đoạn" (doc-41 phía trước), không ngăn
       lời xin; đổi kết quả công cụ của doc-33 nên phải đo đủ 52 bài.
+- 28/10 15:40 (opus) — **Chủ dự án chọn B** (nguyên văn): "Chọn B: sửa phiếu thêm (nói trần 3 đoạn mỗi lần, bỏ câu số
+  đoạn, đã thấy đủ thì trả lời luôn), có thêm bài mới chưa ai xem, đăng ký lại rồi đo lại." Làm như #3-B, hai người không
+  thấy việc của nhau. Không ai sửa tệp ticket này ngoài opus (lần trước hai nhánh cùng sửa dòng Status nên xung đột);
+  báo xong bằng một tin ngắn cho opus.
+  - **Nhân viên của Ún 1 — lời phiếu #3-C**, nhánh `wip/20-paste-slip-c` cắt từ `int/20-3b` (`c54e3eb`, đã có phiếu
+    #3-B), worktree `local-ai-core-wt/20-paste-slip-c`.
+    - Chỉ sửa `slip()` trong `backend/app/services/pastes.py` và test trong `backend/tests/test_agent_pastes.py`.
+    - Ba thay đổi chủ dự án nêu: (1) nói rõ mỗi lần `read_document` đọc tối đa 3 đoạn (`n` từ 1 đến 3); (2) bỏ câu nêu
+      tổng số đoạn ("Văn bản có N đoạn…"); (3) nếu phần đầu và cuối đã thấy đủ để trả lời thì trả lời luôn, không đọc.
+    - Bằng chứng: `kept/agent-eval-v0.5-paste-slip-b/REPORT.md`. Ở 4/5 bài model xin `n` đúng bằng số đoạn phiếu nêu;
+      doc-42 đọc 3 lần dù đáp án đã nằm trong phần cuối phiếu cho thấy.
+    - Giữ những gì #3-B làm được: không gọi đoạn dán là tài liệu, nói `search_documents` không thấy nó, cho lệnh
+      `read_document` cụ thể từ đoạn 0, đọc tiếp bằng `next_from_chunk` tới khi null.
+    - Không đổi `AGENT_GUIDE`, mô tả công cụ (`tools_sha256` phải còn `153209…a75e500`), `read_document`, `read_paste`,
+      `PASTE_THRESHOLD`, `SLIP_EDGE_CHARS`, `PASTE_MAX`, `paste_id`. Test: phiếu không còn số đoạn, có nói trần 3, tin
+      ≤ 10 000 ký tự đi qua y nguyên.
+    - **Không mở nhánh `wip/20-paste-tasks-c`, không đọc bài mới.** Bài doc-39..43 đã công khai, đọc được.
+    - Không chạy `agent_eval`; test với luật giữ im (`env -u POSTGRES_TEST_URL -u REDIS_TEST_URL`,
+      `OLLAMA_BASE_URL=http://127.0.0.1:9`, `MODEL_STARTUP_PROBES=false`, `CUDA_VISIBLE_DEVICES=-1`).
+  - **Nhân viên của Ún 3 — bài mới**, nhánh `wip/20-paste-tasks-c` cắt từ main `58b9ef9`, worktree
+    `local-ai-core-wt/20-paste-tasks-c`.
+    - Bộ bài `agent-eval-v0.6` = v0.5 + 4 bài đoạn dán doc-44..47; 52 bài cũ không đổi byte nào; bộ chấm giữ v0.4.
+    - Bốn kiểu, chủ đề và cách hỏi khác doc-39..43, có gây nhiễu trong phần phiếu cho thấy:
+      - (e) đáp án ở một đoạn giữa (đoạn 3–5), cần đọc tiếp ít nhất một lần;
+      - (f) đáp án nằm trọn trong 600 ký tự **đầu** mà phiếu cho thấy, có `max_tool_calls: 0`: đo trực tiếp ý "đã thấy
+        đủ thì trả lời luôn" (doc-42 có đáp án ở mép cuối và không có trần này);
+      - (g) đáp án ở đoạn xa, vừa tới trong 3 lượt đọc lần lượt từ đoạn 0, mỗi lượt 3 đoạn (như doc-41);
+      - (h) hai mảnh đáp án ở hai đoạn mà một lần đọc 3 đoạn không phủ hết (như doc-43).
+    - Vị trí tính bằng `pastes._chunks` + `SLIP_EDGE_CHARS`, test tính lại mỗi lần chạy (mở rộng
+      `test_paste_answers_lie_where_the_notes_say`). Dài 10 001–30 000 ký tự. Ở (e)(g)(h) không mẫu `must_mention` nào
+      khớp phần đầu hay cuối mà phiếu cho thấy.
+    - Ghi lại truy xuất như doc-39..43 để `--tasks` chạy được. README bộ bài thêm mục v0.6.
+    - **Không mở nhánh `wip/20-paste-slip-c`, không đọc lời phiếu mới.** Không chạy `agent_eval`; test với luật giữ im.
+  - **fable**: duyệt hai nhánh theo giao thức tệp; không chuyển lời phiếu cho NV3, không chuyển bài mới cho NV1. Sau đó
+    duyệt bản đăng ký của opus.
+  - **opus**: khi cả hai nhánh có GỘP ĐƯỢC, gộp bài mới vào main trước, viết đăng ký trước (luật, dự đoán) trước khi chạy,
+    nhờ fable duyệt, rồi đo 9 bài đoạn dán (doc-39..47): main (phiếu cũ) so với main + phiếu #3-C, mỗi bên 2 lần lạnh.
+    Luật sẽ đòi kết quả đứng được trên riêng bốn bài mới, không chỉ trên năm bài đã thấy.
