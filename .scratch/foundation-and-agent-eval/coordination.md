@@ -90,7 +90,7 @@ chưa rõ phiên nào.
 | 3 | BFCL (nếu cắm vòng lặp): ba công cụ của Ún ở lại hay bị thay trong lượt BFCL | |
 | 4 | BFCL: cài venv | phiên NV3 bị bộ phân loại quyền chặn `pip install`; 119 gói, 94,5 MB; hai lệnh ở mục 1 của thiết kế. Opus không chạy thay |
 | 5 | Đợt đo GPU gom lại | **A+B xong 08:29** (duyệt 07:58); C ba nhánh e5 (~3 giờ) và D BFCL chưa duyệt |
-| 5b | Ticket 20 #3 trượt luật: giữ, sửa lời trong phiếu, harness tự đọc, hay lùi | `kept/agent-eval-v0.3-pastes/REPORT.md` có bảng 4 cách; opus nghiêng sửa phiếu + thêm bài đoạn dán |
+| 5b | ~~Ticket 20 #3 trượt luật~~ | **chủ dự án chọn sửa lời phiếu, hai người độc lập (08:45)**: NV3 bài đoạn dán `wip/20-paste-tasks`, NV1 lời phiếu `wip/20-paste-slip-b`; chi tiết trong ticket 20, 08:50 |
 | 5c | Ticket 20 #2: câu làm lại để lộ "tôi cần điều chỉnh lại câu trả lời" ra người dùng (doc-22) | ngoài luật; `kept/agent-eval-v0.3-answer-check/REPORT.md` |
 | 6 | Ticket 25 — nợ Discord sau 22 (3 món, mỗi món 2–3 cách) | `issues/25-discord-debt.md`; NV2 nghiêng 1B (test chặn lõi đọc thêm `discord_*`), 2A, 3A (để nguyên) |
 | 7 | Ticket 20 #4 — Discord hiện tiến độ thế nào: D1 giữ "đang nhập", D2 một tin "⏳ Ún đang làm…" sửa dần rồi thay bằng câu trả lời, D3 đổi emoji trên tin người hỏi (👀→🔎→✅) | NV1 nghiêng D2. Đêm nay chỉ code móc lõi + web (SSE `progress`) + endpoint tiến độ, chưa code phía bot |

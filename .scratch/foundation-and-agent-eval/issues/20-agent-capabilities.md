@@ -160,3 +160,37 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
     trong phiếu, harness tự đọc, lùi) chờ chủ dự án chọn. `kept/agent-eval-v0.3-pastes/`.
   - Mốc v0.4 (`7b44b03`): 39/48, r1 = r2; dự đoán đúng; 0/48 câu khác lần đo C4, nên #4 không đổi hành vi model.
     `kept/agent-eval-v0.4-baseline-20261028/`.
+- 28/10 08:50 (opus 5.5) — **#3-B: sửa lời phiếu đoạn dán, cách B (chủ dự án chọn "Sửa lời phiếu" rồi "Tách hai
+  người").** Lý do: #3 trượt vì doc-39 gọi `search_documents` rồi hỏi lại người dùng (`kept/agent-eval-v0.3-pastes/`).
+  Chỉ có một bài đoạn dán, nên bài thi và lời phiếu phải do **hai người viết độc lập**, để không sửa khớp một bài.
+  - **Nhân viên 3 — bài đoạn dán, nhánh `wip/20-paste-tasks` cắt từ main `60532ed`.**
+    - Bộ bài `agent-eval-v0.5` = v0.4 + **4 bài mới**, tất cả `surface: web`, `long_input: true`, dài 10 001–30 000
+      ký tự, nội dung hư cấu, tiếng Việt. Không sửa 48 bài cũ.
+    - Vị trí đáp án (đo bằng `pastes._chunks` và `SLIP_EDGE_CHARS` trên main, ghi vào `note` chỉ số đoạn chứa đáp án):
+      - (a) chỉ nằm ở phần giữa, một đoạn;
+      - (b) ở phần giữa nhưng xa đầu (đoạn thứ 5 trở đi), để xem agent chọn `from_chunk` thế nào;
+      - (c) nằm trong 600 ký tự cuối: không cần đọc;
+      - (d) cần ghép hai đoạn giữa không liền nhau.
+    - Mỗi bài có đoạn gây nhiễu như doc-39 (ngày, tên người khác). `expect` theo mẫu doc-39: `tools_forbidden`
+      `search_history`, `system_status`; `must_mention` cho đáp án. **Không** cấm `search_documents`.
+    - Nâng `dataset.json` lên `agent-eval-v0.5`, thêm mục v0.5 vào README của bộ bài, sửa test bộ bài nếu cần.
+      Bộ chấm giữ v0.4, trừ khi runner bắt buộc đổi; nếu đổi thì nói lý do.
+    - **Không mở nhánh `wip/20-paste-slip-b`, không hỏi ai lời phiếu mới.** Được đọc `pastes.py` trên main (phiếu cũ).
+    - Không chạy `agent_eval` (luật giữ im). Test không model: chạy với bộ biến giữ im và bỏ `POSTGRES_TEST_URL`.
+  - **Nhân viên 1 — lời phiếu, nhánh `wip/20-paste-slip-b` cắt từ main `60532ed`.**
+    - Chỉ sửa `slip()` trong `backend/app/services/pastes.py` và test trong `backend/tests/test_agent_pastes.py`.
+    - Mục tiêu:
+      - không để model tưởng đoạn dán nằm trong kho tài liệu (phiếu cũ viết "tài liệu tạm", và doc-39 trả lời "Tôi đã
+        tìm kiếm trong văn bản");
+      - nói rõ `search_documents` không thấy đoạn dán;
+      - dặn đọc bằng `read_document` trước khi trả lời hay hỏi lại, khi câu hỏi cần phần chưa thấy.
+    - Không đổi `AGENT_GUIDE`, mô tả công cụ (`tools_sha256` phải còn `153209…a75e500`), `PASTE_THRESHOLD`,
+      `SLIP_EDGE_CHARS`, `PASTE_MAX`, `paste_id`. Phiếu chỉ xuất hiện ở tin dài hơn 10 000 ký tự: thêm test giữ điều đó.
+    - **Không mở nhánh `wip/20-paste-tasks`, không đọc bài đoạn dán mới.** Bằng chứng duy nhất được dùng là doc-39 và
+      báo cáo A2.
+    - Không chạy `agent_eval` (luật giữ im).
+  - **fable**: duyệt hai nhánh theo giao thức tệp; không chuyển lời phiếu mới cho Nhân viên 3.
+  - **opus**: khi cả hai nhánh có GỘP ĐƯỢC, gộp bài đoạn dán vào main trước, viết đăng ký trước (luật, dự đoán) **trước
+    khi chạy**, nhờ fable duyệt bản đăng ký, rồi đo trên 5 bài đoạn dán (doc-39 + 4 bài mới): main (phiếu cũ) và
+    `wip/20-paste-slip-b` rebase lên main (phiếu mới), mỗi bên 2 lần lạnh, `--tasks`. 48 bài cũ không cần chạy lại:
+    phiếu chỉ thay tin dài, và ba băm trong manifest phải bằng nhau.
