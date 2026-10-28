@@ -45,7 +45,7 @@ khi băm, nên Windows và CI ra cùng một hash).
 | `corpus_source` | Chỉ có ở bài hỏi về tài liệu thật: `{file, chunk_index, corpus}`, tức đoạn mà đáp án nằm trong **400 ký tự đầu**. Agent chỉ đọc 400 ký tự đầu của mỗi đoạn (`agent_service`) |
 | `evidence` | Tuỳ chọn: những regex mà đoạn ghi được phải chứa, khi đáp án là kết quả tính toán hoặc dịch (doc-22, doc-27). Không có thì dùng `must_mention` |
 | `long_read` | Từ v0.3: đáp án **không** nằm trong 400 ký tự đầu của bất kỳ đoạn nào; phải đọc tiếp mới thấy (doc-33..37, hist-11). Với bài tài liệu, `corpus_source` khi đó trỏ tới đoạn có đáp án và thêm `char_offset` |
-| `long_input` | Từ v0.3: tin dài hơn 10 000 ký tự, tức đoạn dán (doc-39; doc-40..43 từ v0.5). Lúc thêm doc-39 đó là giới hạn của API; từ #3 (ticket 20), agent chỉ thấy phiếu (600 ký tự đầu và cuối) và mở phần giữa bằng `read_document` |
+| `long_input` | Từ v0.3: tin dài hơn 10 000 ký tự, tức đoạn dán (doc-39; doc-40..43 từ v0.5; doc-44..47 từ v0.6). Lúc thêm doc-39 đó là giới hạn của API; từ #3 (ticket 20), agent chỉ thấy phiếu (600 ký tự đầu và cuối) và mở phần giữa bằng `read_document` |
 
 `expect`: mọi khoá đều tuỳ chọn. Một bài đạt khi **mọi** kiểm tra áp dụng cho nó đều đạt.
 
@@ -302,3 +302,40 @@ Giới hạn:
 - (c) không có `max_tool_calls`: agent đọc thừa vẫn đạt. Số lần gọi công cụ chỉ hiện ở chiều hiệu quả của bảng điểm.
 - Băm bộ bài đổi, nên bảng điểm (ticket 23) không so một lần chạy v0.4 với một lần v0.5. 48 bài cũ không đổi một byte nào,
   nên vẫn so được từng bài.
+
+**agent-eval-v0.6** (ticket 20 #3-C, 28/10). Thêm 4 bài đoạn dán doc-44..47; 52 bài cũ và bộ chấm v0.4 giữ nguyên. Sau
+lần đo #3-B, ai cũng đã thấy doc-39..43, nên lời phiếu #3-C cần được kiểm thêm trên bài chưa ai xem. Các bài viết
+**trước** mọi lần chạy có chúng; người viết không xem lời phiếu mới (`wip/20-paste-slip-c`). Năm bài cũ đều hỏi tên
+người kèm một ngày hoặc một ngưỡng; bốn bài này đổi cả chủ đề lẫn kiểu hỏi.
+
+| Bài | Loại | Ký tự | Đoạn | Đáp án ở đoạn | Câu hỏi ở, kiểu hỏi | Phiếu cho thấy gì gây nhiễu |
+|---|---|---:|---:|---|---|---|
+| doc-44 | (e) giữa, một đoạn | 12 078 | 8 | 4 | đầu; nhờ soạn tin nhắn (nơi nghỉ, số tiền) | phụ thu phòng đơn cả tour, giá tour; khách sạn hai đêm cuối, phụ thu đêm 5 |
+| doc-45 | (f) trong 600 ký tự đầu | 10 651 | 10 | 0, trong phần đầu phiếu | cuối; kiểm một điều người hỏi nhớ sai (nơi, ngày) | ngày thi đấu; văn phòng ở nhà văn hóa phường trực đến thứ Sáu, hạn chót thứ Sáu |
+| doc-46 | (g) xa, lần đọc thứ ba | 14 413 | 12 | 7 | đầu; đối chiếu điều kiện với bảng hạng (hạng, số tiền) | học bổng tân sinh viên 5 000 000; trợ cấp, học bổng tài trợ |
+| doc-47 | (h) hai đoạn một lần đọc không phủ | 10 938 | 9 | 2 và 5 | cuối; hỏi hệ quả (số ngày, số tiền) | báo trước 30 ngày khi gia hạn; tiền đặt cọc 54 000 000 |
+
+- Vị trí đo bằng `pastes._chunks` và `SLIP_EDGE_CHARS` ở main `fadc775`; `test_paste_answers_lie_where_the_notes_say` tính
+  lại 8 bài doc-40..47 (ghi chú của doc-39 không nêu số đoạn).
+- Mỗi regex `must_mention` khớp đúng một lần trong đoạn dán và không khớp câu hỏi. Ở (e), (g), (h) không khớp phần đầu
+  hay phần cuối mà phiếu cho thấy. Ở (f) chỉ khớp phần đầu, trong 350 ký tự đầu, và chỉ ở đoạn 0.
+- (e) ở đoạn 4: lần đọc đầu từ đoạn 0 chưa thấy, phải đọc tiếp một lần (doc-40 ở đoạn 3).
+- (f) có `max_tool_calls: 0`, nên mở đoạn dán dù một lần là trượt. Test qua bộ chạy: cùng một câu trả lời, không đọc thì
+  đạt, đọc một lần thì trượt riêng mục `tool_budget`. doc-42 có đáp án ở mép cuối nhưng không có trần này.
+- (g) đọc lần lượt từ đoạn 0, mỗi lần 3 đoạn: 0–2, 3–5, 6–8, nên đoạn 7 tới ở lượt công cụ cuối (`max_steps` 3). Test qua
+  bộ chạy với trần đọc thật: ba lần đọc trả `next_from_chunk` 3, 6, 9, và chỉ lần thứ ba có đáp án. Sau đáp án còn 4 đoạn.
+- (h) hai đoạn cách nhau 3, đúng bằng `READ_MAX_CHUNKS`: không lần đọc 3 đoạn nào phủ cả hai. Đọc lần lượt từ đoạn 0 thì
+  hai lần là đủ, khác doc-46 cần ba lần. Điều về tiền đặt cọc chỉ trỏ sang điều có số tiền.
+- Mọi lần đọc 3 đoạn liền nhau đều vừa trần 6 000 ký tự (rộng nhất 5 769).
+- Truy xuất: như doc-39..43, bốn bài không có dòng trong `retrieval.jsonl`. Bộ chạy cho `search_documents` một kho rỗng
+  (`retrieval_source` null), nên `--tasks` chạy được mà không cần ghi truy xuất.
+- `expect` theo mẫu doc-39 (cấm `search_history`, `system_status`; không cấm `search_documents`), thêm `max_tool_calls: 0` ở (f).
+- Câu hỏi doc-44 nêu ngày (đêm 14/12), vì "đêm thứ ba" cũng đọc được là đêm thứ Ba 15/12, một đêm ở chỗ khác.
+- Nội dung hư cấu; mỗi cặp thứ–ngày khớp lịch 2026. Địa danh có thật (Mộc Châu, Sa Pa…) chỉ là bối cảnh; tên công ty,
+  cơ sở, người đều bịa.
+
+Giới hạn:
+- Không có `must_not_mention`, như v0.5.
+- Mẫu ngày chỉ nhận số (28/11, 28 tháng 11): câu trả lời doc-45 chỉ nói "thứ Bảy" mà không nêu ngày sẽ trượt.
+- doc-46 đọc lần lượt từ đoạn 0 thì cần đủ ba lượt với `n` 3; mỗi lần đọc ít đoạn hơn là hết lượt trước khi tới, như doc-41.
+- Băm bộ bài đổi, nên bảng điểm không so một lần v0.5 với một lần v0.6. 52 bài cũ không đổi một byte nào.

@@ -216,6 +216,42 @@ def test_a_paste_task_reads_its_far_chunk_through_the_runner(tmp_path):
     assert '"chunk_index": 6' in read["content"] and "Minh Khôi" in read["content"]
 
 
+def test_a_far_paste_answer_arrives_on_the_third_read_from_chunk_0(tmp_path):
+    # v0.6 (ticket 20 #3-C): doc-46 is reachable reading on from chunk 0, three chunks a
+    # read, only while every read fits the read cap whole; the real cap decides it here.
+    from app.services.pastes import paste_id
+
+    task = next(t for t in load_dataset(DATASET_DIR).tasks if t["id"] == "doc-46")
+    reads = [call("read_document", {"document_id": paste_id(task["input"]), "from_chunk": start, "n": 3}) for start in (0, 3, 6)]
+    router = ScriptedRouter(reads, plain_answer="Bạn thuộc diện học bổng Sóng Biếc, mức 4.700.000 đồng mỗi học kỳ.")
+    out_dir, _ = _run(tmp_path, [task], [], router)
+
+    [result] = _jsonl(out_dir / "task_results.jsonl")
+    # Three tool rounds spend max_steps, so the answer is the forced final one.
+    assert result["passed"] is True and result["budget_exhausted"] is True
+    first, second, third = [e["content"] for e in _jsonl(out_dir / "events.jsonl") if e["kind"] == "tool_result"]
+    assert '"next_from_chunk": 3' in first and '"next_from_chunk": 6' in second and '"next_from_chunk": 9' in third
+    assert "Sóng Biếc" not in first + second and "Sóng Biếc" in third
+
+
+def test_a_paste_answer_the_slip_shows_passes_only_without_a_read(tmp_path):
+    # v0.6: doc-45's answer sits in the slip's first edge and the task allows no tool call,
+    # so the same answer after one read fails on the tool budget alone.
+    from app.services.pastes import paste_id
+
+    task = next(t for t in load_dataset(DATASET_DIR).tasks if t["id"] == "doc-45")
+    answer = "Không đúng: nhận số báo danh vào thứ Bảy 28/11/2026, từ 8 giờ đến 18 giờ, tại sảnh B nhà thi đấu Phú Lâm."
+    read = call("read_document", {"document_id": paste_id(task["input"]), "from_chunk": 0, "n": 3})
+    results = {}
+    for name, turns in {"direct": [final(answer)], "read": [read, final(answer)]}.items():
+        out_dir, _ = _run(tmp_path / name, [task], [], ScriptedRouter(turns))
+        [results[name]] = _jsonl(out_dir / "task_results.jsonl")
+
+    assert results["direct"]["passed"] is True and results["direct"]["tool_calls"] == []
+    failed = [c["check"] for c in results["read"]["grade"]["checks"] if not c["passed"]]
+    assert results["read"]["passed"] is False and failed == ["tool_budget"]
+
+
 def test_web_turns_get_no_guild_and_discord_turns_get_the_fixed_one(tmp_path):
     web = {"id": "hist-web", "category": "history", "input": "Hôm qua server bàn gì?", "expect": {"must_mention": ["Discord"]}}
     discord = {
@@ -388,6 +424,15 @@ MENTION_KEYS = ("must_mention", "must_not_mention", "must_say_not_found", "must_
     ("doc-42", "Chuỗi email chưa chốt người dẫn chương trình; hội nghị diễn ra ngày 12/12.", False),
     ("doc-43", "Chị Lương Diệu Linh (phòng Hành chính) phụ trách, hồ sơ phải nộp xong trước ngày 10/12.", True),
     ("doc-43", "Bà Nghiêm Thị Thu Vân phụ trách; mời nghiệm thu ngày 12/01/2027.", False),
+    # v0.6: the same, for the four paste tasks no one had seen.
+    ("doc-44", "Bố mẹ ơi, đêm 14/12 cả đoàn ngủ ở homestay Đá Vàng, bản Nậm Sương; muốn ở phòng đơn đêm đó thì trả thêm 380.000 đồng.", True),
+    ("doc-44", "Bố mẹ ơi, đêm thứ ba đoàn ngủ ở khách sạn Mây Trắng, Sa Pa; phòng đơn trả thêm 2.100.000 đồng.", False),
+    ("doc-45", "Không đúng: nhận số báo danh vào thứ Bảy 28/11/2026, từ 8 giờ đến 18 giờ, tại sảnh B nhà thi đấu Phú Lâm.", True),
+    ("doc-45", "Đúng rồi, bạn ra nhà văn hóa phường Bình An nhận số báo danh trước 17 giờ thứ Sáu 20/11.", False),
+    ("doc-46", "Bạn thuộc diện học bổng Sóng Biếc, mức 4,7 triệu đồng mỗi học kỳ.", True),
+    ("doc-46", "Bạn được học bổng Hải Đăng, 5.000.000 đồng mỗi học kỳ.", False),
+    ("doc-47", "Phải báo trước bằng văn bản ít nhất 75 ngày; chủ nhà được giữ lại 36.000.000 đồng tiền cọc.", True),
+    ("doc-47", "Báo trước 30 ngày; chủ nhà giữ toàn bộ 54.000.000 đồng tiền cọc.", False),
 ])
 def test_shipped_criteria_on_correct_and_wrong_phrasings(task_id, answer, passes):
     task = next(t for t in load_dataset(DATASET_DIR).tasks if t["id"] == task_id)
@@ -395,14 +440,19 @@ def test_shipped_criteria_on_correct_and_wrong_phrasings(task_id, answer, passes
     assert grade(expect, steps_for(), answer, SCHEMAS)["passed"] is passes
 
 
-# v0.5 (ticket 20 #3-B): the chunk each paste's answer lies in, cut by the chunker the agent
-# reads the paste with. "tail" is inside the slip's last edge. The notes give these numbers,
-# so a changed chunker or slip edge fails here before a run measures the wrong thing.
+# v0.5 (ticket 20 #3-B) and v0.6 (#3-C): the chunk each paste's answer lies in, cut by the
+# chunker the agent reads the paste with. "head" and "tail" are inside the slip's first and
+# last edge. The notes give these numbers, so a changed chunker or slip edge fails here
+# before a run measures the wrong thing.
 PASTE_ANSWER_CHUNKS = {
     "doc-40": [3, 3],  # (a) one middle chunk
     "doc-41": [6, 6],  # (b) far from the start: the third round, reading on from chunk 0
     "doc-42": "tail",  # (c) shown by the slip, nothing to read
     "doc-43": [1, 5],  # (d) two middle chunks one read cannot span
+    "doc-44": [4, 4],  # (e) one middle chunk, past the first read from chunk 0
+    "doc-45": "head",  # (f) shown by the slip's first edge, and no tool call allowed
+    "doc-46": [7, 7],  # (g) far: the third read from chunk 0
+    "doc-47": [2, 5],  # (h) two chunks one read cannot span
 }
 
 
@@ -416,6 +466,8 @@ def test_paste_answers_lie_where_the_notes_say():
         task = tasks[task_id]
         text, note = task["input"], task["note"]
         assert task["long_input"] and PASTE_THRESHOLD < len(text) <= min(30_000, INPUT_MAX_CHARS["web"])
+        # Only an answer in the slip's first edge forbids reading (v0.6 (f)).
+        assert task["expect"].get("max_tool_calls") == (0 if where == "head" else None), task_id
         chunks = _chunks(text)
         assert f"{len(text)} ký tự, {len(chunks)} đoạn" in note
         head, tail = text[:SLIP_EDGE_CHARS], text[-SLIP_EDGE_CHARS:]
@@ -423,14 +475,17 @@ def test_paste_answers_lie_where_the_notes_say():
             # Once in the whole paste, so no copy elsewhere answers it.
             assert len(re.findall(unicodedata.normalize("NFC", pattern), text, re.IGNORECASE)) == 1, (task_id, pattern)
             found = [i for i, chunk in enumerate(chunks) if _matches(pattern, chunk)]
+            if where == "head":
+                assert _matches(pattern, head) and not _matches(pattern, tail) and found == [0], (task_id, pattern)
+                continue
             assert not _matches(pattern, head), (task_id, pattern)
             if where == "tail":
                 assert _matches(pattern, tail) and found == [len(chunks) - 1], (task_id, pattern)
             else:
                 assert not _matches(pattern, tail) and found == [where[index]], (task_id, pattern, found)
                 assert f"đoạn {where[index]}" in note
-        if task_id == "doc-43":
-            assert where[1] - where[0] >= READ_MAX_CHUNKS
+        if isinstance(where, list) and where[0] != where[1]:
+            assert where[1] - where[0] >= READ_MAX_CHUNKS, task_id
 
 
 # ── grader ───────────────────────────────────────────────────────────────
