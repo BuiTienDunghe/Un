@@ -14,12 +14,13 @@ from fastapi.testclient import TestClient
 
 import app.routers.chat as chat_router
 from app.security.api_key import require_api_key
-from app.services.agent_service import ANSWER_CHECK_STEP, BAD_ARGUMENTS, NOT_READABLE, AgentService
+from app.services.agent_service import ANSWER_CHECK_STEP, BAD_ARGUMENTS, NOT_READABLE, READ_MAX_CHUNKS, AgentService
 from app.services.chat_service import ChatService
 from app.services.pastes import (
     PASTE_MAX,
     PASTE_THRESHOLD,
     SLIP_EDGE_CHARS,
+    _chunks,
     is_paste,
     note,
     paste_id,
@@ -100,7 +101,59 @@ def test_the_slip_carries_both_edges_and_how_to_open_it_and_not_the_middle():
     text = slip(PASTED)
     assert paste_id(PASTED) in text and "read_document" in text and str(len(PASTED)) in text
     assert PASTED[:SLIP_EDGE_CHARS].rstrip() in text and QUESTION in text, "the question at the end survives"
-    assert SECRET not in text and len(text) < 2 * SLIP_EDGE_CHARS + 600
+    assert SECRET not in text and len(text) < 2 * SLIP_EDGE_CHARS + 900
+
+
+def framing(text: str) -> tuple[str, str]:
+    """The slip's own words before the head and after the tail, without the user's text."""
+    head, tail = text[:SLIP_EDGE_CHARS].rstrip(), text[-SLIP_EDGE_CHARS:].lstrip()
+    shown = slip(text)
+    return shown[: shown.index(head)], shown[shown.index(tail) + len(tail):]
+
+
+def test_the_slip_never_calls_the_paste_a_document_and_says_search_cannot_see_it():
+    # #3-B: on "lưu thành tài liệu tạm" doc-39 searched the library and asked the user
+    # whether to read on (kept/agent-eval-v0.3-pastes/REPORT.md).
+    before, after = framing(PASTED)
+    assert "tài liệu" not in before + after
+    assert "search_documents không tìm thấy" in after and "hỏi lại người dùng" in after
+
+
+def test_the_slip_gives_the_exact_call_after_the_question_the_user_asked():
+    before, after = framing(PASTED)
+    pid = paste_id(PASTED)
+    assert f'read_document(document_id="{pid}", from_chunk=0, n={READ_MAX_CHUNKS})' in after, "n is the most a call reads"
+    assert "from_chunk bằng next_from_chunk" in after and "next_from_chunk là null" in after
+    assert "read_document" not in before, "what to do comes after the tail, not above the head"
+
+
+def test_the_slip_states_the_cap_and_not_the_chunk_count():
+    # #3-C: on #3-B's "Văn bản có N đoạn" the first read asked n = N on 4 of 5 paste tasks,
+    # over the cap (kept/agent-eval-v0.5-paste-slip-b/REPORT.md).
+    before, after = framing(PASTED)
+    total = len(_chunks(PASTED))
+    assert f"{total} đoạn" not in before + after and "từ 0 đến" not in before + after
+    assert f"chỉ nhận n từ 1 đến {READ_MAX_CHUNKS}" in after and f"tối đa {READ_MAX_CHUNKS} đoạn" in after
+    assert "gọi lại với from_chunk" in after, "reading on is another call, not a bigger n"
+
+
+def test_the_slip_says_to_answer_at_once_when_the_edges_are_enough_before_how_to_read():
+    # #3-C: doc-42 read three times with its answer already in the tail.
+    _, after = framing(PASTED)
+    enough = after.index("đã đủ để trả lời thì trả lời luôn")
+    assert enough < after.index("read_document(")
+
+
+def test_only_a_message_past_the_threshold_becomes_a_slip():
+    at_limit = {"role": "user", "content": "x" * PASTE_THRESHOLD}
+    assert take_pastes([at_limit]) == ([at_limit], {})
+    over = {"role": "user", "content": "x" * (PASTE_THRESHOLD + 1)}
+    shown, pastes = take_pastes([over])
+    assert shown == [{**over, "content": slip(over["content"])}] and list(pastes) == [paste_id(over["content"])]
+
+    service, router = agent([final("ok")])
+    service.run([at_limit])
+    assert "read_document(document_id=" not in json.dumps(router.prompts, ensure_ascii=False), "a short message travels as it was"
 
 
 def test_a_paste_reads_in_chunks_and_has_no_pages():
