@@ -305,8 +305,8 @@ Giới hạn:
 
 **agent-eval-v0.6** (ticket 20 #3-C, 28/10). Thêm 4 bài đoạn dán doc-44..47; 52 bài cũ và bộ chấm v0.4 giữ nguyên. Sau
 lần đo #3-B, ai cũng đã thấy doc-39..43, nên lời phiếu #3-C cần được kiểm thêm trên bài chưa ai xem. Các bài viết
-**trước** mọi lần chạy có chúng; người viết không xem lời phiếu mới (`wip/20-paste-slip-c`). Năm bài cũ đều hỏi "ai,
-ngày nào"; bốn bài này đổi cả chủ đề lẫn kiểu hỏi.
+**trước** mọi lần chạy có chúng; người viết không xem lời phiếu mới (`wip/20-paste-slip-c`). Năm bài cũ đều hỏi tên
+người kèm một ngày hoặc một ngưỡng; bốn bài này đổi cả chủ đề lẫn kiểu hỏi.
 
 | Bài | Loại | Ký tự | Đoạn | Đáp án ở đoạn | Câu hỏi ở, kiểu hỏi | Phiếu cho thấy gì gây nhiễu |
 |---|---|---:|---:|---|---|---|
@@ -316,7 +316,7 @@ ngày nào"; bốn bài này đổi cả chủ đề lẫn kiểu hỏi.
 | doc-47 | (h) hai đoạn một lần đọc không phủ | 10 938 | 9 | 2 và 5 | cuối; hỏi hệ quả (số ngày, số tiền) | báo trước 30 ngày khi gia hạn; tiền đặt cọc 54 000 000 |
 
 - Vị trí đo bằng `pastes._chunks` và `SLIP_EDGE_CHARS` ở main `fadc775`; `test_paste_answers_lie_where_the_notes_say` tính
-  lại cả 8 bài đoạn dán.
+  lại 8 bài doc-40..47 (ghi chú của doc-39 không nêu số đoạn).
 - Mỗi regex `must_mention` khớp đúng một lần trong đoạn dán và không khớp câu hỏi. Ở (e), (g), (h) không khớp phần đầu
   hay phần cuối mà phiếu cho thấy. Ở (f) chỉ khớp phần đầu, trong 350 ký tự đầu, và chỉ ở đoạn 0.
 - (e) ở đoạn 4: lần đọc đầu từ đoạn 0 chưa thấy, phải đọc tiếp một lần (doc-40 ở đoạn 3).
