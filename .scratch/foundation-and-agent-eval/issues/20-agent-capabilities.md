@@ -1,6 +1,6 @@
 # 20 — Khả năng cơ bản cho agent: đọc dài, kiểm câu trả lời, báo tiến độ
 
-Status: đang làm — cách A (chủ dự án 28/10 00:20): v0.3 → #1 → #2 → #3 → #4; bỏ #5. #3-B trượt luật (15:13); #3-C trượt điều 3 (19:02): 6/9 trên 9 bài đoạn dán (cũ 2/9), `n` sạch, nhưng bài mới chỉ 1/3; phiếu cũ giữ. Gói #3-D duyệt 21:20 (bước 1 nhắc lại + 3' tìm trong đoạn dán, ba nhánh, bài mới mù): đang làm
+Status: đang làm — cách A (chủ dự án 28/10 00:20): v0.3 → #1 → #2 → #3 → #4; bỏ #5. #3-B trượt luật (15:13); #3-C trượt điều 3 (19:02): 6/9 trên 9 bài đoạn dán (cũ 2/9), `n` sạch, nhưng bài mới chỉ 1/3; phiếu cũ giữ. Gói #3-D duyệt 21:20 (bước 1 nhắc lại + 3' tìm trong đoạn dán, ba nhánh, bài mới mù): dừng giữa lần đo (22:45), câu trả lời một bài phụ thuộc bài chạy trước nó; chờ chủ dự án chọn cách đo 1–3 và phiếu (b)
 Type: task
 Blocked by: — (cần bộ bài v0.3 có bài đọc dài để đo)
 
@@ -359,3 +359,35 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
     nền + bước 1; nền + bước 1 + 3'. Đăng ký trước trên 15 bài đoạn dán (doc-39..53), cùng `--tasks` cùng thứ tự, 2 lần
     lạnh mỗi nhánh, cộng một lần đủ 62 bài ở nền và ở nhánh đủ để chứng minh 47 bài không dán trùng nguyên. Luật phải
     đứng được trên riêng 6 bài mới và nói trước mục chấm nào quyết. Fable duyệt rồi mới chạy.
+- 28/10 22:45 (opus) — **#3-D dừng giữa lần đo: câu trả lời của một bài phụ thuộc bài chạy ngay trước nó.** Đã chạy
+  theo đăng ký (`347194a`, fable GỘP ĐƯỢC ở `73574da`): nền `73bb621` r1, r2 (9/15, r1 = r2); +1 `2866758` r1, r2 (10/15,
+  r1 = r2); nền đủ 62 bài (50/62). +1+3' (`57c3961`) chưa chạy: chờ phiếu (b) và quyết định dưới. Lần chạy ở
+  `kept/agent-eval-v0.7-paste-nudge-search/`; ba lần chẩn đoán không đăng ký ở `diagnostics/`.
+  - Bằng chứng:
+    - doc-41 chạy riêng: nền và +1 trùng từng chữ; nhưng khác doc-41 trong chuỗi 15 bài ở cả hai nhánh, và khác lần đủ 62 bài.
+    - doc-51 chạy riêng ở nền: đạt, không lỗi. Trong chuỗi 15 bài ở nền nó hỏng cả hai lần.
+    - Nền đủ 62 bài so với nền 15 bài: chỉ 3/15 câu trả lời đoạn dán trùng.
+    - +1 so với nền: doc-39 (chạy trước mọi lần nhắc) trùng; doc-41, 42, 43, 46, 53 khác chữ dù lời nhắc không bật và chuỗi
+      công cụ y hệt.
+  - Hệ quả: "t0 + seed lặp lại được" chỉ đúng cho cùng một chuỗi bài. Từ bài đầu tiên hai nhánh khác nhau, các bài sau lệch vì
+    trạng thái chứ không vì code. Lệch doc-39 ở #3-B là cùng hiệu ứng. Cơ chế nghi: Ollama chạy một slot llama-server và dùng
+    lại phần đầu vào trùng với yêu cầu trước; chưa kiểm.
+  - Điều gì còn đứng được: B4 và C4 (thay đổi phải thật sự bật ở cả hai lần) vẫn quy đúng nguyên nhân; doc-51 trượt → đạt ở
+    +1 mà không có lời nhắc, nên không được tính. B2 và C2 (đạt → trượt) không còn tách được hại thật khỏi lệch thứ tự. Điều
+    kiện 47 bài: 46 bài đứng trước doc-39 vẫn kiểm sạch; hist-11 (vị trí 47, ngay sau doc-39) có thể lệch vì thứ tự.
+  - Dấu vết thật ở +1, đứng được dù có lệch:
+    - doc-40: lời nhắc bật, đọc đoạn 0–5, câu trả lời đủ ý; vẫn trượt `tools_forbidden` vì vòng đầu đã gọi `search_history`.
+    - doc-44: nhắc một lần, đọc 0–2, trả lời bằng con số ở mép; trượt.
+    - doc-47: viết "cần xem lại văn bản", kiểu chữ mẫu không bắt; không đọc; trượt.
+    - doc-49: hết lượt ở đoạn 8, câu trả lời ép nói "đã đọc toàn bộ văn bản (15 đoạn)"; lời nhắc không chạy ở nhánh ép.
+    - doc-50: hết lượt ở đoạn 8, đoán theo "thông lệ chung".
+  - Lỗi harness ngoài phạm vi: model viết lệnh công cụ hỏng, Ollama trả 500 "tool call parsing failed" ba lần,
+    `ollama_client.py:129` báo "Cannot connect to Ollama", mất cả lượt. Việc riêng, không sửa trong #3-D.
+  - Cách cho chủ dự án (chưa làm gì):
+    1. Chạy +1+3' như đã đăng ký (khi có (b)); quyết B và C chỉ bằng điều quy nguyên nhân (B4, C4); phần còn lại báo kèm cảnh
+       báo lệch thứ tự. Rẻ nhất (~8 phút GPU); kết luận hẹp hơn bản đăng ký hứa.
+    2. Cô lập từng bài: runner gỡ model giữa các bài. Sửa riêng mục Quy trình của bản đăng ký (luật, dự đoán giữ nguyên), fable
+       duyệt lại, chạy lại cả ba nhánh. Cần sửa runner nhỏ; GPU khoảng gấp đôi (~30 phút).
+    3. Không sửa code: chạy từng bài riêng như lần chẩn đoán (15 bài × 3 nhánh × 2 lần, ~40 phút). Sửa đăng ký chỉ ở thủ tục.
+    - Ý kiến opus: cách 2, vì lệch thứ tự đè lên mọi phép đo Agent Eval so hai nhánh, không riêng #3-D; sửa runner một lần
+      thì các lần đo sau dùng được. Phiếu (b) gộp vào lần đăng ký lại.
