@@ -466,6 +466,7 @@ MENTION_KEYS = ("must_mention", "must_not_mention", "must_say_not_found", "must_
     ("doc-52", "Mặc theo tông xanh ngọc; xe đón ở sảnh Sao Khuê lúc 16 giờ 45.", True),
     ("doc-52", "Mặc áo dài đỏ đô; xe đón ở cổng chính Trung tâm hội nghị Hồng Hạc.", False),
     ("doc-53", "Có: khởi hành muộn từ 6 giờ trở lên được trả 400.000 đồng cho mỗi quãng sáu giờ, nên trễ 7 tiếng bạn nhận 400.000 đồng.", True),
+    ("doc-53", "Trễ từ 6h trở lên là được trả, 7 tiếng thì bạn nhận 400k.", True),
     ("doc-53", "Được 300.000 đồng cho mỗi 4 tiếng trễ.", False),
 ])
 def test_shipped_criteria_on_correct_and_wrong_phrasings(task_id, answer, passes):
