@@ -1,0 +1,154 @@
+{
+ "preconditions": {
+  "repro_hashes_equal": true,
+  "full_hashes_equal": true,
+  "tools_sha256_as_registered": true,
+  "dataset_sha256_as_registered": true,
+  "unload_between_tasks": true,
+  "repro_tasks_run": true,
+  "full_runs_62": true
+ },
+ "hashes": {
+  "before": [
+   {
+    "tools_sha256": "153209652c06",
+    "agent_guide_sha256": "6194cf0fbd65",
+    "system_prompt_sha256": "385cb475e59e",
+    "commit": "2839b5272897f3af43ab0b0defe5299914e5a0b6"
+   },
+   {
+    "tools_sha256": "153209652c06",
+    "agent_guide_sha256": "6194cf0fbd65",
+    "system_prompt_sha256": "385cb475e59e",
+    "commit": "2839b5272897f3af43ab0b0defe5299914e5a0b6"
+   }
+  ],
+  "after": [
+   {
+    "tools_sha256": "153209652c06",
+    "agent_guide_sha256": "6194cf0fbd65",
+    "system_prompt_sha256": "385cb475e59e",
+    "commit": "48b5c0fe83951aca7f88c14060907b2652552aa2"
+   },
+   {
+    "tools_sha256": "153209652c06",
+    "agent_guide_sha256": "6194cf0fbd65",
+    "system_prompt_sha256": "385cb475e59e",
+    "commit": "48b5c0fe83951aca7f88c14060907b2652552aa2"
+   }
+  ],
+  "M0": {
+   "tools_sha256": "153209652c06",
+   "agent_guide_sha256": "6194cf0fbd65",
+   "system_prompt_sha256": "385cb475e59e",
+   "commit": "53b1e8038b4855f5b48dad214e1f28b18d8d6ee8"
+  },
+  "M1": {
+   "tools_sha256": "153209652c06",
+   "agent_guide_sha256": "6194cf0fbd65",
+   "system_prompt_sha256": "385cb475e59e",
+   "commit": "a2b7bde557e6bd252b8550a0166e0fe17884ce87"
+  }
+ },
+ "target": {
+  "before": [
+   {
+    "lost_turn": true,
+    "error": "OllamaUnavailableError: Cannot connect to Ollama",
+    "fix_steps": 0,
+    "fix_codes": [],
+    "stop_reason": null,
+    "answer_empty": true,
+    "passed": false,
+    "failed_checks": [
+     "completed",
+     "must_mention"
+    ],
+    "tools": [],
+    "answer": ""
+   },
+   {
+    "lost_turn": true,
+    "error": "OllamaUnavailableError: Cannot connect to Ollama",
+    "fix_steps": 0,
+    "fix_codes": [],
+    "stop_reason": null,
+    "answer_empty": true,
+    "passed": false,
+    "failed_checks": [
+     "completed",
+     "must_mention"
+    ],
+    "tools": [],
+    "answer": ""
+   }
+  ],
+  "after": [
+   {
+    "lost_turn": false,
+    "error": null,
+    "fix_steps": 1,
+    "fix_codes": [
+     "TOOL_CALL_PARSE"
+    ],
+    "stop_reason": "final",
+    "answer_empty": false,
+    "passed": false,
+    "failed_checks": [
+     "must_mention"
+    ],
+    "tools": [
+     [
+      "read_document",
+      "{\"document_id\": \"paste_72e6e34476e9\", \"from_chunk\": 0, \"n\": 3}"
+     ]
+    ],
+    "answer": "Dựa trên văn bản tour bạn cung cấp:\n\n**Đêm 14/12 (đêm thứ 3 của tour):**\n- Cả đoàn nghỉ tại **Bản Nậm Sương**\n- Đây là điểm dừng cuối cùng của ngày 3, sau khi đi từ Điện Biên Phủ qua Mường Lay\n\n**Về phòng đơn đêm 14/12:**\nVăn bản ghi: \"khách chỉ ở phòng đơn vài đêm thì trả theo mức từng đêm ghi trong lịch trình\". Tuy nhiên, phần chi tiết về phụ thu phòng đơn cho đêm 3 (Bản Nậm Sương) chưa được hiển thị đầy đủ trong kết quả đọc.\n\nĐể có thông tin chính xác nhất về mức phụ thu phòng đơn cho đêm 14/12 tại Bản Nậm Sương, tôi cần xem thêm các đoạn tiếp theo của văn bản. Bạn có muốn tôi đọc thêm phần còn lại để tìm thông tin này không?"
+   },
+   {
+    "lost_turn": false,
+    "error": null,
+    "fix_steps": 1,
+    "fix_codes": [
+     "TOOL_CALL_PARSE"
+    ],
+    "stop_reason": "final",
+    "answer_empty": false,
+    "passed": false,
+    "failed_checks": [
+     "must_mention"
+    ],
+    "tools": [
+     [
+      "read_document",
+      "{\"document_id\": \"paste_72e6e34476e9\", \"from_chunk\": 0, \"n\": 3}"
+     ]
+    ],
+    "answer": "Dựa trên văn bản tour bạn cung cấp:\n\n**Đêm 14/12 (đêm thứ 3 của tour):**\n- Cả đoàn nghỉ tại **Bản Nậm Sương**\n- Đây là điểm dừng cuối cùng của ngày 3, sau khi đi từ Điện Biên Phủ qua Mường Lay\n\n**Về phòng đơn đêm 14/12:**\nVăn bản ghi: \"khách chỉ ở phòng đơn vài đêm thì trả theo mức từng đêm ghi trong lịch trình\". Tuy nhiên, phần chi tiết về phụ thu phòng đơn cho đêm 3 (Bản Nậm Sương) chưa được hiển thị đầy đủ trong kết quả đọc.\n\nĐể có thông tin chính xác nhất về mức phụ thu phòng đơn cho đêm 14/12 tại Bản Nậm Sương, tôi cần xem thêm các đoạn tiếp theo của văn bản. Bạn có muốn tôi đọc thêm phần còn lại để tìm thông tin này không?"
+   }
+  ]
+ },
+ "full_score": {
+  "M0": 45,
+  "M1": 45
+ },
+ "full_lost_turns": {
+  "M0": [],
+  "M1": []
+ },
+ "fired_on_main_after": [],
+ "differ_main_before_after": [],
+ "predictions": {
+  "before_lost_both": true,
+  "after_fixed_both": true,
+  "after_r1_equals_r2": true,
+  "main_identical_62_and_no_fix_step": true
+ },
+ "rule": {
+  "1_preconditions": true,
+  "2_reproduced_before": true,
+  "3_fixed_after": true,
+  "4_no_side_effect": true,
+  "propose_merge": true
+ }
+}
