@@ -203,7 +203,8 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
     lần lượt từ 0 thì tới lượt công cụ thứ ba mới thấy; (c) doc-42 trong 600 ký tự cuối; (d) doc-43 đoạn 1 và 5/10.
     Dài 10 474–21 342 ký tự.
   - Test mới `test_paste_answers_lie_where_the_notes_say` tính lại vị trí mỗi lần chạy; kiểm ngược: trượt khi sai chỉ
-    số, khi mép phiếu 2 000 ký tự, khi chunk 300 token. Thêm 8 câu đúng/sai vào bảng tiêu chí.
+    số, khi mép phiếu 2 000 ký tự, khi chunk 300 token. Thêm 8 câu đúng/sai vào bảng tiêu chí, và một test chạy qua
+    runner (`839f3c7`): model thấy phiếu của doc-41, đọc đoạn 6, trả lời đạt. Trước đó runner chưa từng đọc đoạn dán.
   - Tự chọn, ticket không nói: câu hỏi của (a), (d) đặt ở đầu đoạn dán (doc-39, (b), (c) ở cuối), vì phiếu cho thấy cả
     hai mép; (b) ở đoạn 6 chứ không từ đoạn 9 trở đi, để bài làm được mà không phải đoán.
   - Không thêm vào `expect` ngoài mẫu doc-39. Có thể thêm nếu điều phối muốn: `must_not_mention` cho gây nhiễu thấy
