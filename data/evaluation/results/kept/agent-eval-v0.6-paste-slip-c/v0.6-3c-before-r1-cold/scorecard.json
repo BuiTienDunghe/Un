@@ -1,0 +1,95 @@
+{
+ "scorecard_version": "agent-eval-scorecard-v1",
+ "run_id": "v0.6-3c-before-r1-cold",
+ "commit": "01daa427f160f4da5aaa2b85dbbe215c10da7523",
+ "worktree_dirty": false,
+ "dataset_version": "agent-eval-v0.6",
+ "dataset_sha256": "cd38e4d19a09496bda4997a06c2383fdc133b1c6e3473c615f10fe4c1ec306ed",
+ "grader_version": "agent-eval-grader-v0.4",
+ "model": "qwen3.5:9b",
+ "started_at": "2026-10-28T11:56:58.540429+00:00",
+ "condition": {
+  "temperature": 0.0,
+  "seed": 42,
+  "cold": true,
+  "loaded_at_start": [],
+  "source": "manifest",
+  "gpu_shared": false,
+  "gpu_at_start": {
+   "utilization_percent": 0,
+   "memory_used_mib": 0,
+   "processes": []
+  }
+ },
+ "correctness": {
+  "passed": 2,
+  "tasks": 9,
+  "pass_rate": 0.2222,
+  "by_category": {
+   "documents": {
+    "passed": 2,
+    "tasks": 9,
+    "pass_rate": 0.2222
+   }
+  },
+  "fabricated": 0,
+  "fabricated_tasks": [],
+  "not_found_missed": 0,
+  "not_found_missed_tasks": [],
+  "citation_passed": 0,
+  "citation_tasks": 0,
+  "citation_rate": null,
+  "citation_verbatim": 0,
+  "answer_checks": 0,
+  "answer_check_tasks": [],
+  "finals_unsupported": 0,
+  "finals_unsupported_tasks": []
+ },
+ "efficiency": {
+  "tasks_ran": 9,
+  "tokens_in_mean": 4755,
+  "tokens_in_median": 3572,
+  "tokens_out_mean": 315,
+  "tokens_out_median": 267,
+  "model_rounds_mean": 2.0,
+  "tool_calls": 9,
+  "tool_calls_per_solved": 4.5,
+  "tool_calls_mean_of_solved": 0.0,
+  "latency_p50_ms": 4833,
+  "latency_p95_ms": 14647,
+  "latency_max_ms": 14647
+ },
+ "robustness": {
+  "task_errors": {},
+  "budget_exhausted": 2,
+  "stop_reasons": {
+   "final": 7,
+   "max_steps": 2,
+   "turn_budget": 0,
+   "turn_budget_exhausted": 0
+  },
+  "stop_reasons_unavailable": null,
+  "max_steps_matches_budget_exhausted": true,
+  "tool_error_codes": {},
+  "tool_errors_uncoded": null,
+  "bad_arguments_rate": 0.0,
+  "results_trimmed_by_item": 0
+ },
+ "traceability": {
+  "turns": 9,
+  "complete": 9,
+  "complete_rate": 1.0,
+  "parts": {
+   "rounds_timed_and_counted": 9,
+   "calls_named_and_shaped": 9,
+   "calls_answered": 9,
+   "final_has_stop_reason": 9
+  }
+ },
+ "limits": {
+  "points_per_task": 11.11,
+  "cold_rule": "so ở nhiệt độ 0 chỉ giữa các lần lạnh (gỡ model chính trước mỗi lần đo)",
+  "first_divergence_rule": "so từng bài chỉ chắc tới chỗ câu trả lời khác nhau đầu tiên",
+  "fabrication": "chỉ đếm được ở bài có tiêu chí phủ định"
+ }
+}

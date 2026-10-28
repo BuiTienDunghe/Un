@@ -45,7 +45,7 @@ khi băm, nên Windows và CI ra cùng một hash).
 | `corpus_source` | Chỉ có ở bài hỏi về tài liệu thật: `{file, chunk_index, corpus}`, tức đoạn mà đáp án nằm trong **400 ký tự đầu**. Agent chỉ đọc 400 ký tự đầu của mỗi đoạn (`agent_service`) |
 | `evidence` | Tuỳ chọn: những regex mà đoạn ghi được phải chứa, khi đáp án là kết quả tính toán hoặc dịch (doc-22, doc-27). Không có thì dùng `must_mention` |
 | `long_read` | Từ v0.3: đáp án **không** nằm trong 400 ký tự đầu của bất kỳ đoạn nào; phải đọc tiếp mới thấy (doc-33..37, hist-11). Với bài tài liệu, `corpus_source` khi đó trỏ tới đoạn có đáp án và thêm `char_offset` |
-| `long_input` | Từ v0.3: tin dài hơn 10 000 ký tự, tức đoạn dán (doc-39; doc-40..43 từ v0.5; doc-44..47 từ v0.6). Lúc thêm doc-39 đó là giới hạn của API; từ #3 (ticket 20), agent chỉ thấy phiếu (600 ký tự đầu và cuối) và mở phần giữa bằng `read_document` |
+| `long_input` | Từ v0.3: tin dài hơn 10 000 ký tự, tức đoạn dán (doc-39; doc-40..43 từ v0.5; doc-44..47 từ v0.6; doc-48..53 từ v0.7). Lúc thêm doc-39 đó là giới hạn của API; từ #3 (ticket 20), agent chỉ thấy phiếu (600 ký tự đầu và cuối) và mở phần giữa bằng `read_document` |
 
 `expect`: mọi khoá đều tuỳ chọn. Một bài đạt khi **mọi** kiểm tra áp dụng cho nó đều đạt.
 
@@ -339,3 +339,50 @@ Giới hạn:
 - Mẫu ngày chỉ nhận số (28/11, 28 tháng 11): câu trả lời doc-45 chỉ nói "thứ Bảy" mà không nêu ngày sẽ trượt.
 - doc-46 đọc lần lượt từ đoạn 0 thì cần đủ ba lượt với `n` 3; mỗi lần đọc ít đoạn hơn là hết lượt trước khi tới, như doc-41.
 - Băm bộ bài đổi, nên bảng điểm không so một lần v0.5 với một lần v0.6. 52 bài cũ không đổi một byte nào.
+
+**agent-eval-v0.7** (ticket 20 #3-D, 28/10). Thêm 6 bài đoạn dán doc-48..53; 56 bài cũ và bộ chấm v0.4 giữ nguyên. Cả
+chín bài đoạn dán trước đều đã công khai qua các lần đo #3-B, #3-C, nên ba nhánh #3-D cần bài chưa ai xem. Các bài viết
+**trước** mọi lần chạy có chúng; người viết không xem nhánh `wip/20-paste-nudge`, `wip/20-paste-search`. Chủ đề và kiểu hỏi
+khác doc-39..47; hai bài (j), (k) có đáp án sau đoạn 8, chỗ ba lần đọc lần lượt từ đoạn 0 không tới.
+
+| Bài | Loại | Ký tự | Đoạn | Đáp án ở đoạn | Câu hỏi ở, kiểu hỏi | Phiếu cho thấy gì gây nhiễu |
+|---|---|---:|---:|---|---|---|
+| doc-48 | (i) giữa, một đoạn | 10 820 | 8 | 5 | cuối; tả triệu chứng, hỏi cách tự xử lý (dụng cụ, số giây) | giữ nút Nguồn 3 giây; về cài đặt gốc 10 giây, số tổng đài |
+| doc-49 | (j) sau đoạn 8 | 18 914 | 15 | 10 | đầu; có được phép không, kèm điều kiện (nơi đăng ký, phí) | Ban quản lý ở phòng 105; bảng phí không có phí vật nuôi |
+| doc-50 | (k) như (j), đoạn dán trên 30 000 ký tự | 31 681 | 25 | 14 | cuối; kể việc riêng, hỏi quyền lợi (số ngày, số tiền) | phép năm 15 ngày; nghỉ Tết 9 ngày |
+| doc-51 | (l) một mảnh gần đầu, một mảnh xa | 10 689 | 9 | 0 và 6 | đầu; lên kế hoạch đặt hàng (giá, thời hạn chốt) | ưu đãi xác nhận trước 15 ngày; tiệc tối đặt trước 21 ngày |
+| doc-52 | (m) trong 600 ký tự cuối | 10 446 | 9 | 8, trong phần cuối phiếu | đầu; chỉ cần hai điều (màu trang phục, nơi xe đón) | nơi tổ chức Hồng Hạc ở cả hai phần; xe lượt về 22 giờ 15 |
+| doc-53 | (n) giữa, chữ khác câu hỏi | 13 834 | 11 | 6 (đoạn mồi 8) | cuối; nói kiểu thường ngày, hỏi có được đền không | số tổng đài |
+
+- Vị trí đo bằng `pastes._chunks` và `SLIP_EDGE_CHARS` ở main `61abb34`; `test_paste_answers_lie_where_the_notes_say` tính
+  lại 14 bài doc-40..53.
+- Mỗi regex `must_mention` khớp đúng một lần trong đoạn dán, không khớp câu hỏi, và nằm trọn trong một đoạn. Trừ (m), không
+  khớp phần đầu hay phần cuối mà phiếu cho thấy. Ở (m) chỉ khớp phần cuối, cách mép trong của phần cuối ít nhất 256 ký tự,
+  và chỉ ở đoạn cuối.
+- (j), (k): ba lần đọc 3 đoạn từ đoạn 0 dừng ở đoạn 8, nên phải đọc thẳng từ đoạn xa hoặc tìm. Test qua bộ chạy với trần
+  đọc thật: doc-49 đọc 0, 3, 6 thì hết lượt công cụ, lần cuối trả `next_from_chunk` 9, và không lần đọc nào có đáp án.
+- (k) dài 31 681 ký tự, nên trần độ dài trong test vị trí nâng từ 30 000 lên 60 000 như đề bài; (j) giữ dưới 30 000.
+- (l): mảnh đầu ở ký tự 1 026, ngoài 600 ký tự phiếu cho thấy nhưng vẫn trong đoạn 0. Đọc lần lượt từ đoạn 0 thì lần đọc thứ
+  ba mới tới mảnh thứ hai, và câu trả lời là câu ép sau khi hết lượt; đọc đoạn 0 rồi đọc thẳng từ đoạn 6 thì hai lần là đủ.
+- (m) có `max_tool_calls: 0` như doc-45. Test qua bộ chạy của doc-45 chạy thêm doc-52: không đọc thì đạt, đọc một lần thì
+  trượt riêng mục `tool_budget`.
+- (n): chỉ đếm chữ của câu hỏi có mặt ở không quá nửa số đoạn (bỏ "bảo", "hiểm", "có"...). Đoạn đáp án chung 0 chữ, đoạn mồi
+  chung 17 chữ, nhiều nhất trong các đoạn không chứa câu hỏi; đoạn mồi không khớp regex nào. Test tính lại các số này. Đo
+  thêm, không đưa vào test: xếp hạng BM25 với cả câu hỏi làm truy vấn đưa đoạn mồi lên thứ hai, sau đoạn chứa chính câu hỏi;
+  đoạn đáp án đứng thứ 10 trên 11. Đây là cách tính của người viết bài, không phải của nhánh 3'.
+- Mọi lần đọc 3 đoạn liền nhau đều vừa trần 6 000 ký tự (rộng nhất 5 866, ở doc-50).
+- Bộ chia đoạn coi dòng đánh số không có dấu câu cuối ("7. Mã lỗi") là tiêu đề và không đưa chữ của nó vào nội dung đoạn, nên
+  đọc đoạn dán không thấy các tiêu đề đó: doc-39, 40, 41, 43 mất 13–21 dòng tiêu đề như vậy (doc-41 mất cả tiêu đề mục 7 mà
+mục 5 trỏ tới). Bài v0.7 viết tiêu đề không mở đầu bằng
+  số ("MỤC 8.", "Điều 39.", "PHẦN 14."); mọi câu của sáu bài đều nằm trong ít nhất một đoạn.
+- Truy xuất: như doc-39..47, sáu bài không có dòng trong `retrieval.jsonl`; `--tasks` chạy được không cần ghi truy xuất.
+- `expect` theo mẫu doc-39, thêm `max_tool_calls: 0` ở (m).
+- Nội dung hư cấu; mỗi cặp thứ–ngày khớp lịch (năm 2026, hoặc 2027 khi văn bản ghi năm). Tên công ty, cơ sở, người đều bịa.
+
+Giới hạn:
+- Không có `must_not_mention`, như v0.6.
+- Mẫu số chỉ nhận chữ số: "sáu ngày" (doc-50), "bảy ngày" (doc-51) viết bằng chữ sẽ trượt. Ở doc-53, câu chỉ nói 400 000
+  đồng mà không nêu ngưỡng 6 giờ cũng trượt.
+- (n) đo "ít từ chung" bằng chữ của cả câu hỏi; truy vấn thật do model tự đặt và có thể khác.
+- doc-51 và doc-53 đọc lần lượt từ đoạn 0 thì cần đủ ba lượt công cụ.
+- Băm bộ bài đổi, nên bảng điểm không so một lần v0.6 với một lần v0.7. 56 bài cũ không đổi một byte nào.

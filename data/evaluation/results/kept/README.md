@@ -102,6 +102,11 @@ tasks of `agent-eval-v0.5` only (`--tasks`), two cold runs per side, identical. 
 so the grader fails four of five: 1/5 on both sides, and doc-42 goes from pass to fail. Misses its rule; not merged.
 Not in the scorecard history, since it is not a full run.
 
+`agent-eval-v0.6-paste-slip-c/` is ticket 20 #3-C: the second paste slip against the old one on the nine paste tasks
+of `agent-eval-v0.6` only (`--tasks`), two cold runs per side, identical. Every read now asks for at most three chunks,
+the score goes 2/9 → 6/9 and no task goes from pass to fail, but of the three unseen tasks whose answer needs the
+middle only one goes from fail to pass (doc-46). Misses its rule; not merged. Not in the scorecard history.
+
 ## Agent Eval scorecard history
 
 `agent-eval-scorecard-history.jsonl` is one line per kept agent-eval run (ticket 23): commit,
