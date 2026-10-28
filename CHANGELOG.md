@@ -72,6 +72,10 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   lời phiếu mới; 52 bài cũ không đổi, bộ chấm vẫn v0.4. Đo lời phiếu lần hai (ticket 20 #3-C) trên 9 bài đoạn dán: 2/9 →
   6/9, model xin đọc đúng trần ở mọi lần, nhưng trên bài mới cần phần giữa chỉ 1/3 từ trượt thành đạt, trượt luật đăng
   ký trước; phiếu cũ giữ nguyên.
+- **Agent Eval v0.7** (28/10, test hồi quy nội bộ). Thêm 6 bài đoạn dán chưa ai xem (doc-48..53), trong đó hai bài có đáp
+  án sau đoạn 8. Runner có cờ `--unload-between-tasks`: gỡ model trước mỗi bài để câu trả lời không phụ thuộc bài chạy
+  trước; mọi số Agent Eval trước đó là số theo chuỗi. Đo ticket 20 #3-D dưới cô lập: lời nhắc khi đoạn dán còn đoạn chưa
+  đọc, và tìm trong đoạn dán, đều trượt luật đăng ký trước; mỗi nhánh 4/6 bài mới. Mốc nền 62 bài cô lập: 50/62.
 
 ### Changed
 - **Discord thành một gói riêng** (28/10, ticket 22): 26 module Discord dời vào `backend/app/discord/`

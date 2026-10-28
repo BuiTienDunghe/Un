@@ -1,0 +1,109 @@
+{
+ "scorecard_version": "agent-eval-scorecard-v1",
+ "run_id": "v0.7-3d-iso-both-r1",
+ "commit": "2839b5272897f3af43ab0b0defe5299914e5a0b6",
+ "worktree_dirty": false,
+ "dataset_version": "agent-eval-v0.7",
+ "dataset_sha256": "d87c4155eb3e244a4f63b04a4556f0aa6fbf3b969d785bc9196f7841e56efb10",
+ "grader_version": "agent-eval-grader-v0.4",
+ "model": "qwen3.5:9b",
+ "started_at": "2026-10-28T16:15:52.772365+00:00",
+ "condition": {
+  "temperature": 0.0,
+  "seed": 42,
+  "cold": true,
+  "loaded_at_start": [
+   "qwen3-embedding:0.6b"
+  ],
+  "source": "manifest",
+  "gpu_shared": false,
+  "gpu_at_start": {
+   "utilization_percent": 0,
+   "memory_used_mib": 1782,
+   "processes": [
+    "llama-server.exe"
+   ]
+  }
+ },
+ "correctness": {
+  "passed": 9,
+  "tasks": 15,
+  "pass_rate": 0.6,
+  "by_category": {
+   "documents": {
+    "passed": 9,
+    "tasks": 15,
+    "pass_rate": 0.6
+   }
+  },
+  "fabricated": 0,
+  "fabricated_tasks": [],
+  "not_found_missed": 0,
+  "not_found_missed_tasks": [],
+  "citation_passed": 0,
+  "citation_tasks": 0,
+  "citation_rate": null,
+  "citation_verbatim": 0,
+  "answer_checks": 2,
+  "answer_check_tasks": [
+   "doc-41",
+   "doc-47"
+  ],
+  "finals_unsupported": 2,
+  "finals_unsupported_tasks": [
+   "doc-41",
+   "doc-47"
+  ]
+ },
+ "efficiency": {
+  "tasks_ran": 15,
+  "tokens_in_mean": 8048,
+  "tokens_in_median": 5984,
+  "tokens_out_mean": 463,
+  "tokens_out_median": 415,
+  "model_rounds_mean": 2.467,
+  "tool_calls": 20,
+  "tool_calls_per_solved": 2.222,
+  "tool_calls_mean_of_solved": 1.333,
+  "latency_p50_ms": 8973,
+  "latency_p95_ms": 18035,
+  "latency_max_ms": 18035
+ },
+ "robustness": {
+  "task_errors": {
+   "OllamaUnavailableError": 1
+  },
+  "budget_exhausted": 3,
+  "stop_reasons": {
+   "final": 11,
+   "max_steps": 3,
+   "turn_budget": 0,
+   "turn_budget_exhausted": 0
+  },
+  "stop_reasons_unavailable": null,
+  "max_steps_matches_budget_exhausted": true,
+  "tool_error_codes": {
+   "TOOL_UNAVAILABLE_HERE": 1
+  },
+  "tool_errors_uncoded": null,
+  "bad_arguments_rate": 0.0,
+  "results_trimmed_by_item": 2
+ },
+ "traceability": {
+  "turns": 15,
+  "complete": 14,
+  "complete_rate": 0.9333,
+  "parts": {
+   "rounds_timed_and_counted": 14,
+   "calls_named_and_shaped": 15,
+   "calls_answered": 15,
+   "final_has_stop_reason": 14
+  }
+ },
+ "limits": {
+  "points_per_task": 6.67,
+  "cold_rule": "so ở nhiệt độ 0 chỉ giữa các lần lạnh (gỡ model chính trước mỗi lần đo)",
+  "first_divergence_rule": "so từng bài chỉ chắc tới chỗ câu trả lời khác nhau đầu tiên",
+  "fabrication": "chỉ đếm được ở bài có tiêu chí phủ định"
+ }
+}

@@ -43,7 +43,7 @@ CONDITIONS_PATH = KEPT_DIR / "agent-eval-run-conditions.json"
 # pattern missed (doc-19, doc-12), not claims (review 28/10).
 FABRICATION_CHECK = "must_not_mention"
 NOT_FOUND_CHECK = "not_found"
-STOP_REASONS = ("final", "max_steps", "turn_budget", "turn_budget_exhausted")
+STOP_REASONS = ("final", "max_steps", "turn_budget", "turn_budget_exhausted", "tool_call_error")
 _OMITTED = re.compile(r'"omitted":\s*\d+')
 _UNCODED_ERROR = re.compile(r'"error":')
 

@@ -1,0 +1,4079 @@
+{
+ "preconditions": {
+  "tools_sha256": true,
+  "agent_guide_sha256": true,
+  "system_prompt_sha256": true,
+  "tools_sha256_as_registered": true,
+  "dataset_sha256_as_registered": true,
+  "dataset_version": true,
+  "tasks_run": true,
+  "unload_between_tasks": true,
+  "full_runs_62": true,
+  "others_47": true,
+  "others_identical_base_vs_both": true
+ },
+ "others_differ_base_vs_both": [],
+ "hashes": {
+  "base": [
+   {
+    "tools_sha256": "153209652c06",
+    "agent_guide_sha256": "6194cf0fbd65",
+    "system_prompt_sha256": "385cb475e59e",
+    "dataset": "d87c4155eb3e",
+    "commit": "94e321f0ae1e0d2de28b11d3954ad673b7d6c1d2"
+   },
+   {
+    "tools_sha256": "153209652c06",
+    "agent_guide_sha256": "6194cf0fbd65",
+    "system_prompt_sha256": "385cb475e59e",
+    "dataset": "d87c4155eb3e",
+    "commit": "94e321f0ae1e0d2de28b11d3954ad673b7d6c1d2"
+   }
+  ],
+  "nudge": [
+   {
+    "tools_sha256": "153209652c06",
+    "agent_guide_sha256": "6194cf0fbd65",
+    "system_prompt_sha256": "385cb475e59e",
+    "dataset": "d87c4155eb3e",
+    "commit": "04b89a26dc4091296a58b98b532c33e2ebd2749f"
+   },
+   {
+    "tools_sha256": "153209652c06",
+    "agent_guide_sha256": "6194cf0fbd65",
+    "system_prompt_sha256": "385cb475e59e",
+    "dataset": "d87c4155eb3e",
+    "commit": "04b89a26dc4091296a58b98b532c33e2ebd2749f"
+   }
+  ],
+  "both": [
+   {
+    "tools_sha256": "153209652c06",
+    "agent_guide_sha256": "6194cf0fbd65",
+    "system_prompt_sha256": "385cb475e59e",
+    "dataset": "d87c4155eb3e",
+    "commit": "2839b5272897f3af43ab0b0defe5299914e5a0b6"
+   },
+   {
+    "tools_sha256": "153209652c06",
+    "agent_guide_sha256": "6194cf0fbd65",
+    "system_prompt_sha256": "385cb475e59e",
+    "dataset": "d87c4155eb3e",
+    "commit": "2839b5272897f3af43ab0b0defe5299914e5a0b6"
+   }
+  ]
+ },
+ "score": {
+  "base": [
+   10,
+   10
+  ],
+  "nudge": [
+   10,
+   10
+  ],
+  "both": [
+   9,
+   9
+  ]
+ },
+ "score_new": {
+  "base": [
+   4,
+   4
+  ],
+  "nudge": [
+   4,
+   4
+  ],
+  "both": [
+   4,
+   4
+  ]
+ },
+ "passed": {
+  "base": [
+   [
+    "doc-39",
+    "doc-41",
+    "doc-42",
+    "doc-43",
+    "doc-45",
+    "doc-46",
+    "doc-48",
+    "doc-51",
+    "doc-52",
+    "doc-53"
+   ],
+   [
+    "doc-39",
+    "doc-41",
+    "doc-42",
+    "doc-43",
+    "doc-45",
+    "doc-46",
+    "doc-48",
+    "doc-51",
+    "doc-52",
+    "doc-53"
+   ]
+  ],
+  "nudge": [
+   [
+    "doc-39",
+    "doc-41",
+    "doc-42",
+    "doc-43",
+    "doc-45",
+    "doc-46",
+    "doc-48",
+    "doc-51",
+    "doc-52",
+    "doc-53"
+   ],
+   [
+    "doc-39",
+    "doc-41",
+    "doc-42",
+    "doc-43",
+    "doc-45",
+    "doc-46",
+    "doc-48",
+    "doc-51",
+    "doc-52",
+    "doc-53"
+   ]
+  ],
+  "both": [
+   [
+    "doc-39",
+    "doc-41",
+    "doc-42",
+    "doc-45",
+    "doc-46",
+    "doc-48",
+    "doc-51",
+    "doc-52",
+    "doc-53"
+   ],
+   [
+    "doc-39",
+    "doc-41",
+    "doc-42",
+    "doc-45",
+    "doc-46",
+    "doc-48",
+    "doc-51",
+    "doc-52",
+    "doc-53"
+   ]
+  ]
+ },
+ "opens": {
+  "base": [
+   [
+    "doc-39",
+    "doc-41",
+    "doc-43",
+    "doc-46",
+    "doc-47",
+    "doc-48",
+    "doc-49",
+    "doc-50",
+    "doc-51",
+    "doc-53"
+   ],
+   [
+    "doc-39",
+    "doc-41",
+    "doc-43",
+    "doc-46",
+    "doc-47",
+    "doc-48",
+    "doc-49",
+    "doc-50",
+    "doc-51",
+    "doc-53"
+   ]
+  ],
+  "nudge": [
+   [
+    "doc-39",
+    "doc-40",
+    "doc-41",
+    "doc-43",
+    "doc-46",
+    "doc-47",
+    "doc-48",
+    "doc-49",
+    "doc-50",
+    "doc-51",
+    "doc-53"
+   ],
+   [
+    "doc-39",
+    "doc-40",
+    "doc-41",
+    "doc-43",
+    "doc-46",
+    "doc-47",
+    "doc-48",
+    "doc-49",
+    "doc-50",
+    "doc-51",
+    "doc-53"
+   ]
+  ],
+  "both": [
+   [
+    "doc-39",
+    "doc-40",
+    "doc-41",
+    "doc-43",
+    "doc-46",
+    "doc-48",
+    "doc-49",
+    "doc-51",
+    "doc-53"
+   ],
+   [
+    "doc-39",
+    "doc-40",
+    "doc-41",
+    "doc-43",
+    "doc-46",
+    "doc-48",
+    "doc-49",
+    "doc-51",
+    "doc-53"
+   ]
+  ]
+ },
+ "reached": {
+  "base": [
+   [
+    "doc-39",
+    "doc-41",
+    "doc-43",
+    "doc-46",
+    "doc-48",
+    "doc-51",
+    "doc-53"
+   ],
+   [
+    "doc-39",
+    "doc-41",
+    "doc-43",
+    "doc-46",
+    "doc-48",
+    "doc-51",
+    "doc-53"
+   ]
+  ],
+  "nudge": [
+   [
+    "doc-39",
+    "doc-40",
+    "doc-41",
+    "doc-43",
+    "doc-46",
+    "doc-48",
+    "doc-51",
+    "doc-53"
+   ],
+   [
+    "doc-39",
+    "doc-40",
+    "doc-41",
+    "doc-43",
+    "doc-46",
+    "doc-48",
+    "doc-51",
+    "doc-53"
+   ]
+  ],
+  "both": [
+   [
+    "doc-39",
+    "doc-41",
+    "doc-46",
+    "doc-48",
+    "doc-53"
+   ],
+   [
+    "doc-39",
+    "doc-41",
+    "doc-46",
+    "doc-48",
+    "doc-53"
+   ]
+  ]
+ },
+ "nudged": {
+  "base": [
+   {},
+   {}
+  ],
+  "nudge": [
+   {
+    "doc-40": [
+     "asks_for_paste"
+    ]
+   },
+   {
+    "doc-40": [
+     "asks_for_paste"
+    ]
+   }
+  ],
+  "both": [
+   {},
+   {}
+  ]
+ },
+ "searched": {
+  "base": [
+   [],
+   []
+  ],
+  "nudge": [
+   [],
+   []
+  ],
+  "both": [
+   [
+    "doc-41",
+    "doc-43",
+    "doc-47"
+   ],
+   [
+    "doc-41",
+    "doc-43",
+    "doc-47"
+   ]
+  ]
+ },
+ "found_by_search": {
+  "base": [
+   [],
+   []
+  ],
+  "nudge": [
+   [],
+   []
+  ],
+  "both": [
+   [
+    "doc-41",
+    "doc-43"
+   ],
+   [
+    "doc-41",
+    "doc-43"
+   ]
+  ]
+ },
+ "answered_after_search_without_read": {
+  "base": [
+   [],
+   []
+  ],
+  "nudge": [
+   [],
+   []
+  ],
+  "both": [
+   [],
+   []
+  ]
+ },
+ "leak": {
+  "base": [
+   [],
+   []
+  ],
+  "nudge": [
+   [],
+   []
+  ],
+  "both": [
+   [
+    "doc-41"
+   ],
+   [
+    "doc-41"
+   ]
+  ]
+ },
+ "lost_turn_errors": {
+  "base": [
+   {},
+   {}
+  ],
+  "nudge": [
+   {},
+   {}
+  ],
+  "both": [
+   {
+    "doc-44": "OllamaUnavailableError: Cannot connect to Ollama"
+   },
+   {
+    "doc-44": "OllamaUnavailableError: Cannot connect to Ollama"
+   }
+  ]
+ },
+ "searched_middle_any_run": [
+  "doc-41",
+  "doc-43",
+  "doc-47"
+ ],
+ "reload_ms": {
+  "base": [
+   {
+    "median": 3064,
+    "max": 6332
+   },
+   {
+    "median": 2816,
+    "max": 6072
+   }
+  ],
+  "nudge": [
+   {
+    "median": 2818,
+    "max": 5831
+   },
+   {
+    "median": 2816,
+    "max": 5819
+   }
+  ],
+  "both": [
+   {
+    "median": 2818,
+    "max": 5814
+   },
+   {
+    "median": 2819,
+    "max": 5818
+   }
+  ]
+ },
+ "max_tokens_in": {
+  "base": [
+   17550,
+   17550
+  ],
+  "nudge": [
+   17550,
+   17550
+  ],
+  "both": [
+   17607,
+   17607
+  ]
+ },
+ "fail_to_pass": {
+  "base_to_nudge": [],
+  "nudge_to_both": []
+ },
+ "pass_to_fail": {
+  "base_to_nudge": [],
+  "nudge_to_both": [
+   "doc-43"
+  ]
+ },
+ "b3_k": 0,
+ "predictions": {
+  "base_doc41_equals_alone_run": true,
+  "base_doc51_equals_alone_run": true,
+  "base_past_ceiling_fail": true,
+  "base_doc52_passes_no_tool": true,
+  "nudge_unchanged_tasks_identical_to_base": true,
+  "nudge_fires_on_40_44_47": false,
+  "nudge_past_ceiling_still_fail": true,
+  "nudge_doc52_equals_base": true,
+  "both_doc52_passes_no_tool": true,
+  "both_search_called_in_fewer_than_half_of_12_middle": true,
+  "both_past_ceiling_still_fail": true,
+  "both_doc53_same_pass_as_nudge": true,
+  "base_r1_equals_r2": true,
+  "nudge_r1_equals_r2": true,
+  "both_r1_equals_r2": true
+ },
+ "rule": {
+  "B1_preconditions": true,
+  "B2_no_pass_turns_fail_base_to_nudge": true,
+  "B3_new_reachable_fail_to_pass": false,
+  "B4_each_b3_task_nudged_in_both_runs": true,
+  "C1_preconditions": true,
+  "C2_no_pass_turns_fail_nudge_to_both": false,
+  "C3_past_ceiling_fail_to_pass": false,
+  "C4_each_c3_task_searched_before_reaching": true
+ },
+ "proposals": {
+  "B_merge_3c_plus_step1": false,
+  "C_merge_3prime_too": false
+ },
+ "tasks": {
+  "base": [
+   {
+    "doc-39": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 5400,
+     "latency_ms": 7820,
+     "error": null,
+     "answer": "Dựa trên nội dung văn bản đã đọc, tôi có thể trả lời câu hỏi của bạn:\n\n**Theo biên bản họp:**\n\n1. **Hạn chót nộp hồ sơ dự thầu gói hộp giấy cho Minh Phát:** 17 giờ ngày 14/11/2026\n   - Nộp bản cứng tại văn phòng Minh Phát ở Thủ Đức\n   - Đồng thời gửi bản điện tử qua cổng đấu thầu của họ\n\n2. **Người phụ trách hồ sơ:** Chị Vũ Thu Hà, Phó phòng Kinh doanh\n   - Là đầu mối chịu trách nhiệm toàn bộ hồ sơ dự thầu\n   - Sẽ gửi danh mục tài liệu cần chuẩn bị cho các phòng trước thứ Sáu tuần này\n\n**Phân công hỗ trợ:**\n- Phòng Kỹ thuật: Hỗ trợ phần thông số kỹ thuật và mẫu in thử\n- Phòng Kế toán: Hỗ trợ phần báo giá và bảo lãnh dự thầu"
+    },
+    "doc-40": {
+     "passed": false,
+     "failed_checks": [
+      "tools_forbidden",
+      "must_mention"
+     ],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "search_history"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 3908,
+     "latency_ms": 6116,
+     "error": null,
+     "answer": "Tôi xin lỗi, nhưng tôi không thể truy cập vào lịch sử tin nhắn Discord vì đây không phải là môi trường Discord. Tuy nhiên, dựa trên phần đầu và cuối của văn bản bạn cung cấp, tôi có thể thấy:\n\n**Thông tin từ phần cuối văn bản:**\n- Sau mỗi đợt chuyển, người phụ trách gửi báo cáo cho ông **Lâm Hữu Phước** (Phó giám đốc hành chính) trước 10 giờ sáng hôm sau.\n- Văn bản được ký bởi **Lâm Hữu Phước**, Phó giám đốc hành chính.\n\n**Nhưng tôi không thấy thông tin cụ thể về:**\n1. Ngày chuyển máy chủ và tủ mạng sang trụ sở mới\n2. Ai giám sát việc chuyển đó\n\nThông tin này có lẽ nằm ở phần giữa của văn bản mà bạn chưa hiển thị đầy đủ. Bạn có thể:\n- Dán lại toàn bộ văn bản, hoặc\n- Cung cấp thêm thông tin về ngày chuyển và người giám sát từ các nguồn khác?"
+    },
+    "doc-41": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 16724,
+     "latency_ms": 15296,
+     "error": null,
+     "answer": "Dựa trên nội dung sổ tay vận hành bếp trung tâm của chuỗi nhà hàng Mộc Lan mà tôi đã đọc, tôi có thể trả lời câu hỏi của bạn:\n\n**Khi kho âm sâu báo nhiệt độ vượt ngưỡng:**\n\n- **Ngưỡng báo động:** Kho âm sâu số 2 đặt ở **-18°C**. Khi bảng điều khiển báo nhiệt độ trong kho **cao hơn -15°C liên tục quá 20 phút**, nhân viên ca phải thực hiện các bước xử lý.\n\n- **Người cần gọi đầu tiên:** Nhân viên ca phải gọi ngay **anh Tạ Minh Khôi, kỹ thuật viên lạnh của công ty** (máy lẻ 214). \n  - Nếu là giờ hành chính: gọi trực tiếp số máy lẻ 214\n  - Nếu ngoài giờ hành chính: nhờ tổng đài bảo vệ nối máy cho anh\n\n- **Lưu ý quan trọng:** Chỉ khi không liên lạc được với kỹ thuật viên trong vòng 10 phút mới gọi quản lý bếp. Hàng trong kho được giữ nguyên, không chuyển sang kho mát.\n\nSau khi kỹ thuật viên kiểm tra, nếu kho không về được -18°C trong vòng 2 giờ, quản lý bếp sẽ quyết định chuyển hàng sang xe lạnh thuê theo hợp đồng dự phòng."
+    },
+    "doc-42": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [],
+     "stop_reason": "final",
+     "tokens_in": 1838,
+     "latency_ms": 2368,
+     "error": null,
+     "answer": "Theo phần đầu và cuối của văn bản bạn cung cấp:\n\n- **Người dẫn chương trình** được chốt là **chị Kha Ngọc Diệp**, phòng Kinh doanh.\n- **Buổi tổng duyệt** diễn ra vào lúc **14 giờ 30, thứ Sáu ngày 11/12/2026** tại hội trường khách sạn.\n\nThông tin này có trong Email 15 từ Trần Thị Bích Ngân gửi ngày 04/12/2026."
+    },
+    "doc-43": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 10878,
+     "latency_ms": 10721,
+     "error": null,
+     "answer": "Tôi đã tìm thấy thông tin cần thiết:\n\n**Hồ sơ thẩm duyệt phòng cháy chữa cháy:**\n- **Người phụ trách:** Chị **Lương Diệu Linh**, thuộc **phòng Hành chính**\n- Chị này làm việc trực tiếp với đơn vị tư vấn thiết kế và cơ quan cảnh sát phòng cháy.\n\n**Ngày hạn nộp hồ sơ:**\n- Hồ sơ thẩm duyệt thiết kế phòng cháy chữa cháy phải nộp xong trước ngày **10/12/2026**.\n\nĐây là mốc gấp nhất của dự án, vì thời gian thẩm duyệt cộng với thi công hệ thống báo cháy quyết định ngày nghiệm thu, và nghiệm thu lại là điều kiện để nộp hồ sơ giấy phép hoạt động."
+    },
+    "doc-44": {
+     "passed": false,
+     "failed_checks": [
+      "must_mention"
+     ],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": true,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [],
+     "stop_reason": "final",
+     "tokens_in": 4127,
+     "latency_ms": 10319,
+     "error": null,
+     "answer": "Xin lỗi, tôi đã nhầm lẫn trong cách tính toán. Hãy để tôi phân tích lại:\n\n- Tour khởi hành thứ Bảy 12/12/2026\n- Về Hà Nội tối thứ Năm 17/12/2026\n- Tổng cộng 6 ngày 5 đêm\n\nĐếm theo thứ tự:\n- Ngày 1 (đêm 1): 12/12 - khởi hành, nghỉ đêm ở đâu đó\n- Ngày 2 (đêm 2): 13/12\n- Ngày 3 (đêm 3): 14/12\n\nVậy đêm 14/12 chính là **đêm thứ 3** của tour.\n\nTuy nhiên, văn bản bạn cung cấp không ghi rõ đoàn nghỉ ở đâu vào đêm 14/12 (đêm thứ 3). Thông tin chỉ nêu rõ:\n- Hai đêm ở Sa Pa (đêm 4 và đêm 5) có thể đăng ký phòng đơn với mức phụ thu 420.000 đồng.\n- Các đêm còn lại phải đăng ký trước ngày 05/12.\n\nĐể trả lời chính xác, tôi cần biết:\n1. Đêm thứ 3 (đêm 14/12) đoàn nghỉ ở đâu?\n2. Mức phụ thu phòng đơn cho đêm đó là bao nhiêu?\n\nBạn có thể cung cấp thêm thông tin này hoặc kiểm tra lại văn bản gốc để tìm các chi tiết còn thiếu không?"
+    },
+    "doc-45": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [],
+     "stop_reason": "final",
+     "tokens_in": 1851,
+     "latency_ms": 2808,
+     "error": null,
+     "answer": "Không đúng. Theo phần đầu văn bản bạn dán:\n\n> Nhận số báo danh và áo đấu: **thứ Bảy 28/11/2026**, từ 8 giờ đến 18 giờ, tại sảnh B nhà thi đấu Phú Lâm. Không phát số báo danh vào sáng ngày thi đấu.\n\nVăn bản ghi rõ nhận số báo danh là **thứ Bảy 28/11/2026** (chiều), không phải chiều thứ Sáu. Hạn chót đăng ký và chuyển nhượng suất chạy mới là **17 giờ thứ Sáu 20/11/2026**."
+    },
+    "doc-46": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 15461,
+     "latency_ms": 13967,
+     "error": null,
+     "answer": "Dựa trên thông tin bạn cung cấp và nội dung quy chế từ văn bản, mình có thể xác định chính xác học bổng bạn thuộc diện:\n\n## Kết quả xét học bổng cho bạn\n\n**Thông tin của bạn:**\n- Điểm trung bình học kỳ: **3,35** (thang 4)\n- Điểm rèn luyện: **85**\n- Không có học phần phải học lại\n- Đang học năm thứ hai (đáp ứng điều kiện áp dụng quy chế)\n\n## Phân tích theo Điều 9 của Quy chế\n\nBạn thuộc diện **Học bổng Sóng Biếc** vì:\n\n✅ **Điều kiện điểm trung bình:** 3,35 nằm trong khoảng từ **3,20 đến dưới 3,60**  \n✅ **Điều kiện điểm rèn luyện:** 85 đạt yêu cầu từ **80 trở lên**\n\n## Mức học bổng bạn nhận được\n\n- **Mỗi học kỳ: 4.700.000 đồng**\n- Học bổng này được giữ nguyên trong năm học 2026–2027\n- Không phụ thuộc vào mức học phí ngành hay số tín chỉ đăng ký\n\n## Lưu ý quan trọng\n\nBạn cần đảm bảo các điều kiện chung tại Điều 5:\n- Đăng ký và hoàn thành ít nhất **15 tín chỉ** trong học kỳ xét\n- Không bị kỷ luật từ mức khiển trách trở lên\n- Đã hoàn thành học phí trước ngày khoa lập danh sách dự kiến\n\nNếu bạn có thắc mắc thêm về quy trình xét hoặc các trường hợp đặc biệt, mình sẵn sàng giải thích chi tiết hơn!"
+    },
+    "doc-47": {
+     "passed": false,
+     "failed_checks": [
+      "must_mention"
+     ],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      }
+     ],
+     "reached": false,
+     "nudged": [],
+     "answer_check": true,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 7905,
+     "latency_ms": 12524,
+     "error": null,
+     "answer": "Dựa trên nội dung văn bản hợp đồng mà tôi vừa đọc được:\n\n**Về thời hạn báo trước khi trả mặt bằng sớm:**\nTheo Điều 2, khoản 2 của hợp đồng, bên thuê (bên B) muốn trả mặt bằng trước hạn thì phải **thông báo bằng văn bản cho bên A trước ít nhất 75 ngày** tính đến ngày dự kiến trả mặt bằng.\n\n**Về số tiền cọc chủ nhà được giữ lại:**\nVăn bản ghi rõ: \"Tiền đặt cọc 54.000.000 đồng bên B đã chuyển đủ cho bên A vào ngày ký hợp đồng, bên A đã nhận và ký xác nhận dưới đây.\"\n\nTuy nhiên, **hợp đồng không nêu cụ thể** số tiền cọc mà chủ nhà được giữ lại khi bên thuê trả mặt bằng trước hạn. Thông thường:\n- Nếu báo trước đúng 75 ngày theo quy định của hợp đồng, hợp đồng chấm dứt tự nhiên và tiền cọc sẽ được hoàn trả (trừ các khoản chi phí phát sinh nếu có).\n- Nếu không báo trước đủ 75 ngày hoặc vi phạm các điều khoản khác, chủ nhà có thể giữ lại một phần hoặc toàn bộ tiền cọc như hình phạt.\n\nBạn có muốn tôi tìm hiểu thêm về các quy định pháp luật liên quan đến hợp đồng thuê mặt bằng và xử lý khi chấm dứt hợp đồng sớm không?"
+    },
+    "doc-48": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 10483,
+     "latency_ms": 10297,
+     "error": null,
+     "answer": "Tôi đã tìm thấy thông tin về lỗi E7 trong văn bản. Dưới đây là cách xử lý:\n\n## Lỗi E7 - Cảm biến bụi bị bám bẩn\n\n**Nguyên nhân:** Cảm biến bụi bị bám bẩn, máy không đọc được chỉ số bụi mịn nên tự dừng quạt để bảo vệ động cơ.\n\n**Các bước xử lý:**\n1. **Tắt máy và rút phích cắm**\n2. **Mở nắp nhỏ ở hông trái** của máy (nắp che ô cảm biến bụi)\n3. **Lau nhẹ ô cảm biến bụi bằng tăm bông khô**, không dùng nước hay cồn\n4. **Đóng nắp lại**, cắm điện, bật máy\n5. **Giữ nút Hẹn giờ trong 8 giây** để xoá mã lỗi\n\n**Lưu ý quan trọng:**\n- Nếu mã lỗi E7 hiện lại trong vòng một tuần sau khi đã làm theo các bước trên, cảm biến có thể đã hỏng và cần mang máy đi bảo hành.\n\nVì bạn đang chạy máy thì quạt tự dừng và màn hình nháy E7, hãy thực hiện ngay các bước trên. Đây là lỗi có thể tự xử lý được mà không cần gọi bảo hành ngay lập tức."
+    },
+    "doc-49": {
+     "passed": false,
+     "failed_checks": [
+      "must_mention"
+     ],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 17550,
+     "latency_ms": 18019,
+     "error": null,
+     "answer": "Dựa trên nội quy bạn cung cấp, tôi xin trả lời như sau:\n\n**1. Chung cư có cho nuôi mèo không?**\n- **Có**, nhưng phải tuân thủ các quy định tại **Chương XII. VẬT NUÔI**.\n- Theo **Điều 8** (trong phần văn bản bạn đã dán), khu vực sảnh và hành lang **không được phép** để chó, mèo đi vệ sinh hay thả rông. Các quy định chi tiết về vật nuôi sẽ nêu trong Chương XII.\n\n**2. Nếu được thì phải đăng ký ở đâu?**\n- Theo nội quy, các việc đăng ký liên quan đến vật nuôi (nếu có) thường do **Ban quản lý vận hành** tiếp nhận.\n- Bạn cần liên hệ trực tiếp với Ban quản lý vận hành tại:\n  - **Địa chỉ:** Phòng 105, tầng 1, tòa A.\n  - **Giờ mở cửa:** Từ 7 giờ 30 đến 19 giờ hằng ngày.\n  - **Số điện thoại:** Lễ tân tòa A: 028 3910 2206.\n\n**3. Mỗi tháng đóng thêm bao nhiêu?**\n- Trong phần văn bản bạn cung cấp (phần cuối), tôi thấy các khoản phí liên quan đến thẻ cư dân, bể bơi, phòng sinh hoạt chung, nhưng **không thấy đề cập cụ thể về mức phí hàng tháng cho việc nuôi thú cưng**.\n- Thông thường, nếu được phép nuôi, cư dân có thể phải đóng thêm một khoản phí quản lý hoặc bảo hiểm trách nhiệm (nếu có). Tuy nhiên, nội dung này chưa xuất hiện trong văn bản bạn dán.\n\n**Lời khuyên:**\nBạn nên gọi điện trực tiếp cho Ban quản lý vận hành (028 3910 2206) để hỏi rõ:\n- Điều kiện cụ thể về số lượng và chủng loại thú cưng được phép nuôi.\n- Mức phí đăng ký và phí hàng tháng (nếu có).\n- Các quy định chi tiết trong Chương XII về vật nuôi.\n\nNếu bạn cần, tôi có thể giúp soạn thảo nội dung gọi điện hoặc email gửi Ban quản lý để hỏi rõ hơn."
+    },
+    "doc-50": {
+     "passed": false,
+     "failed_checks": [
+      "must_mention"
+     ],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 16029,
+     "latency_ms": 19216,
+     "error": null,
+     "answer": "Xin chào! Tôi đã đọc kỹ sổ tay nhân viên của bạn, nhưng **không tìm thấy thông tin cụ thể về chính sách nghỉ phép cưới** trong các phần đã xem (từ Phần 1 đến Phần 8). Sổ tay này tập trung vào: giờ làm việc, thử việc, lương thưởng, bảo hiểm, thiết bị, quy tắc ứng xử...\n\nTuy nhiên, dựa trên những gì bạn cung cấp ở phần cuối văn bản và thông lệ chung tại Việt Nam, tôi có thể gợi ý như sau:\n\n### 1. Về nghỉ phép cưới\n- **Nghỉ phép cưới** thường không được quy định rõ trong sổ tay nhân viên vì đây là sự kiện cá nhân đặc biệt.\n- Theo **Luật Lao động Việt Nam**, nhân viên có quyền xin nghỉ việc riêng (như cưới hỏi, tang lễ...) nhưng **không bắt buộc phải trả lương** trừ khi công ty có chính sách nội bộ hoặc thỏa ước lao động tập thể quy định khác.\n- Nếu bạn muốn nghỉ mà vẫn có lương, hãy:\n  - Trao đổi với trưởng nhóm và phòng Nhân sự trước khi kết hôn.\n  - Đề xuất lịch nghỉ phù hợp (ví dụ: 1–3 ngày) để đảm bảo công việc không bị ảnh hưởng.\n  - Công ty có thể xem xét hỗ trợ đặc biệt nếu bạn là nhân viên lâu năm hoặc đóng góp tốt.\n\n### 2. Về phần mừng của công đoàn\n- **Công đoàn** thường tổ chức các hoạt động như:\n  - Tặng quà, thiệp chúc mừng cho nhân viên kết hôn.\n  - Tổ chức tiệc nhỏ hoặc gửi lời chúc qua email nội bộ.\n  - Hỗ trợ tài chính (nếu có) cho các sự kiện lớn như cưới hỏi.\n- Bạn nên liên hệ với **anh Thạch Đức Vinh** (Đại diện Công đoàn, máy lẻ 512) để biết rõ hơn về chính sách cụ thể của công ty.\n\n### 3. Lời khuyên\n- Hãy gửi email hoặc nhắn tin qua cổng nội bộ **Thông Xanh** đến phòng Nhân sự và Công đoàn trước khi kết hôn để:\n  - Xin phép nghỉ việc phù hợp.\n  - Hỏi về các phúc lợi đặc biệt (nếu có).\n  - Nhận lời chúc mừng từ công ty.\n\nNếu bạn cần, tôi có thể giúp soạn thảo email xin phép nghỉ hoặc đề xuất nội dung gửi cho phòng Nhân sự!"
+    },
+    "doc-51": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 16064,
+     "latency_ms": 15374,
+     "error": null,
+     "answer": "Dựa trên báo giá từ **Bếp Tiệc Hương Cau**, đây là thông tin cho đơn đặt 120 suất ăn trưa Set Hội thảo B:\n\n### 1. Giá mỗi suất\n*   **Set Hội thảo B:** **145.000 đồng/suất**.\n    *   *Thực đơn:* Cá basa chiên sốt chanh dây, thịt ba chỉ rim tiêu, trứng hấp nấm, cải thìa xào nấm đông cô, canh chua cá lóc, bánh flan.\n    *   *Gồm:* Cơm trắng/gạo lứt, canh, món chính, món phụ, rau, tráng miệng và chai nước suối 350ml.\n\n### 2. Thời hạn đặt trước (chốt đơn)\nVì đơn của bạn là **120 suất** (thuộc nhóm \"từ 100 suất trở lên\"), theo quy trình đặt hàng:\n*   **Thời hạn xác nhận đơn tối thiểu:** Phải xác nhận và chuyển tiền đặt cọc trước ít nhất **7 ngày làm việc** so với ngày tổ chức.\n*   **Chốt số suất chính thức:** Cần chốt lại số suất cuối cùng trước ngày tổ chức **2 ngày làm việc**.\n\n### 3. Các lưu ý khác cho đơn này\n*   **Phí giao hàng:** Miễn phí nếu địa điểm trong bán kính 5km (từ bếp tại đường Hồ Văn Huê). Nếu xa hơn, sẽ tính theo khoảng cách.\n*   **Thanh toán:** Đặt cọc 30% khi xác nhận đơn, phần còn lại thanh toán trong vòng 10 ngày làm việc sau sự kiện.\n*   **Liên hệ đặt hàng:** Chị Đoàn Thị Mai Hương - **0912 448 316** (từ 8h-20h hằng ngày).\n\nBạn có cần tôi hỗ trợ soạn thảo nội dung gửi cho bếp để xác nhận đơn không?"
+    },
+    "doc-52": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [],
+     "stop_reason": "final",
+     "tokens_in": 1841,
+     "latency_ms": 2896,
+     "error": null,
+     "answer": "Dựa trên phần đầu và cuối của văn bản bạn cung cấp, tôi đã tìm thấy thông tin bạn cần:\n\n**Tông màu trang phục:** Xanh ngọc (cả công ty mặc theo tông màu này)\n\n**Xe đưa đón:**\n- Lượt đi: Khởi hành lúc 16 giờ 45 tại sảnh Sao Khuê, tầng trệt tòa văn phòng công ty\n- Lượt về: Khởi hành lúc 22 giờ 15 tại cổng chính Trung tâm hội nghị Hồng Hạc\n\nThông tin này đã có đầy đủ trong phần cuối của văn bản bạn dán. Bạn không cần phải đọc thêm phần giữa vì các thông tin bạn hỏi đã được cung cấp rồi."
+    },
+    "doc-53": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 14786,
+     "latency_ms": 16686,
+     "error": null,
+     "answer": "Dựa trên **Quy tắc Bảo hiểm Du lịch trong nước — Gói An Khang** của Công ty Bảo hiểm Phù Sa mà bạn cung cấp, tôi xin trả lời câu hỏi của bạn như sau:\n\n### 1. Bạn có được đền bù không?\n**CÓ.** Theo **Quyền lợi 4. Khởi hành muộn** (trích từ trang 6 của văn bản):\n> \"Khi Phương tiện vận tải công cộng mà Người được bảo hiểm đã đặt chỗ khởi hành muộn liên tục từ **6 giờ trở lên** so với lịch trình ghi trên vé... Công ty chi trả...\"\n\nVì máy bay của bạn trễ khoảng **7 tiếng** (tức là hơn 6 tiếng), điều kiện này đã được đáp ứng. Tuy nhiên, cần lưu ý:\n*   Lý do trễ phải là: thời tiết xấu, sự cố kỹ thuật, đình công hoặc yêu cầu của nhà chức trách (không phải do lỗi cá nhân của bạn).\n*   Bạn cần xuất trình **xác nhận của hãng vận tải** về lý do và thời lượng khởi hành muộn.\n\n### 2. Được bao nhiêu tiền?\nTheo quy định:\n> \"Công ty chi trả **400.000 đồng cho mỗi quãng sáu giờ** khởi hành muộn liên tục, tối đa **2.400.000 đồng** cho mỗi hành trình.\"\n\nCách tính cụ thể cho trường hợp trễ 7 tiếng của bạn:\n*   Bạn được tính cho **1 quãng 6 giờ** (vì quy định tính theo từng đơn vị 6 giờ).\n*   Số tiền nhận được = **400.000 đồng**.\n*   Phần trễ thêm 1 tiếng còn lại không được tính thêm vì chưa đủ để tạo thành một \"quãng\" mới (tối đa chỉ nhận cho 1 quãng 6 giờ).\n\n**Tổng số tiền bạn có thể nhận được là: 400.000 đồng.**\n\n### 3. Thủ tục cần làm gì?\n*   Liên hệ tổng đài hỗ trợ 24/7 của Bảo hiểm Phù Sa: **1900 6268**.\n*   Gửi email bồi thường qua mục Liên hệ trên ứng dụng **Phù Sa Care**.\n*   Cung cấp xác nhận của hãng vận tải về việc máy bay trễ chuyến (lý do và thời gian).\n\n### Lưu ý quan trọng:\nQuyền lợi này **không áp dụng** nếu lịch khởi hành đã được hãng thông báo thay đổi từ 24 giờ trở lên trước giờ khởi hành dự kiến. Nếu bạn không biết trước mà máy bay bị trễ đột ngột, bạn vẫn có quyền nhận bồi thường."
+    }
+   },
+   {
+    "doc-39": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 5400,
+     "latency_ms": 7806,
+     "error": null,
+     "answer": "Dựa trên nội dung văn bản đã đọc, tôi có thể trả lời câu hỏi của bạn:\n\n**Theo biên bản họp:**\n\n1. **Hạn chót nộp hồ sơ dự thầu gói hộp giấy cho Minh Phát:** 17 giờ ngày 14/11/2026\n   - Nộp bản cứng tại văn phòng Minh Phát ở Thủ Đức\n   - Đồng thời gửi bản điện tử qua cổng đấu thầu của họ\n\n2. **Người phụ trách hồ sơ:** Chị Vũ Thu Hà, Phó phòng Kinh doanh\n   - Là đầu mối chịu trách nhiệm toàn bộ hồ sơ dự thầu\n   - Sẽ gửi danh mục tài liệu cần chuẩn bị cho các phòng trước thứ Sáu tuần này\n\n**Phân công hỗ trợ:**\n- Phòng Kỹ thuật: Hỗ trợ phần thông số kỹ thuật và mẫu in thử\n- Phòng Kế toán: Hỗ trợ phần báo giá và bảo lãnh dự thầu"
+    },
+    "doc-40": {
+     "passed": false,
+     "failed_checks": [
+      "tools_forbidden",
+      "must_mention"
+     ],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "search_history"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 3908,
+     "latency_ms": 6239,
+     "error": null,
+     "answer": "Tôi xin lỗi, nhưng tôi không thể truy cập vào lịch sử tin nhắn Discord vì đây không phải là môi trường Discord. Tuy nhiên, dựa trên phần đầu và cuối của văn bản bạn cung cấp, tôi có thể thấy:\n\n**Thông tin từ phần cuối văn bản:**\n- Sau mỗi đợt chuyển, người phụ trách gửi báo cáo cho ông **Lâm Hữu Phước** (Phó giám đốc hành chính) trước 10 giờ sáng hôm sau.\n- Văn bản được ký bởi **Lâm Hữu Phước**, Phó giám đốc hành chính.\n\n**Nhưng tôi không thấy thông tin cụ thể về:**\n1. Ngày chuyển máy chủ và tủ mạng sang trụ sở mới\n2. Ai giám sát việc chuyển đó\n\nThông tin này có lẽ nằm ở phần giữa của văn bản mà bạn chưa hiển thị đầy đủ. Bạn có thể:\n- Dán lại toàn bộ văn bản, hoặc\n- Cung cấp thêm thông tin về ngày chuyển và người giám sát từ các nguồn khác?"
+    },
+    "doc-41": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 16724,
+     "latency_ms": 15163,
+     "error": null,
+     "answer": "Dựa trên nội dung sổ tay vận hành bếp trung tâm của chuỗi nhà hàng Mộc Lan mà tôi đã đọc, tôi có thể trả lời câu hỏi của bạn:\n\n**Khi kho âm sâu báo nhiệt độ vượt ngưỡng:**\n\n- **Ngưỡng báo động:** Kho âm sâu số 2 đặt ở **-18°C**. Khi bảng điều khiển báo nhiệt độ trong kho **cao hơn -15°C liên tục quá 20 phút**, nhân viên ca phải thực hiện các bước xử lý.\n\n- **Người cần gọi đầu tiên:** Nhân viên ca phải gọi ngay **anh Tạ Minh Khôi, kỹ thuật viên lạnh của công ty** (máy lẻ 214). \n  - Nếu là giờ hành chính: gọi trực tiếp số máy lẻ 214\n  - Nếu ngoài giờ hành chính: nhờ tổng đài bảo vệ nối máy cho anh\n\n- **Lưu ý quan trọng:** Chỉ khi không liên lạc được với kỹ thuật viên trong vòng 10 phút mới gọi quản lý bếp. Hàng trong kho được giữ nguyên, không chuyển sang kho mát.\n\nSau khi kỹ thuật viên kiểm tra, nếu kho không về được -18°C trong vòng 2 giờ, quản lý bếp sẽ quyết định chuyển hàng sang xe lạnh thuê theo hợp đồng dự phòng."
+    },
+    "doc-42": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [],
+     "stop_reason": "final",
+     "tokens_in": 1838,
+     "latency_ms": 2360,
+     "error": null,
+     "answer": "Theo phần đầu và cuối của văn bản bạn cung cấp:\n\n- **Người dẫn chương trình** được chốt là **chị Kha Ngọc Diệp**, phòng Kinh doanh.\n- **Buổi tổng duyệt** diễn ra vào lúc **14 giờ 30, thứ Sáu ngày 11/12/2026** tại hội trường khách sạn.\n\nThông tin này có trong Email 15 từ Trần Thị Bích Ngân gửi ngày 04/12/2026."
+    },
+    "doc-43": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 10878,
+     "latency_ms": 10762,
+     "error": null,
+     "answer": "Tôi đã tìm thấy thông tin cần thiết:\n\n**Hồ sơ thẩm duyệt phòng cháy chữa cháy:**\n- **Người phụ trách:** Chị **Lương Diệu Linh**, thuộc **phòng Hành chính**\n- Chị này làm việc trực tiếp với đơn vị tư vấn thiết kế và cơ quan cảnh sát phòng cháy.\n\n**Ngày hạn nộp hồ sơ:**\n- Hồ sơ thẩm duyệt thiết kế phòng cháy chữa cháy phải nộp xong trước ngày **10/12/2026**.\n\nĐây là mốc gấp nhất của dự án, vì thời gian thẩm duyệt cộng với thi công hệ thống báo cháy quyết định ngày nghiệm thu, và nghiệm thu lại là điều kiện để nộp hồ sơ giấy phép hoạt động."
+    },
+    "doc-44": {
+     "passed": false,
+     "failed_checks": [
+      "must_mention"
+     ],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": true,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [],
+     "stop_reason": "final",
+     "tokens_in": 4127,
+     "latency_ms": 10297,
+     "error": null,
+     "answer": "Xin lỗi, tôi đã nhầm lẫn trong cách tính toán. Hãy để tôi phân tích lại:\n\n- Tour khởi hành thứ Bảy 12/12/2026\n- Về Hà Nội tối thứ Năm 17/12/2026\n- Tổng cộng 6 ngày 5 đêm\n\nĐếm theo thứ tự:\n- Ngày 1 (đêm 1): 12/12 - khởi hành, nghỉ đêm ở đâu đó\n- Ngày 2 (đêm 2): 13/12\n- Ngày 3 (đêm 3): 14/12\n\nVậy đêm 14/12 chính là **đêm thứ 3** của tour.\n\nTuy nhiên, văn bản bạn cung cấp không ghi rõ đoàn nghỉ ở đâu vào đêm 14/12 (đêm thứ 3). Thông tin chỉ nêu rõ:\n- Hai đêm ở Sa Pa (đêm 4 và đêm 5) có thể đăng ký phòng đơn với mức phụ thu 420.000 đồng.\n- Các đêm còn lại phải đăng ký trước ngày 05/12.\n\nĐể trả lời chính xác, tôi cần biết:\n1. Đêm thứ 3 (đêm 14/12) đoàn nghỉ ở đâu?\n2. Mức phụ thu phòng đơn cho đêm đó là bao nhiêu?\n\nBạn có thể cung cấp thêm thông tin này hoặc kiểm tra lại văn bản gốc để tìm các chi tiết còn thiếu không?"
+    },
+    "doc-45": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [],
+     "stop_reason": "final",
+     "tokens_in": 1851,
+     "latency_ms": 2764,
+     "error": null,
+     "answer": "Không đúng. Theo phần đầu văn bản bạn dán:\n\n> Nhận số báo danh và áo đấu: **thứ Bảy 28/11/2026**, từ 8 giờ đến 18 giờ, tại sảnh B nhà thi đấu Phú Lâm. Không phát số báo danh vào sáng ngày thi đấu.\n\nVăn bản ghi rõ nhận số báo danh là **thứ Bảy 28/11/2026** (chiều), không phải chiều thứ Sáu. Hạn chót đăng ký và chuyển nhượng suất chạy mới là **17 giờ thứ Sáu 20/11/2026**."
+    },
+    "doc-46": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 15461,
+     "latency_ms": 14002,
+     "error": null,
+     "answer": "Dựa trên thông tin bạn cung cấp và nội dung quy chế từ văn bản, mình có thể xác định chính xác học bổng bạn thuộc diện:\n\n## Kết quả xét học bổng cho bạn\n\n**Thông tin của bạn:**\n- Điểm trung bình học kỳ: **3,35** (thang 4)\n- Điểm rèn luyện: **85**\n- Không có học phần phải học lại\n- Đang học năm thứ hai (đáp ứng điều kiện áp dụng quy chế)\n\n## Phân tích theo Điều 9 của Quy chế\n\nBạn thuộc diện **Học bổng Sóng Biếc** vì:\n\n✅ **Điều kiện điểm trung bình:** 3,35 nằm trong khoảng từ **3,20 đến dưới 3,60**  \n✅ **Điều kiện điểm rèn luyện:** 85 đạt yêu cầu từ **80 trở lên**\n\n## Mức học bổng bạn nhận được\n\n- **Mỗi học kỳ: 4.700.000 đồng**\n- Học bổng này được giữ nguyên trong năm học 2026–2027\n- Không phụ thuộc vào mức học phí ngành hay số tín chỉ đăng ký\n\n## Lưu ý quan trọng\n\nBạn cần đảm bảo các điều kiện chung tại Điều 5:\n- Đăng ký và hoàn thành ít nhất **15 tín chỉ** trong học kỳ xét\n- Không bị kỷ luật từ mức khiển trách trở lên\n- Đã hoàn thành học phí trước ngày khoa lập danh sách dự kiến\n\nNếu bạn có thắc mắc thêm về quy trình xét hoặc các trường hợp đặc biệt, mình sẵn sàng giải thích chi tiết hơn!"
+    },
+    "doc-47": {
+     "passed": false,
+     "failed_checks": [
+      "must_mention"
+     ],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      }
+     ],
+     "reached": false,
+     "nudged": [],
+     "answer_check": true,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 7905,
+     "latency_ms": 12385,
+     "error": null,
+     "answer": "Dựa trên nội dung văn bản hợp đồng mà tôi vừa đọc được:\n\n**Về thời hạn báo trước khi trả mặt bằng sớm:**\nTheo Điều 2, khoản 2 của hợp đồng, bên thuê (bên B) muốn trả mặt bằng trước hạn thì phải **thông báo bằng văn bản cho bên A trước ít nhất 75 ngày** tính đến ngày dự kiến trả mặt bằng.\n\n**Về số tiền cọc chủ nhà được giữ lại:**\nVăn bản ghi rõ: \"Tiền đặt cọc 54.000.000 đồng bên B đã chuyển đủ cho bên A vào ngày ký hợp đồng, bên A đã nhận và ký xác nhận dưới đây.\"\n\nTuy nhiên, **hợp đồng không nêu cụ thể** số tiền cọc mà chủ nhà được giữ lại khi bên thuê trả mặt bằng trước hạn. Thông thường:\n- Nếu báo trước đúng 75 ngày theo quy định của hợp đồng, hợp đồng chấm dứt tự nhiên và tiền cọc sẽ được hoàn trả (trừ các khoản chi phí phát sinh nếu có).\n- Nếu không báo trước đủ 75 ngày hoặc vi phạm các điều khoản khác, chủ nhà có thể giữ lại một phần hoặc toàn bộ tiền cọc như hình phạt.\n\nBạn có muốn tôi tìm hiểu thêm về các quy định pháp luật liên quan đến hợp đồng thuê mặt bằng và xử lý khi chấm dứt hợp đồng sớm không?"
+    },
+    "doc-48": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 10483,
+     "latency_ms": 10236,
+     "error": null,
+     "answer": "Tôi đã tìm thấy thông tin về lỗi E7 trong văn bản. Dưới đây là cách xử lý:\n\n## Lỗi E7 - Cảm biến bụi bị bám bẩn\n\n**Nguyên nhân:** Cảm biến bụi bị bám bẩn, máy không đọc được chỉ số bụi mịn nên tự dừng quạt để bảo vệ động cơ.\n\n**Các bước xử lý:**\n1. **Tắt máy và rút phích cắm**\n2. **Mở nắp nhỏ ở hông trái** của máy (nắp che ô cảm biến bụi)\n3. **Lau nhẹ ô cảm biến bụi bằng tăm bông khô**, không dùng nước hay cồn\n4. **Đóng nắp lại**, cắm điện, bật máy\n5. **Giữ nút Hẹn giờ trong 8 giây** để xoá mã lỗi\n\n**Lưu ý quan trọng:**\n- Nếu mã lỗi E7 hiện lại trong vòng một tuần sau khi đã làm theo các bước trên, cảm biến có thể đã hỏng và cần mang máy đi bảo hành.\n\nVì bạn đang chạy máy thì quạt tự dừng và màn hình nháy E7, hãy thực hiện ngay các bước trên. Đây là lỗi có thể tự xử lý được mà không cần gọi bảo hành ngay lập tức."
+    },
+    "doc-49": {
+     "passed": false,
+     "failed_checks": [
+      "must_mention"
+     ],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 17550,
+     "latency_ms": 18202,
+     "error": null,
+     "answer": "Dựa trên nội quy bạn cung cấp, tôi xin trả lời như sau:\n\n**1. Chung cư có cho nuôi mèo không?**\n- **Có**, nhưng phải tuân thủ các quy định tại **Chương XII. VẬT NUÔI**.\n- Theo **Điều 8** (trong phần văn bản bạn đã dán), khu vực sảnh và hành lang **không được phép** để chó, mèo đi vệ sinh hay thả rông. Các quy định chi tiết về vật nuôi sẽ nêu trong Chương XII.\n\n**2. Nếu được thì phải đăng ký ở đâu?**\n- Theo nội quy, các việc đăng ký liên quan đến vật nuôi (nếu có) thường do **Ban quản lý vận hành** tiếp nhận.\n- Bạn cần liên hệ trực tiếp với Ban quản lý vận hành tại:\n  - **Địa chỉ:** Phòng 105, tầng 1, tòa A.\n  - **Giờ mở cửa:** Từ 7 giờ 30 đến 19 giờ hằng ngày.\n  - **Số điện thoại:** Lễ tân tòa A: 028 3910 2206.\n\n**3. Mỗi tháng đóng thêm bao nhiêu?**\n- Trong phần văn bản bạn cung cấp (phần cuối), tôi thấy các khoản phí liên quan đến thẻ cư dân, bể bơi, phòng sinh hoạt chung, nhưng **không thấy đề cập cụ thể về mức phí hàng tháng cho việc nuôi thú cưng**.\n- Thông thường, nếu được phép nuôi, cư dân có thể phải đóng thêm một khoản phí quản lý hoặc bảo hiểm trách nhiệm (nếu có). Tuy nhiên, nội dung này chưa xuất hiện trong văn bản bạn dán.\n\n**Lời khuyên:**\nBạn nên gọi điện trực tiếp cho Ban quản lý vận hành (028 3910 2206) để hỏi rõ:\n- Điều kiện cụ thể về số lượng và chủng loại thú cưng được phép nuôi.\n- Mức phí đăng ký và phí hàng tháng (nếu có).\n- Các quy định chi tiết trong Chương XII về vật nuôi.\n\nNếu bạn cần, tôi có thể giúp soạn thảo nội dung gọi điện hoặc email gửi Ban quản lý để hỏi rõ hơn."
+    },
+    "doc-50": {
+     "passed": false,
+     "failed_checks": [
+      "must_mention"
+     ],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 16029,
+     "latency_ms": 19082,
+     "error": null,
+     "answer": "Xin chào! Tôi đã đọc kỹ sổ tay nhân viên của bạn, nhưng **không tìm thấy thông tin cụ thể về chính sách nghỉ phép cưới** trong các phần đã xem (từ Phần 1 đến Phần 8). Sổ tay này tập trung vào: giờ làm việc, thử việc, lương thưởng, bảo hiểm, thiết bị, quy tắc ứng xử...\n\nTuy nhiên, dựa trên những gì bạn cung cấp ở phần cuối văn bản và thông lệ chung tại Việt Nam, tôi có thể gợi ý như sau:\n\n### 1. Về nghỉ phép cưới\n- **Nghỉ phép cưới** thường không được quy định rõ trong sổ tay nhân viên vì đây là sự kiện cá nhân đặc biệt.\n- Theo **Luật Lao động Việt Nam**, nhân viên có quyền xin nghỉ việc riêng (như cưới hỏi, tang lễ...) nhưng **không bắt buộc phải trả lương** trừ khi công ty có chính sách nội bộ hoặc thỏa ước lao động tập thể quy định khác.\n- Nếu bạn muốn nghỉ mà vẫn có lương, hãy:\n  - Trao đổi với trưởng nhóm và phòng Nhân sự trước khi kết hôn.\n  - Đề xuất lịch nghỉ phù hợp (ví dụ: 1–3 ngày) để đảm bảo công việc không bị ảnh hưởng.\n  - Công ty có thể xem xét hỗ trợ đặc biệt nếu bạn là nhân viên lâu năm hoặc đóng góp tốt.\n\n### 2. Về phần mừng của công đoàn\n- **Công đoàn** thường tổ chức các hoạt động như:\n  - Tặng quà, thiệp chúc mừng cho nhân viên kết hôn.\n  - Tổ chức tiệc nhỏ hoặc gửi lời chúc qua email nội bộ.\n  - Hỗ trợ tài chính (nếu có) cho các sự kiện lớn như cưới hỏi.\n- Bạn nên liên hệ với **anh Thạch Đức Vinh** (Đại diện Công đoàn, máy lẻ 512) để biết rõ hơn về chính sách cụ thể của công ty.\n\n### 3. Lời khuyên\n- Hãy gửi email hoặc nhắn tin qua cổng nội bộ **Thông Xanh** đến phòng Nhân sự và Công đoàn trước khi kết hôn để:\n  - Xin phép nghỉ việc phù hợp.\n  - Hỏi về các phúc lợi đặc biệt (nếu có).\n  - Nhận lời chúc mừng từ công ty.\n\nNếu bạn cần, tôi có thể giúp soạn thảo email xin phép nghỉ hoặc đề xuất nội dung gửi cho phòng Nhân sự!"
+    },
+    "doc-51": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 16064,
+     "latency_ms": 15436,
+     "error": null,
+     "answer": "Dựa trên báo giá từ **Bếp Tiệc Hương Cau**, đây là thông tin cho đơn đặt 120 suất ăn trưa Set Hội thảo B:\n\n### 1. Giá mỗi suất\n*   **Set Hội thảo B:** **145.000 đồng/suất**.\n    *   *Thực đơn:* Cá basa chiên sốt chanh dây, thịt ba chỉ rim tiêu, trứng hấp nấm, cải thìa xào nấm đông cô, canh chua cá lóc, bánh flan.\n    *   *Gồm:* Cơm trắng/gạo lứt, canh, món chính, món phụ, rau, tráng miệng và chai nước suối 350ml.\n\n### 2. Thời hạn đặt trước (chốt đơn)\nVì đơn của bạn là **120 suất** (thuộc nhóm \"từ 100 suất trở lên\"), theo quy trình đặt hàng:\n*   **Thời hạn xác nhận đơn tối thiểu:** Phải xác nhận và chuyển tiền đặt cọc trước ít nhất **7 ngày làm việc** so với ngày tổ chức.\n*   **Chốt số suất chính thức:** Cần chốt lại số suất cuối cùng trước ngày tổ chức **2 ngày làm việc**.\n\n### 3. Các lưu ý khác cho đơn này\n*   **Phí giao hàng:** Miễn phí nếu địa điểm trong bán kính 5km (từ bếp tại đường Hồ Văn Huê). Nếu xa hơn, sẽ tính theo khoảng cách.\n*   **Thanh toán:** Đặt cọc 30% khi xác nhận đơn, phần còn lại thanh toán trong vòng 10 ngày làm việc sau sự kiện.\n*   **Liên hệ đặt hàng:** Chị Đoàn Thị Mai Hương - **0912 448 316** (từ 8h-20h hằng ngày).\n\nBạn có cần tôi hỗ trợ soạn thảo nội dung gửi cho bếp để xác nhận đơn không?"
+    },
+    "doc-52": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [],
+     "stop_reason": "final",
+     "tokens_in": 1841,
+     "latency_ms": 2876,
+     "error": null,
+     "answer": "Dựa trên phần đầu và cuối của văn bản bạn cung cấp, tôi đã tìm thấy thông tin bạn cần:\n\n**Tông màu trang phục:** Xanh ngọc (cả công ty mặc theo tông màu này)\n\n**Xe đưa đón:**\n- Lượt đi: Khởi hành lúc 16 giờ 45 tại sảnh Sao Khuê, tầng trệt tòa văn phòng công ty\n- Lượt về: Khởi hành lúc 22 giờ 15 tại cổng chính Trung tâm hội nghị Hồng Hạc\n\nThông tin này đã có đầy đủ trong phần cuối của văn bản bạn dán. Bạn không cần phải đọc thêm phần giữa vì các thông tin bạn hỏi đã được cung cấp rồi."
+    },
+    "doc-53": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 14786,
+     "latency_ms": 16713,
+     "error": null,
+     "answer": "Dựa trên **Quy tắc Bảo hiểm Du lịch trong nước — Gói An Khang** của Công ty Bảo hiểm Phù Sa mà bạn cung cấp, tôi xin trả lời câu hỏi của bạn như sau:\n\n### 1. Bạn có được đền bù không?\n**CÓ.** Theo **Quyền lợi 4. Khởi hành muộn** (trích từ trang 6 của văn bản):\n> \"Khi Phương tiện vận tải công cộng mà Người được bảo hiểm đã đặt chỗ khởi hành muộn liên tục từ **6 giờ trở lên** so với lịch trình ghi trên vé... Công ty chi trả...\"\n\nVì máy bay của bạn trễ khoảng **7 tiếng** (tức là hơn 6 tiếng), điều kiện này đã được đáp ứng. Tuy nhiên, cần lưu ý:\n*   Lý do trễ phải là: thời tiết xấu, sự cố kỹ thuật, đình công hoặc yêu cầu của nhà chức trách (không phải do lỗi cá nhân của bạn).\n*   Bạn cần xuất trình **xác nhận của hãng vận tải** về lý do và thời lượng khởi hành muộn.\n\n### 2. Được bao nhiêu tiền?\nTheo quy định:\n> \"Công ty chi trả **400.000 đồng cho mỗi quãng sáu giờ** khởi hành muộn liên tục, tối đa **2.400.000 đồng** cho mỗi hành trình.\"\n\nCách tính cụ thể cho trường hợp trễ 7 tiếng của bạn:\n*   Bạn được tính cho **1 quãng 6 giờ** (vì quy định tính theo từng đơn vị 6 giờ).\n*   Số tiền nhận được = **400.000 đồng**.\n*   Phần trễ thêm 1 tiếng còn lại không được tính thêm vì chưa đủ để tạo thành một \"quãng\" mới (tối đa chỉ nhận cho 1 quãng 6 giờ).\n\n**Tổng số tiền bạn có thể nhận được là: 400.000 đồng.**\n\n### 3. Thủ tục cần làm gì?\n*   Liên hệ tổng đài hỗ trợ 24/7 của Bảo hiểm Phù Sa: **1900 6268**.\n*   Gửi email bồi thường qua mục Liên hệ trên ứng dụng **Phù Sa Care**.\n*   Cung cấp xác nhận của hãng vận tải về việc máy bay trễ chuyến (lý do và thời gian).\n\n### Lưu ý quan trọng:\nQuyền lợi này **không áp dụng** nếu lịch khởi hành đã được hãng thông báo thay đổi từ 24 giờ trở lên trước giờ khởi hành dự kiến. Nếu bạn không biết trước mà máy bay bị trễ đột ngột, bạn vẫn có quyền nhận bồi thường."
+    }
+   }
+  ],
+  "nudge": [
+   {
+    "doc-39": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 5400,
+     "latency_ms": 7754,
+     "error": null,
+     "answer": "Dựa trên nội dung văn bản đã đọc, tôi có thể trả lời câu hỏi của bạn:\n\n**Theo biên bản họp:**\n\n1. **Hạn chót nộp hồ sơ dự thầu gói hộp giấy cho Minh Phát:** 17 giờ ngày 14/11/2026\n   - Nộp bản cứng tại văn phòng Minh Phát ở Thủ Đức\n   - Đồng thời gửi bản điện tử qua cổng đấu thầu của họ\n\n2. **Người phụ trách hồ sơ:** Chị Vũ Thu Hà, Phó phòng Kinh doanh\n   - Là đầu mối chịu trách nhiệm toàn bộ hồ sơ dự thầu\n   - Sẽ gửi danh mục tài liệu cần chuẩn bị cho các phòng trước thứ Sáu tuần này\n\n**Phân công hỗ trợ:**\n- Phòng Kỹ thuật: Hỗ trợ phần thông số kỹ thuật và mẫu in thử\n- Phòng Kế toán: Hỗ trợ phần báo giá và bảo lãnh dự thầu"
+    },
+    "doc-40": {
+     "passed": false,
+     "failed_checks": [
+      "tools_forbidden"
+     ],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [
+      "asks_for_paste"
+     ],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "search_history",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 15000,
+     "latency_ms": 13965,
+     "error": null,
+     "answer": "Dựa trên nội dung kế hoạch chuyển trụ sở văn phòng năm 2026 mà bạn cung cấp, tôi xin trả lời như sau:\n\n**1. Ngày chuyển máy chủ và tủ mạng:**\nMáy chủ và tủ mạng của công ty được chuyển sang trụ sở mới vào **thứ Bảy ngày 12/12/2026**, bắt đầu lúc 7 giờ sáng. Đây là đợt chuyển riêng, không đi chung với các đợt khác.\n\n**2. Người giám sát việc chuyển:**\nViệc chuyển máy chủ và tủ mạng được anh **Lạc Quốc Bảo**, trưởng nhóm hạ tầng của phòng Kỹ thuật, trực tiếp giám sát. Anh này chịu trách nhiệm cho việc tháo dỡ, đóng thùng chống sốc, vận chuyển và lắp đặt lại thiết bị tại trụ sở mới."
+    },
+    "doc-41": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 16724,
+     "latency_ms": 14984,
+     "error": null,
+     "answer": "Dựa trên nội dung sổ tay vận hành bếp trung tâm của chuỗi nhà hàng Mộc Lan mà tôi đã đọc, tôi có thể trả lời câu hỏi của bạn:\n\n**Khi kho âm sâu báo nhiệt độ vượt ngưỡng:**\n\n- **Ngưỡng báo động:** Kho âm sâu số 2 đặt ở **-18°C**. Khi bảng điều khiển báo nhiệt độ trong kho **cao hơn -15°C liên tục quá 20 phút**, nhân viên ca phải thực hiện các bước xử lý.\n\n- **Người cần gọi đầu tiên:** Nhân viên ca phải gọi ngay **anh Tạ Minh Khôi, kỹ thuật viên lạnh của công ty** (máy lẻ 214). \n  - Nếu là giờ hành chính: gọi trực tiếp số máy lẻ 214\n  - Nếu ngoài giờ hành chính: nhờ tổng đài bảo vệ nối máy cho anh\n\n- **Lưu ý quan trọng:** Chỉ khi không liên lạc được với kỹ thuật viên trong vòng 10 phút mới gọi quản lý bếp. Hàng trong kho được giữ nguyên, không chuyển sang kho mát.\n\nSau khi kỹ thuật viên kiểm tra, nếu kho không về được -18°C trong vòng 2 giờ, quản lý bếp sẽ quyết định chuyển hàng sang xe lạnh thuê theo hợp đồng dự phòng."
+    },
+    "doc-42": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [],
+     "stop_reason": "final",
+     "tokens_in": 1838,
+     "latency_ms": 2347,
+     "error": null,
+     "answer": "Theo phần đầu và cuối của văn bản bạn cung cấp:\n\n- **Người dẫn chương trình** được chốt là **chị Kha Ngọc Diệp**, phòng Kinh doanh.\n- **Buổi tổng duyệt** diễn ra vào lúc **14 giờ 30, thứ Sáu ngày 11/12/2026** tại hội trường khách sạn.\n\nThông tin này có trong Email 15 từ Trần Thị Bích Ngân gửi ngày 04/12/2026."
+    },
+    "doc-43": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 10878,
+     "latency_ms": 10757,
+     "error": null,
+     "answer": "Tôi đã tìm thấy thông tin cần thiết:\n\n**Hồ sơ thẩm duyệt phòng cháy chữa cháy:**\n- **Người phụ trách:** Chị **Lương Diệu Linh**, thuộc **phòng Hành chính**\n- Chị này làm việc trực tiếp với đơn vị tư vấn thiết kế và cơ quan cảnh sát phòng cháy.\n\n**Ngày hạn nộp hồ sơ:**\n- Hồ sơ thẩm duyệt thiết kế phòng cháy chữa cháy phải nộp xong trước ngày **10/12/2026**.\n\nĐây là mốc gấp nhất của dự án, vì thời gian thẩm duyệt cộng với thi công hệ thống báo cháy quyết định ngày nghiệm thu, và nghiệm thu lại là điều kiện để nộp hồ sơ giấy phép hoạt động."
+    },
+    "doc-44": {
+     "passed": false,
+     "failed_checks": [
+      "must_mention"
+     ],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": true,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [],
+     "stop_reason": "final",
+     "tokens_in": 4127,
+     "latency_ms": 10228,
+     "error": null,
+     "answer": "Xin lỗi, tôi đã nhầm lẫn trong cách tính toán. Hãy để tôi phân tích lại:\n\n- Tour khởi hành thứ Bảy 12/12/2026\n- Về Hà Nội tối thứ Năm 17/12/2026\n- Tổng cộng 6 ngày 5 đêm\n\nĐếm theo thứ tự:\n- Ngày 1 (đêm 1): 12/12 - khởi hành, nghỉ đêm ở đâu đó\n- Ngày 2 (đêm 2): 13/12\n- Ngày 3 (đêm 3): 14/12\n\nVậy đêm 14/12 chính là **đêm thứ 3** của tour.\n\nTuy nhiên, văn bản bạn cung cấp không ghi rõ đoàn nghỉ ở đâu vào đêm 14/12 (đêm thứ 3). Thông tin chỉ nêu rõ:\n- Hai đêm ở Sa Pa (đêm 4 và đêm 5) có thể đăng ký phòng đơn với mức phụ thu 420.000 đồng.\n- Các đêm còn lại phải đăng ký trước ngày 05/12.\n\nĐể trả lời chính xác, tôi cần biết:\n1. Đêm thứ 3 (đêm 14/12) đoàn nghỉ ở đâu?\n2. Mức phụ thu phòng đơn cho đêm đó là bao nhiêu?\n\nBạn có thể cung cấp thêm thông tin này hoặc kiểm tra lại văn bản gốc để tìm các chi tiết còn thiếu không?"
+    },
+    "doc-45": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [],
+     "stop_reason": "final",
+     "tokens_in": 1851,
+     "latency_ms": 2768,
+     "error": null,
+     "answer": "Không đúng. Theo phần đầu văn bản bạn dán:\n\n> Nhận số báo danh và áo đấu: **thứ Bảy 28/11/2026**, từ 8 giờ đến 18 giờ, tại sảnh B nhà thi đấu Phú Lâm. Không phát số báo danh vào sáng ngày thi đấu.\n\nVăn bản ghi rõ nhận số báo danh là **thứ Bảy 28/11/2026** (chiều), không phải chiều thứ Sáu. Hạn chót đăng ký và chuyển nhượng suất chạy mới là **17 giờ thứ Sáu 20/11/2026**."
+    },
+    "doc-46": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 15461,
+     "latency_ms": 13861,
+     "error": null,
+     "answer": "Dựa trên thông tin bạn cung cấp và nội dung quy chế từ văn bản, mình có thể xác định chính xác học bổng bạn thuộc diện:\n\n## Kết quả xét học bổng cho bạn\n\n**Thông tin của bạn:**\n- Điểm trung bình học kỳ: **3,35** (thang 4)\n- Điểm rèn luyện: **85**\n- Không có học phần phải học lại\n- Đang học năm thứ hai (đáp ứng điều kiện áp dụng quy chế)\n\n## Phân tích theo Điều 9 của Quy chế\n\nBạn thuộc diện **Học bổng Sóng Biếc** vì:\n\n✅ **Điều kiện điểm trung bình:** 3,35 nằm trong khoảng từ **3,20 đến dưới 3,60**  \n✅ **Điều kiện điểm rèn luyện:** 85 đạt yêu cầu từ **80 trở lên**\n\n## Mức học bổng bạn nhận được\n\n- **Mỗi học kỳ: 4.700.000 đồng**\n- Học bổng này được giữ nguyên trong năm học 2026–2027\n- Không phụ thuộc vào mức học phí ngành hay số tín chỉ đăng ký\n\n## Lưu ý quan trọng\n\nBạn cần đảm bảo các điều kiện chung tại Điều 5:\n- Đăng ký và hoàn thành ít nhất **15 tín chỉ** trong học kỳ xét\n- Không bị kỷ luật từ mức khiển trách trở lên\n- Đã hoàn thành học phí trước ngày khoa lập danh sách dự kiến\n\nNếu bạn có thắc mắc thêm về quy trình xét hoặc các trường hợp đặc biệt, mình sẵn sàng giải thích chi tiết hơn!"
+    },
+    "doc-47": {
+     "passed": false,
+     "failed_checks": [
+      "must_mention"
+     ],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      }
+     ],
+     "reached": false,
+     "nudged": [],
+     "answer_check": true,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 7905,
+     "latency_ms": 12305,
+     "error": null,
+     "answer": "Dựa trên nội dung văn bản hợp đồng mà tôi vừa đọc được:\n\n**Về thời hạn báo trước khi trả mặt bằng sớm:**\nTheo Điều 2, khoản 2 của hợp đồng, bên thuê (bên B) muốn trả mặt bằng trước hạn thì phải **thông báo bằng văn bản cho bên A trước ít nhất 75 ngày** tính đến ngày dự kiến trả mặt bằng.\n\n**Về số tiền cọc chủ nhà được giữ lại:**\nVăn bản ghi rõ: \"Tiền đặt cọc 54.000.000 đồng bên B đã chuyển đủ cho bên A vào ngày ký hợp đồng, bên A đã nhận và ký xác nhận dưới đây.\"\n\nTuy nhiên, **hợp đồng không nêu cụ thể** số tiền cọc mà chủ nhà được giữ lại khi bên thuê trả mặt bằng trước hạn. Thông thường:\n- Nếu báo trước đúng 75 ngày theo quy định của hợp đồng, hợp đồng chấm dứt tự nhiên và tiền cọc sẽ được hoàn trả (trừ các khoản chi phí phát sinh nếu có).\n- Nếu không báo trước đủ 75 ngày hoặc vi phạm các điều khoản khác, chủ nhà có thể giữ lại một phần hoặc toàn bộ tiền cọc như hình phạt.\n\nBạn có muốn tôi tìm hiểu thêm về các quy định pháp luật liên quan đến hợp đồng thuê mặt bằng và xử lý khi chấm dứt hợp đồng sớm không?"
+    },
+    "doc-48": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 10483,
+     "latency_ms": 10141,
+     "error": null,
+     "answer": "Tôi đã tìm thấy thông tin về lỗi E7 trong văn bản. Dưới đây là cách xử lý:\n\n## Lỗi E7 - Cảm biến bụi bị bám bẩn\n\n**Nguyên nhân:** Cảm biến bụi bị bám bẩn, máy không đọc được chỉ số bụi mịn nên tự dừng quạt để bảo vệ động cơ.\n\n**Các bước xử lý:**\n1. **Tắt máy và rút phích cắm**\n2. **Mở nắp nhỏ ở hông trái** của máy (nắp che ô cảm biến bụi)\n3. **Lau nhẹ ô cảm biến bụi bằng tăm bông khô**, không dùng nước hay cồn\n4. **Đóng nắp lại**, cắm điện, bật máy\n5. **Giữ nút Hẹn giờ trong 8 giây** để xoá mã lỗi\n\n**Lưu ý quan trọng:**\n- Nếu mã lỗi E7 hiện lại trong vòng một tuần sau khi đã làm theo các bước trên, cảm biến có thể đã hỏng và cần mang máy đi bảo hành.\n\nVì bạn đang chạy máy thì quạt tự dừng và màn hình nháy E7, hãy thực hiện ngay các bước trên. Đây là lỗi có thể tự xử lý được mà không cần gọi bảo hành ngay lập tức."
+    },
+    "doc-49": {
+     "passed": false,
+     "failed_checks": [
+      "must_mention"
+     ],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 17550,
+     "latency_ms": 18053,
+     "error": null,
+     "answer": "Dựa trên nội quy bạn cung cấp, tôi xin trả lời như sau:\n\n**1. Chung cư có cho nuôi mèo không?**\n- **Có**, nhưng phải tuân thủ các quy định tại **Chương XII. VẬT NUÔI**.\n- Theo **Điều 8** (trong phần văn bản bạn đã dán), khu vực sảnh và hành lang **không được phép** để chó, mèo đi vệ sinh hay thả rông. Các quy định chi tiết về vật nuôi sẽ nêu trong Chương XII.\n\n**2. Nếu được thì phải đăng ký ở đâu?**\n- Theo nội quy, các việc đăng ký liên quan đến vật nuôi (nếu có) thường do **Ban quản lý vận hành** tiếp nhận.\n- Bạn cần liên hệ trực tiếp với Ban quản lý vận hành tại:\n  - **Địa chỉ:** Phòng 105, tầng 1, tòa A.\n  - **Giờ mở cửa:** Từ 7 giờ 30 đến 19 giờ hằng ngày.\n  - **Số điện thoại:** Lễ tân tòa A: 028 3910 2206.\n\n**3. Mỗi tháng đóng thêm bao nhiêu?**\n- Trong phần văn bản bạn cung cấp (phần cuối), tôi thấy các khoản phí liên quan đến thẻ cư dân, bể bơi, phòng sinh hoạt chung, nhưng **không thấy đề cập cụ thể về mức phí hàng tháng cho việc nuôi thú cưng**.\n- Thông thường, nếu được phép nuôi, cư dân có thể phải đóng thêm một khoản phí quản lý hoặc bảo hiểm trách nhiệm (nếu có). Tuy nhiên, nội dung này chưa xuất hiện trong văn bản bạn dán.\n\n**Lời khuyên:**\nBạn nên gọi điện trực tiếp cho Ban quản lý vận hành (028 3910 2206) để hỏi rõ:\n- Điều kiện cụ thể về số lượng và chủng loại thú cưng được phép nuôi.\n- Mức phí đăng ký và phí hàng tháng (nếu có).\n- Các quy định chi tiết trong Chương XII về vật nuôi.\n\nNếu bạn cần, tôi có thể giúp soạn thảo nội dung gọi điện hoặc email gửi Ban quản lý để hỏi rõ hơn."
+    },
+    "doc-50": {
+     "passed": false,
+     "failed_checks": [
+      "must_mention"
+     ],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 16029,
+     "latency_ms": 19311,
+     "error": null,
+     "answer": "Xin chào! Tôi đã đọc kỹ sổ tay nhân viên của bạn, nhưng **không tìm thấy thông tin cụ thể về chính sách nghỉ phép cưới** trong các phần đã xem (từ Phần 1 đến Phần 8). Sổ tay này tập trung vào: giờ làm việc, thử việc, lương thưởng, bảo hiểm, thiết bị, quy tắc ứng xử...\n\nTuy nhiên, dựa trên những gì bạn cung cấp ở phần cuối văn bản và thông lệ chung tại Việt Nam, tôi có thể gợi ý như sau:\n\n### 1. Về nghỉ phép cưới\n- **Nghỉ phép cưới** thường không được quy định rõ trong sổ tay nhân viên vì đây là sự kiện cá nhân đặc biệt.\n- Theo **Luật Lao động Việt Nam**, nhân viên có quyền xin nghỉ việc riêng (như cưới hỏi, tang lễ...) nhưng **không bắt buộc phải trả lương** trừ khi công ty có chính sách nội bộ hoặc thỏa ước lao động tập thể quy định khác.\n- Nếu bạn muốn nghỉ mà vẫn có lương, hãy:\n  - Trao đổi với trưởng nhóm và phòng Nhân sự trước khi kết hôn.\n  - Đề xuất lịch nghỉ phù hợp (ví dụ: 1–3 ngày) để đảm bảo công việc không bị ảnh hưởng.\n  - Công ty có thể xem xét hỗ trợ đặc biệt nếu bạn là nhân viên lâu năm hoặc đóng góp tốt.\n\n### 2. Về phần mừng của công đoàn\n- **Công đoàn** thường tổ chức các hoạt động như:\n  - Tặng quà, thiệp chúc mừng cho nhân viên kết hôn.\n  - Tổ chức tiệc nhỏ hoặc gửi lời chúc qua email nội bộ.\n  - Hỗ trợ tài chính (nếu có) cho các sự kiện lớn như cưới hỏi.\n- Bạn nên liên hệ với **anh Thạch Đức Vinh** (Đại diện Công đoàn, máy lẻ 512) để biết rõ hơn về chính sách cụ thể của công ty.\n\n### 3. Lời khuyên\n- Hãy gửi email hoặc nhắn tin qua cổng nội bộ **Thông Xanh** đến phòng Nhân sự và Công đoàn trước khi kết hôn để:\n  - Xin phép nghỉ việc phù hợp.\n  - Hỏi về các phúc lợi đặc biệt (nếu có).\n  - Nhận lời chúc mừng từ công ty.\n\nNếu bạn cần, tôi có thể giúp soạn thảo email xin phép nghỉ hoặc đề xuất nội dung gửi cho phòng Nhân sự!"
+    },
+    "doc-51": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 16064,
+     "latency_ms": 15502,
+     "error": null,
+     "answer": "Dựa trên báo giá từ **Bếp Tiệc Hương Cau**, đây là thông tin cho đơn đặt 120 suất ăn trưa Set Hội thảo B:\n\n### 1. Giá mỗi suất\n*   **Set Hội thảo B:** **145.000 đồng/suất**.\n    *   *Thực đơn:* Cá basa chiên sốt chanh dây, thịt ba chỉ rim tiêu, trứng hấp nấm, cải thìa xào nấm đông cô, canh chua cá lóc, bánh flan.\n    *   *Gồm:* Cơm trắng/gạo lứt, canh, món chính, món phụ, rau, tráng miệng và chai nước suối 350ml.\n\n### 2. Thời hạn đặt trước (chốt đơn)\nVì đơn của bạn là **120 suất** (thuộc nhóm \"từ 100 suất trở lên\"), theo quy trình đặt hàng:\n*   **Thời hạn xác nhận đơn tối thiểu:** Phải xác nhận và chuyển tiền đặt cọc trước ít nhất **7 ngày làm việc** so với ngày tổ chức.\n*   **Chốt số suất chính thức:** Cần chốt lại số suất cuối cùng trước ngày tổ chức **2 ngày làm việc**.\n\n### 3. Các lưu ý khác cho đơn này\n*   **Phí giao hàng:** Miễn phí nếu địa điểm trong bán kính 5km (từ bếp tại đường Hồ Văn Huê). Nếu xa hơn, sẽ tính theo khoảng cách.\n*   **Thanh toán:** Đặt cọc 30% khi xác nhận đơn, phần còn lại thanh toán trong vòng 10 ngày làm việc sau sự kiện.\n*   **Liên hệ đặt hàng:** Chị Đoàn Thị Mai Hương - **0912 448 316** (từ 8h-20h hằng ngày).\n\nBạn có cần tôi hỗ trợ soạn thảo nội dung gửi cho bếp để xác nhận đơn không?"
+    },
+    "doc-52": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [],
+     "stop_reason": "final",
+     "tokens_in": 1841,
+     "latency_ms": 2890,
+     "error": null,
+     "answer": "Dựa trên phần đầu và cuối của văn bản bạn cung cấp, tôi đã tìm thấy thông tin bạn cần:\n\n**Tông màu trang phục:** Xanh ngọc (cả công ty mặc theo tông màu này)\n\n**Xe đưa đón:**\n- Lượt đi: Khởi hành lúc 16 giờ 45 tại sảnh Sao Khuê, tầng trệt tòa văn phòng công ty\n- Lượt về: Khởi hành lúc 22 giờ 15 tại cổng chính Trung tâm hội nghị Hồng Hạc\n\nThông tin này đã có đầy đủ trong phần cuối của văn bản bạn dán. Bạn không cần phải đọc thêm phần giữa vì các thông tin bạn hỏi đã được cung cấp rồi."
+    },
+    "doc-53": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 14786,
+     "latency_ms": 16671,
+     "error": null,
+     "answer": "Dựa trên **Quy tắc Bảo hiểm Du lịch trong nước — Gói An Khang** của Công ty Bảo hiểm Phù Sa mà bạn cung cấp, tôi xin trả lời câu hỏi của bạn như sau:\n\n### 1. Bạn có được đền bù không?\n**CÓ.** Theo **Quyền lợi 4. Khởi hành muộn** (trích từ trang 6 của văn bản):\n> \"Khi Phương tiện vận tải công cộng mà Người được bảo hiểm đã đặt chỗ khởi hành muộn liên tục từ **6 giờ trở lên** so với lịch trình ghi trên vé... Công ty chi trả...\"\n\nVì máy bay của bạn trễ khoảng **7 tiếng** (tức là hơn 6 tiếng), điều kiện này đã được đáp ứng. Tuy nhiên, cần lưu ý:\n*   Lý do trễ phải là: thời tiết xấu, sự cố kỹ thuật, đình công hoặc yêu cầu của nhà chức trách (không phải do lỗi cá nhân của bạn).\n*   Bạn cần xuất trình **xác nhận của hãng vận tải** về lý do và thời lượng khởi hành muộn.\n\n### 2. Được bao nhiêu tiền?\nTheo quy định:\n> \"Công ty chi trả **400.000 đồng cho mỗi quãng sáu giờ** khởi hành muộn liên tục, tối đa **2.400.000 đồng** cho mỗi hành trình.\"\n\nCách tính cụ thể cho trường hợp trễ 7 tiếng của bạn:\n*   Bạn được tính cho **1 quãng 6 giờ** (vì quy định tính theo từng đơn vị 6 giờ).\n*   Số tiền nhận được = **400.000 đồng**.\n*   Phần trễ thêm 1 tiếng còn lại không được tính thêm vì chưa đủ để tạo thành một \"quãng\" mới (tối đa chỉ nhận cho 1 quãng 6 giờ).\n\n**Tổng số tiền bạn có thể nhận được là: 400.000 đồng.**\n\n### 3. Thủ tục cần làm gì?\n*   Liên hệ tổng đài hỗ trợ 24/7 của Bảo hiểm Phù Sa: **1900 6268**.\n*   Gửi email bồi thường qua mục Liên hệ trên ứng dụng **Phù Sa Care**.\n*   Cung cấp xác nhận của hãng vận tải về việc máy bay trễ chuyến (lý do và thời gian).\n\n### Lưu ý quan trọng:\nQuyền lợi này **không áp dụng** nếu lịch khởi hành đã được hãng thông báo thay đổi từ 24 giờ trở lên trước giờ khởi hành dự kiến. Nếu bạn không biết trước mà máy bay bị trễ đột ngột, bạn vẫn có quyền nhận bồi thường."
+    }
+   },
+   {
+    "doc-39": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 5400,
+     "latency_ms": 7706,
+     "error": null,
+     "answer": "Dựa trên nội dung văn bản đã đọc, tôi có thể trả lời câu hỏi của bạn:\n\n**Theo biên bản họp:**\n\n1. **Hạn chót nộp hồ sơ dự thầu gói hộp giấy cho Minh Phát:** 17 giờ ngày 14/11/2026\n   - Nộp bản cứng tại văn phòng Minh Phát ở Thủ Đức\n   - Đồng thời gửi bản điện tử qua cổng đấu thầu của họ\n\n2. **Người phụ trách hồ sơ:** Chị Vũ Thu Hà, Phó phòng Kinh doanh\n   - Là đầu mối chịu trách nhiệm toàn bộ hồ sơ dự thầu\n   - Sẽ gửi danh mục tài liệu cần chuẩn bị cho các phòng trước thứ Sáu tuần này\n\n**Phân công hỗ trợ:**\n- Phòng Kỹ thuật: Hỗ trợ phần thông số kỹ thuật và mẫu in thử\n- Phòng Kế toán: Hỗ trợ phần báo giá và bảo lãnh dự thầu"
+    },
+    "doc-40": {
+     "passed": false,
+     "failed_checks": [
+      "tools_forbidden"
+     ],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [
+      "asks_for_paste"
+     ],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "search_history",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 15000,
+     "latency_ms": 13987,
+     "error": null,
+     "answer": "Dựa trên nội dung kế hoạch chuyển trụ sở văn phòng năm 2026 mà bạn cung cấp, tôi xin trả lời như sau:\n\n**1. Ngày chuyển máy chủ và tủ mạng:**\nMáy chủ và tủ mạng của công ty được chuyển sang trụ sở mới vào **thứ Bảy ngày 12/12/2026**, bắt đầu lúc 7 giờ sáng. Đây là đợt chuyển riêng, không đi chung với các đợt khác.\n\n**2. Người giám sát việc chuyển:**\nViệc chuyển máy chủ và tủ mạng được anh **Lạc Quốc Bảo**, trưởng nhóm hạ tầng của phòng Kỹ thuật, trực tiếp giám sát. Anh này chịu trách nhiệm cho việc tháo dỡ, đóng thùng chống sốc, vận chuyển và lắp đặt lại thiết bị tại trụ sở mới."
+    },
+    "doc-41": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 16724,
+     "latency_ms": 15101,
+     "error": null,
+     "answer": "Dựa trên nội dung sổ tay vận hành bếp trung tâm của chuỗi nhà hàng Mộc Lan mà tôi đã đọc, tôi có thể trả lời câu hỏi của bạn:\n\n**Khi kho âm sâu báo nhiệt độ vượt ngưỡng:**\n\n- **Ngưỡng báo động:** Kho âm sâu số 2 đặt ở **-18°C**. Khi bảng điều khiển báo nhiệt độ trong kho **cao hơn -15°C liên tục quá 20 phút**, nhân viên ca phải thực hiện các bước xử lý.\n\n- **Người cần gọi đầu tiên:** Nhân viên ca phải gọi ngay **anh Tạ Minh Khôi, kỹ thuật viên lạnh của công ty** (máy lẻ 214). \n  - Nếu là giờ hành chính: gọi trực tiếp số máy lẻ 214\n  - Nếu ngoài giờ hành chính: nhờ tổng đài bảo vệ nối máy cho anh\n\n- **Lưu ý quan trọng:** Chỉ khi không liên lạc được với kỹ thuật viên trong vòng 10 phút mới gọi quản lý bếp. Hàng trong kho được giữ nguyên, không chuyển sang kho mát.\n\nSau khi kỹ thuật viên kiểm tra, nếu kho không về được -18°C trong vòng 2 giờ, quản lý bếp sẽ quyết định chuyển hàng sang xe lạnh thuê theo hợp đồng dự phòng."
+    },
+    "doc-42": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [],
+     "stop_reason": "final",
+     "tokens_in": 1838,
+     "latency_ms": 2368,
+     "error": null,
+     "answer": "Theo phần đầu và cuối của văn bản bạn cung cấp:\n\n- **Người dẫn chương trình** được chốt là **chị Kha Ngọc Diệp**, phòng Kinh doanh.\n- **Buổi tổng duyệt** diễn ra vào lúc **14 giờ 30, thứ Sáu ngày 11/12/2026** tại hội trường khách sạn.\n\nThông tin này có trong Email 15 từ Trần Thị Bích Ngân gửi ngày 04/12/2026."
+    },
+    "doc-43": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 10878,
+     "latency_ms": 10715,
+     "error": null,
+     "answer": "Tôi đã tìm thấy thông tin cần thiết:\n\n**Hồ sơ thẩm duyệt phòng cháy chữa cháy:**\n- **Người phụ trách:** Chị **Lương Diệu Linh**, thuộc **phòng Hành chính**\n- Chị này làm việc trực tiếp với đơn vị tư vấn thiết kế và cơ quan cảnh sát phòng cháy.\n\n**Ngày hạn nộp hồ sơ:**\n- Hồ sơ thẩm duyệt thiết kế phòng cháy chữa cháy phải nộp xong trước ngày **10/12/2026**.\n\nĐây là mốc gấp nhất của dự án, vì thời gian thẩm duyệt cộng với thi công hệ thống báo cháy quyết định ngày nghiệm thu, và nghiệm thu lại là điều kiện để nộp hồ sơ giấy phép hoạt động."
+    },
+    "doc-44": {
+     "passed": false,
+     "failed_checks": [
+      "must_mention"
+     ],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": true,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [],
+     "stop_reason": "final",
+     "tokens_in": 4127,
+     "latency_ms": 10121,
+     "error": null,
+     "answer": "Xin lỗi, tôi đã nhầm lẫn trong cách tính toán. Hãy để tôi phân tích lại:\n\n- Tour khởi hành thứ Bảy 12/12/2026\n- Về Hà Nội tối thứ Năm 17/12/2026\n- Tổng cộng 6 ngày 5 đêm\n\nĐếm theo thứ tự:\n- Ngày 1 (đêm 1): 12/12 - khởi hành, nghỉ đêm ở đâu đó\n- Ngày 2 (đêm 2): 13/12\n- Ngày 3 (đêm 3): 14/12\n\nVậy đêm 14/12 chính là **đêm thứ 3** của tour.\n\nTuy nhiên, văn bản bạn cung cấp không ghi rõ đoàn nghỉ ở đâu vào đêm 14/12 (đêm thứ 3). Thông tin chỉ nêu rõ:\n- Hai đêm ở Sa Pa (đêm 4 và đêm 5) có thể đăng ký phòng đơn với mức phụ thu 420.000 đồng.\n- Các đêm còn lại phải đăng ký trước ngày 05/12.\n\nĐể trả lời chính xác, tôi cần biết:\n1. Đêm thứ 3 (đêm 14/12) đoàn nghỉ ở đâu?\n2. Mức phụ thu phòng đơn cho đêm đó là bao nhiêu?\n\nBạn có thể cung cấp thêm thông tin này hoặc kiểm tra lại văn bản gốc để tìm các chi tiết còn thiếu không?"
+    },
+    "doc-45": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [],
+     "stop_reason": "final",
+     "tokens_in": 1851,
+     "latency_ms": 2757,
+     "error": null,
+     "answer": "Không đúng. Theo phần đầu văn bản bạn dán:\n\n> Nhận số báo danh và áo đấu: **thứ Bảy 28/11/2026**, từ 8 giờ đến 18 giờ, tại sảnh B nhà thi đấu Phú Lâm. Không phát số báo danh vào sáng ngày thi đấu.\n\nVăn bản ghi rõ nhận số báo danh là **thứ Bảy 28/11/2026** (chiều), không phải chiều thứ Sáu. Hạn chót đăng ký và chuyển nhượng suất chạy mới là **17 giờ thứ Sáu 20/11/2026**."
+    },
+    "doc-46": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 15461,
+     "latency_ms": 13807,
+     "error": null,
+     "answer": "Dựa trên thông tin bạn cung cấp và nội dung quy chế từ văn bản, mình có thể xác định chính xác học bổng bạn thuộc diện:\n\n## Kết quả xét học bổng cho bạn\n\n**Thông tin của bạn:**\n- Điểm trung bình học kỳ: **3,35** (thang 4)\n- Điểm rèn luyện: **85**\n- Không có học phần phải học lại\n- Đang học năm thứ hai (đáp ứng điều kiện áp dụng quy chế)\n\n## Phân tích theo Điều 9 của Quy chế\n\nBạn thuộc diện **Học bổng Sóng Biếc** vì:\n\n✅ **Điều kiện điểm trung bình:** 3,35 nằm trong khoảng từ **3,20 đến dưới 3,60**  \n✅ **Điều kiện điểm rèn luyện:** 85 đạt yêu cầu từ **80 trở lên**\n\n## Mức học bổng bạn nhận được\n\n- **Mỗi học kỳ: 4.700.000 đồng**\n- Học bổng này được giữ nguyên trong năm học 2026–2027\n- Không phụ thuộc vào mức học phí ngành hay số tín chỉ đăng ký\n\n## Lưu ý quan trọng\n\nBạn cần đảm bảo các điều kiện chung tại Điều 5:\n- Đăng ký và hoàn thành ít nhất **15 tín chỉ** trong học kỳ xét\n- Không bị kỷ luật từ mức khiển trách trở lên\n- Đã hoàn thành học phí trước ngày khoa lập danh sách dự kiến\n\nNếu bạn có thắc mắc thêm về quy trình xét hoặc các trường hợp đặc biệt, mình sẵn sàng giải thích chi tiết hơn!"
+    },
+    "doc-47": {
+     "passed": false,
+     "failed_checks": [
+      "must_mention"
+     ],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      }
+     ],
+     "reached": false,
+     "nudged": [],
+     "answer_check": true,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 7905,
+     "latency_ms": 12358,
+     "error": null,
+     "answer": "Dựa trên nội dung văn bản hợp đồng mà tôi vừa đọc được:\n\n**Về thời hạn báo trước khi trả mặt bằng sớm:**\nTheo Điều 2, khoản 2 của hợp đồng, bên thuê (bên B) muốn trả mặt bằng trước hạn thì phải **thông báo bằng văn bản cho bên A trước ít nhất 75 ngày** tính đến ngày dự kiến trả mặt bằng.\n\n**Về số tiền cọc chủ nhà được giữ lại:**\nVăn bản ghi rõ: \"Tiền đặt cọc 54.000.000 đồng bên B đã chuyển đủ cho bên A vào ngày ký hợp đồng, bên A đã nhận và ký xác nhận dưới đây.\"\n\nTuy nhiên, **hợp đồng không nêu cụ thể** số tiền cọc mà chủ nhà được giữ lại khi bên thuê trả mặt bằng trước hạn. Thông thường:\n- Nếu báo trước đúng 75 ngày theo quy định của hợp đồng, hợp đồng chấm dứt tự nhiên và tiền cọc sẽ được hoàn trả (trừ các khoản chi phí phát sinh nếu có).\n- Nếu không báo trước đủ 75 ngày hoặc vi phạm các điều khoản khác, chủ nhà có thể giữ lại một phần hoặc toàn bộ tiền cọc như hình phạt.\n\nBạn có muốn tôi tìm hiểu thêm về các quy định pháp luật liên quan đến hợp đồng thuê mặt bằng và xử lý khi chấm dứt hợp đồng sớm không?"
+    },
+    "doc-48": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 10483,
+     "latency_ms": 10176,
+     "error": null,
+     "answer": "Tôi đã tìm thấy thông tin về lỗi E7 trong văn bản. Dưới đây là cách xử lý:\n\n## Lỗi E7 - Cảm biến bụi bị bám bẩn\n\n**Nguyên nhân:** Cảm biến bụi bị bám bẩn, máy không đọc được chỉ số bụi mịn nên tự dừng quạt để bảo vệ động cơ.\n\n**Các bước xử lý:**\n1. **Tắt máy và rút phích cắm**\n2. **Mở nắp nhỏ ở hông trái** của máy (nắp che ô cảm biến bụi)\n3. **Lau nhẹ ô cảm biến bụi bằng tăm bông khô**, không dùng nước hay cồn\n4. **Đóng nắp lại**, cắm điện, bật máy\n5. **Giữ nút Hẹn giờ trong 8 giây** để xoá mã lỗi\n\n**Lưu ý quan trọng:**\n- Nếu mã lỗi E7 hiện lại trong vòng một tuần sau khi đã làm theo các bước trên, cảm biến có thể đã hỏng và cần mang máy đi bảo hành.\n\nVì bạn đang chạy máy thì quạt tự dừng và màn hình nháy E7, hãy thực hiện ngay các bước trên. Đây là lỗi có thể tự xử lý được mà không cần gọi bảo hành ngay lập tức."
+    },
+    "doc-49": {
+     "passed": false,
+     "failed_checks": [
+      "must_mention"
+     ],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 17550,
+     "latency_ms": 18091,
+     "error": null,
+     "answer": "Dựa trên nội quy bạn cung cấp, tôi xin trả lời như sau:\n\n**1. Chung cư có cho nuôi mèo không?**\n- **Có**, nhưng phải tuân thủ các quy định tại **Chương XII. VẬT NUÔI**.\n- Theo **Điều 8** (trong phần văn bản bạn đã dán), khu vực sảnh và hành lang **không được phép** để chó, mèo đi vệ sinh hay thả rông. Các quy định chi tiết về vật nuôi sẽ nêu trong Chương XII.\n\n**2. Nếu được thì phải đăng ký ở đâu?**\n- Theo nội quy, các việc đăng ký liên quan đến vật nuôi (nếu có) thường do **Ban quản lý vận hành** tiếp nhận.\n- Bạn cần liên hệ trực tiếp với Ban quản lý vận hành tại:\n  - **Địa chỉ:** Phòng 105, tầng 1, tòa A.\n  - **Giờ mở cửa:** Từ 7 giờ 30 đến 19 giờ hằng ngày.\n  - **Số điện thoại:** Lễ tân tòa A: 028 3910 2206.\n\n**3. Mỗi tháng đóng thêm bao nhiêu?**\n- Trong phần văn bản bạn cung cấp (phần cuối), tôi thấy các khoản phí liên quan đến thẻ cư dân, bể bơi, phòng sinh hoạt chung, nhưng **không thấy đề cập cụ thể về mức phí hàng tháng cho việc nuôi thú cưng**.\n- Thông thường, nếu được phép nuôi, cư dân có thể phải đóng thêm một khoản phí quản lý hoặc bảo hiểm trách nhiệm (nếu có). Tuy nhiên, nội dung này chưa xuất hiện trong văn bản bạn dán.\n\n**Lời khuyên:**\nBạn nên gọi điện trực tiếp cho Ban quản lý vận hành (028 3910 2206) để hỏi rõ:\n- Điều kiện cụ thể về số lượng và chủng loại thú cưng được phép nuôi.\n- Mức phí đăng ký và phí hàng tháng (nếu có).\n- Các quy định chi tiết trong Chương XII về vật nuôi.\n\nNếu bạn cần, tôi có thể giúp soạn thảo nội dung gọi điện hoặc email gửi Ban quản lý để hỏi rõ hơn."
+    },
+    "doc-50": {
+     "passed": false,
+     "failed_checks": [
+      "must_mention"
+     ],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 16029,
+     "latency_ms": 19235,
+     "error": null,
+     "answer": "Xin chào! Tôi đã đọc kỹ sổ tay nhân viên của bạn, nhưng **không tìm thấy thông tin cụ thể về chính sách nghỉ phép cưới** trong các phần đã xem (từ Phần 1 đến Phần 8). Sổ tay này tập trung vào: giờ làm việc, thử việc, lương thưởng, bảo hiểm, thiết bị, quy tắc ứng xử...\n\nTuy nhiên, dựa trên những gì bạn cung cấp ở phần cuối văn bản và thông lệ chung tại Việt Nam, tôi có thể gợi ý như sau:\n\n### 1. Về nghỉ phép cưới\n- **Nghỉ phép cưới** thường không được quy định rõ trong sổ tay nhân viên vì đây là sự kiện cá nhân đặc biệt.\n- Theo **Luật Lao động Việt Nam**, nhân viên có quyền xin nghỉ việc riêng (như cưới hỏi, tang lễ...) nhưng **không bắt buộc phải trả lương** trừ khi công ty có chính sách nội bộ hoặc thỏa ước lao động tập thể quy định khác.\n- Nếu bạn muốn nghỉ mà vẫn có lương, hãy:\n  - Trao đổi với trưởng nhóm và phòng Nhân sự trước khi kết hôn.\n  - Đề xuất lịch nghỉ phù hợp (ví dụ: 1–3 ngày) để đảm bảo công việc không bị ảnh hưởng.\n  - Công ty có thể xem xét hỗ trợ đặc biệt nếu bạn là nhân viên lâu năm hoặc đóng góp tốt.\n\n### 2. Về phần mừng của công đoàn\n- **Công đoàn** thường tổ chức các hoạt động như:\n  - Tặng quà, thiệp chúc mừng cho nhân viên kết hôn.\n  - Tổ chức tiệc nhỏ hoặc gửi lời chúc qua email nội bộ.\n  - Hỗ trợ tài chính (nếu có) cho các sự kiện lớn như cưới hỏi.\n- Bạn nên liên hệ với **anh Thạch Đức Vinh** (Đại diện Công đoàn, máy lẻ 512) để biết rõ hơn về chính sách cụ thể của công ty.\n\n### 3. Lời khuyên\n- Hãy gửi email hoặc nhắn tin qua cổng nội bộ **Thông Xanh** đến phòng Nhân sự và Công đoàn trước khi kết hôn để:\n  - Xin phép nghỉ việc phù hợp.\n  - Hỏi về các phúc lợi đặc biệt (nếu có).\n  - Nhận lời chúc mừng từ công ty.\n\nNếu bạn cần, tôi có thể giúp soạn thảo email xin phép nghỉ hoặc đề xuất nội dung gửi cho phòng Nhân sự!"
+    },
+    "doc-51": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 16064,
+     "latency_ms": 15410,
+     "error": null,
+     "answer": "Dựa trên báo giá từ **Bếp Tiệc Hương Cau**, đây là thông tin cho đơn đặt 120 suất ăn trưa Set Hội thảo B:\n\n### 1. Giá mỗi suất\n*   **Set Hội thảo B:** **145.000 đồng/suất**.\n    *   *Thực đơn:* Cá basa chiên sốt chanh dây, thịt ba chỉ rim tiêu, trứng hấp nấm, cải thìa xào nấm đông cô, canh chua cá lóc, bánh flan.\n    *   *Gồm:* Cơm trắng/gạo lứt, canh, món chính, món phụ, rau, tráng miệng và chai nước suối 350ml.\n\n### 2. Thời hạn đặt trước (chốt đơn)\nVì đơn của bạn là **120 suất** (thuộc nhóm \"từ 100 suất trở lên\"), theo quy trình đặt hàng:\n*   **Thời hạn xác nhận đơn tối thiểu:** Phải xác nhận và chuyển tiền đặt cọc trước ít nhất **7 ngày làm việc** so với ngày tổ chức.\n*   **Chốt số suất chính thức:** Cần chốt lại số suất cuối cùng trước ngày tổ chức **2 ngày làm việc**.\n\n### 3. Các lưu ý khác cho đơn này\n*   **Phí giao hàng:** Miễn phí nếu địa điểm trong bán kính 5km (từ bếp tại đường Hồ Văn Huê). Nếu xa hơn, sẽ tính theo khoảng cách.\n*   **Thanh toán:** Đặt cọc 30% khi xác nhận đơn, phần còn lại thanh toán trong vòng 10 ngày làm việc sau sự kiện.\n*   **Liên hệ đặt hàng:** Chị Đoàn Thị Mai Hương - **0912 448 316** (từ 8h-20h hằng ngày).\n\nBạn có cần tôi hỗ trợ soạn thảo nội dung gửi cho bếp để xác nhận đơn không?"
+    },
+    "doc-52": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [],
+     "stop_reason": "final",
+     "tokens_in": 1841,
+     "latency_ms": 2899,
+     "error": null,
+     "answer": "Dựa trên phần đầu và cuối của văn bản bạn cung cấp, tôi đã tìm thấy thông tin bạn cần:\n\n**Tông màu trang phục:** Xanh ngọc (cả công ty mặc theo tông màu này)\n\n**Xe đưa đón:**\n- Lượt đi: Khởi hành lúc 16 giờ 45 tại sảnh Sao Khuê, tầng trệt tòa văn phòng công ty\n- Lượt về: Khởi hành lúc 22 giờ 15 tại cổng chính Trung tâm hội nghị Hồng Hạc\n\nThông tin này đã có đầy đủ trong phần cuối của văn bản bạn dán. Bạn không cần phải đọc thêm phần giữa vì các thông tin bạn hỏi đã được cung cấp rồi."
+    },
+    "doc-53": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 14786,
+     "latency_ms": 16746,
+     "error": null,
+     "answer": "Dựa trên **Quy tắc Bảo hiểm Du lịch trong nước — Gói An Khang** của Công ty Bảo hiểm Phù Sa mà bạn cung cấp, tôi xin trả lời câu hỏi của bạn như sau:\n\n### 1. Bạn có được đền bù không?\n**CÓ.** Theo **Quyền lợi 4. Khởi hành muộn** (trích từ trang 6 của văn bản):\n> \"Khi Phương tiện vận tải công cộng mà Người được bảo hiểm đã đặt chỗ khởi hành muộn liên tục từ **6 giờ trở lên** so với lịch trình ghi trên vé... Công ty chi trả...\"\n\nVì máy bay của bạn trễ khoảng **7 tiếng** (tức là hơn 6 tiếng), điều kiện này đã được đáp ứng. Tuy nhiên, cần lưu ý:\n*   Lý do trễ phải là: thời tiết xấu, sự cố kỹ thuật, đình công hoặc yêu cầu của nhà chức trách (không phải do lỗi cá nhân của bạn).\n*   Bạn cần xuất trình **xác nhận của hãng vận tải** về lý do và thời lượng khởi hành muộn.\n\n### 2. Được bao nhiêu tiền?\nTheo quy định:\n> \"Công ty chi trả **400.000 đồng cho mỗi quãng sáu giờ** khởi hành muộn liên tục, tối đa **2.400.000 đồng** cho mỗi hành trình.\"\n\nCách tính cụ thể cho trường hợp trễ 7 tiếng của bạn:\n*   Bạn được tính cho **1 quãng 6 giờ** (vì quy định tính theo từng đơn vị 6 giờ).\n*   Số tiền nhận được = **400.000 đồng**.\n*   Phần trễ thêm 1 tiếng còn lại không được tính thêm vì chưa đủ để tạo thành một \"quãng\" mới (tối đa chỉ nhận cho 1 quãng 6 giờ).\n\n**Tổng số tiền bạn có thể nhận được là: 400.000 đồng.**\n\n### 3. Thủ tục cần làm gì?\n*   Liên hệ tổng đài hỗ trợ 24/7 của Bảo hiểm Phù Sa: **1900 6268**.\n*   Gửi email bồi thường qua mục Liên hệ trên ứng dụng **Phù Sa Care**.\n*   Cung cấp xác nhận của hãng vận tải về việc máy bay trễ chuyến (lý do và thời gian).\n\n### Lưu ý quan trọng:\nQuyền lợi này **không áp dụng** nếu lịch khởi hành đã được hãng thông báo thay đổi từ 24 giờ trở lên trước giờ khởi hành dự kiến. Nếu bạn không biết trước mà máy bay bị trễ đột ngột, bạn vẫn có quyền nhận bồi thường."
+    }
+   }
+  ],
+  "both": [
+   {
+    "doc-39": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 5319,
+     "latency_ms": 5459,
+     "error": null,
+     "answer": "Dựa trên nội dung văn bản đã đọc, mình có thể trả lời câu hỏi của bạn:\n\n**Hạn chót nộp hồ sơ dự thầu gói hộp giấy cho Minh Phát:** 17 giờ ngày 14/11/2026.\n\n**Người phụ trách hồ sơ:** Chị Vũ Thu Hà, Phó phòng Kinh doanh (được ông Thịnh giao làm đầu mối chịu trách nhiệm toàn bộ hồ sơ).\n\nCác phòng hỗ trợ:\n- Phòng Kỹ thuật: hỗ trợ phần thông số kỹ thuật và mẫu in thử\n- Phòng Kế toán: hỗ trợ phần báo giá và bảo lãnh dự thầu"
+    },
+    "doc-40": {
+     "passed": false,
+     "failed_checks": [
+      "must_mention"
+     ],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      }
+     ],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 5359,
+     "latency_ms": 7046,
+     "error": null,
+     "answer": "Dựa trên văn bản kế hoạch chuyển trụ sở, tôi có thể trả lời câu hỏi của bạn:\n\n**Máy chủ và tủ mạng** sẽ được chuyển trong **Đợt 3**, tuy nhiên văn bản không nêu cụ thể ngày chính xác cho đợt này. Tuy nhiên, dựa vào thứ tự các đợt:\n- Đợt 1: Thứ Bảy 28/11\n- Đợt 2: Thứ Bảy 05/12  \n- Đợt 4: Thứ Bảy 19/12 và Chủ nhật 20/12\n\nVậy **Đợt 3 (máy chủ và tủ mạng)** sẽ diễn ra vào **Thứ Bảy 12/12**.\n\n**Người giám sát việc chuyển máy chủ và tủ mạng**: Theo văn bản, **phòng Kỹ thuật** là đơn vị quản lý hai máy chủ, tủ mạng, tổng đài điện thoại nội bộ và hệ thống camera. Văn bản cũng đề cập đến **trưởng nhóm hạ tầng của phòng Kỹ thuật** là thành viên trong ban điều phối.\n\nTuy nhiên, văn bản không nêu rõ ai là người giám sát trực tiếp cho đợt chuyển này. Thông thường, trưởng nhóm hạ tầng của phòng Kỹ thuật sẽ chịu trách nhiệm giám sát việc chuyển các thiết bị công nghệ thông tin này."
+    },
+    "doc-41": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 4,
+       "n": 3,
+       "returned": [
+        4,
+        5,
+        6
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": true,
+     "searched": true,
+     "search_paste_results": [
+      [
+       6,
+       4,
+       7
+      ]
+     ],
+     "found_by_search": true,
+     "read_at_search_hit": true,
+     "search_before_reaching": true,
+     "answered_after_search_without_read": false,
+     "leak": true,
+     "tools": [
+      "search_documents",
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 13336,
+     "latency_ms": 11853,
+     "error": null,
+     "answer": "Xin lỗi, tôi cần kiểm tra lại câu trả lời của mình. Sau khi xem xét kỹ nội dung văn bản, tôi thấy:\n\n**Thông tin chính xác từ sổ tay:**\n\nKhi kho âm sâu báo nhiệt độ vượt ngưỡng:\n- **Ngưỡng báo động**: Nhiệt độ trong kho cao hơn **-15°C** (tức là trên -15°C) liên tục quá **20 phút**\n- **Người cần gọi đầu tiên**: **Anh Tạ Minh Khôi**, kỹ thuật viên lạnh của công ty, máy lẻ **214**\n\nQuy trình xử lý:\n1. Nhân viên ca không mở cửa kho\n2. Ghi giờ báo động vào sổ thiết bị\n3. Gọi ngay anh Tạ Minh Khôi (máy lẻ 214)\n4. Nếu ngoài giờ hành chính thì nhờ tổng đài bảo vệ nối máy cho anh\n5. Chỉ khi không liên lạc được với anh trong 10 phút mới gọi quản lý bếp\n\nLưu ý: Hàng trong kho được giữ nguyên, không chuyển sang kho mát."
+    },
+    "doc-42": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [],
+     "stop_reason": "final",
+     "tokens_in": 1846,
+     "latency_ms": 1875,
+     "error": null,
+     "answer": "Theo chuỗi email đã dán:\n\n- **Người dẫn chương trình** được chốt là **chị Kha Ngọc Diệp**, thuộc phòng Kinh doanh.\n- **Buổi tổng duyệt** diễn ra vào lúc **14 giờ 30, thứ Sáu ngày 11/12/2026** tại hội trường khách sạn."
+    },
+    "doc-43": {
+     "passed": false,
+     "failed_checks": [
+      "must_mention"
+     ],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 1,
+       "n": 3,
+       "returned": [
+        1,
+        2,
+        3
+       ]
+      }
+     ],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": true,
+     "search_paste_results": [
+      [
+       0,
+       1,
+       3
+      ]
+     ],
+     "found_by_search": true,
+     "read_at_search_hit": true,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "search_documents",
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 8647,
+     "latency_ms": 7694,
+     "error": null,
+     "answer": "Dựa trên nội dung văn bản đã tìm thấy, tôi có thể trả lời câu hỏi của bạn:\n\n**Hồ sơ thẩm duyệt thiết kế phòng cháy chữa cháy và nghiệm thu sau thi công:**\n\n- **Người phụ trách:** Chị Lương Diệu Linh, thuộc phòng Hành chính\n- **Công việc:** Làm việc trực tiếp với đơn vị tư vấn thiết kế và cơ quan cảnh sát phòng cháy\n\nTuy nhiên, văn bản này không nêu rõ thời hạn nộp hồ sơ trước ngày nào. Thông tin về mốc thời gian cụ thể cho việc nộp hồ sơ PCCC có thể nằm ở phần khác của văn bản (có thể là mục 8 về các mốc thời gian mà người dùng đã đề cập trong câu hỏi).\n\nBạn có muốn tôi tìm thêm thông tin về thời hạn nộp hồ sơ không?"
+    },
+    "doc-44": {
+     "passed": false,
+     "failed_checks": [
+      "completed",
+      "must_mention"
+     ],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [],
+     "stop_reason": null,
+     "tokens_in": null,
+     "latency_ms": 16543,
+     "error": "OllamaUnavailableError: Cannot connect to Ollama",
+     "answer": ""
+    },
+    "doc-45": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [],
+     "stop_reason": "final",
+     "tokens_in": 1859,
+     "latency_ms": 2688,
+     "error": null,
+     "answer": "Không đúng. Theo điều lệ bạn dán: nhận số báo danh và áo đấu là **thứ Bảy 28/11/2026**, từ 8 giờ đến 18 giờ, tại sảnh B nhà thi đấu Phú Lâm. Không có thông tin nào về việc nhận số báo danh vào chiều thứ Sáu tại nhà văn hóa phường.\n\nNhà văn hóa phường chỉ dùng để hỏi thông tin (không nhận vật phẩm), và hạn chót đăng ký/chuyển nhượng suất chạy là 17 giờ thứ Sáu 20/11/2026."
+    },
+    "doc-46": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 15376,
+     "latency_ms": 14468,
+     "error": null,
+     "answer": "Dựa trên văn bản bạn cung cấp, mình có thể xác định được sinh viên thuộc diện học bổng nào và mức tiền nhận được như sau:\n\n**Thông tin của bạn:**\n- Điểm trung bình học kỳ: **3,35** (trên thang 4)\n- Điểm rèn luyện: **85**\n- Không có học phần phải học lại\n\n**So sánh với các hạng học bổng theo Điều 9 của Quy chế:**\n\n1. **Học bổng Sao Mai**: \n   - Điểm trung bình ≥ 3,60 và điểm rèn luyện ≥ 90 → Mức 6.200.000 đồng\n   - *Bạn không đạt vì điểm trung bình 3,35 < 3,60*\n\n2. **Học bổng Sóng Biếc**: \n   - Điểm trung bình từ 3,20 đến dưới 3,60 và điểm rèn luyện ≥ 80 → Mức **4.700.000 đồng**\n   - *Bạn đạt: 3,35 nằm trong khoảng [3,20; 3,60) và 85 ≥ 80*\n\n3. **Học bổng Cánh Buồm**: \n   - Điểm trung bình từ 2,80 đến dưới 3,20 và điểm rèn luyện ≥ 65 → Mức 3.100.000 đồng\n   - *Bạn không xét vì đã đạt hạng cao hơn*\n\n**Kết luận:**\n- Bạn thuộc diện **Học bổng Sóng Biếc**.\n- Mỗi học kỳ bạn nhận được: **4.700.000 đồng**.\n\n*Lưu ý:* Học bổng này chỉ được xét nếu bạn đáp ứng đủ điều kiện chung (Điều 5), bao gồm việc đăng ký và hoàn thành ít nhất 15 tín chỉ trong học kỳ xét, không bị kỷ luật từ mức khiển trách trở lên, và đã nộp học phí đầy đủ."
+    },
+    "doc-47": {
+     "passed": false,
+     "failed_checks": [
+      "must_mention"
+     ],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": true,
+     "searched": true,
+     "search_paste_results": [
+      []
+     ],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "search_documents"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 6499,
+     "latency_ms": 11333,
+     "error": null,
+     "answer": "Tôi xin lỗi vì sự nhầm lẫn trước đó. Dựa trên phần văn bản bạn đã cung cấp:\n\n**Về thời hạn báo trước khi trả mặt bằng sớm:**\nTheo Điều 14 (phần cuối văn bản), bên thuê cần **báo trước cho bên A ít nhất 30 ngày** nếu muốn chấm dứt hợp đồng thuê sớm.\n\n**Về số tiền cọc chủ nhà được giữ lại:**\nVăn bản ghi rõ: \"Tiền đặt cọc 54.000.000 đồng bên B đã chuyển đủ cho bên A vào ngày ký hợp đồng, bên A đã nhận và ký xác nhận dưới đây.\"\n\nTuy nhiên, văn bản này **không nêu cụ thể** số tiền cọc chủ nhà được giữ lại khi chấm dứt hợp đồng sớm. Thông thường:\n- Nếu bên thuê báo trước đúng 30 ngày theo quy định, chủ nhà thường sẽ hoàn trả toàn bộ tiền cọc (trừ các khoản phí phát sinh nếu có).\n- Nếu bên thuê không báo trước đủ thời gian hoặc vi phạm hợp đồng, chủ nhà có thể giữ lại một phần hoặc toàn bộ tiền cọc như hình phạt.\n\nBạn cần xem lại toàn bộ Điều 14 trong văn bản để biết rõ hơn về các điều khoản liên quan đến việc chấm dứt hợp đồng và xử lý tiền cọc. Bạn có muốn tôi đọc thêm phần này không?"
+    },
+    "doc-48": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 10389,
+     "latency_ms": 8973,
+     "error": null,
+     "answer": "Tôi đã tìm thấy thông tin về lỗi E7 trong văn bản hướng dẫn. Đây là lỗi cảm biến bụi bị bám bẩn, khiến máy không đọc được chỉ số bụi mịn và tự dừng quạt để bảo vệ động cơ.\n\n**Cách xử lý lỗi E7:**\n\n1. **Tắt máy và rút phích cắm**\n2. **Mở nắp nhỏ ở hông trái** của máy (nắp che ô cảm biến bụi)\n3. **Lau nhẹ ô cảm biến bụi bằng tăm bông khô**, không dùng nước hay cồn\n4. **Đóng nắp lại**, cắm điện, bật máy\n5. **Giữ nút Hẹn giờ trong 8 giây** để xoá mã lỗi\n\nNếu sau khi xử lý như vậy mà **mã lỗi vẫn hiện lại trong vòng một tuần**, thì cảm biến có thể đã hỏng và bạn cần mang máy đi bảo hành.\n\nBạn đang ở đâu trong quá trình xử lý? Nếu đã làm theo các bước trên nhưng lỗi vẫn còn, hãy cho tôi biết để hỗ trợ thêm."
+    },
+    "doc-49": {
+     "passed": false,
+     "failed_checks": [
+      "must_mention"
+     ],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 17607,
+     "latency_ms": 17671,
+     "error": null,
+     "answer": "Xin lỗi, tôi đã sử dụng hết số lượt công cụ cho phép (3 lần liên tiếp). Tuy nhiên, dựa trên những gì đã đọc được, tôi có thể cung cấp thông tin sau:\n\n**Về việc nuôi mèo:**\n\nTheo nội quy bạn cung cấp, tại **Điều 8** trong Chương III (Sử dụng phần sở hữu chung), có ghi rõ:\n> \"Không cho chó, mèo đi vệ sinh hay thả rông ở sảnh và hành lang; các quy định khác về vật nuôi nêu tại Chương XII.\"\n\nĐiều này cho thấy:\n1. Chung cư **cho phép nuôi mèo** (vì không cấm hoàn toàn mà chỉ quy định về việc không được thả rông)\n2. Các quy định chi tiết về vật nuôi sẽ nằm ở **Chương XII** - nhưng tiếc là tôi chưa đọc được phần này do giới hạn số lượt công cụ\n\n**Để bạn có thể tự kiểm tra:**\n- Hãy tìm đến **Chương XII** trong văn bản (thường nằm ở cuối nội quy)\n- Tìm các điều khoản liên quan đến \"vật nuôi\", \"chó mèo\", \"thú cưng\"\n- Thông thường sẽ có thông tin về:\n  - Số lượng thú cưng được phép nuôi mỗi căn hộ\n  - Có cần đăng ký không và đăng ký ở đâu (thường là Ban quản lý vận hành tại phòng 105, tầng 1 tòa A)\n  - Mức phí hàng tháng (nếu có)\n\n**Thông tin liên hệ để đăng ký:**\n- Ban quản lý vận hành: Phòng 105, tầng 1 tòa A\n- Giờ mở cửa: 7h30 - 19h hằng ngày\n- Điện thoại: 028 3910 2206 (tòa A) hoặc 028 3910 2207 (tòa B)\n\nBạn có thể gọi điện trực tiếp đến Ban quản lý để hỏi cụ thể về quy định nuôi mèo tại khu căn hộ Hoàng Lan."
+    },
+    "doc-50": {
+     "passed": false,
+     "failed_checks": [
+      "tools_forbidden",
+      "must_mention"
+     ],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "search_history"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 4211,
+     "latency_ms": 9869,
+     "error": null,
+     "answer": "Mình hiểu rồi — cuộc trò chuyện này không phải trên Discord nên `search_history` không áp dụng được. Văn bản bạn dán là nội dung trực tiếp, không phải tệp đã index, nên `search_documents` cũng không tìm thấy gì (vì nó chỉ đọc các tài liệu đã upload).\n\nVì vậy, mình **không thể** truy cập vào phần giữa của văn bản dài này — bạn cần cung cấp thêm thông tin hoặc copy lại toàn bộ văn bản nếu muốn mình phân tích.\n\nTuy nhiên, dựa trên những gì bạn đã cung cấp:\n- Sổ tay chỉ đề cập đến **phép năm** (15 ngày cho người làm đủ 12 tháng + cộng thêm) và **lịch nghỉ lễ**.\n- Không thấy mục nào về **nghỉ phép cưới** hay chính sách của công đoàn khi nhân viên kết hôn.\n\n**Kết luận:**\nTheo sổ tay bạn cung cấp, **không có thông tin về nghỉ phép cưới**. Công ty có thể không có chính thức cho việc này, hoặc nó nằm ở phần khác chưa được dán vào. Bạn nên:\n1. Hỏi trực tiếp phòng Nhân sự hoặc đọc toàn bộ sổ tay (nếu có bản PDF/DOCX đã upload).\n2. Nếu công ty có văn bản riêng về phúc lợi nhân viên, hãy kiểm tra tài liệu đó.\n\nBạn có muốn mình giúp gì thêm không?"
+    },
+    "doc-51": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      }
+     ],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 5469,
+     "latency_ms": 6202,
+     "error": null,
+     "answer": "Dựa trên thông tin từ văn bản bạn cung cấp:\n\n**Báo giá suất ăn trưa Set Hội thảo B:**\n- **Giá:** 145.000 đồng mỗi suất\n- **Thực đơn:** cá basa chiên sốt chanh dây, thịt ba chỉ rim tiêu, trứng hấp nấm, cải thìa xào nấm đông cô, canh chua cá lóc, bánh flan\n\n**Về thời gian đặt trước:**\nTheo văn bản, có ưu đãi giảm 5% cho đơn được xác nhận trước ngày tổ chức từ **15 ngày trở lên**. Tuy nhiên, tôi chưa thấy thông tin cụ thể về thời hạn đặt trước tối thiểu cho Set Hội thảo B. Thông thường, các đơn hàng hội nghị cần đặt trước ít nhất 3-7 ngày để bếp chuẩn bị thực đơn và nguyên liệu.\n\nBạn có muốn tôi đọc thêm phần sau của văn bản để tìm thông tin chi tiết về thời gian đặt trước không?"
+    },
+    "doc-52": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [],
+     "stop_reason": "final",
+     "tokens_in": 1849,
+     "latency_ms": 2361,
+     "error": null,
+     "answer": "Dựa trên nội dung thư mời bạn đã dán:\n\n**Tông màu trang phục:** Xanh ngọc (cả công ty mặc theo tông màu này)\n\n**Xe đưa đón:**\n- Lượt đi: Khởi hành lúc 16 giờ 45 tại sảnh Sao Khuê, tầng trệt tòa văn phòng công ty\n- Lượt về: Khởi hành lúc 22 giờ 15 tại cổng chính Trung tâm hội nghị Hồng Hạc\n\nBạn có cần thêm thông tin gì khác không?"
+    },
+    "doc-53": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 14903,
+     "latency_ms": 18035,
+     "error": null,
+     "answer": "Dựa trên **Quy tắc Bảo hiểm Du lịch trong nước — Gói An Khang** của Công ty Bảo hiểm Phù Sa mà bạn cung cấp, tôi xin trả lời câu hỏi của bạn như sau:\n\n### 1. Bạn có được đền bù không?\n**CÓ**, nhưng với điều kiện cụ thể về thời gian trễ và lý do.\n\nTheo **Quyền lợi 4. Khởi hành muộn** (trong văn bản bạn dán):\n*   Công ty chỉ chi trả khi phương tiện vận tải công cộng khởi hành muộn **liên tục từ 6 giờ trở lên** so với lịch trình ghi trên vé.\n*   Lý do trễ phải là: thời tiết xấu, sự cố kỹ thuật, đình công hoặc yêu cầu của nhà chức trách (không phải do lỗi cá nhân của bạn).\n\n### 2. Được bao nhiêu tiền?\nCông ty chi trả theo tỷ lệ: **400.000 đồng cho mỗi quãng 6 giờ khởi hành muộn liên tục**.\n*   Mức tối đa cho mỗi hành trình là **2.400.000 đồng**.\n\n**Áp dụng vào trường hợp của bạn:**\nBạn bị trễ khoảng **7 tiếng**.\n*   Theo quy định, chỉ tính từ mốc **6 tiếng trở lên**.\n*   Số tiền được đền bù = 1 quãng x 6 giờ x 400.000 đồng = **400.000 đồng**.\n    *(Lưu ý: Phần trễ thêm 1 tiếng nữa không được tính thêm vì quy định là \"mỗi quãng 6 giờ\", và tổng số tiền đã đạt mức tối thiểu cho một lần khởi hành muộn).*\n\n### 3. Những điều kiện bắt buộc bạn phải làm:\nĐể nhận được khoản bồi thường này, bạn cần xuất trình **xác nhận của hãng vận tải** (Vietnam Airlines hoặc hàng không khác) về:\n*   Lý do máy bay trễ.\n*   Thời lượng chính xác chuyến bay bị trễ.\n\n### 4. Trường hợp KHÔNG được đền bù:\nTheo **Chương IV. Điểm loại trừ**, bạn sẽ **không được đền bù** nếu:\n*   Lịch khởi hành đã được hãng vận tải thông báo thay đổi từ **24 giờ trở lên** trước giờ khởi hành dự kiến (ví dụ: hôm qua họ đã nhắn tin cho bạn là bay trễ 7 tiếng).\n*   Bạn không làm thủ tục đúng giờ hoặc không có mặt tại điểm khởi hành theo yêu cầu của hãng.\n\n### Tóm lại:\nNếu máy bay của bạn bị trễ **7 tiếng** mà **không có thông báo trước 24h**, và lý do là sự cố kỹ thuật/thời tiết, bạn sẽ được đền bù **400.000 đồng**. Bạn cần liên hệ tổng đài hỗ trợ 24/7 (1900 6268) hoặc qua ứng dụng Phù Sa Care để làm thủ tục yêu cầu bồi thường và nộp xác nhận của hãng bay."
+    }
+   },
+   {
+    "doc-39": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 5319,
+     "latency_ms": 6664,
+     "error": null,
+     "answer": "Dựa trên nội dung văn bản đã đọc, mình có thể trả lời câu hỏi của bạn:\n\n**Hạn chót nộp hồ sơ dự thầu gói hộp giấy cho Minh Phát:** 17 giờ ngày 14/11/2026.\n\n**Người phụ trách hồ sơ:** Chị Vũ Thu Hà, Phó phòng Kinh doanh (được ông Thịnh giao làm đầu mối chịu trách nhiệm toàn bộ hồ sơ).\n\nCác phòng hỗ trợ:\n- Phòng Kỹ thuật: hỗ trợ phần thông số kỹ thuật và mẫu in thử\n- Phòng Kế toán: hỗ trợ phần báo giá và bảo lãnh dự thầu"
+    },
+    "doc-40": {
+     "passed": false,
+     "failed_checks": [
+      "must_mention"
+     ],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      }
+     ],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 5359,
+     "latency_ms": 7012,
+     "error": null,
+     "answer": "Dựa trên văn bản kế hoạch chuyển trụ sở, tôi có thể trả lời câu hỏi của bạn:\n\n**Máy chủ và tủ mạng** sẽ được chuyển trong **Đợt 3**, tuy nhiên văn bản không nêu cụ thể ngày chính xác cho đợt này. Tuy nhiên, dựa vào thứ tự các đợt:\n- Đợt 1: Thứ Bảy 28/11\n- Đợt 2: Thứ Bảy 05/12  \n- Đợt 4: Thứ Bảy 19/12 và Chủ nhật 20/12\n\nVậy **Đợt 3 (máy chủ và tủ mạng)** sẽ diễn ra vào **Thứ Bảy 12/12**.\n\n**Người giám sát việc chuyển máy chủ và tủ mạng**: Theo văn bản, **phòng Kỹ thuật** là đơn vị quản lý hai máy chủ, tủ mạng, tổng đài điện thoại nội bộ và hệ thống camera. Văn bản cũng đề cập đến **trưởng nhóm hạ tầng của phòng Kỹ thuật** là thành viên trong ban điều phối.\n\nTuy nhiên, văn bản không nêu rõ ai là người giám sát trực tiếp cho đợt chuyển này. Thông thường, trưởng nhóm hạ tầng của phòng Kỹ thuật sẽ chịu trách nhiệm giám sát việc chuyển các thiết bị công nghệ thông tin này."
+    },
+    "doc-41": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 4,
+       "n": 3,
+       "returned": [
+        4,
+        5,
+        6
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": true,
+     "searched": true,
+     "search_paste_results": [
+      [
+       6,
+       4,
+       7
+      ]
+     ],
+     "found_by_search": true,
+     "read_at_search_hit": true,
+     "search_before_reaching": true,
+     "answered_after_search_without_read": false,
+     "leak": true,
+     "tools": [
+      "search_documents",
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 13336,
+     "latency_ms": 11874,
+     "error": null,
+     "answer": "Xin lỗi, tôi cần kiểm tra lại câu trả lời của mình. Sau khi xem xét kỹ nội dung văn bản, tôi thấy:\n\n**Thông tin chính xác từ sổ tay:**\n\nKhi kho âm sâu báo nhiệt độ vượt ngưỡng:\n- **Ngưỡng báo động**: Nhiệt độ trong kho cao hơn **-15°C** (tức là trên -15°C) liên tục quá **20 phút**\n- **Người cần gọi đầu tiên**: **Anh Tạ Minh Khôi**, kỹ thuật viên lạnh của công ty, máy lẻ **214**\n\nQuy trình xử lý:\n1. Nhân viên ca không mở cửa kho\n2. Ghi giờ báo động vào sổ thiết bị\n3. Gọi ngay anh Tạ Minh Khôi (máy lẻ 214)\n4. Nếu ngoài giờ hành chính thì nhờ tổng đài bảo vệ nối máy cho anh\n5. Chỉ khi không liên lạc được với anh trong 10 phút mới gọi quản lý bếp\n\nLưu ý: Hàng trong kho được giữ nguyên, không chuyển sang kho mát."
+    },
+    "doc-42": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [],
+     "stop_reason": "final",
+     "tokens_in": 1846,
+     "latency_ms": 1861,
+     "error": null,
+     "answer": "Theo chuỗi email đã dán:\n\n- **Người dẫn chương trình** được chốt là **chị Kha Ngọc Diệp**, thuộc phòng Kinh doanh.\n- **Buổi tổng duyệt** diễn ra vào lúc **14 giờ 30, thứ Sáu ngày 11/12/2026** tại hội trường khách sạn."
+    },
+    "doc-43": {
+     "passed": false,
+     "failed_checks": [
+      "must_mention"
+     ],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 1,
+       "n": 3,
+       "returned": [
+        1,
+        2,
+        3
+       ]
+      }
+     ],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": true,
+     "search_paste_results": [
+      [
+       0,
+       1,
+       3
+      ]
+     ],
+     "found_by_search": true,
+     "read_at_search_hit": true,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "search_documents",
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 8647,
+     "latency_ms": 7754,
+     "error": null,
+     "answer": "Dựa trên nội dung văn bản đã tìm thấy, tôi có thể trả lời câu hỏi của bạn:\n\n**Hồ sơ thẩm duyệt thiết kế phòng cháy chữa cháy và nghiệm thu sau thi công:**\n\n- **Người phụ trách:** Chị Lương Diệu Linh, thuộc phòng Hành chính\n- **Công việc:** Làm việc trực tiếp với đơn vị tư vấn thiết kế và cơ quan cảnh sát phòng cháy\n\nTuy nhiên, văn bản này không nêu rõ thời hạn nộp hồ sơ trước ngày nào. Thông tin về mốc thời gian cụ thể cho việc nộp hồ sơ PCCC có thể nằm ở phần khác của văn bản (có thể là mục 8 về các mốc thời gian mà người dùng đã đề cập trong câu hỏi).\n\nBạn có muốn tôi tìm thêm thông tin về thời hạn nộp hồ sơ không?"
+    },
+    "doc-44": {
+     "passed": false,
+     "failed_checks": [
+      "completed",
+      "must_mention"
+     ],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [],
+     "stop_reason": null,
+     "tokens_in": null,
+     "latency_ms": 16386,
+     "error": "OllamaUnavailableError: Cannot connect to Ollama",
+     "answer": ""
+    },
+    "doc-45": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [],
+     "stop_reason": "final",
+     "tokens_in": 1859,
+     "latency_ms": 2640,
+     "error": null,
+     "answer": "Không đúng. Theo điều lệ bạn dán: nhận số báo danh và áo đấu là **thứ Bảy 28/11/2026**, từ 8 giờ đến 18 giờ, tại sảnh B nhà thi đấu Phú Lâm. Không có thông tin nào về việc nhận số báo danh vào chiều thứ Sáu tại nhà văn hóa phường.\n\nNhà văn hóa phường chỉ dùng để hỏi thông tin (không nhận vật phẩm), và hạn chót đăng ký/chuyển nhượng suất chạy là 17 giờ thứ Sáu 20/11/2026."
+    },
+    "doc-46": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 15376,
+     "latency_ms": 14529,
+     "error": null,
+     "answer": "Dựa trên văn bản bạn cung cấp, mình có thể xác định được sinh viên thuộc diện học bổng nào và mức tiền nhận được như sau:\n\n**Thông tin của bạn:**\n- Điểm trung bình học kỳ: **3,35** (trên thang 4)\n- Điểm rèn luyện: **85**\n- Không có học phần phải học lại\n\n**So sánh với các hạng học bổng theo Điều 9 của Quy chế:**\n\n1. **Học bổng Sao Mai**: \n   - Điểm trung bình ≥ 3,60 và điểm rèn luyện ≥ 90 → Mức 6.200.000 đồng\n   - *Bạn không đạt vì điểm trung bình 3,35 < 3,60*\n\n2. **Học bổng Sóng Biếc**: \n   - Điểm trung bình từ 3,20 đến dưới 3,60 và điểm rèn luyện ≥ 80 → Mức **4.700.000 đồng**\n   - *Bạn đạt: 3,35 nằm trong khoảng [3,20; 3,60) và 85 ≥ 80*\n\n3. **Học bổng Cánh Buồm**: \n   - Điểm trung bình từ 2,80 đến dưới 3,20 và điểm rèn luyện ≥ 65 → Mức 3.100.000 đồng\n   - *Bạn không xét vì đã đạt hạng cao hơn*\n\n**Kết luận:**\n- Bạn thuộc diện **Học bổng Sóng Biếc**.\n- Mỗi học kỳ bạn nhận được: **4.700.000 đồng**.\n\n*Lưu ý:* Học bổng này chỉ được xét nếu bạn đáp ứng đủ điều kiện chung (Điều 5), bao gồm việc đăng ký và hoàn thành ít nhất 15 tín chỉ trong học kỳ xét, không bị kỷ luật từ mức khiển trách trở lên, và đã nộp học phí đầy đủ."
+    },
+    "doc-47": {
+     "passed": false,
+     "failed_checks": [
+      "must_mention"
+     ],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": true,
+     "searched": true,
+     "search_paste_results": [
+      []
+     ],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "search_documents"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 6499,
+     "latency_ms": 11439,
+     "error": null,
+     "answer": "Tôi xin lỗi vì sự nhầm lẫn trước đó. Dựa trên phần văn bản bạn đã cung cấp:\n\n**Về thời hạn báo trước khi trả mặt bằng sớm:**\nTheo Điều 14 (phần cuối văn bản), bên thuê cần **báo trước cho bên A ít nhất 30 ngày** nếu muốn chấm dứt hợp đồng thuê sớm.\n\n**Về số tiền cọc chủ nhà được giữ lại:**\nVăn bản ghi rõ: \"Tiền đặt cọc 54.000.000 đồng bên B đã chuyển đủ cho bên A vào ngày ký hợp đồng, bên A đã nhận và ký xác nhận dưới đây.\"\n\nTuy nhiên, văn bản này **không nêu cụ thể** số tiền cọc chủ nhà được giữ lại khi chấm dứt hợp đồng sớm. Thông thường:\n- Nếu bên thuê báo trước đúng 30 ngày theo quy định, chủ nhà thường sẽ hoàn trả toàn bộ tiền cọc (trừ các khoản phí phát sinh nếu có).\n- Nếu bên thuê không báo trước đủ thời gian hoặc vi phạm hợp đồng, chủ nhà có thể giữ lại một phần hoặc toàn bộ tiền cọc như hình phạt.\n\nBạn cần xem lại toàn bộ Điều 14 trong văn bản để biết rõ hơn về các điều khoản liên quan đến việc chấm dứt hợp đồng và xử lý tiền cọc. Bạn có muốn tôi đọc thêm phần này không?"
+    },
+    "doc-48": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 10389,
+     "latency_ms": 8966,
+     "error": null,
+     "answer": "Tôi đã tìm thấy thông tin về lỗi E7 trong văn bản hướng dẫn. Đây là lỗi cảm biến bụi bị bám bẩn, khiến máy không đọc được chỉ số bụi mịn và tự dừng quạt để bảo vệ động cơ.\n\n**Cách xử lý lỗi E7:**\n\n1. **Tắt máy và rút phích cắm**\n2. **Mở nắp nhỏ ở hông trái** của máy (nắp che ô cảm biến bụi)\n3. **Lau nhẹ ô cảm biến bụi bằng tăm bông khô**, không dùng nước hay cồn\n4. **Đóng nắp lại**, cắm điện, bật máy\n5. **Giữ nút Hẹn giờ trong 8 giây** để xoá mã lỗi\n\nNếu sau khi xử lý như vậy mà **mã lỗi vẫn hiện lại trong vòng một tuần**, thì cảm biến có thể đã hỏng và bạn cần mang máy đi bảo hành.\n\nBạn đang ở đâu trong quá trình xử lý? Nếu đã làm theo các bước trên nhưng lỗi vẫn còn, hãy cho tôi biết để hỗ trợ thêm."
+    },
+    "doc-49": {
+     "passed": false,
+     "failed_checks": [
+      "must_mention"
+     ],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 17607,
+     "latency_ms": 17671,
+     "error": null,
+     "answer": "Xin lỗi, tôi đã sử dụng hết số lượt công cụ cho phép (3 lần liên tiếp). Tuy nhiên, dựa trên những gì đã đọc được, tôi có thể cung cấp thông tin sau:\n\n**Về việc nuôi mèo:**\n\nTheo nội quy bạn cung cấp, tại **Điều 8** trong Chương III (Sử dụng phần sở hữu chung), có ghi rõ:\n> \"Không cho chó, mèo đi vệ sinh hay thả rông ở sảnh và hành lang; các quy định khác về vật nuôi nêu tại Chương XII.\"\n\nĐiều này cho thấy:\n1. Chung cư **cho phép nuôi mèo** (vì không cấm hoàn toàn mà chỉ quy định về việc không được thả rông)\n2. Các quy định chi tiết về vật nuôi sẽ nằm ở **Chương XII** - nhưng tiếc là tôi chưa đọc được phần này do giới hạn số lượt công cụ\n\n**Để bạn có thể tự kiểm tra:**\n- Hãy tìm đến **Chương XII** trong văn bản (thường nằm ở cuối nội quy)\n- Tìm các điều khoản liên quan đến \"vật nuôi\", \"chó mèo\", \"thú cưng\"\n- Thông thường sẽ có thông tin về:\n  - Số lượng thú cưng được phép nuôi mỗi căn hộ\n  - Có cần đăng ký không và đăng ký ở đâu (thường là Ban quản lý vận hành tại phòng 105, tầng 1 tòa A)\n  - Mức phí hàng tháng (nếu có)\n\n**Thông tin liên hệ để đăng ký:**\n- Ban quản lý vận hành: Phòng 105, tầng 1 tòa A\n- Giờ mở cửa: 7h30 - 19h hằng ngày\n- Điện thoại: 028 3910 2206 (tòa A) hoặc 028 3910 2207 (tòa B)\n\nBạn có thể gọi điện trực tiếp đến Ban quản lý để hỏi cụ thể về quy định nuôi mèo tại khu căn hộ Hoàng Lan."
+    },
+    "doc-50": {
+     "passed": false,
+     "failed_checks": [
+      "tools_forbidden",
+      "must_mention"
+     ],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "search_history"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 4211,
+     "latency_ms": 9840,
+     "error": null,
+     "answer": "Mình hiểu rồi — cuộc trò chuyện này không phải trên Discord nên `search_history` không áp dụng được. Văn bản bạn dán là nội dung trực tiếp, không phải tệp đã index, nên `search_documents` cũng không tìm thấy gì (vì nó chỉ đọc các tài liệu đã upload).\n\nVì vậy, mình **không thể** truy cập vào phần giữa của văn bản dài này — bạn cần cung cấp thêm thông tin hoặc copy lại toàn bộ văn bản nếu muốn mình phân tích.\n\nTuy nhiên, dựa trên những gì bạn đã cung cấp:\n- Sổ tay chỉ đề cập đến **phép năm** (15 ngày cho người làm đủ 12 tháng + cộng thêm) và **lịch nghỉ lễ**.\n- Không thấy mục nào về **nghỉ phép cưới** hay chính sách của công đoàn khi nhân viên kết hôn.\n\n**Kết luận:**\nTheo sổ tay bạn cung cấp, **không có thông tin về nghỉ phép cưới**. Công ty có thể không có chính thức cho việc này, hoặc nó nằm ở phần khác chưa được dán vào. Bạn nên:\n1. Hỏi trực tiếp phòng Nhân sự hoặc đọc toàn bộ sổ tay (nếu có bản PDF/DOCX đã upload).\n2. Nếu công ty có văn bản riêng về phúc lợi nhân viên, hãy kiểm tra tài liệu đó.\n\nBạn có muốn mình giúp gì thêm không?"
+    },
+    "doc-51": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      }
+     ],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document"
+     ],
+     "stop_reason": "final",
+     "tokens_in": 5469,
+     "latency_ms": 6140,
+     "error": null,
+     "answer": "Dựa trên thông tin từ văn bản bạn cung cấp:\n\n**Báo giá suất ăn trưa Set Hội thảo B:**\n- **Giá:** 145.000 đồng mỗi suất\n- **Thực đơn:** cá basa chiên sốt chanh dây, thịt ba chỉ rim tiêu, trứng hấp nấm, cải thìa xào nấm đông cô, canh chua cá lóc, bánh flan\n\n**Về thời gian đặt trước:**\nTheo văn bản, có ưu đãi giảm 5% cho đơn được xác nhận trước ngày tổ chức từ **15 ngày trở lên**. Tuy nhiên, tôi chưa thấy thông tin cụ thể về thời hạn đặt trước tối thiểu cho Set Hội thảo B. Thông thường, các đơn hàng hội nghị cần đặt trước ít nhất 3-7 ngày để bếp chuẩn bị thực đơn và nguyên liệu.\n\nBạn có muốn tôi đọc thêm phần sau của văn bản để tìm thông tin chi tiết về thời gian đặt trước không?"
+    },
+    "doc-52": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": false,
+     "reads": [],
+     "reached": false,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [],
+     "stop_reason": "final",
+     "tokens_in": 1849,
+     "latency_ms": 2359,
+     "error": null,
+     "answer": "Dựa trên nội dung thư mời bạn đã dán:\n\n**Tông màu trang phục:** Xanh ngọc (cả công ty mặc theo tông màu này)\n\n**Xe đưa đón:**\n- Lượt đi: Khởi hành lúc 16 giờ 45 tại sảnh Sao Khuê, tầng trệt tòa văn phòng công ty\n- Lượt về: Khởi hành lúc 22 giờ 15 tại cổng chính Trung tâm hội nghị Hồng Hạc\n\nBạn có cần thêm thông tin gì khác không?"
+    },
+    "doc-53": {
+     "passed": true,
+     "failed_checks": [],
+     "opens": true,
+     "reads": [
+      {
+       "from_chunk": 0,
+       "n": 3,
+       "returned": [
+        0,
+        1,
+        2
+       ]
+      },
+      {
+       "from_chunk": 3,
+       "n": 3,
+       "returned": [
+        3,
+        4,
+        5
+       ]
+      },
+      {
+       "from_chunk": 6,
+       "n": 3,
+       "returned": [
+        6,
+        7,
+        8
+       ]
+      }
+     ],
+     "reached": true,
+     "nudged": [],
+     "answer_check": false,
+     "searched": false,
+     "search_paste_results": [],
+     "found_by_search": false,
+     "read_at_search_hit": false,
+     "search_before_reaching": false,
+     "answered_after_search_without_read": false,
+     "leak": false,
+     "tools": [
+      "read_document",
+      "read_document",
+      "read_document"
+     ],
+     "stop_reason": "max_steps",
+     "tokens_in": 14903,
+     "latency_ms": 18066,
+     "error": null,
+     "answer": "Dựa trên **Quy tắc Bảo hiểm Du lịch trong nước — Gói An Khang** của Công ty Bảo hiểm Phù Sa mà bạn cung cấp, tôi xin trả lời câu hỏi của bạn như sau:\n\n### 1. Bạn có được đền bù không?\n**CÓ**, nhưng với điều kiện cụ thể về thời gian trễ và lý do.\n\nTheo **Quyền lợi 4. Khởi hành muộn** (trong văn bản bạn dán):\n*   Công ty chỉ chi trả khi phương tiện vận tải công cộng khởi hành muộn **liên tục từ 6 giờ trở lên** so với lịch trình ghi trên vé.\n*   Lý do trễ phải là: thời tiết xấu, sự cố kỹ thuật, đình công hoặc yêu cầu của nhà chức trách (không phải do lỗi cá nhân của bạn).\n\n### 2. Được bao nhiêu tiền?\nCông ty chi trả theo tỷ lệ: **400.000 đồng cho mỗi quãng 6 giờ khởi hành muộn liên tục**.\n*   Mức tối đa cho mỗi hành trình là **2.400.000 đồng**.\n\n**Áp dụng vào trường hợp của bạn:**\nBạn bị trễ khoảng **7 tiếng**.\n*   Theo quy định, chỉ tính từ mốc **6 tiếng trở lên**.\n*   Số tiền được đền bù = 1 quãng x 6 giờ x 400.000 đồng = **400.000 đồng**.\n    *(Lưu ý: Phần trễ thêm 1 tiếng nữa không được tính thêm vì quy định là \"mỗi quãng 6 giờ\", và tổng số tiền đã đạt mức tối thiểu cho một lần khởi hành muộn).*\n\n### 3. Những điều kiện bắt buộc bạn phải làm:\nĐể nhận được khoản bồi thường này, bạn cần xuất trình **xác nhận của hãng vận tải** (Vietnam Airlines hoặc hàng không khác) về:\n*   Lý do máy bay trễ.\n*   Thời lượng chính xác chuyến bay bị trễ.\n\n### 4. Trường hợp KHÔNG được đền bù:\nTheo **Chương IV. Điểm loại trừ**, bạn sẽ **không được đền bù** nếu:\n*   Lịch khởi hành đã được hãng vận tải thông báo thay đổi từ **24 giờ trở lên** trước giờ khởi hành dự kiến (ví dụ: hôm qua họ đã nhắn tin cho bạn là bay trễ 7 tiếng).\n*   Bạn không làm thủ tục đúng giờ hoặc không có mặt tại điểm khởi hành theo yêu cầu của hãng.\n\n### Tóm lại:\nNếu máy bay của bạn bị trễ **7 tiếng** mà **không có thông báo trước 24h**, và lý do là sự cố kỹ thuật/thời tiết, bạn sẽ được đền bù **400.000 đồng**. Bạn cần liên hệ tổng đài hỗ trợ 24/7 (1900 6268) hoặc qua ứng dụng Phù Sa Care để làm thủ tục yêu cầu bồi thường và nộp xác nhận của hãng bay."
+    }
+   }
+  ]
+ }
+}
