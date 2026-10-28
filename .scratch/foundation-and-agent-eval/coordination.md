@@ -266,3 +266,4 @@ cherry-pick** (v0.3 đã gộp như vậy).
 | Lúc | Ai xin | Khung | Ghi chú |
 |---|---|---|---|
 | 28/10 00:35 | phiên "Quản lý" (dự án decision model, `C:\Users\dungbt06\Fine-tune`) | ~00:40 → 02:55 (≈ 2 giờ) | chấm Qwen3.5-4B, đo độ trễ batch 1. Ún: Nhân viên 1 chạy xong `v0.3-read-B-r1-cold` rồi gỡ model; r2 chạy sau. Eval đêm 03:00 vẫn chạy (đã báo bên kia) |
+| 28/10 10:50 | phiên "Quản lý" (dự án VI) | 10:50 → ~16:00 (≈ 5 giờ) | train Qwen3-1.7B LoRA rồi chấm, người dùng đã duyệt. Ún: GPU trống lúc nhường (0 MiB, `/api/ps` trống); không nạp model qua Ollama tới khi bên kia báo xong. Lần đo #3-B (~5 phút) chờ |
