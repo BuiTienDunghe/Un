@@ -15,6 +15,29 @@ class OllamaUnavailableError(Exception):
     pass
 
 
+class OllamaToolCallParseError(OllamaUnavailableError):
+    """Ollama could not parse the tool call the model wrote (ticket 27): a 5xx whose `error`
+    says TOOL_CALL_PARSE_MARK. Never sent again as is: at temperature 0 the same request
+    writes the same call. A subclass, so every `except OllamaUnavailableError` still
+    catches it; AgentService catches it first, to retry with a note."""
+
+
+# The one rejection seen so far (28/10, doc-44 on 2839b52, three times alike): "XML syntax
+# error on line 12: element <function> closed by </parameter>", logged by Ollama as "qwen3.5
+# tool call parsing failed". Another parser's rejection, in other words, is retried as a 5xx.
+TOOL_CALL_PARSE_MARK = "XML syntax error"
+
+
+def _server_error(response: httpx.Response) -> str:
+    """What the server said went wrong: Ollama's JSON `error`, else the start of the body."""
+    try:
+        body = response.json()
+    except ValueError:
+        body = None
+    error = body.get("error") if isinstance(body, dict) else None
+    return error if isinstance(error, str) and error else response.text[:300]
+
+
 class OllamaModelNotLoadedError(Exception):
     pass
 
@@ -203,9 +226,19 @@ class OllamaClient:
             except httpx.TimeoutException as error:
                 if attempt == self.retry_count or spent():
                     raise OllamaTimeoutError("Ollama did not answer before the timeout") from error
-            except httpx.HTTPError as error:
+            except httpx.HTTPStatusError as error:
+                # Ollama answered, so it is reachable: the last error says what it answered.
+                status, detail = error.response.status_code, _server_error(error.response)
+                if status >= 500 and TOOL_CALL_PARSE_MARK in detail:
+                    raise OllamaToolCallParseError(f"Ollama could not parse the model's tool call: {detail}") from error
+                if attempt == self.retry_count:
+                    raise OllamaUnavailableError(f"Ollama answered {status}: {detail}") from error
+            except httpx.TransportError as error:
                 if attempt == self.retry_count:
                     raise OllamaUnavailableError("Cannot connect to Ollama") from error
+            except httpx.HTTPError as error:
+                if attempt == self.retry_count:
+                    raise OllamaUnavailableError(f"Ollama request failed: {type(error).__name__}") from error
             if not can_wait(1 + attempt * 2):
                 raise OllamaTimeoutError("Ollama did not answer within the agent turn's time budget")
             time.sleep(1 + attempt * 2)
