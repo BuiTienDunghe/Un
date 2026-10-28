@@ -190,6 +190,32 @@ def test_an_input_the_api_would_reject_fails_without_a_model_call(tmp_path):
     assert json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))["input_max_chars"] == INPUT_MAX_CHARS
 
 
+def test_a_paste_task_reads_its_far_chunk_through_the_runner(tmp_path):
+    # v0.5 (ticket 20 #3-B): kept runs show the runner handing doc-39's slip to the model,
+    # never a read of a paste. doc-41's answer chunk comes back through read_document.
+    from app.services.pastes import paste_id
+
+    class Recording(ScriptedRouter):
+        def chat_tools(self, mode, messages, tools):
+            self.seen = getattr(self, "seen", None) or [m["content"] for m in messages if m["role"] == "user"]
+            return super().chat_tools(mode, messages, tools)
+
+    task = next(t for t in load_dataset(DATASET_DIR).tasks if t["id"] == "doc-41")
+    router = Recording([
+        call("read_document", {"document_id": paste_id(task["input"]), "from_chunk": 6, "n": 3}),
+        final("Gọi ngay anh Tạ Minh Khôi, máy lẻ 214; ngưỡng là cao hơn âm 15 độ C quá hai mươi phút."),
+    ])
+    out_dir, _ = _run(tmp_path, [task], [], router)
+
+    [result] = _jsonl(out_dir / "task_results.jsonl")
+    assert result["passed"] is True and result["error"] is None
+    # The model saw the slip, not the paste; the read returned chunk 6 with the answer in it.
+    [shown] = router.seen
+    assert "CUỐI VĂN BẢN" in shown and "Minh Khôi" not in shown and len(shown) < len(task["input"])
+    read = next(e for e in _jsonl(out_dir / "events.jsonl") if e["kind"] == "tool_result")
+    assert '"chunk_index": 6' in read["content"] and "Minh Khôi" in read["content"]
+
+
 def test_web_turns_get_no_guild_and_discord_turns_get_the_fixed_one(tmp_path):
     web = {"id": "hist-web", "category": "history", "input": "Hôm qua server bàn gì?", "expect": {"must_mention": ["Discord"]}}
     discord = {
