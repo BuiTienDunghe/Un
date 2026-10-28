@@ -602,6 +602,23 @@ def test_general_on_an_unregistered_cloud_provider_falls_back_to_the_local_versi
     assert general.status == "fallback" and general.loaded_id == "general-v0" and "gemini not registered" in general.reason
 
 
+def test_anthropic_general_candidate_serves_only_when_its_key_is_registered(tmp_path):
+    document = base_document()
+    add_version(document, "general", {"id": "general-haiku-v1", "provider": "anthropic", "vram_mib": 0,
+                                       "config": {"provider": "anthropic", "name": "claude-haiku-5-5", "max_tokens": 4096, "effort": "low"}})
+    registry = load(tmp_path, document)
+    general = resolve(registry, Overrides(disabled_roles=FLAGS_OFF), ready_probes()).roles["general"]
+    assert general.status == "fallback" and general.loaded_id == "general-v0" and "anthropic not registered" in general.reason
+    registered = Overrides(disabled_roles=FLAGS_OFF, registered_providers=frozenset({"ollama", "anthropic"}))
+    general = resolve(registry, registered, ready_probes()).roles["general"]
+    assert general.status == "active" and general.loaded_id == "general-haiku-v1" and general.probe.kind == "provider"
+
+
+def test_overrides_from_settings_registers_anthropic_with_its_key():
+    assert "anthropic" in overrides_from_settings(_settings(anthropic_api_key="k")).registered_providers
+    assert "anthropic" not in overrides_from_settings(_settings()).registered_providers
+
+
 # ── resolve(): embedding (acceptance G) ─────────────────────────────────────────
 
 @pytest.mark.parametrize(

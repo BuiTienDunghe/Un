@@ -6,10 +6,11 @@ from collections.abc import Iterator
 from app.llm_clients.ollama_client import OllamaClient, OllamaModelNotLoadedError
 from app.llm_clients.gemini_client import GeminiClient
 from app.llm_clients.deepseek_client import DeepSeekClient
+from app.llm_clients.anthropic_client import AnthropicClient
 
 
 # Union type for all supported clients
-LLMClient = OllamaClient | GeminiClient | DeepSeekClient
+LLMClient = OllamaClient | GeminiClient | DeepSeekClient | AnthropicClient
 
 # Which end of a retrieval pair a text is: the embedding version may prefix the
 # two sides differently (multilingual-e5: "query: " / "passage: ").
@@ -37,12 +38,15 @@ class ModelRouter:
 
     Supported providers
     -------------------
-    - ``ollama``   – local Ollama inference server (default)
-    - ``gemini``   – Google Gemini REST API
-    - ``deepseek`` – DeepSeek API (OpenAI-compatible)
+    - ``ollama``    – local Ollama inference server (default)
+    - ``gemini``    – Google Gemini REST API
+    - ``deepseek``  – DeepSeek API (OpenAI-compatible)
+    - ``anthropic`` – Claude Messages API (the only cloud provider that also serves
+      ``chat_tools``, so the agent runs on it unchanged)
 
-    To switch a model to a different provider, change the ``provider`` field
-    in ``backend/app/config/models.yaml`` and restart the server.  The
+    To switch a model to a different provider, point the role's ``active`` in
+    ``backend/app/config/model_versions.yaml`` (or ``MODEL_VERSION_<ROLE>`` in the
+    shell) at a version of that provider and restart the server.  The
     corresponding API key must be set in ``.env``.
     """
 
@@ -97,6 +101,20 @@ class ModelRouter:
             kwargs["top_p"] = config["top_p"]
         return kwargs
 
+    def _anthropic_kwargs(self, config: dict[str, Any], options: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Claude takes ``max_tokens`` and ``effort``. ``temperature`` / ``top_p`` are
+        rejected by the Claude 5.x models, so they never leave this method even when the
+        config or a caller's ``options`` names them; a caller's ``num_predict`` becomes
+        ``max_tokens`` as for the other cloud clients."""
+        kwargs: dict[str, Any] = {}
+        if "max_tokens" in config:
+            kwargs["max_tokens"] = config["max_tokens"]
+        if "effort" in config:
+            kwargs["effort"] = config["effort"]
+        if options and "num_predict" in options:
+            kwargs["max_tokens"] = options["num_predict"]
+        return kwargs
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
@@ -128,6 +146,8 @@ class ModelRouter:
                 if "temperature" in options:
                     kwargs["temperature"] = options["temperature"]
             answer = client.chat(model=model_name, messages=messages, **kwargs)
+        elif isinstance(client, AnthropicClient):
+            answer = client.chat(model=model_name, messages=messages, **self._anthropic_kwargs(config, options))
         else:
             raise RuntimeError(f"Unknown client type: {type(client)}")
 
@@ -139,15 +159,18 @@ class ModelRouter:
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]],
     ) -> tuple[dict[str, Any], str]:
-        """One function-calling turn. Only the ollama provider supports the
-        tools API; cloud providers raise so the caller can fall back."""
+        """One function-calling turn. The ollama and anthropic providers speak the
+        tools API; the other cloud providers raise so the caller can fall back."""
         if mode != "general":
             raise ValueError(f"Unsupported model mode: {mode}")
         config = self.models[mode]
         model_name = str(config["name"])
         client = self._get_client(config)
+        if isinstance(client, AnthropicClient):
+            result = client.chat_tools(model=model_name, messages=messages, tools=tools, **self._anthropic_kwargs(config))
+            return result, model_name
         if not isinstance(client, OllamaClient):
-            raise RuntimeError("Tool calling requires the 'ollama' provider for the general model")
+            raise RuntimeError("Tool calling requires the 'ollama' or 'anthropic' provider for the general model")
         result = client.chat_tools(
             model=model_name,
             messages=messages,
@@ -213,6 +236,8 @@ class ModelRouter:
             stream = client.stream_chat(model=model_name, messages=messages, **self._cloud_kwargs(config))
         elif isinstance(client, DeepSeekClient):
             stream = client.stream_chat(model=model_name, messages=messages, **self._cloud_kwargs(config))
+        elif isinstance(client, AnthropicClient):
+            stream = client.stream_chat(model=model_name, messages=messages, **self._anthropic_kwargs(config))
         else:
             raise RuntimeError(f"Unknown client type: {type(client)}")
 

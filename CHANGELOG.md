@@ -12,6 +12,14 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 ## [Unreleased]
 
 ### Added
+- **Claude (Anthropic) làm provider thứ tư cho vai trò `general`** (28/10, ticket 26): client mới
+  `backend/app/llm_clients/anthropic_client.py` dùng SDK chính thức, chạy cả ba đường chat, stream và
+  lượt công cụ của agent (dịch hai chiều schema công cụ, `tool_calls`, `tool_result`, nên mọi lượt
+  Discord chạy được trên Claude). Bản ghi ứng viên `general-haiku-v1` (claude-haiku-5-5, `effort: low`,
+  `max_tokens: 4096`) đặt SAU `general-v0` nên không bao giờ tự phục vụ; dùng thử bằng
+  `MODEL_VERSION_GENERAL=general-haiku-v1` trong shell với `ANTHROPIC_API_KEY` trong `.env`. Promote
+  cần báo cáo D1 đóng dấu id. Không gửi `temperature`/`top_p` (Claude 5.x từ chối); token vào/ra được
+  ghi vào request log (Gemini/DeepSeek vẫn NULL).
 - **Agent Eval v0** (27/10): `backend/scripts/agent_eval.py` chạy agent thật (cùng model, cùng
   vòng lặp) trên 40 bài tiếng Việt với dữ liệu giả hoàn toàn (20 tài liệu, 10 lịch sử Discord kể cả
   khi chat web không có guild, 5 trạng thái hệ thống, 5 không cần công cụ hoặc phải từ chối). Bộ chấm

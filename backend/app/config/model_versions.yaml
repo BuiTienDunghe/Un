@@ -26,7 +26,9 @@ budget:
 roles:
   # ── general: the answer path. A cloud fallback would send user text to a
   # third party automatically, and a second local 9b tag is a download plus
-  # ~6.4 GB residency (vram_budget.md), so v0 is deliberately alone.
+  # ~6.4 GB residency (vram_budget.md), so v0 is deliberately alone BEFORE the
+  # pointer. The Claude record below is a candidate AFTER it: never served unless
+  # the pointer (or a shell pin) names it, and then v0 is its automatic fallback.
   general:
     active: general-v0
     versions:
@@ -44,6 +46,24 @@ roles:
           top_p: 0.9
           think: false
           keep_alive: 5m
+      - id: general-haiku-v1           # CANDIDATE (after active): never served automatically. Try it on
+        provider: anthropic            #   one machine: MODEL_VERSION_GENERAL=general-haiku-v1 in the SHELL,
+        vram_mib: 0                    #   ANTHROPIC_API_KEY in .env. Cloud: no residency.
+        notes: >-
+          28/10/2026: the same role as general-v0 on every path — chat, RAG answer and
+          question rewrite, the agent's tool rounds (all Discord turns), chunk context at
+          index time. No temperature/top_p: the Claude 5.x models reject them; `effort` is
+          the depth knob, low because general-v0 runs think: false. Promotion needs the D1
+          multidoc report stamped with this id (invariant #4) and extractor-v0's vram_mib
+          re-measured, since it would no longer share a resident tag with general.
+        eval:
+          reports:
+            d1_multidoc: null
+        config:
+          provider: anthropic
+          name: claude-haiku-5-5
+          max_tokens: 4096             # mandatory on this API; a hit is logged (anthropic_max_tokens) and the text kept
+          effort: low
 
   # ── condenser: read only by scripts/condensation_worker.py; needs
   # DISCORD_CONDENSATION_ENABLED + GEMINI_API_KEY. Probe = "provider registered".
