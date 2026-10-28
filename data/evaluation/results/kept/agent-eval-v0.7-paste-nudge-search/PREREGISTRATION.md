@@ -2,33 +2,45 @@
 
 **Đây là test hồi quy nội bộ, không phải khẳng định chất lượng.** Bộ bài do dự án tự viết, không có điểm công bố.
 
+> **Sửa trước lần chạy lại (28/10, sau 22:45).** Bản gốc `347194a` (fable GỘP ĐƯỢC ở `73574da`) đã chạy được năm lần, theo
+> chuỗi, rồi dừng: ba lần chạy một bài cho thấy câu trả lời của một bài phụ thuộc bài chạy ngay trước nó (ticket 20, 22:45;
+> `diagnostics/`). Chủ dự án chọn cách 2: runner gỡ model trước mỗi bài, chỉ sửa mục Quy trình, chạy lại cả ba nhánh. Chủ dự
+> án cũng bỏ phiếu lái sang tìm của 3' ("vậy bỏ"). Những gì đổi so với `347194a`:
+> - Quy trình: mọi lần chạy dùng `--unload-between-tasks`; tên lần chạy mới `v0.7-3d-iso-*`; thêm điều kiện so
+>   `unload_between_tasks: true`; ước lượng GPU mới.
+> - Nhánh +1+3' dùng phiếu thu hẹp `92f5796`; các dự đoán của nhánh này viết lại theo phiếu đó. C3, C4 giữ nguyên.
+> - Dự đoán "nền: doc-39..47 trùng #3-C phía sau" bỏ, vì #3-C là số theo chuỗi; thay bằng so với hai lần chạy một bài.
+> - Điều kiện 47 bài không còn ngoại lệ hist-11.
+> - Thêm kiểu trượt "lệnh công cụ hỏng → Ollama 500 → mất cả lượt", báo riêng.
+>
+> Luật B1–B4, C1–C4 và mọi dự đoán khác giữ nguyên chữ. Năm lần chạy theo chuỗi (`v0.7-3d-{base,nudge}-r{1,2}-cold`,
+> `v0.7-3d-base-full-cold`) giữ trong thư mục này làm bằng chứng, không dùng cho luật.
+
 Chủ dự án duyệt gói #3-D (28/10 21:20, nguyên văn ở ticket 20, 21:25): đo trên `int/20-3c`, không gộp #3-C trước; bước 1
 nhắc lại một lần với lượt thử lại riêng; 3' cho `search_documents` tìm trong đoạn dán; một bản đăng ký ba nhánh; bài mới
 mù, có ít nhất một bài đáp án sau đoạn 8.
 
 - Nhân viên 1 viết bước 1 (`wip/20-paste-nudge`, `2955861` + `5e69dbe`, fable GỘP ĐƯỢC sau một lần sửa).
-- Nhân viên 2 viết 3' (`wip/20-paste-search`, `f497da6` + `c270ded`, fable GỘP ĐƯỢC).
-- Nhân viên 3 viết doc-48..53 (`wip/20-paste-tasks-d`, `a755981`, fable GỘP ĐƯỢC, đã gộp main `f45b764`).
+- Nhân viên 2 viết 3' (`wip/20-paste-search`, `f497da6` + `c270ded` + `92f5796`; phiếu thu hẹp ở `92f5796` chờ fable).
+- Nhân viên 3 viết doc-48..53 (`wip/20-paste-tasks-d`, `a755981`, fable GỘP ĐƯỢC, đã gộp main `f45b764`) và runner gỡ model
+  trước mỗi bài (`wip/20-eval-isolate`, chờ fable).
 
-Ba người không thấy việc của nhau. Opus thấy cả ba và viết bản này trước khi chạy; fable duyệt bản này trước lần chạy đầu.
+Người viết code nhánh không thấy bài mới, người viết bài không thấy code nhánh. Opus thấy cả hai và viết bản này trước khi
+chạy; fable duyệt bản này trước lần chạy đầu.
 
 ## So cái gì
 
-Ba commit trên nhánh tạm `int/20-3d`, dựng sau khi bản này và bài duyệt của fable vào main. Không commit nào lên main giữa
-lúc dựng và lúc đo xong; báo cáo ghi sha thật.
+Ba commit trên một nhánh tạm, dựng sau khi bản sửa này, runner mới và bài duyệt của fable vào main. Không commit nào lên main
+giữa lúc dựng và lúc đo xong; báo cáo ghi sha thật.
 
 | Nhánh | Code | Khác nhánh trước ở đâu |
 |---|---|---|
-| **Nền** | `ed210e4` (`int/20-3c`, phiếu #3-C) gộp `--no-ff` main có bản này | — |
+| **Nền** | `ed210e4` (`int/20-3c`, phiếu #3-C) gộp `--no-ff` main có bản này và runner mới | — |
 | **+1** | Nền gộp `--no-ff` `wip/20-paste-nudge` `5e69dbe` | câu trả lời tự do nhờ dán lại, hoặc nói đã đọc hết, khi đoạn dán còn đoạn chưa đọc, bị trả lại một lần với lệnh `read_document` cụ thể; lượt thử lại riêng, không dùng chung với #2 |
-| **+1+3'** | +1 gộp `--no-ff` `wip/20-paste-search` `c270ded` (xung đột duy nhất ở dòng import của `agent_service.py`: giữ cả hai) | `search_documents` xếp hạng các đoạn của đoạn dán bằng BM25, chỉ trên phần phiếu chưa cho thấy; phiếu bảo cần một chi tiết thì tìm rồi đọc từ `chunk_index` tìm được, cần cả văn bản hoặc tìm không ra thì đọc lần lượt từ đoạn 0 |
-
-Nhánh +1+3' đo **cả gói** "BM25 + phiếu lái sang tìm", không tách được hai phần (fable). Phiếu này rộng hơn chữ của gói đã
-duyệt; fable đã báo chủ dự án; chủ dự án bác thì đổi phiếu về một câu ngắn và đăng ký lại phần +1+3' trước khi chạy nó.
+| **+1+3'** | +1 gộp `--no-ff` `wip/20-paste-search` `92f5796` (xung đột duy nhất ở dòng import của `agent_service.py`: giữ cả hai) | `search_documents` xếp hạng các đoạn của đoạn dán bằng BM25, chỉ trên phần phiếu chưa cho thấy; phiếu thêm đúng một câu "search_documents tìm được trong văn bản dán, và kết quả cho chunk_index để đọc thẳng đoạn đó"; lệnh cụ thể duy nhất vẫn là đọc từ đoạn 0 |
 
 Bộ bài `agent-eval-v0.7` (62 bài, sha `d87c4155eb3e…e56efb10`), bộ chấm `agent-eval-grader-v0.4` **nguyên vẹn** (gồm
-`args_valid`, `max_tool_calls`, không ngoại lệ). Chạy **15 bài đoạn dán**: doc-39..53 (`--tasks`), runner chạy theo thứ tự bộ
-bài nên thứ tự giống nhau ở mọi lần.
+`args_valid`, `max_tool_calls`, không ngoại lệ). Chạy **15 bài đoạn dán**: doc-39..53 (`--tasks`).
 
 | Nhóm | Bài | Đáp án ở đoạn (đếm từ 0) / số đoạn | Lần đọc tối thiểu từ đoạn 0, mỗi lần 3 |
 |---|---|---|---:|
@@ -56,16 +68,20 @@ trả lời của cả 9 bài. **Luật chỉ đứng trên doc-48..53.**
 
 ## Quy trình
 
-Như #3-C: worktree sạch tách tại đúng commit (`meas-<sha>`). Trước mỗi lần chạy: gỡ `qwen3.5:9b`, ghi `/api/ps`. t0, seed 42,
-`--probe`, `--gpu-shared` theo thật. Từng lần một, đọc tin giữa các lần; nhiệt độ GPU > 85 °C thì dừng.
+Worktree sạch tách tại đúng commit (`meas-<sha>`). Trước mỗi lần chạy: gỡ `qwen3.5:9b`, ghi `/api/ps` (`run_cold.sh`). Mọi
+lần chạy dùng `--unload-between-tasks`: trước **mỗi** bài, kể cả bài đầu, runner gỡ model general, chờ `/api/ps` không còn
+nó, nạp lại không prompt, rồi mới chạy bài; manifest ghi `unload_between_tasks: true`, mỗi dòng kết quả ghi `reload_ms`. t0,
+seed 42, `--probe`, `--gpu-shared` theo thật. Từng lần một, đọc tin giữa các lần; nhiệt độ GPU > 85 °C thì dừng.
 
-Thứ tự: nền r1, nền r2, +1 r1, +1 r2, +1+3' r1, +1+3' r2 (15 bài mỗi lần); rồi một lần đủ 62 bài ở nền và một lần đủ 62 bài
-ở +1+3'. Ước ~25 phút GPU.
+Thứ tự: nền r1, nền r2, +1 r1, +1 r2, +1+3' r1, +1+3' r2 (15 bài mỗi lần, `v0.7-3d-iso-{base,nudge,both}-r{1,2}`); rồi một
+lần đủ 62 bài ở nền và một lần đủ 62 bài ở +1+3' (`v0.7-3d-iso-{base,both}-full`). Ước ~45 phút GPU: mỗi bài thêm một lần
+gỡ và nạp, vài giây.
 
 ## Điều kiện phải đúng trước khi so (sai thì dừng)
 
 - `tools_sha256` = `153209…a75e500`; `agent_guide_sha256`, `system_prompt_sha256` bằng nhau ở mọi lần chạy.
 - `dataset.sha256` = `d87c4155eb3e…e56efb10` ở mọi lần chạy; `tasks_run` đúng 15 bài trên (hoặc đủ 62 ở hai lần đủ bộ).
+- `unload_between_tasks: true` ở mọi lần chạy.
 - Hai lần đủ bộ: 47 bài không có đoạn dán cho câu trả lời giống hệt nhau và cùng chuỗi công cụ ở nền và ở +1+3'. Sai
   thì dừng, không đề xuất gì, tìm nguyên nhân trước (hai thay đổi chỉ chạy khi lượt có đoạn dán).
 
@@ -80,27 +96,28 @@ Thứ tự: nền r1, nền r2, +1 r1, +1 r2, +1+3' r1, +1+3' r2 (15 bài mỗi 
 | **Tìm** (+1+3') | có gọi `search_documents`; kết quả có đoạn của đoạn dán không; đoạn đáp án có trong kết quả tìm không; lần đọc ngay sau có bắt đầu ở một `chunk_index` tìm được không |
 | **Trả lời sau tìm mà không đọc** (+1+3') | có tìm, có kết quả ở đoạn dán, không có lần `read_document` nào sau đó |
 | **Lộ lời nhắc** | câu trả lời cuối khớp `lời nhắc\|nhắc tới\|điều chỉnh lại\|kiểm tra lại câu trả lời\|trả lời lại\|hệ thống (yêu cầu\|nhắc)` (đọc tay mọi ca khớp) |
-| Ghi thêm | `from_chunk`/`n` từng lần; bước `answer_check`; `stop_reason`; `tokens_in` lớn nhất; độ trễ |
+| **Mất lượt vì lệnh công cụ hỏng** | bài có `error` (Ollama trả 500 "tool call parsing failed", client báo "Cannot connect to Ollama"); vẫn tính trượt theo bộ chấm, báo riêng |
+| Ghi thêm | `from_chunk`/`n` từng lần; bước `answer_check`; `stop_reason`; `tokens_in` lớn nhất; độ trễ; `reload_ms` |
 
 ## Dự đoán (sai thì báo; không sửa bài, code hay bộ chấm sau khi thấy kết quả)
 
 | Dự đoán | Lý do |
 |---|---|
-| Nền: doc-39..47 trùng từng chữ phía sau của #3-C (`../agent-eval-v0.6-paste-slip-c/v0.6-3c-after-r1-cold`) | cùng code, cùng phiếu; runner chạy theo thứ tự bộ bài nên chín bài này vẫn là chín bài đầu |
+| Nền: doc-41 trùng từng chữ `diagnostics/diag-base-doc41-alone`, doc-51 trùng `diagnostics/diag-base-doc51-alone` | gỡ model trước mỗi bài là để bài chạy như chạy riêng; khác thì "gỡ rồi nạp" chưa bằng "chạy riêng" (ví dụ do yêu cầu `--probe` lúc khởi động) |
 | Nền: doc-49, doc-50 trượt | quá trần đọc lần lượt |
 | Nền: doc-52 đạt, không gọi công cụ | như doc-45 ở #3-C |
-| +1: doc-39, 41, 42, 43, 45, 46 trùng từng byte nền | mẫu chữ không bắn trên 20 câu đạt đã lưu (Nhân viên 1, fable kiểm lại); không bắn thì đầu vào model không đổi |
+| +1: doc-39, 41, 42, 43, 45, 46 trùng từng byte nền | mẫu chữ không bắn trên 20 câu đạt đã lưu (Nhân viên 1, fable kiểm lại); không bắn thì đầu vào model không đổi; bài nào cũng chạy trên model vừa nạp |
 | +1: bước 1 bắn ở doc-40, 44, 47 | đúng ba câu đã thấy nó bắn |
 | +1: doc-49, doc-50 vẫn trượt | bước 1 không vượt trần |
 | +1: doc-52 trùng nền | không đọc, không có gì để bước 1 bắt |
 | +1+3': doc-52 đạt, không gọi công cụ | phiếu vẫn đặt "đủ thì trả lời luôn" trước |
-| +1+3': ít nhất một trong doc-49, doc-50 tìm ra đoạn đáp án trong kết quả tìm | trên 7 bài đã thấy, BM25 đưa đoạn đáp án vào top-4 ở 5–6/7 bài (fable) |
-| +1+3': doc-53 trượt | đoạn đáp án không trùng chữ nào với câu hỏi; tìm sẽ trả đoạn mồi |
-| Mỗi nhánh r1 trùng r2 từng chữ | t0, seed 42, model lạnh |
+| +1+3': `search_documents` được gọi ở ít hơn một nửa trong 12 bài cần phần giữa | lệnh cụ thể duy nhất của phiếu vẫn là đọc từ đoạn 0; ở #3-C, 5/5 lần mở đầu làm đúng lệnh cụ thể của phiếu |
+| +1+3': doc-49 và doc-50 vẫn trượt, tức C3 sai | như trên: model đọc lần lượt tới đoạn 8 rồi hết lượt |
+| +1+3': doc-53 cùng đạt/trượt với +1 | không tìm thì không gặp đoạn mồi; đọc lần lượt tới đoạn 6 ở lượt thứ ba như ở +1 |
+| Mỗi nhánh r1 trùng r2 từng chữ | t0, seed 42, mỗi bài trên model vừa nạp |
 
-**Không dự đoán** doc-48, 51 ở nền và +1, và doc-39, 41, 43, 46 ở +1+3'. Phiếu lái sang tìm, mà BM25 yếu ở doc-46 (đoạn
-đáp án ngoài top-4 khi truy vấn là nguyên câu hỏi; fable), nên mấy bài #3-C đạt nhờ đọc lần lượt có thể lùi; luật điều C2
-bắt chuyện đó.
+**Không dự đoán** doc-48, 51 ở nền và +1, và doc-39, 41, 43, 46 ở +1+3' (câu mới trong phiếu đổi đầu vào của mọi bài đoạn
+dán, nên câu trả lời đổi chữ; đạt hay không thì chưa biết). Luật điều C2 bắt bài lùi.
 
 ## Luật quyết định (đặt trước khi thấy kết quả)
 
@@ -124,6 +141,7 @@ so" nếu một lần đạt; "đạt ở nhánh đề xuất" chỉ khi cả ha
   `read_document` tới được đoạn đáp án.
 
 C xét độc lập với B: B trượt mà C đạt thì báo cả hai, chủ dự án quyết. Một điều sai thì báo kèm câu trả lời, không tự sửa tiếp.
+B đạt nghĩa là gộp cả phiếu #3-C, thứ đã trượt luật riêng của nó; báo cáo nhắc điều đó ngay cạnh kết luận B (fable).
 
 Báo cáo tách riêng, không gọi một lần đạt luật là "đọc được đoạn dán dài":
 
@@ -131,10 +149,11 @@ Báo cáo tách riêng, không gọi một lần đạt luật là "đọc đư�
 - tìm ra đoạn đáp án ở bao nhiêu bài cần phần giữa;
 - trả lời sau tìm mà không đọc: x/y;
 - lộ lời nhắc: x/y;
-- `tokens_in` lớn nhất mỗi nhánh (phiếu +1+3' dài thêm ~245 ký tự ở mọi đoạn dán).
+- mất lượt vì lệnh công cụ hỏng: bài nào, nhánh nào;
+- `tokens_in` lớn nhất mỗi nhánh.
 
 Bảng điểm: lần đo 15 bài là lần đo một phần, không `--append-history`; hai lần đủ bộ chỉ dùng cho điều kiện 47 bài, cũng không
-`--append-history` (chưa có gì được gộp). `analyze.py` bên cạnh tệp này được commit cùng bản đăng ký, trước lần chạy đầu: nó
+`--append-history` (chưa có gì được gộp). `analyze.py` bên cạnh tệp này được commit cùng bản sửa, trước lần chạy lại đầu: nó
 là cách tính luật, không viết lại sau khi thấy số.
 
 ## Giới hạn đã biết
@@ -142,13 +161,17 @@ là cách tính luật, không viết lại sau khi thấy số.
 - 6 bài mới là bằng chứng duy nhất chưa bị nhìn thấy; mỗi bài một câu hỏi. Đủ để thấy hai thay đổi có làm được việc nó nhắm
   không, chưa đủ để nói tỉ lệ trên đoạn dán thật.
 - Phiếu #3-C so với phiếu cũ trên main chưa đo trên doc-48..53: gói duyệt đo trên `int/20-3c`, không có nhánh phiếu cũ.
+- Mọi số Agent Eval trước bản sửa này, kể cả năm lần chạy theo chuỗi trong thư mục này, là **số theo chuỗi**: chỉ so được với
+  lần chạy cùng chuỗi bài (`kept/README.md`).
 - Bước 1 chỉ bắt hai kiểu chữ đã thấy (nhờ dán/gửi/tải/cung cấp lại văn bản hay phần giữa; nói đã đọc hết/toàn bộ/đầy đủ).
-  Kiểu "bạn có muốn tôi đọc tiếp không?" và "cung cấp thêm thông tin" không làm nó bắn.
-- Bước 1 chỉ ở nhánh model tự trả lời; câu trả lời ép khi hết vòng công cụ không bị trả lại.
+  Kiểu "bạn có muốn tôi đọc tiếp không?", "cung cấp thêm thông tin" và "cần xem lại văn bản" (doc-47 theo chuỗi) không làm
+  nó bắn.
+- Bước 1 chỉ ở nhánh model tự trả lời; câu trả lời ép khi hết vòng công cụ không bị trả lại (doc-49 theo chuỗi: "đã đọc
+  toàn bộ văn bản (15 đoạn)" sau 9 đoạn).
 - Câu "không nhắc tới lời nhắc này" là cách giảm lộ, chưa phải bằng chứng; lộ vẫn được đếm.
 - Bộ chia đoạn bỏ các dòng tiêu đề đánh số không có dấu câu cuối khỏi phần chữ (Nhân viên 3, fable): doc-39, 40, 41, 43 mất
-  8, 6, 11, 5 dòng tiêu đề, không dòng nào chứa đáp án. Ở bốn bài đó model và công cụ tìm không thấy tên mục. Đè đều lên
-  ba nhánh; sửa là việc riêng.
+  8, 6, 11, 5 dòng tiêu đề, không dòng nào chứa đáp án. Đè đều lên ba nhánh; sửa là việc riêng.
+- Lệnh công cụ hỏng làm mất cả lượt (`ollama_client.py:129` báo "Cannot connect to Ollama"); việc riêng, không sửa ở đây.
 - doc-49 chỉ quá trần một đoạn; doc-50 là bài xa hẳn.
 - Mẫu số chỉ nhận chữ số ("sáu ngày" trượt), như v0.5/v0.6.
 - doc-53 đo truy vấn bằng chữ của câu hỏi; truy vấn thật do model tự đặt.

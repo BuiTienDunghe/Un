@@ -2,9 +2,11 @@
 
     python analyze.py   # writes analysis.json beside this file
 
-Committed with the preregistration, before the first run. "Worse run" (r1 and r2 differ)
-is read against the proposal: a task passes on the arm compared against if any of its runs
-passes it, and on the proposed arm only if every run does.
+Committed with the preregistration, before the first run; amended with it before the rerun
+with the model unloaded before every task (the earlier sequence runs beside this file are
+evidence, not read here). "Worse run" (r1 and r2 differ) is read against the proposal: a
+task passes on the arm compared against if any of its runs passes it, and on the proposed
+arm only if every run does.
 """
 from __future__ import annotations
 
@@ -12,15 +14,17 @@ import json
 import math
 import re
 from pathlib import Path
+from statistics import median
 
 HERE = Path(__file__).resolve().parent
 KEPT = HERE.parent
 ARMS = {
-    "base": [HERE / "v0.7-3d-base-r1-cold", HERE / "v0.7-3d-base-r2-cold"],
-    "nudge": [HERE / "v0.7-3d-nudge-r1-cold", HERE / "v0.7-3d-nudge-r2-cold"],
-    "both": [HERE / "v0.7-3d-both-r1-cold", HERE / "v0.7-3d-both-r2-cold"],
+    "base": [HERE / "v0.7-3d-iso-base-r1", HERE / "v0.7-3d-iso-base-r2"],
+    "nudge": [HERE / "v0.7-3d-iso-nudge-r1", HERE / "v0.7-3d-iso-nudge-r2"],
+    "both": [HERE / "v0.7-3d-iso-both-r1", HERE / "v0.7-3d-iso-both-r2"],
 }
-FULL = {"base": HERE / "v0.7-3d-base-full-cold", "both": HERE / "v0.7-3d-both-full-cold"}
+FULL = {"base": HERE / "v0.7-3d-iso-base-full", "both": HERE / "v0.7-3d-iso-both-full"}
+ALONE = {"doc-41": HERE / "diagnostics" / "diag-base-doc41-alone", "doc-51": HERE / "diagnostics" / "diag-base-doc51-alone"}
 PASTE_TASKS = tuple(f"doc-{n}" for n in range(39, 54))
 SEEN = tuple(f"doc-{n}" for n in range(39, 48))
 NEW_REACHABLE = ("doc-48", "doc-51", "doc-53")
@@ -35,7 +39,6 @@ ANSWER_CHUNKS = {
 HASHES = ("tools_sha256", "agent_guide_sha256", "system_prompt_sha256")
 TOOLS_SHA = ("153209", "a75e500")  # prefix, suffix as registered
 DATASET_SHA = ("d87c4155eb3e", "e56efb10")  # agent-eval-v0.7 on main f45b764
-PRIOR_AFTER = KEPT / "agent-eval-v0.6-paste-slip-c" / "v0.6-3c-after-r1-cold"
 LEAK = re.compile(r"lời nhắc|nhắc tới|điều chỉnh lại|kiểm tra lại câu trả lời|trả lời lại|hệ thống (?:yêu cầu|nhắc)", re.IGNORECASE)
 CHUNK_INDEX = re.compile(r'"chunk_index":\s*(\d+)')
 
@@ -165,6 +168,7 @@ def main() -> None:
         "dataset_sha256_as_registered": all(m["dataset"]["sha256"].startswith(DATASET_SHA[0]) and m["dataset"]["sha256"].endswith(DATASET_SHA[1]) for m in every),
         "dataset_version": {m["dataset"]["version"] for m in every} == {"agent-eval-v0.7"},
         "tasks_run": all(tuple(run["manifest"]["dataset"]["tasks_run"]) == PASTE_TASKS for arm_runs in runs.values() for run in arm_runs),
+        "unload_between_tasks": all(m.get("unload_between_tasks") is True for m in every),
         "full_runs_62": all(len(run["rows"]) == 62 for run in full.values()),
         "others_47": len(others) == 47,
         "others_identical_base_vs_both": all(
@@ -207,9 +211,10 @@ def main() -> None:
         "C_merge_3prime_too": all(v for key, v in rule.items() if key.startswith("C")),
     }
 
-    prior = load(PRIOR_AFTER)["rows"]
+    alone = {t: load(path)["rows"][t] for t, path in ALONE.items()}
+    searched_middle = [t for t in ANSWER_CHUNKS if any(run[t]["searched"] for run in per["both"])]
     predictions = {
-        "base_seen_equal_3c_after": all(run[t]["answer"] == prior[t]["answer"] for run in per["base"] for t in SEEN),
+        **{f"base_{t.replace('-', '')}_equals_alone_run": all(run[t]["answer"] == alone[t]["answer"] for run in per["base"]) for t in ALONE},
         "base_past_ceiling_fail": not any(any_pass("base", t) for t in NEW_PAST_CEILING),
         "base_doc52_passes_no_tool": all(run["doc-52"]["passed"] and not run["doc-52"]["tools"] for run in per["base"]),
         "nudge_unchanged_tasks_identical_to_base": all(
@@ -219,8 +224,9 @@ def main() -> None:
         "nudge_past_ceiling_still_fail": not any(any_pass("nudge", t) for t in NEW_PAST_CEILING),
         "nudge_doc52_equals_base": all(n["doc-52"]["answer"] == b["doc-52"]["answer"] for n, b in zip(per["nudge"], per["base"])),
         "both_doc52_passes_no_tool": all(run["doc-52"]["passed"] and not run["doc-52"]["tools"] for run in per["both"]),
-        "both_search_finds_answer_in_49_or_50": any(all_runs("both", t, "found_by_search") for t in NEW_PAST_CEILING),
-        "both_doc53_fails": not any_pass("both", "doc-53"),
+        "both_search_called_in_fewer_than_half_of_12_middle": len(searched_middle) < len(ANSWER_CHUNKS) / 2,
+        "both_past_ceiling_still_fail": not any(any_pass("both", t) for t in NEW_PAST_CEILING),
+        "both_doc53_same_pass_as_nudge": [run["doc-53"]["passed"] for run in per["both"]] == [run["doc-53"]["passed"] for run in per["nudge"]],
         **{f"{arm}_r1_equals_r2": all(r1[t]["answer"] == r2[t]["answer"] for t in PASTE_TASKS) for arm, (r1, r2) in per.items()},
     }
 
@@ -242,6 +248,10 @@ def main() -> None:
         "found_by_search": per_arm(lambda run: sorted(t for t in middle if run[t]["found_by_search"])),
         "answered_after_search_without_read": per_arm(lambda run: sorted(t for t in PASTE_TASKS if run[t]["answered_after_search_without_read"])),
         "leak": per_arm(lambda run: sorted(t for t in PASTE_TASKS if run[t]["leak"])),
+        "lost_turn_errors": per_arm(lambda run: {t: run[t]["error"][:80] for t in PASTE_TASKS if run[t]["error"]}),
+        "searched_middle_any_run": searched_middle,
+        "reload_ms": {arm: [{"median": median(r["reload_ms"] for r in run["rows"].values() if r.get("reload_ms") is not None) if any(r.get("reload_ms") is not None for r in run["rows"].values()) else None,
+                             "max": max((r.get("reload_ms") or 0) for r in run["rows"].values())} for run in arm_runs] for arm, arm_runs in runs.items()},
         "max_tokens_in": per_arm(lambda run: max((run[t]["tokens_in"] or 0) for t in PASTE_TASKS)),
         "fail_to_pass": {
             "base_to_nudge": fail_to_pass("base", "nudge", PASTE_TASKS),
