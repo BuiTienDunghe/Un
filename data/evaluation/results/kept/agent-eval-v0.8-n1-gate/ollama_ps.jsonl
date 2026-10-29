@@ -1,0 +1,1 @@
+{"run_id": "v0.8-n1-gate-full", "commit": "717e4d3", "at": "2026-10-29T10:31:28+07:00", "loaded_before_unload": [], "loaded_after_unload": [], "general_unloaded": true, "embedding_loaded": false, "gpu_after_unload": {"temperature_c": 44, "utilization_percent": 0, "memory_used_mib": 0, "processes": ""}}

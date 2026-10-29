@@ -1,0 +1,27 @@
+{
+ "preconditions": {
+  "tools_sha256": true,
+  "agent_guide_sha256": true,
+  "system_prompt_sha256": true,
+  "tools_sha256_as_registered": true,
+  "dataset_v08_66": true,
+  "dataset_same_as_paste_ref": true,
+  "unload_between_tasks": true,
+  "paste_inline_key": true,
+  "others_47": true
+ },
+ "commit": "717e4d31bfaf63a8bc7e75adaa252725b54f9d59",
+ "G1_all_66_identical": true,
+ "merge": true,
+ "differ": {},
+ "score": {
+  "all": 58,
+  "paste_19": 18,
+  "others_47": 40
+ },
+ "ref_score": {
+  "paste_19": 18,
+  "others_47": 40
+ },
+ "errors": {}
+}
