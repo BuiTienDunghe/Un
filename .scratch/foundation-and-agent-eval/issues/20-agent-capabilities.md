@@ -505,3 +505,4 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
     - văn bản quá ~36 000 ký tự vẫn đi phiếu (cách C, D chưa làm);
     - lịch sử dài chưa đo bằng model.
   - Chưa push.
+- 30/10 00:30 (opus 5.5): #4 phía bot: chủ dự án chọn **D2**. Một tin "⏳ Ún đang làm…" sửa dần theo bước, rồi thay bằng câu trả lời. Làm trên `wip/20-discord-progress`. Đuôi #2 và ngưỡng N1 chuyển sang ticket 28.

@@ -1,6 +1,6 @@
 # 25 — Nợ còn lại sau khi tách mềm Discord: lõi vẫn biết tên Discord ở ba chỗ
 
-Status: soạn, chưa code — chờ chủ dự án chọn cách cho từng món nợ
+Status: đang làm 1B — chủ dự án chọn 1B, 2A, 3A (30/10)
 Type: task
 Blocked by: 22 (đã gộp d1711e7); C4 của 22 nên gộp trước, để shim không còn
 
@@ -75,3 +75,4 @@ Nếu sau này thật sự thêm Telegram, lúc đó làm 2B và 3B cùng một 
 | 3C | Migration có test lên/xuống; danh sách hội thoại web trùng trước/sau trên DB thật đã sao lưu |
 
 ## Comments
+- 30/10 00:30 (opus 5.5): chủ dự án chọn **1B, 2A, 3A** ("chặn lan, rẻ"). 1B làm trên `wip/25-config-guard`; 2A và 3A là để nguyên.

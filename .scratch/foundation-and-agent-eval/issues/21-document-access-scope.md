@@ -1,6 +1,6 @@
 # 21 — Tài liệu không có chủ: agent ở web đọc được mọi tài liệu, kể cả PDF của dự án Nghiên cứu người khác
 
-Status: chờ chủ dự án — đây là thiết kế có chủ đích hay lỗ hổng?
+Status: để sau — chủ dự án chọn hoãn (30/10)
 Type: research
 Blocked by: —
 
@@ -19,3 +19,4 @@ Kho tài liệu là **dùng chung** cho mọi thành viên (khi đó ghi rõ tro
 xét), hay **theo người** (khi đó cần cột chủ + lọc ở mọi đường tra: agent, `/rag`, Nghiên cứu)?
 
 ## Comments
+- 30/10 00:30 (opus 5.5): chủ dự án chọn **để sau**: chỉ có hại khi có nhiều tài khoản thật. Ticket giữ nguyên, chưa ai làm.
