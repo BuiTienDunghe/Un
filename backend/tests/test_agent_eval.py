@@ -151,6 +151,15 @@ def test_a_run_writes_all_four_artifacts_with_usage_from_every_round(tmp_path):
     assert manifest["unload_between_tasks"] is False and result["reload_ms"] is None
 
 
+def test_events_name_the_figures_the_answer_check_rejected(tmp_path):
+    # Ticket 28 #1: a reader of events.jsonl sees which figures sent the agent back.
+    router = ScriptedRouter([final("Bạn có 15 ngày phép, cộng 30 ngày nếu thâm niên."), call("search_documents", {"query": "nghỉ phép năm"}), final("Bạn có 12 ngày phép (quy_che.pdf, trang 3).")])
+    out_dir, _ = _run(tmp_path, [DOC_TASK], [DOC_FIXTURE], router)
+
+    check = next(e for e in _jsonl(out_dir / "events.jsonl") if e["kind"] == "answer_check")
+    assert check["arguments"] == {"unsupported_figures": ["15", "30"]} and check["arguments_shape"] == {"unsupported_figures": 2}
+
+
 # ── --unload-between-tasks (ticket 20 #3-D): each task on a model just loaded ──
 
 CHAT_TASK = {"id": "chat-x", "category": "no_tool", "input": "Chào bạn", "expect": {"must_mention": ["Chào"]}}

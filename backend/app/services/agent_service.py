@@ -393,9 +393,12 @@ class AgentService:
                 if check["unsupported"] and not retried and left >= self.final_reserve_seconds:
                     # Figures the turn saw nowhere (ticket 20 #2, T1): one retry, with tools,
                     # in a round of its own. The rejected answer reached no one, so the trace
-                    # keeps only how many figures it had, not its text.
+                    # keeps not its text but the figures it was rejected for (ticket 28 #1):
+                    # in `arguments`, which is content (deleted with the conversation, read by
+                    # forget_member), while arguments_shape, the summary's, keeps their count.
                     steps.append({
-                        "kind": ANSWER_CHECK_STEP, "tool_name": None, "arguments": None, "content": None,
+                        "kind": ANSWER_CHECK_STEP, "tool_name": None,
+                        "arguments": {"unsupported_figures": list(check["unsupported"])}, "content": None,
                         "latency_ms": round_latency, "error_code": UNSUPPORTED_FIGURES,
                         "arguments_shape": {"unsupported_figures": len(check["unsupported"])}, **last,
                     })

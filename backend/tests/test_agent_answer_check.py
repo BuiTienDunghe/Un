@@ -85,11 +85,24 @@ def test_an_invented_figure_gets_one_retry_and_the_rejected_text_is_kept_nowhere
     rejected = steps[0]
     assert rejected["content"] is None and rejected["error_code"] == UNSUPPORTED_FIGURES
     assert rejected["arguments_shape"] == {"unsupported_figures": 2}
-    assert INVENTED not in json.dumps(steps, ensure_ascii=False), "the trace keeps counts, not the invented text"
+    assert INVENTED not in json.dumps(steps, ensure_ascii=False), "the trace keeps figures, not the invented text"
     retry_prompt = router.prompts[1]
     assert retry_prompt[-2] == {"role": "assistant", "content": INVENTED}
     assert "100.000, 200.000" in retry_prompt[-1]["content"] and "gọi công cụ" in retry_prompt[-1]["content"]
     assert steps[1]["arguments_shape"] == {"unsupported_figures": 0} and "error_code" not in steps[1]
+
+
+def test_the_rejected_step_names_its_figures_where_content_lives_and_the_summary_keeps_the_count():
+    # Ticket 28 #1: `arguments` goes to agent_traces, deleted with the conversation;
+    # arguments_shape is all the content-free summary reads, so it stays a count.
+    invented = "Mức 100.000, 120.000, 140.000, 160.000, 180.000 hay 200.000 đồng/ngày."
+    _, steps, router = run([final(invented), final(HONEST)])
+
+    rejected = steps[0]
+    figures = ["100.000", "120.000", "140.000", "160.000", "180.000", "200.000"]
+    assert rejected["arguments"] == {"unsupported_figures": figures}, "every figure, past the five the retry names"
+    assert rejected["arguments_shape"] == {"unsupported_figures": 6} and rejected["content"] is None
+    assert "200.000" not in router.prompts[1][-1]["content"], "the retry still names five"
 
 
 def test_figures_from_the_question_the_history_or_a_tool_need_no_retry():

@@ -97,5 +97,14 @@ def test_tool_arguments_lose_the_members_id_and_words():
     assert redact_arguments({"query": "lịch họp", "author_id": B_ID}, A_ID, INDEX) == ({"query": "lịch họp", "author_id": B_ID}, False)
 
 
+def test_an_answer_checks_figures_lose_the_members_words_item_by_item():
+    # Ticket 28 #1: an answer_check step's arguments list the figures a rejected answer had.
+    account = "1.234.567.890.123.456.789"
+    index = QuoteIndex([f"Số tài khoản của mình là {account} nhé"])
+    redacted, changed = redact_arguments({"unsupported_figures": [account, "200.000"]}, A_ID, index)
+    assert changed and redacted == {"unsupported_figures": [PLACEHOLDER, "200.000"]}
+    assert redact_arguments({"unsupported_figures": ["200.000"]}, A_ID, index) == ({"unsupported_figures": ["200.000"]}, False)
+
+
 def test_an_empty_index_changes_nothing():
     assert redact_quotes(A_SAYS, QuoteIndex([])) == (A_SAYS, False)
