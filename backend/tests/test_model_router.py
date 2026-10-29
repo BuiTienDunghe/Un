@@ -1,5 +1,7 @@
 import pytest
 
+from app.llm_clients.anthropic_client import AnthropicClient
+from app.llm_clients.gemini_client import GeminiClient
 from app.llm_clients.ollama_client import OllamaClient, OllamaModelNotLoadedError
 from app.jobs.retry import classify_error
 from app.services.model_router import EmbeddingRefusedError, ModelRouter
@@ -60,6 +62,55 @@ def test_seed_reaches_ollama_only_when_the_config_names_one():
     assert seeded.options == {"temperature": 0, "seed": 42}
     router.chat("general", [{"role": "user", "content": "Hello"}])
     assert seeded.options == {"temperature": 0, "seed": 42}
+
+
+class FakeAnthropic(AnthropicClient):
+    def __init__(self):  # no SDK; records what the router hands over
+        self.calls = []
+
+    def chat(self, model, messages, max_tokens=None, effort=None):
+        self.calls.append(("chat", model, max_tokens, effort))
+        return "claude"
+
+    def chat_tools(self, model, messages, tools, max_tokens=None, effort=None):
+        self.calls.append(("tools", model, max_tokens, effort, tools))
+        return {"content": "claude", "tool_calls": [], "raw_tool_calls": []}
+
+    def stream_chat(self, model, messages, max_tokens=None, effort=None):
+        self.calls.append(("stream", model, max_tokens, effort))
+        yield "cl"
+
+
+HAIKU = {"provider": "anthropic", "name": "claude-haiku-5-5", "max_tokens": 4096, "effort": "low"}
+
+
+def test_anthropic_general_gets_max_tokens_and_effort_and_never_sampling_knobs():
+    client = FakeAnthropic()
+    # temperature in the config (as general-v0 carries) must not reach Claude: the 5.x models 400 on it.
+    router = ModelRouter({"ollama": FakeOllama(), "anthropic": client}, {"general": {**HAIKU, "temperature": 0.4, "top_p": 0.9}})
+    answer, model_used = router.chat("general", [{"role": "user", "content": "Hello"}])
+    assert (answer, model_used) == ("claude", "claude-haiku-5-5")
+    assert client.calls == [("chat", "claude-haiku-5-5", 4096, "low")]
+    # The RAG rewrite's short-call options: num_predict becomes max_tokens, temperature is dropped.
+    router.chat("general", [{"role": "user", "content": "Hello"}], options={"num_predict": 128, "temperature": 0.0})
+    assert client.calls[-1] == ("chat", "claude-haiku-5-5", 128, "low")
+
+
+def test_anthropic_general_serves_tool_rounds_and_streams():
+    client = FakeAnthropic()
+    router = ModelRouter({"ollama": FakeOllama(), "anthropic": client}, {"general": HAIKU})
+    schemas = [{"type": "function", "function": {"name": "t", "parameters": {}}}]
+    result, model_used = router.chat_tools("general", [{"role": "user", "content": "Hello"}], schemas)
+    assert result["content"] == "claude" and model_used == "claude-haiku-5-5"
+    assert client.calls[-1] == ("tools", "claude-haiku-5-5", 4096, "low", schemas)
+    stream, model_used = router.stream_chat("general", [{"role": "user", "content": "Hello"}])
+    assert list(stream) == ["cl"] and model_used == "claude-haiku-5-5"
+
+
+def test_other_cloud_providers_still_refuse_tool_rounds():
+    router = ModelRouter({"gemini": GeminiClient(api_key="k")}, {"general": {"provider": "gemini", "name": "gemini-2.5-flash"}})
+    with pytest.raises(RuntimeError, match="'ollama' or 'anthropic'"):
+        router.chat_tools("general", [{"role": "user", "content": "Hello"}], [])
 
 
 def test_model_router_rejects_removed_code_mode():

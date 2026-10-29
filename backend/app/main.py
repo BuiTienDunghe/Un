@@ -12,6 +12,7 @@ from app.config.settings import PROJECT_ROOT, get_settings
 from app.llm_clients.ollama_client import OllamaClient
 from app.llm_clients.gemini_client import GeminiClient
 from app.llm_clients.deepseek_client import DeepSeekClient
+from app.llm_clients.anthropic_client import AnthropicClient
 from app import discord
 from app.routers import agent, auth, chat, conversations, dashboard, documents, health, memory, models, ocr, rag, research, vision
 from app.security.api_key import require_api_key_for_read
@@ -70,6 +71,12 @@ async def lifespan(app: FastAPI):
             base_url=settings.deepseek_base_url,
             chat_timeout=settings.deepseek_chat_timeout_seconds,
             retry_count=settings.deepseek_retry_count,
+        )
+    if settings.anthropic_api_key:
+        llm_clients["anthropic"] = AnthropicClient(
+            api_key=settings.anthropic_api_key,
+            chat_timeout=settings.anthropic_chat_timeout_seconds,
+            retry_count=settings.anthropic_retry_count,
         )
 
     # Settings validates the mandatory PostgreSQL URL before this point.

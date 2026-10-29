@@ -119,6 +119,10 @@ Cách promote, demote, revert và rebuild collection: `docs/model_registry.md`.
 | Condenser (Gemini, tắt mặc định) | `condenser-v0` | gemini-2.5-flash |
 | Vision | `active: null` — chưa có gì dùng (`/vision/chat` trả 501) | — |
 
+Ứng viên đám mây cho `general`: `general-haiku-v1` (claude-haiku-5-5) nằm sau v0 nên không bao
+giờ tự phục vụ; dùng thử trên một máy bằng `MODEL_VERSION_GENERAL=general-haiku-v1` trong shell
+với `ANTHROPIC_API_KEY` trong `.env`. Chạy được cả lượt công cụ của agent.
+
 `cd backend && python -m app.config.model_registry --check` kiểm tra file (CI chạy mỗi commit);
 `--show` in ra máy này sẽ phục vụ phiên bản nào.
 
