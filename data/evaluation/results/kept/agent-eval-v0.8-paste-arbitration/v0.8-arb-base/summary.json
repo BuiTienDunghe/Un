@@ -1,0 +1,67 @@
+{
+  "overall": {
+    "passed": 10,
+    "total": 19,
+    "rate": 0.5263
+  },
+  "errors": 0,
+  "by_category": {
+    "documents": {
+      "passed": 10,
+      "total": 19,
+      "rate": 0.5263
+    }
+  },
+  "by_check": {
+    "args_valid": {
+      "passed": 14,
+      "total": 14,
+      "rate": 1.0
+    },
+    "completed": {
+      "passed": 19,
+      "total": 19,
+      "rate": 1.0
+    },
+    "must_mention": {
+      "passed": 10,
+      "total": 19,
+      "rate": 0.5263
+    },
+    "tool_budget": {
+      "passed": 2,
+      "total": 2,
+      "rate": 1.0
+    },
+    "tools_forbidden": {
+      "passed": 18,
+      "total": 19,
+      "rate": 0.9474
+    }
+  },
+  "by_retrieval_source": {},
+  "citation_verbatim": {
+    "verbatim": 0,
+    "of_tasks_with_citation": 0
+  },
+  "failed_tasks": [
+    "doc-40",
+    "doc-44",
+    "doc-47",
+    "doc-49",
+    "doc-50",
+    "doc-54",
+    "doc-55",
+    "doc-56",
+    "doc-57"
+  ],
+  "latency_ms": {
+    "mean": 11760,
+    "p50": 12087,
+    "max": 21457
+  },
+  "tokens_in_total": 199532,
+  "tokens_out_total": 11900,
+  "mean_tool_calls": 1.74,
+  "budget_exhausted": 8
+}
