@@ -51,6 +51,7 @@ from app.services.agent_service import AGENT_GUIDE, FINAL_RESERVE_SECONDS, READ_
 from app.discord.history_service import _SAFE_LEXEME, DiscordHistoryHit
 from app.discord.speaker_context import DISCORD_SPEAKER_SYSTEM_INSTRUCTION, attributed_user_content
 from app.services.injection_defense import InjectionDefense
+from app.services.pastes import CHARS_PER_TOKEN, INLINE_FIXED_TOKENS, INLINE_MAX_TOKENS
 from app.utils.vi_tokenizer import tokenize_vietnamese
 from scripts.agent_eval_grader import GRADER_VERSION, grade, summarize, tool_calls
 from scripts.agent_eval_scorecard import render, scorecard
@@ -420,6 +421,8 @@ def run_eval(
         "tool_result_max_chars": tool_result_max_chars,
         "read_result_max_chars": read_result_max_chars,
         "input_max_chars": INPUT_MAX_CHARS,
+        # N1 (ticket 20's arbitration round): a last-message paste under this estimate reaches the model whole.
+        "paste_inline": {"max_tokens": INLINE_MAX_TOKENS, "fixed_tokens": INLINE_FIXED_TOKENS, "chars_per_token": CHARS_PER_TOKEN},
         "turn_budget_seconds": turn_budget_seconds,
         "final_reserve_seconds": final_reserve_seconds,
         "injection_defense": defense.enabled,
