@@ -77,9 +77,14 @@ chỉ là đối chiếu. Nền và C7 trả lời theo Điều 9, và hai câu 
 | p9 | N1 lần 1 = lần 2 trên bài giữa | đúng (9/9 giống từng byte) |
 | p10 | C7: bài nền dừng trước trần thì giống hệt nền | đúng |
 
-p5 sai: với N1, #2 vẫn bắt được con số model tự tính, không chép từ văn bản. Vết chỉ ghi số lượng con số bị bắt, không ghi là
-số nào. Câu trả lời sau lần thử lại mở đầu bằng "Xin lỗi, tôi đã nhầm lẫn…". Đây là lỗi lộ lời thử lại của #2 đã biết từ
-28/10; nó cũng có ở C7 doc-57 ("Xin lỗi, tôi cần làm rõ lại").
+p5 sai: #2 bắn một lần ở doc-47 dưới N1. Vết chỉ ghi số lượng con số bị bắt, không ghi là số nào, và không giữ câu trả lời
+đầu. Ba con số trong câu trả lời cuối (18.000.000, 36.000.000, 54.000.000) đều có nguyên văn trong văn bản. Câu thử lại tự
+nói con số bị bắt là tiền cọc 54.000.000, mà số này có trong văn bản. Suy luận, chưa kiểm được: câu đầu viết khác dạng, ví dụ
+"54 triệu"; bộ kiểm đọc "54" thành một số riêng, không khớp với 54.000.000. Đây là điểm mù sẵn có của #2, có ở mọi nhánh: nền
+và C7 cũng bắn ở doc-47.
+
+Câu trả lời sau lần thử lại mở đầu bằng "Xin lỗi, tôi đã nhầm lẫn…". Đây là lỗi lộ lời thử lại của #2, đã biết từ 28/10; nó
+cũng có ở C7 doc-57 ("Xin lỗi, tôi cần làm rõ lại").
 
 ## Ghi riêng
 
@@ -107,7 +112,9 @@ số nào. Câu trả lời sau lần thử lại mở đầu bằng "Xin lỗi,
 - 15 bài cũ đã lộ với người viết code; chỉ doc-54..57 là mù.
 - 19 bài chỉ bắt được chênh lệch lớn. Ở đây chênh lệch lớn: 18 so với 14 và 10.
 - 47 bài không dán không chạy lại. Code của N1 chỉ chạm tin cuối là đoạn dán, có test ghim.
-- Eval không có lịch sử hội thoại. Phần lịch sử trong ước token của N1 chỉ được test đơn vị kiểm, chưa đo bằng model.
+- Eval không có lịch sử hội thoại. Phần lịch sử trong ước token của N1 chỉ được test đơn vị kiểm, chưa đo bằng model. Trong
+  chat thật, tối đa 40 tin lịch sử nằm cùng phép ước, nên trần thực tế thấp hơn ~36 000 ký tự. Discord giới hạn tin ở 10 000
+  ký tự, nên N1 không bao giờ bật ở đó.
 - Agent Eval là test hồi quy nội bộ, không phải khẳng định chất lượng.
 - Các nhánh đo đứng trên phiếu #3-C (`int/20-arb`), không phải main. Main đang dùng phiếu #3.
 
