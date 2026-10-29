@@ -47,7 +47,7 @@ from app.llm_clients.usage import consume_usage
 from app.schemas.chat_schema import ChatRequest
 from app.discord.schema import DiscordTurnEnqueueRequest
 from app.discord import agent_tools
-from app.services.agent_service import AGENT_GUIDE, FINAL_RESERVE_SECONDS, READ_RESULT_MAX_CHARS, TURN_BUDGET_SECONDS, AgentService, core_tools
+from app.services.agent_service import AGENT_GUIDE, FINAL_RESERVE_SECONDS, PASTE_EXTRA_ROUNDS, READ_RESULT_MAX_CHARS, TURN_BUDGET_SECONDS, AgentService, core_tools
 from app.discord.history_service import _SAFE_LEXEME, DiscordHistoryHit
 from app.discord.speaker_context import DISCORD_SPEAKER_SYSTEM_INSTRUCTION, attributed_user_content
 from app.services.injection_defense import InjectionDefense
@@ -417,6 +417,8 @@ def run_eval(
     manifest = {
         **run_meta,
         "max_steps": max_steps,
+        # C7 (ticket 20's arbitration round): the tool rounds a paste turn gets past max_steps.
+        "paste_extra_rounds": PASTE_EXTRA_ROUNDS,
         "tool_result_max_chars": tool_result_max_chars,
         "read_result_max_chars": read_result_max_chars,
         "input_max_chars": INPUT_MAX_CHARS,

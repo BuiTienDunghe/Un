@@ -12,9 +12,13 @@ import json
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+import pytest
+
 import app.routers.chat as chat_router
+import app.services.agent_service as agent_service
+from app.llm_clients.ollama_client import OllamaToolCallParseError
 from app.security.api_key import require_api_key
-from app.services.agent_service import ANSWER_CHECK_STEP, BAD_ARGUMENTS, NOT_READABLE, READ_MAX_CHUNKS, AgentService
+from app.services.agent_service import ANSWER_CHECK_STEP, BAD_ARGUMENTS, NOT_READABLE, READ_MAX_CHUNKS, TOOL_CALL_ERROR_STEP, AgentService
 from app.services.chat_service import ChatService
 from app.services.pastes import (
     PASTE_MAX,
@@ -59,7 +63,10 @@ class Router:
 
     def chat_tools(self, role, messages, tools):
         self.prompts.append([dict(m) for m in messages])
-        return self.rounds.pop(0), "fake"
+        turn = self.rounds.pop(0)
+        if isinstance(turn, Exception):
+            raise turn
+        return turn, "fake"
 
     def chat(self, role, messages):
         self.prompts.append([dict(m) for m in messages])
@@ -221,6 +228,48 @@ def test_a_figure_only_in_the_unread_middle_sends_the_agent_back_to_read_it():
     service, router = agent([final("Hạn là ngày 14/11."), call("read_document", {"document_id": pid, "n": 3}), final("Hạn 14/11.")])
     _, _, steps = service.run([{"role": "user", "content": PASTED}])
     assert [s["kind"] for s in steps][:2] == [ANSWER_CHECK_STEP, "tool_call"]
+
+
+# C7 (ticket 20's arbitration round): a turn with a paste, last message or history, gets
+# PASTE_EXTRA_ROUNDS tool rounds past max_steps; #2's and ticket 27's retries still add one.
+
+def reads(text: str, count: int = 10) -> list[dict]:
+    return [call("read_document", {"document_id": paste_id(text), "from_chunk": 3 * k, "n": 3}) for k in range(count)]
+
+
+def tool_rounds(steps) -> int:
+    return sum(1 for step in steps if step["kind"] == "tool_call")
+
+
+@pytest.mark.parametrize("messages, expected", [
+    ([{"role": "user", "content": PASTED}], 7),
+    ([{"role": "user", "content": PASTED}, {"role": "assistant", "content": "Đã đọc."}, {"role": "user", "content": "Ai phụ trách?"}], 7),
+    ([{"role": "user", "content": "Ai phụ trách?"}], 3),
+])
+def test_a_paste_turn_gets_seven_tool_rounds_and_a_turn_without_one_three(messages, expected):
+    service, _ = agent(reads(PASTED))
+    _, _, steps = service.run(messages)
+    assert tool_rounds(steps) == expected and steps[-1]["stop_reason"] == "max_steps"
+
+
+@pytest.mark.parametrize("first", [OllamaToolCallParseError("XML syntax error on line 12"), final("Hạn là ngày 14/11.")])
+def test_a_retry_on_a_paste_turn_still_adds_its_own_round(first):
+    # Ticket 27's retry after a malformed call, or #2's after a figure from nowhere: 7 + 1.
+    service, _ = agent([first, *reads(PASTED)])
+    _, _, steps = service.run([{"role": "user", "content": PASTED}])
+    assert steps[0]["kind"] in (TOOL_CALL_ERROR_STEP, ANSWER_CHECK_STEP)
+    assert tool_rounds(steps) == 7 and steps[-1]["stop_reason"] == "max_steps"
+
+
+def test_a_paste_turn_that_ends_inside_three_rounds_sends_the_model_what_it_did(monkeypatch):
+    def run():
+        service, router = agent([*reads(PASTED, 2), final("Hạn 14/11, chị Thu Hà phụ trách.")])
+        answer, _, steps = service.run([{"role": "user", "content": PASTED}])
+        return router.prompts, answer, [step["kind"] for step in steps]
+
+    with_c7 = run()
+    monkeypatch.setattr(agent_service, "PASTE_EXTRA_ROUNDS", 0)
+    assert run() == with_c7 and with_c7[2][-1] == "final"
 
 
 def client(chat_service) -> TestClient:
