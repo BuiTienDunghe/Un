@@ -1,6 +1,6 @@
 # Current architecture — PostgreSQL-only baseline
 
-Date: 2026-08-19 (original 2026-07-19; refreshed after P0 and P1-1..P1-3; model version registry 2026-09-07; Discord package 2026-10-28)
+Date: 2026-08-19 (original 2026-07-19; refreshed after P0 and P1-1..P1-3; model version registry 2026-09-07; Discord package 2026-10-28; checked against main 2026-10-30, ticket 29)
 
 ## Source-of-truth boundary
 
@@ -26,16 +26,26 @@ database.
 FastAPI APIs (layer-1 X-API-Key guard on every mutating route)
   -> PostgreSQL: documents, versions, pages, chunks, jobs, outbox,
      conversations + message_sources (persisted citations), Discord sessions/memory
-  -> Redis/RQ: OCR, indexing and Discord-memory transport only
-       -> OCR worker / index worker / memory worker
-            -> PostgreSQL canonical state + Qdrant versioned vectors
+  -> OCR + indexing: a background thread of the API process (default,
+     INGESTION_EXECUTION_BACKEND=thread)
+       -> PostgreSQL canonical state + Qdrant versioned vectors
+  -> Redis/RQ: Discord-memory transport (memory worker); OCR/index jobs
+     only when INGESTION_EXECUTION_BACKEND=rq (compose worker-ocr / worker-index)
   -> host workers started by the launcher: cleanup, backup,
-     outbox dispatcher + memory worker (when memory proposal mode is enabled)
+     outbox dispatcher + memory worker (when memory proposal mode is enabled),
+     condensation worker (when DISCORD_CONDENSATION_ENABLED=true)
 ```
 
 `backend/app/main.py` composes PostgreSQL repositories and document/retrieval
-services. Redis carries job IDs; PostgreSQL owns lifecycle state, idempotency,
-outbox records, active-version state, citations, and canonical chunk content.
+services. With the default `thread` backend it builds no job queue: an index request, a source
+replacement or a retry starts `_run_index` in a daemon thread of the API
+(`PostgresDocumentService.enqueue_index` / `_replace_content` / `retry_ingestion`), so
+no RQ job, outbox event or OCR/index worker is involved, and `/health` reports
+`worker_ocr` / `worker_index` as `unavailable` without that affecting `status`. The
+launcher starts only the `redis` container of the `workers` profile, never the OCR/index
+worker containers. With `rq`, Redis carries job IDs; in both modes PostgreSQL owns
+lifecycle state, idempotency, outbox records, active-version state, citations, and
+canonical chunk content.
 Ollama provides embeddings and model inference; it is not a persistence source.
 Which model serves each role is decided once per process by the model version
 registry (next section).
@@ -60,7 +70,7 @@ The split is soft, on purpose (ticket 22):
 
 - Discord's 10 tables keep their models in `app/postgres/models.py` (one metadata for
   Alembic, no migration), and the dashboard and `/health` count rows in them.
-- The 25 `discord_*` fields stay in `Settings`; `jobs/routing.py` names the memory
+- The 23 `discord_*` fields stay in `Settings`; `jobs/routing.py` names the memory
   ingest task by its string path.
 - The agent's `search_history` tool is the package's (`app/discord/agent_tools.py`):
   `register_services()` plugs it into the running agent's `ToolRegistry` (ticket 22 C4).
@@ -69,6 +79,31 @@ Web memory and Discord memory meet at one contract. The `memories` table and the
 `memories` collection belong to the core (`MemoryService`); an approved Discord fact is
 projected into them under a `mem_dc_<uuid>` id through `upsert_with_id` / `remove_with_id`,
 and the core infers nothing from that prefix.
+
+## Agent (tool mode)
+
+A web turn goes through `AgentService` only when the request sets `use_tools` (default
+false, `chat_schema.py`); a Discord turn does when `DISCORD_AGENT_TOOLS_ENABLED` (default
+true) and its guild is in `DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST` (default empty = no guild,
+`*` = every guild). Every other turn is plain chat. The tools sit in one `ToolRegistry`:
+the core registers `search_documents`, `read_document` and `system_status`; the Discord
+package adds `search_history`. `read_document` reads up to three consecutive chunks whole
+per call (at most `agent.read_result_max_chars`, 6 000), and only a document that the same
+turn's search returned or a paste of the same conversation. A turn is bounded by
+`agent.max_steps` (3 tool rounds) and `agent.turn_budget_seconds` (90 s, with
+`final_reserve_seconds` 20 s kept for the answer). An answer with a figure of two or more
+digits the turn saw nowhere gets one more round with tools while that reserve is free
+(`answer_figures.py`); a tool call Ollama cannot parse gets one re-prompt. Steps persist in
+`agent_traces`, and a content-free summary of each in `agent_trace_summaries`, which
+outlives the conversation.
+
+Long pastes (`services/pastes.py`): tool mode accepts a message up to 100 000 characters,
+plain chat refuses more than 10 000 (422 `INPUT_TOO_LONG`). A paste stays a message of its
+conversation and never enters the document library. The paste the user just sent reaches
+the model whole while the whole prompt, estimated as 1 253 + characters / 3.3 tokens, fits
+16 384 − 4 096; otherwise, and for any paste further up the history, the model sees a slip
+(the first and last 600 characters and a `paste_<hash>` id) and opens the rest with
+`read_document`.
 
 ## Model versions
 
