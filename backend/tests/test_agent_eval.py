@@ -310,7 +310,19 @@ def test_an_input_the_api_would_reject_fails_without_a_model_call(tmp_path):
     rejected, answered = _jsonl(out_dir / "task_results.jsonl")
     assert rejected["error"].startswith("INPUT_TOO_LONG") and rejected["model_rounds"] == 0 and rejected["passed"] is False
     assert answered["passed"] is True
-    assert json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))["input_max_chars"] == INPUT_MAX_CHARS
+    manifest = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["input_max_chars"] == INPUT_MAX_CHARS
+    # C7's rounds (ticket 20's arbitration round), and the tools it leaves as they were.
+    assert manifest["max_steps"] == 3 and manifest["paste_extra_rounds"] == 4
+    assert manifest["tools_sha256"] == "153209652c0672a2337be105bd711a1e343a9c7bdf93911e7d14dba18a75e500"
+
+
+@pytest.fixture
+def three_rounds(monkeypatch):
+    """The three tool rounds a paste turn had before C7."""
+    from app.services import agent_service
+
+    monkeypatch.setattr(agent_service, "PASTE_EXTRA_ROUNDS", 0)
 
 
 def test_a_paste_task_reads_its_far_chunk_through_the_runner(tmp_path):
@@ -339,6 +351,7 @@ def test_a_paste_task_reads_its_far_chunk_through_the_runner(tmp_path):
     assert '"chunk_index": 6' in read["content"] and "Minh Khôi" in read["content"]
 
 
+@pytest.mark.usefixtures("three_rounds")
 def test_a_far_paste_answer_arrives_on_the_third_read_from_chunk_0(tmp_path):
     # v0.6 (ticket 20 #3-C): doc-46 is reachable reading on from chunk 0, three chunks a
     # read, only while every read fits the read cap whole; the real cap decides it here.
@@ -357,6 +370,7 @@ def test_a_far_paste_answer_arrives_on_the_third_read_from_chunk_0(tmp_path):
     assert "Sóng Biếc" not in first + second and "Sóng Biếc" in third
 
 
+@pytest.mark.usefixtures("three_rounds")
 def test_a_paste_answer_past_three_reads_from_chunk_0_never_arrives_that_way(tmp_path):
     # v0.7 (j): doc-49 read on from chunk 0, three chunks a read, spends every tool round
     # and ends at chunk 8; the answer is in chunk 10.
@@ -372,6 +386,22 @@ def test_a_paste_answer_past_three_reads_from_chunk_0_never_arrives_that_way(tmp
     contents = [e["content"] for e in _jsonl(out_dir / "events.jsonl") if e["kind"] == "tool_result"]
     assert len(contents) == 3 and '"next_from_chunk": 9' in contents[-1]
     assert not any(_matches(pattern, content) for pattern in task["expect"]["must_mention"] for content in contents)
+
+
+def test_with_c7_doc_49s_answer_arrives_on_the_fourth_read_from_chunk_0(tmp_path):
+    # C7: the same reads go on past three, and the fourth, from chunk 9, holds chunk 10.
+    from app.services.pastes import paste_id
+    from scripts.agent_eval_grader import _matches
+
+    task = next(t for t in load_dataset(DATASET_DIR).tasks if t["id"] == "doc-49")
+    reads = [call("read_document", {"document_id": paste_id(task["input"]), "from_chunk": start, "n": 3}) for start in range(0, 21, 3)]
+    out_dir, _ = _run(tmp_path, [task], [], ScriptedRouter(reads))
+
+    [result] = _jsonl(out_dir / "task_results.jsonl")
+    contents = [e["content"] for e in _jsonl(out_dir / "events.jsonl") if e["kind"] == "tool_result"]
+    assert result["budget_exhausted"] is True and len(contents) == 7, "seven tool rounds, then the forced answer"
+    found = [any(_matches(pattern, content) for pattern in task["expect"]["must_mention"]) for content in contents]
+    assert found.index(True) == 3
 
 
 @pytest.mark.parametrize("task_id, answer", [

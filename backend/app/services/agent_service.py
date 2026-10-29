@@ -66,6 +66,10 @@ SEARCH_EXCERPT_CHARS = 400
 READ_CHUNK_MAX_CHARS = 2400
 READ_RESULT_MAX_CHARS = 6000
 READ_MAX_CHUNKS = 3
+# C7 (ticket 20's arbitration round, owner's approval 29/10): a turn with a paste to read gets
+# this many tool rounds past max_steps. Seven reads of three chunks reach chunk 20, about
+# 27 000 characters, the most the 16k window holds (research-2026-10-29/c-noi-tran-doc.md).
+PASTE_EXTRA_ROUNDS = 4
 
 SEARCH_DOCUMENTS_SCHEMA: dict[str, Any] = {
     "type": "function",
@@ -343,8 +347,9 @@ class AgentService:
         consume_usage()
         last: dict[str, int | None] = {"tokens_in": None, "tokens_out": None}
         # The answer check (ticket 20 #2) may grant one more round, for its single retry;
-        # `checked_out` are the messages it added, which never count as something seen.
-        rounds, retried = self.max_steps, False
+        # `checked_out` are the messages it added, which never count as something seen. A turn
+        # with a paste starts with PASTE_EXTRA_ROUNDS more (C7).
+        rounds, retried = self.max_steps + (PASTE_EXTRA_ROUNDS if pastes else 0), False
         checked_out: set[int] = set()
         # A tool call Ollama could not parse (ticket 27) has a retry of its own, apart from #2's.
         call_retried = False
