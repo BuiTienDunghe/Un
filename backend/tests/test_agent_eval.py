@@ -591,6 +591,24 @@ MENTION_KEYS = ("must_mention", "must_not_mention", "must_say_not_found", "must_
     ("doc-53", "Có: khởi hành muộn từ 6 giờ trở lên được trả 400.000 đồng cho mỗi quãng sáu giờ, nên trễ 7 tiếng bạn nhận 400.000 đồng.", True),
     ("doc-53", "Trễ từ 6h trở lên là được trả, 7 tiếng thì bạn nhận 400k.", True),
     ("doc-53", "Được 300.000 đồng cho mỗi 4 tiếng trễ.", False),
+    # v0.8: four more no one had seen, each against a range guess too (doc-51 passed on
+    # "3-7 ngày"): a figure right after a dash, spaced or not, is the end of a range.
+    ("doc-54", "Điểm cắt duy nhất của cự ly 21 km là trạm Suối Mơ ở km 14,2, đóng lúc 8 giờ 40.", True),
+    ("doc-54", "Bạn phải qua trạm Suối Mơ trước 08:40.", True),
+    ("doc-54", "Điểm cắt ở trạm Đá Bàn, đóng lúc 8 giờ 05.", False),
+    ("doc-54", "Trạm Suối Mơ thường đóng trong khoảng 7:30–8:40.", False),
+    ("doc-55", "Em nộp hồ sơ ở Bộ phận Một cửa, tầng trệt nhà Hoa Sữa; phí duy trì hồ sơ là 320.000 đồng mỗi học kỳ.", True),
+    ("doc-55", "Nộp ở nhà Hoa Sữa, đóng 320k.", True),
+    ("doc-55", "Nộp ở Phòng Công tác học sinh sinh viên, phòng 105 nhà Bằng Lăng; không mất khoản nào.", False),
+    ("doc-55", "Nộp ở nhà Hoa Sữa, phí khoảng 300.000 - 320.000 đồng.", False),
+    ("doc-56", "Gãy chân có kết luận của cơ sở y tế thì được bảo lưu, tối đa 75 ngày, phí xử lý hồ sơ 90.000 đồng.", True),
+    ("doc-56", "Bảo lưu 75 ngày, mất 90k.", True),
+    ("doc-56", "Thẻ được tạm dừng tối đa 30 ngày mỗi năm, phí 150.000 đồng mỗi lần.", False),
+    ("doc-56", "Thường được bảo lưu 60–75 ngày, phí 50.000–90.000 đồng.", False),
+    ("doc-57", "Vùng Tây Nguyên: tiền phòng tối đa 870.000 đồng/đêm, phụ cấp lưu trú 265.000 đồng/ngày.", True),
+    ("doc-57", "870k một đêm, phụ cấp 265k mỗi ngày.", True),
+    ("doc-57", "Tiền phòng tối đa 1.250.000 đồng/đêm, phụ cấp 310.000 đồng/ngày.", False),
+    ("doc-57", "Tiền phòng khoảng 700.000 - 870.000 đồng/đêm, phụ cấp 220.000–265.000 đồng/ngày.", False),
 ])
 def test_shipped_criteria_on_correct_and_wrong_phrasings(task_id, answer, passes):
     task = next(t for t in load_dataset(DATASET_DIR).tasks if t["id"] == task_id)
@@ -617,12 +635,23 @@ PASTE_ANSWER_CHUNKS = {
     "doc-51": [0, 6],  # (l) chunk 0 past the slip's first edge, and a far chunk
     "doc-52": "tail",  # (m) shown by the slip's last edge, and no tool call allowed
     "doc-53": [6, 6],  # (n) a middle chunk worded unlike the question
+    "doc-54": [10, 10],  # (o) v0.8 middle task, one piece
+    "doc-55": [10, 12],  # (p) v0.8 middle task, two pieces
+    "doc-56": [10, 10],  # (q) v0.8 middle task with a decoy chunk, as (n)
+    "doc-57": [13, 13],  # (r) v0.8 long task, past what N1 reads whole
 }
 # The answer is in the slip, so any tool call fails the task (doc-42 has no such cap).
 PASTE_NO_TOOL_CALLS = {"doc-45", "doc-52"}
 # Three reads of three chunks from chunk 0 end at chunk 8, so these answers need a read
 # that starts further on.
-PASTE_PAST_THREE_READS = {"doc-49", "doc-50"}
+PASTE_PAST_THREE_READS = {"doc-49", "doc-50", "doc-54", "doc-55", "doc-56", "doc-57"}
+# v0.8 (ticket 20, the N1 / C7 arbitration round): a middle task has every answer piece at
+# 40-60 % of the paste, question included, rounded to two decimals, and in chunk 10 or
+# later. The long task is past what N1 reads whole and, on purpose, below 40 %, so it never
+# counts as a middle task where N1 cannot apply. 40-60 % of 29 000 characters holds no two
+# chunks READ_MAX_CHUNKS apart from chunk 10 on, so doc-55's pieces are two apart.
+PASTE_MIDDLE = {"doc-54", "doc-55", "doc-56"}
+PASTE_LONG = {"doc-57"}
 
 
 def test_paste_answers_lie_where_the_notes_say():
@@ -654,26 +683,65 @@ def test_paste_answers_lie_where_the_notes_say():
             else:
                 assert not _matches(pattern, tail) and found == [where[index]], (task_id, pattern, found)
                 assert f"đoạn {where[index]}" in note
-        if isinstance(where, list) and where[0] != where[1]:
+        if isinstance(where, list) and where[0] != where[1] and task_id not in PASTE_MIDDLE:
             assert where[1] - where[0] >= READ_MAX_CHUNKS, task_id
 
 
-def test_the_reworded_paste_question_shares_its_words_with_a_decoy_chunk_not_the_answer():
+def test_v08_paste_answers_sit_where_the_arbitration_round_reads_them():
+    # Read through AgentService's own read_document, so a changed chunker, read cap or
+    # result format fails here before a run measures the wrong thing.
+    from app.services.agent_service import READ_MAX_CHUNKS, AgentService
+    from app.services.pastes import _chunks, paste_id
+
+    tasks = {task["id"]: task for task in load_dataset(DATASET_DIR).tasks}
+    agent = AgentService(None, None, None)
+    for task_id in sorted(PASTE_MIDDLE | PASTE_LONG):
+        text = tasks[task_id]["input"]
+        chunks, document_id = _chunks(text), paste_id(text)
+        if task_id in PASTE_MIDDLE:
+            assert 25_000 <= len(text) <= 29_000 and min(PASTE_ANSWER_CHUNKS[task_id]) >= 10, task_id
+        else:
+            assert len(text) >= 42_000 and 12 <= PASTE_ANSWER_CHUNKS[task_id][0] <= 18, task_id
+        for pattern in tasks[task_id]["expect"]["must_mention"]:
+            [match] = re.finditer(unicodedata.normalize("NFC", pattern), text, re.IGNORECASE)
+            shares = {round(match.start() / len(text), 2), round(match.end() / len(text), 2)}
+            if task_id in PASTE_MIDDLE:
+                assert all(0.40 <= share <= 0.60 for share in shares), (task_id, pattern, shares)
+            else:
+                assert all(share < 0.40 for share in shares), (task_id, pattern, shares)
+        # Every read of three chunks returns three, so reading on from chunk 0 goes three
+        # chunks a round: three rounds end at chunk 8, seven (C7) at chunk 20.
+        context = {"pastes": {document_id: text}, "readable_documents": {document_id}}
+        for start in range(len(chunks) - READ_MAX_CHUNKS + 1):
+            read, _, _ = agent._read_document({"document_id": document_id, "from_chunk": start, "n": READ_MAX_CHUNKS}, context)
+            assert len(json.loads(read)["chunks"]) == READ_MAX_CHUNKS, (task_id, start)
+        assert max(PASTE_ANSWER_CHUNKS[task_id]) < 7 * READ_MAX_CHUNKS, task_id
+
+
+@pytest.mark.parametrize("task_id, decoy, question_at, answer_shares", [
     # v0.7 (n): doc-53 asks in everyday words ("máy bay trễ", "đền"); the answer chunk says
     # "khởi hành muộn", "chi trả", and a decoy chunk repeats the question's words around a
     # different payout. Words in more than half the chunks (bảo, hiểm, có...) do not count.
+    ("doc-53", 8, -1, 0),
+    # v0.8 (q): doc-56 asks "gãy chân", "tạm dừng", "mất phí"; the answer chunk says "chấn
+    # thương", "chống chỉ định vận động", "bảo lưu", and the decoy is the card pause for trips,
+    # which three reads from chunk 0 reach first.
+    ("doc-56", 4, 0, 4),
+])
+def test_the_reworded_paste_question_shares_its_words_with_a_decoy_chunk_not_the_answer(task_id, decoy, question_at, answer_shares):
     from app.services.pastes import _chunks
     from scripts.agent_eval_grader import _matches
 
-    task = next(t for t in load_dataset(DATASET_DIR).tasks if t["id"] == "doc-53")
+    task = next(t for t in load_dataset(DATASET_DIR).tasks if t["id"] == task_id)
     chunks = _chunks(task["input"])
-    question = task["input"].split("\n\n")[-1]
+    question = task["input"].split("\n\n")[question_at]
     words = [set(re.findall(r"\w+", chunk.lower())) for chunk in chunks]
     rare = {w for w in re.findall(r"\w+", question.lower()) if sum(w in chunk for chunk in words) <= len(chunks) / 2}
     shared = [len(rare & chunk) for chunk in words]
-    answer, decoy, own = PASTE_ANSWER_CHUNKS["doc-53"][0], 8, len(chunks) - 1
+    answer, own = PASTE_ANSWER_CHUNKS[task_id][0], 0 if question_at == 0 else len(chunks) - 1
     assert question in chunks[own]
-    assert shared[answer] == 0 and shared[decoy] == max(s for i, s in enumerate(shared) if i != own), shared
+    assert shared[answer] == answer_shares and 3 * shared[answer] <= shared[decoy], shared
+    assert shared[decoy] == max(s for i, s in enumerate(shared) if i != own), shared
     assert f"Đoạn mồi {decoy}" in task["note"]
     assert not any(_matches(pattern, chunks[decoy]) for pattern in task["expect"]["must_mention"])
 
