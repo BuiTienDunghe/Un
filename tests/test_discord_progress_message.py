@@ -180,13 +180,12 @@ class FakeBackend:
         return [call for call in self.calls if call[0] == "complete"]
 
 
-EDIT_INTERVAL = 0.025
+EDIT_INTERVAL = 0.05
 
 
 def quick(source, **overrides) -> ProgressMessage:
-    # Production's 2 s / 1.5 s / 1.5 s, scaled down. Polls stay slower than the edit
-    # interval by more than Windows' 15.6 ms clock tick, so every label a poll sees gets
-    # its own edit.
+    # Production's 2 s / 1.5 s / 1.5 s, scaled down: polls as often as edits may happen, so
+    # every label a poll sees gets its own edit.
     timings = {"first_post_seconds": 0.05, "poll_seconds": 0.05, "edit_interval_seconds": EDIT_INTERVAL, **overrides}
     return ProgressMessage(source, **timings)
 

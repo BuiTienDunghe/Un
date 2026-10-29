@@ -87,9 +87,7 @@ class ProgressMessage:
         message, self.message = self.message, None
         if message is None:
             return None
-        # A loop, not one sleep: asyncio may wake a timer up to one clock tick early.
-        while self._written_at is not None and (wait := self.edit_interval_seconds - (monotonic() - self._written_at)) > 0:
-            await asyncio.sleep(wait)
+        await self._space_out()
         try:
             return await message.edit(content=content, allowed_mentions=_NO_REPLY_PING)
         except discord.NotFound:
@@ -116,8 +114,18 @@ class ProgressMessage:
         await asyncio.sleep(self.first_post_seconds)
         while not self._given_up:
             await self._poll()
-            await self._write(PREFIX + (self._label or WORKING_LABEL))
+            text = PREFIX + (self._label or WORKING_LABEL)
+            if text != self._shown:
+                # Outside the lock: stop() never waits on this.
+                await self._space_out()
+                await self._write(text)
             await asyncio.sleep(self.poll_seconds)
+
+    async def _space_out(self) -> None:
+        """Until the last write is edit_interval_seconds old. A loop, not one sleep: asyncio
+        may wake a timer up to one clock tick early (15.6 ms on Windows' Python 3.11)."""
+        while self._written_at is not None and (wait := self.edit_interval_seconds - (monotonic() - self._written_at)) > 0:
+            await asyncio.sleep(wait)
 
     async def _poll(self) -> None:
         try:
@@ -133,8 +141,6 @@ class ProgressMessage:
     async def _write(self, text: str) -> None:
         async with self._lock:
             if self._stopped or text == self._shown:
-                return
-            if self._written_at is not None and monotonic() - self._written_at < self.edit_interval_seconds:
                 return
             if self.message is None:
                 try:
