@@ -11,6 +11,8 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-29
+
 ### Added
 - **Agent Eval v0.8** (ticket 20, 29/10): thêm bốn bài dán mù doc-54..57. Ba bài có đáp án ở 40–60 % văn bản dài
   25–29 nghìn ký tự, một bài có số mồi. Bài thứ tư dài 45 166 ký tự, quá ngưỡng nạp nguyên văn. 62 bài cũ và bộ chấm không đổi.
@@ -1100,7 +1102,8 @@ dẫn nguồn đã đo được chất lượng, hai kênh web và Discord dùng
 - Bộ eval mới phủ một tài liệu và đã bão hòa ở 100%, chưa đo được tiến bộ tiếp theo (G7).
 - BM25 chạy trong tiến trình, giới hạn quy mô corpus (G8).
 
-[Unreleased]: https://github.com/BuiTienDunghe/Un/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/BuiTienDunghe/Un/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/BuiTienDunghe/Un/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/BuiTienDunghe/Un/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/BuiTienDunghe/Un/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/BuiTienDunghe/Un/compare/v1.1.0...v1.2.0
