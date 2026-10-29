@@ -53,6 +53,12 @@ class Settings(BaseSettings):
     rq_queue_prefix: str = "local-ai:dev"
     job_max_attempts: int = 3
     job_stale_timeout_seconds: int = 900
+    # ── Discord package knobs (app/discord/) — every discord_* field, in this one block ──
+    # They belong to the Discord package and still live here (ticket 25, choice 1B) because
+    # one Settings keeps one .env and the validators below that check a Discord tag pin
+    # against MODEL_VERSION_EXTRACTOR / _VERIFIER. The core may read only the fixed list in
+    # tests/test_discord_boundary.py, which also fails if a discord_* field lands outside
+    # this block.
     discord_memory_ingestion_enabled: bool = False
     discord_memory_extractor_enabled: bool = False
     # P2-1b: benchmark 19/08 (150 case) — 2b poisons ~49% of auto-applies and
@@ -116,6 +122,7 @@ class Settings(BaseSettings):
     # the dashboard; below it they wait in the review queue. Set to "off" to
     # review everything by hand. Delete-proposals always wait for a human.
     discord_memory_auto_apply_threshold: float | None = 0.8
+    # ── end of the Discord block ──
     # P4-2: per-machine override of models.yaml rag.contextual_retrieval.enabled.
     # Unset = follow models.yaml (shared, versioned); true/false = this machine
     # decides. Context generation is one general-model call per chunk at INDEX

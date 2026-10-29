@@ -11,6 +11,7 @@ Three checks, all read without a database or a running service:
 - Settings (ticket 25, choice 1B): the discord_* fields of the shared Settings belong to the
   Discord package. Outside app/discord/, a module may read one only if the (module, field)
   pair is on a fixed list, so the core cannot start leaning on new Discord knobs unnoticed.
+  The fields also stay in one block of settings.py, so they can be lifted out in one piece.
 """
 from __future__ import annotations
 
@@ -156,6 +157,18 @@ def test_core_modules_read_only_the_listed_discord_settings():
         "to CORE_DISCORD_SETTINGS_READS and say why in the commit."
     )
     assert not gone, f"these listed reads are gone from the code; delete them from CORE_DISCORD_SETTINGS_READS: {gone}"
+
+
+def test_the_discord_settings_fields_sit_in_one_block():
+    # Field order is declaration order, so a run of consecutive positions is one block in the source.
+    names = list(Settings.model_fields)
+    positions = [index for index, name in enumerate(names) if name.startswith("discord_")]
+    assert positions, "Settings has no discord_* field left: drop this test and CORE_DISCORD_SETTINGS_READS"
+    strays = [name for name in names[positions[0]:positions[-1] + 1] if not name.startswith("discord_")]
+    assert not strays, (
+        f"the discord_* fields of settings.py are no longer one block, these fields sit between them: {strays}. "
+        "Declare a Discord field inside the Discord block, and any other field outside it."
+    )
 
 
 def test_the_settings_check_sees_every_spelling_of_a_read():
