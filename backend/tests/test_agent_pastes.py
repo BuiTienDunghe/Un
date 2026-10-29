@@ -14,6 +14,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import app.routers.chat as chat_router
+from app.config.model_registry import Overrides, load_registry, resolve
 from app.security.api_key import require_api_key
 from app.services.agent_service import ANSWER_CHECK_STEP, BAD_ARGUMENTS, NOT_READABLE, READ_MAX_CHUNKS, AgentService
 from app.services.chat_service import ChatService
@@ -24,6 +25,7 @@ from app.services.pastes import (
     PASTE_THRESHOLD,
     SLIP_EDGE_CHARS,
     _chunks,
+    inline_ceiling,
     is_paste,
     note,
     paste_id,
@@ -247,6 +249,31 @@ def test_the_ceiling_is_the_window_less_the_reserve_and_sits_at_36_415_character
     assert INLINE_MAX_TOKENS == 12_288
     assert take_pastes([{"role": "user", "content": sized(36_415)}])[1] == {}
     assert len(take_pastes([{"role": "user", "content": sized(36_416)}])[1]) == 1
+
+
+def test_todays_registry_gives_general_a_ceiling_of_exactly_12_288():
+    # Ticket 28 #4: the ceiling is read off general's context, and with model_versions.yaml
+    # as it stands it is the constant N1 was measured with: nothing changes.
+    general = resolve(load_registry(), Overrides(disabled_roles=frozenset({"condenser", "extractor", "verifier"}))).flat_models()["general"]
+    assert general["context"] == 16_384 and inline_ceiling(general) == 12_288
+
+
+def test_the_ceiling_follows_generals_window_and_a_version_with_none_keeps_todays():
+    assert inline_ceiling({"provider": "ollama", "name": "qwen3.5:9b", "context": 32_768}) == 32_768 - 4_096
+    # A cloud model's config names no context (ticket 26's general-haiku-v1 has only these keys).
+    assert inline_ceiling({"provider": "anthropic", "name": "claude-haiku-5-5", "max_tokens": 4_096, "effort": "low"}) == 12_288
+    assert inline_ceiling(None) == 12_288
+
+
+def test_the_agent_keeps_a_paste_whole_under_the_ceiling_its_caller_hands_it():
+    text = sized(40_000)
+    assert take_pastes([SYSTEM, {"role": "user", "content": text}], max_tokens=28_672)[1] == {}
+    router = Router([final("Đã đọc.")])
+    AgentService(router, None, None, inline_max_tokens=inline_ceiling({"context": 32_768})).run([SYSTEM, {"role": "user", "content": text}])
+    assert router.prompts[0][-1]["content"] == text
+    router = Router([final("Đã đọc.")])
+    AgentService(router, None, None).run([SYSTEM, {"role": "user", "content": text}])
+    assert router.prompts[0][-1]["content"] == slip(text), "with no ceiling handed in, today's"
 
 
 def test_a_paste_of_31_681_characters_reaches_the_model_whole_and_has_no_id():

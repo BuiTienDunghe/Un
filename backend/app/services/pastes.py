@@ -19,6 +19,7 @@ already in the history becomes a one-line note.
 """
 from __future__ import annotations
 
+from collections.abc import Mapping
 from functools import lru_cache
 from hashlib import sha256
 from typing import Any
@@ -31,9 +32,11 @@ SLIP_EDGE_CHARS = 600
 # The chunker's own defaults, which are models.yaml's rag.chunk_tokens / chunk_overlap_tokens:
 # a paste reads in chunks the size of an uploaded document's (median ~1 700 characters).
 CHUNK_TOKENS, CHUNK_OVERLAP_TOKENS = 480, 80
-# N1's ceiling: general's num_ctx (16 384) less 4 096 kept for the answer, one #2 retry and one
-# tool round. A constant, not read from models.yaml: a change of num_ctx must change it too.
-INLINE_MAX_TOKENS = 16_384 - 4_096
+# N1's ceiling: general's window less INLINE_RESERVE_TOKENS kept for the answer, one #2 retry and
+# one tool round. The caller reads the window off general's config (inline_ceiling, ticket 28 #4).
+INLINE_RESERVE_TOKENS = 4_096
+# The ceiling under general-v0's context of 16 384: a version with no `context` keeps it.
+INLINE_MAX_TOKENS = 16_384 - INLINE_RESERVE_TOKENS
 # What the model reads that is not in `messages`, the agent guide and the tool schemas: round 1's
 # tokens_in on stat-01 (a 29-character question, the shortest) in
 # kept/agent-eval-v0.7-paste-nudge-search/v0.7-3d-iso-base-full, run on 94e321f, whose guide and
@@ -101,19 +104,27 @@ def note(text: str) -> str:
     return f"[Người dùng đã dán một văn bản dài {len(text)} ký tự; chỉ đọc được ở chế độ công cụ.]"
 
 
+def inline_ceiling(general: Mapping[str, Any] | None) -> int:
+    """N1's ceiling for general's config as served (a model_versions.yaml `config:` block):
+    its `context` less INLINE_RESERVE_TOKENS."""
+    context = (general or {}).get("context")
+    # No `context` (a cloud model's config, ticket 26's general-haiku-v1): today's 16 384 - 4 096.
+    return int(context) - INLINE_RESERVE_TOKENS if context else INLINE_MAX_TOKENS
+
+
 def prompt_tokens(messages: list[dict[str, Any]]) -> float:
     """N1's estimate of the prompt the model reads for `messages`, as the agent shows them."""
     return INLINE_FIXED_TOKENS + sum(len(str(message.get("content") or "")) for message in messages) / CHARS_PER_TOKEN
 
 
-def take_pastes(messages: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, str]]:
+def take_pastes(messages: list[dict[str, Any]], max_tokens: int = INLINE_MAX_TOKENS) -> tuple[list[dict[str, Any]], dict[str, str]]:
     """The agent's view: every paste replaced by its slip, and the pastes by id — save the
-    user's last message, kept as it is when the whole prompt still fits (N1): no slip, and
-    no id to open."""
+    user's last message, kept as it is when the whole prompt still fits under `max_tokens`
+    (N1, inline_ceiling): no slip, and no id to open."""
     pastes: dict[str, str] = {}
     shown: list[dict[str, Any]] = []
     for index, message in enumerate(messages):
-        whole = index == len(messages) - 1 and prompt_tokens([*shown, message]) <= INLINE_MAX_TOKENS
+        whole = index == len(messages) - 1 and prompt_tokens([*shown, message]) <= max_tokens
         if is_paste(message) and not whole:
             text = str(message["content"])
             pastes[paste_id(text)] = text

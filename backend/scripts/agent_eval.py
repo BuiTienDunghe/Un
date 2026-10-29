@@ -51,7 +51,7 @@ from app.services.agent_service import AGENT_GUIDE, FINAL_RESERVE_SECONDS, READ_
 from app.discord.history_service import _SAFE_LEXEME, DiscordHistoryHit
 from app.discord.speaker_context import DISCORD_SPEAKER_SYSTEM_INSTRUCTION, attributed_user_content
 from app.services.injection_defense import InjectionDefense
-from app.services.pastes import CHARS_PER_TOKEN, INLINE_FIXED_TOKENS, INLINE_MAX_TOKENS
+from app.services.pastes import CHARS_PER_TOKEN, INLINE_FIXED_TOKENS, INLINE_MAX_TOKENS, inline_ceiling
 from app.utils.vi_tokenizer import tokenize_vietnamese
 from scripts.agent_eval_grader import GRADER_VERSION, grade, summarize, tool_calls
 from scripts.agent_eval_scorecard import render, scorecard
@@ -409,6 +409,7 @@ def run_eval(
     read_result_max_chars = int(agent_config.get("read_result_max_chars", READ_RESULT_MAX_CHARS))
     turn_budget_seconds = float(agent_config.get("turn_budget_seconds", TURN_BUDGET_SECONDS))
     final_reserve_seconds = float(agent_config.get("final_reserve_seconds", FINAL_RESERVE_SECONDS))
+    inline_max_tokens = int(agent_config.get("inline_max_tokens", INLINE_MAX_TOKENS))
     history = FixtureHistory(dataset.guild)
     # The tools as the API offers them: the core's, plus app.discord's search_history
     # plugged in with the fixture guild (ticket 22, C4). The manifest's hash and the
@@ -422,7 +423,7 @@ def run_eval(
         "read_result_max_chars": read_result_max_chars,
         "input_max_chars": INPUT_MAX_CHARS,
         # N1 (ticket 20's arbitration round): a last-message paste under this estimate reaches the model whole.
-        "paste_inline": {"max_tokens": INLINE_MAX_TOKENS, "fixed_tokens": INLINE_FIXED_TOKENS, "chars_per_token": CHARS_PER_TOKEN},
+        "paste_inline": {"max_tokens": inline_max_tokens, "fixed_tokens": INLINE_FIXED_TOKENS, "chars_per_token": CHARS_PER_TOKEN},
         "turn_budget_seconds": turn_budget_seconds,
         "final_reserve_seconds": final_reserve_seconds,
         "injection_defense": defense.enabled,
@@ -464,6 +465,7 @@ def run_eval(
             document_reader=documents,
             read_result_max_chars=read_result_max_chars,
             registry=registry,
+            inline_max_tokens=inline_max_tokens,
         )
         tool_context = {"guild_id": history.guild_id} if task.get("surface") == "discord" else None
         answer: str | None = None
@@ -732,6 +734,8 @@ def main(argv: list[str] | None = None) -> int:
         "read_result_max_chars": int(agent_section.get("read_result_max_chars", READ_RESULT_MAX_CHARS)),
         "turn_budget_seconds": float(agent_section.get("turn_budget_seconds", TURN_BUDGET_SECONDS)),
         "final_reserve_seconds": float(agent_section.get("final_reserve_seconds", FINAL_RESERVE_SECONDS)),
+        # N1's ceiling from the general config this run serves, as main.py reads it (ticket 28 #4).
+        "inline_max_tokens": inline_ceiling(general),
     }
     defense = InjectionDefense.from_config(config.get("rag", {}), enabled_override=settings.rag_injection_defense_enabled)
 

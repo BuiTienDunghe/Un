@@ -158,7 +158,8 @@ def _copies(database, guild_id: str, author_id: str, index: QuoteIndex, requests
         if row.kind == "tool_result" and row.tool_name == "search_history":
             redacted, changed = redact_history_result(row.content, author_id, index)
             field = "content"
-        elif row.kind == "tool_call":
+        elif row.kind in ("tool_call", "answer_check"):
+            # answer_check keeps the figures a rejected answer was flagged for (ticket 28 #1).
             redacted, changed = redact_arguments(row.arguments, author_id, index)
             field = "arguments"
         elif row.kind == "final":

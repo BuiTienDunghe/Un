@@ -71,6 +71,27 @@ def test_figures_compare_as_numbers_and_single_digits_are_not_claims():
     assert unsupported_figures("Hạn 31/03/2026", ["hạn cuối 31/3 năm 2026"]) == [], "a leading zero is the same figure"
 
 
+def test_a_number_before_a_scale_word_is_its_full_value_both_ways():
+    # Ticket 28 #3: "54 triệu" was 54 to the check, which 54.000.000 never matched.
+    assert unsupported_figures("Lương là 54 triệu đồng", ["Mức lương 54.000.000 đồng"]) == []
+    assert unsupported_figures("Lương là 54.000.000 đồng", ["Mức lương 54 triệu đồng"]) == []
+    assert unsupported_figures("Vốn 1.500.000.000 đồng", ["vốn điều lệ 1,5 tỷ"]) == [], "a decimal comma before a scale word"
+    # "1,5 tỷ" in an answer is not checked at all (its digits are single, see the blind spots).
+    assert unsupported_figures("Vốn 12,5 tỷ đồng", ["vốn điều lệ 12.500.000.000"]) == []
+    assert unsupported_figures("Vốn 2.000.000.000 đồng", ["vốn 2 tỉ"]) == [] and unsupported_figures("Hỗ trợ 12.000 đồng", ["hỗ trợ 12 ngàn"]) == []
+    assert unsupported_figures("Dự toán 2.500.000.000.000 đồng", ["dự toán 2.500 tỷ"]) == [], "three digits after a separator are thousands still"
+    assert unsupported_figures("Mức 300.000 đồng", ["mức 3 trăm nghìn"]) == [], "a run of scale words multiplies"
+    _, steps, _ = run([final("Đúng, lương của bạn là 54 triệu đồng.")], user="Lương tháng của mình là 54.000.000 đồng phải không?")
+    assert [s["kind"] for s in steps] == ["final"], "no retry"
+
+
+def test_the_digits_as_written_still_count_so_nothing_found_before_is_flagged_now():
+    assert unsupported_figures("Lương 54 triệu đồng", ["Đơn vị: triệu đồng | Lương | 54"]) == [], "a table states its unit once"
+    assert unsupported_figures("Lương 54 đồng", ["lương 54 triệu"]) == []
+    assert unsupported_figures("Lương 54 triệu", ["Lương 45.000.000"]) == ["54 triệu"], "flagged as written, scale word and all"
+    assert unsupported_figures("Lãi suất 10,5%", []) == ["10"], "with no scale word a decimal splits as before"
+
+
 def test_the_checks_own_messages_never_vouch_for_a_figure():
     messages = [{"role": "user", "content": "phụ cấp?"}, {"role": "assistant", "content": INVENTED}, {"role": "system", "content": retry_instruction(["100.000"])}]
     shown, tools = turn_texts(messages, skip={1, 2})
@@ -85,11 +106,32 @@ def test_an_invented_figure_gets_one_retry_and_the_rejected_text_is_kept_nowhere
     rejected = steps[0]
     assert rejected["content"] is None and rejected["error_code"] == UNSUPPORTED_FIGURES
     assert rejected["arguments_shape"] == {"unsupported_figures": 2}
-    assert INVENTED not in json.dumps(steps, ensure_ascii=False), "the trace keeps counts, not the invented text"
+    assert INVENTED not in json.dumps(steps, ensure_ascii=False), "the trace keeps figures, not the invented text"
     retry_prompt = router.prompts[1]
     assert retry_prompt[-2] == {"role": "assistant", "content": INVENTED}
     assert "100.000, 200.000" in retry_prompt[-1]["content"] and "gọi công cụ" in retry_prompt[-1]["content"]
     assert steps[1]["arguments_shape"] == {"unsupported_figures": 0} and "error_code" not in steps[1]
+
+
+def test_the_rejected_step_names_its_figures_where_content_lives_and_the_summary_keeps_the_count():
+    # Ticket 28 #1: `arguments` goes to agent_traces, deleted with the conversation;
+    # arguments_shape is all the content-free summary reads, so it stays a count.
+    invented = "Mức 100.000, 120.000, 140.000, 160.000, 180.000 hay 200.000 đồng/ngày."
+    _, steps, router = run([final(invented), final(HONEST)])
+
+    rejected = steps[0]
+    figures = ["100.000", "120.000", "140.000", "160.000", "180.000", "200.000"]
+    assert rejected["arguments"] == {"unsupported_figures": figures}, "every figure, past the five the retry names"
+    assert rejected["arguments_shape"] == {"unsupported_figures": 6} and rejected["content"] is None
+    assert "200.000" not in router.prompts[1][-1]["content"], "the retry still names five"
+
+
+def test_the_retry_asks_for_a_first_answer_with_no_apology_and_no_word_of_the_check():
+    # Ticket 28 #2: the user never saw the rejected answer, but read the retry's "Xin lỗi, tôi đã nhầm lẫn…".
+    _, _, router = run([final(INVENTED), final(HONEST)])
+    instruction = router.prompts[1][-1]["content"]
+    assert instruction == retry_instruction(["100.000", "200.000"])
+    assert instruction.endswith("Rồi viết lại câu trả lời như khi trả lời lần đầu: không xin lỗi, không nhắc tới việc kiểm tra này.")
 
 
 def test_figures_from_the_question_the_history_or_a_tool_need_no_retry():
@@ -146,7 +188,8 @@ def test_the_check_can_be_switched_off(monkeypatch):
     assert answer == INVENTED and [s["kind"] for s in steps] == ["final"] and "arguments_shape" not in steps[0]
 
 
-@pytest.mark.parametrize("text", ["2 giờ", "hai trăm nghìn đồng", "Ông Khoa phụ trách hệ thống"])
+@pytest.mark.parametrize("text", ["2 giờ", "hai trăm nghìn đồng", "khoảng 3,5 triệu đồng", "Ông Khoa phụ trách hệ thống"])
 def test_the_stated_blind_spots_pass_unflagged(text):
-    # A one-digit result, a figure in words, a claim with no figure: not seen, as documented.
+    # A one-digit result, a figure in words, a short decimal (one before a scale word only
+    # vouches, ticket 28 #3), a claim with no figure: not seen, as documented.
     assert unsupported_figures(text, []) == []

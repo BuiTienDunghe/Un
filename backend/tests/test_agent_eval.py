@@ -101,14 +101,14 @@ DOC_FIXTURE = {
 }
 
 
-def _run(tmp_path, tasks, retrieval, router, *, run_meta=None, reloader=None):
+def _run(tmp_path, tasks, retrieval, router, *, run_meta=None, reloader=None, agent_config=None):
     dataset = load_dataset(write_dataset(tmp_path / "ds", tasks, retrieval))
     out_dir = tmp_path / "run"
     summary = run_eval(
         dataset,
         router,
         out_dir=out_dir,
-        agent_config={"max_steps": 3, "tool_result_max_chars": 2400},
+        agent_config={"max_steps": 3, "tool_result_max_chars": 2400, **(agent_config or {})},
         defense=InjectionDefense(enabled=True),
         system_prompt="Bạn là trợ lý.",
         run_meta=run_meta or {"run_id": "t", "seed": NO_SEED, "temperature": 0.4},
@@ -149,6 +149,15 @@ def test_a_run_writes_all_four_artifacts_with_usage_from_every_round(tmp_path):
     assert summary["overall"] == {"passed": 1, "total": 1, "rate": 1.0}
     # The default run reloads nothing, and says so.
     assert manifest["unload_between_tasks"] is False and result["reload_ms"] is None
+
+
+def test_events_name_the_figures_the_answer_check_rejected(tmp_path):
+    # Ticket 28 #1: a reader of events.jsonl sees which figures sent the agent back.
+    router = ScriptedRouter([final("Bạn có 15 ngày phép, cộng 30 ngày nếu thâm niên."), call("search_documents", {"query": "nghỉ phép năm"}), final("Bạn có 12 ngày phép (quy_che.pdf, trang 3).")])
+    out_dir, _ = _run(tmp_path, [DOC_TASK], [DOC_FIXTURE], router)
+
+    check = next(e for e in _jsonl(out_dir / "events.jsonl") if e["kind"] == "answer_check")
+    assert check["arguments"] == {"unsupported_figures": ["15", "30"]} and check["arguments_shape"] == {"unsupported_figures": 2}
 
 
 # ── --unload-between-tasks (ticket 20 #3-D): each task on a model just loaded ──
@@ -337,12 +346,32 @@ def test_doc_50_the_longest_paste_task_reaches_the_model_whole(tmp_path):
     assert router.seen == [task["input"]]
 
 
+def test_the_manifest_records_the_ceiling_the_agents_ran_with(tmp_path):
+    # Ticket 28 #4: main() reads the ceiling off general's context; a window of 32 768 keeps
+    # whole a paste that 16 384's would slip, and the manifest says which one was used.
+    from app.services.pastes import prompt_tokens
+
+    paste = {**DOC_TASK, "id": "doc-paste", "input": "Biên bản họp. " * 3_000 + "Hạn nộp là ngày nào?"}
+    assert 12_288 < prompt_tokens(build_messages(paste, "Bạn là trợ lý.")) <= 28_672, "_run's system prompt"
+
+    class Recording(ScriptedRouter):
+        def chat_tools(self, mode, messages, tools):
+            self.seen = getattr(self, "seen", None) or [m["content"] for m in messages if m["role"] == "user"]
+            return super().chat_tools(mode, messages, tools)
+
+    router = Recording([final("Không rõ.")])
+    out_dir, _ = _run(tmp_path, [paste], [], router, agent_config={"inline_max_tokens": 28_672})
+    manifest = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["paste_inline"]["max_tokens"] == 28_672 and router.seen == [paste["input"]]
+
+
 @pytest.fixture
 def slips_only(monkeypatch):
-    """The slip path on a real paste task, which under N1 reaches the model whole."""
-    from app.services import pastes
+    """The slip path on a real paste task, which under N1 reaches the model whole: the
+    runner's ceiling when its config names none (main() always names one, ticket 28 #4)."""
+    import scripts.agent_eval
 
-    monkeypatch.setattr(pastes, "INLINE_MAX_TOKENS", 0)
+    monkeypatch.setattr(scripts.agent_eval, "INLINE_MAX_TOKENS", 0)
 
 
 @pytest.mark.usefixtures("slips_only")

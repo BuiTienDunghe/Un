@@ -1096,8 +1096,9 @@ class AgentTraceSummary(Base):
 
     `arguments_shape` keeps a declared integer as a number and a declared string as
     "str:<length>"; undeclared keys are only counted. On a final or answer_check step,
-    which has no arguments, it carries the answer check's labels and counts instead
-    (ticket 20 #2: unsupported figures, grounding). `content_sha256` hashes what the
+    which calls no tool, it carries the answer check's labels and counts instead
+    (ticket 20 #2: unsupported figures, grounding); the figures an answer_check step
+    flagged stay in AgentTrace.arguments (ticket 28 #1). `content_sha256` hashes what the
     model read or wrote — a result or an answer, long enough not to be guessed back;
     a short question would be, which is why arguments are shaped and never hashed.
     """

@@ -124,7 +124,8 @@ def redact_history_result(content: str | None, author_id: str, index: QuoteIndex
 
 
 def redact_arguments(arguments: Any, author_id: str, index: QuoteIndex) -> tuple[Any, bool]:
-    """A tool call's arguments with the member's id and verbatim words replaced."""
+    """A tool call's arguments with the member's id and verbatim words replaced; also an
+    answer_check step's, whose value is a list of the figures it flagged (ticket 28 #1)."""
     if not isinstance(arguments, dict):
         return arguments, False
     redacted: dict[str, Any] = {}
@@ -135,6 +136,10 @@ def redact_arguments(arguments: Any, author_id: str, index: QuoteIndex) -> tuple
         elif isinstance(value, str):
             redacted[key], quoted = redact_quotes(value, index)
             changed = changed or quoted
+        elif isinstance(value, list):
+            items = [redact_quotes(item, index) if isinstance(item, str) else (item, False) for item in value]
+            redacted[key] = [item for item, _ in items]
+            changed = changed or any(quoted for _, quoted in items)
         else:
             redacted[key] = value
     return redacted, changed
