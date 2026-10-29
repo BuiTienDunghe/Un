@@ -59,13 +59,19 @@ def unsupported_figures(answer: str, seen_texts: Iterable[str]) -> list[str]:
 
 
 def retry_instruction(unsupported: list[str]) -> str:
-    """The system message for the one retry: which figures, and the three ways out."""
+    """The system message for the one retry: which figures, and the three ways out.
+
+    The user never saw the rejected answer, yet a retried answer opened with "Xin lỗi, tôi
+    đã nhầm lẫn…" (doc-22 in v0.3, doc-47 in v0.8-n1-gate) and the user read that. So the
+    answer is to be written as a first one: no apology, no word of the check (ticket 28 #2).
+    """
     shown = ", ".join(unsupported[:SHOWN_IN_RETRY]) + (" …" if len(unsupported) > SHOWN_IN_RETRY else "")
     return (
         f"Kiểm tra câu trả lời vừa viết: các con số {shown} không có trong câu hỏi, cuộc trò chuyện "
         "hay kết quả công cụ của lượt này. Nếu câu hỏi cần dữ liệu nội bộ (tài liệu, tin nhắn, trạng "
         "thái hệ thống) thì gọi công cụ để tra; không tìm thấy thì nói rõ là không tìm thấy, đừng đưa "
-        "con số. Nếu đó là số bạn tự tính từ dữ liệu đã có thì ghi rõ phép tính. Rồi trả lời lại."
+        "con số. Nếu đó là số bạn tự tính từ dữ liệu đã có thì ghi rõ phép tính. Rồi viết lại câu trả "
+        "lời như khi trả lời lần đầu: không xin lỗi, không nhắc tới việc kiểm tra này."
     )
 
 

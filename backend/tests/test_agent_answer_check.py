@@ -105,6 +105,14 @@ def test_the_rejected_step_names_its_figures_where_content_lives_and_the_summary
     assert "200.000" not in router.prompts[1][-1]["content"], "the retry still names five"
 
 
+def test_the_retry_asks_for_a_first_answer_with_no_apology_and_no_word_of_the_check():
+    # Ticket 28 #2: the user never saw the rejected answer, but read the retry's "Xin lỗi, tôi đã nhầm lẫn…".
+    _, _, router = run([final(INVENTED), final(HONEST)])
+    instruction = router.prompts[1][-1]["content"]
+    assert instruction == retry_instruction(["100.000", "200.000"])
+    assert instruction.endswith("Rồi viết lại câu trả lời như khi trả lời lần đầu: không xin lỗi, không nhắc tới việc kiểm tra này.")
+
+
 def test_figures_from_the_question_the_history_or_a_tool_need_no_retry():
     answer, steps, _ = run([final("Bạn vừa nói 450.000 đồng, mình ghi nhận.")], user="Mình được 450.000 đồng mỗi ngày")
     assert [s["kind"] for s in steps] == ["final"]
