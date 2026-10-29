@@ -19,6 +19,7 @@ from time import monotonic, perf_counter
 from typing import Any, Protocol
 
 from app.llm_clients.deadline import ModelCallTimeoutError, call_within
+from app.llm_clients.ollama_client import OllamaToolCallParseError
 from app.llm_clients.usage import consume_usage, record_usage
 from app.services.answer_figures import grounding_summary, retry_instruction, turn_texts, unsupported_figures
 from app.services.pastes import read_paste, take_pastes
@@ -133,11 +134,23 @@ TURN_BUDGET_SECONDS = 90.0
 FINAL_RESERVE_SECONDS = 20.0
 # Why the loop ended, on the final step: "final" (the model answered), "max_steps" (tool
 # rounds used up), "turn_budget" (time ran short, answered from what was gathered),
-# "turn_budget_exhausted" (even the final answer did not fit: the fixed reply below).
+# "turn_budget_exhausted" (even the final answer did not fit: the fixed reply below),
+# "tool_call_error" (a tool call Ollama could not parse, again after the retry or with no
+# time for one: answered from what was gathered).
 STOP_FINAL = "final"
 STOP_MAX_STEPS = "max_steps"
 STOP_TURN_BUDGET = "turn_budget"
 STOP_TURN_BUDGET_EXHAUSTED = "turn_budget_exhausted"
+STOP_TOOL_CALL_ERROR = "tool_call_error"
+# A tool call the model wrote and Ollama could not parse (ticket 27): one retry with a note,
+# in a round of its own, while the final reserve is still free; then the answer without
+# tools. Each failed round is a TOOL_CALL_ERROR_STEP that keeps no text.
+TOOL_CALL_ERROR_STEP = "tool_call_error"
+TOOL_CALL_PARSE = "TOOL_CALL_PARSE"
+TOOL_CALL_RETRY = (
+    "Lệnh gọi công cụ vừa rồi sai định dạng nên không chạy được. Gọi lại với tham số hợp lệ, "
+    "hoặc trả lời thẳng nếu đã đủ thông tin. Không nhắc tới lời nhắc này."
+)
 # The answer check (ticket 20 #2, app/services/answer_figures.py). An answer whose figures
 # the turn saw nowhere gets one retry, in one extra round with tools, while the final
 # reserve is still free; the rejected attempt is an ANSWER_CHECK_STEP that keeps no text.
@@ -150,6 +163,7 @@ THINKING_LABEL = "Đang suy nghĩ…"
 REVIEWING_LABEL = "Đang xem lại những gì đã tra…"
 TOOL_LABEL = "Đang dùng công cụ…"
 ANSWER_CHECK_LABEL = "Đang kiểm lại các con số trong câu trả lời…"
+TOOL_CALL_ERROR_LABEL = "Đang gọi lại công cụ…"
 ANSWERING_LABEL = "Đang viết câu trả lời…"
 
 
@@ -332,6 +346,8 @@ class AgentService:
         # `checked_out` are the messages it added, which never count as something seen.
         rounds, retried = self.max_steps, False
         checked_out: set[int] = set()
+        # A tool call Ollama could not parse (ticket 27) has a retry of its own, apart from #2's.
+        call_retried = False
         while round_index < rounds:
             round_index += 1
             left = self.turn_budget_seconds - (self.clock() - turn_started)
@@ -350,6 +366,23 @@ class AgentService:
                 consume_usage()
                 stop_reason = STOP_TURN_BUDGET
                 break
+            except OllamaToolCallParseError:
+                # The same input writes the same broken call, so the retry adds a note; the
+                # call never reached a tool, and its text is the server's, not kept.
+                consume_usage()
+                steps.append({
+                    "kind": TOOL_CALL_ERROR_STEP, "tool_name": None, "arguments": None, "content": None,
+                    "latency_ms": int((perf_counter() - started) * 1000), "error_code": TOOL_CALL_PARSE,
+                    "tokens_in": None, "tokens_out": None,
+                })
+                left = self.turn_budget_seconds - (self.clock() - turn_started)
+                if call_retried or left < self.final_reserve_seconds:
+                    stop_reason = STOP_TOOL_CALL_ERROR
+                    break
+                working.append({"role": "system", "content": TOOL_CALL_RETRY})
+                call_retried, rounds = True, rounds + 1
+                emit(TOOL_CALL_ERROR_STEP, label=TOOL_CALL_ERROR_LABEL)
+                continue
             round_latency = int((perf_counter() - started) * 1000)
             last = consume_usage()
             calls = result["tool_calls"]
@@ -410,14 +443,16 @@ class AgentService:
                 emit("tool_result", tool=call["name"] if declared else None, ok=error_code is None)
                 working.append({"role": "tool", "tool_name": call["name"], "content": output})
 
-        # Out of tool rounds or out of time: force a plain answer from what was
-        # gathered — the structured stop that keeps the work done, not an exception
-        # that throws it away (the Claude SDK / smolagents / Inspect family).
+        # Out of tool rounds, out of time, or a tool call that will not parse: force a plain
+        # answer from what was gathered — the structured stop that keeps the work done, not
+        # an exception that throws it away (the Claude SDK / smolagents / Inspect family).
         working.append({
             "role": "system",
             "content": (
                 "Đã dùng tối đa số lượt công cụ. Trả lời ngay bằng những gì đã thu thập được."
                 if stop_reason == STOP_MAX_STEPS
+                else "Không gọi được công cụ nữa. Trả lời ngay bằng những gì đã thu thập được."
+                if stop_reason == STOP_TOOL_CALL_ERROR
                 else "Hết thời gian dùng công cụ. Trả lời ngay bằng những gì đã thu thập được."
             ),
         })

@@ -11,6 +11,8 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-29
+
 ### Added
 - **Agent Eval v0** (27/10): `backend/scripts/agent_eval.py` chạy agent thật (cùng model, cùng
   vòng lặp) trên 40 bài tiếng Việt với dữ liệu giả hoàn toàn (20 tài liệu, 10 lịch sử Discord kể cả
@@ -72,6 +74,10 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   lời phiếu mới; 52 bài cũ không đổi, bộ chấm vẫn v0.4. Đo lời phiếu lần hai (ticket 20 #3-C) trên 9 bài đoạn dán: 2/9 →
   6/9, model xin đọc đúng trần ở mọi lần, nhưng trên bài mới cần phần giữa chỉ 1/3 từ trượt thành đạt, trượt luật đăng
   ký trước; phiếu cũ giữ nguyên.
+- **Agent Eval v0.7** (28/10, test hồi quy nội bộ). Thêm 6 bài đoạn dán chưa ai xem (doc-48..53), trong đó hai bài có đáp
+  án sau đoạn 8. Runner có cờ `--unload-between-tasks`: gỡ model trước mỗi bài để câu trả lời không phụ thuộc bài chạy
+  trước; mọi số Agent Eval trước đó là số theo chuỗi. Đo ticket 20 #3-D dưới cô lập: lời nhắc khi đoạn dán còn đoạn chưa
+  đọc, và tìm trong đoạn dán, đều trượt luật đăng ký trước; mỗi nhánh 4/6 bài mới. Mốc nền 62 bài cô lập: 50/62.
 
 ### Changed
 - **Discord thành một gói riêng** (28/10, ticket 22): 26 module Discord dời vào `backend/app/discord/`
@@ -132,6 +138,11 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   (launcher tự chạy); thiếu bảng thì mọi lượt agent trả 500.
 
 ### Fixed
+- **Lệnh gọi công cụ viết hỏng không còn làm mất cả lượt** (ticket 27, 29/10). Khi model viết sai cú pháp lệnh gọi công
+  cụ, Ollama trả lỗi 500 "XML syntax error". Trước đây client gửi lại y hệt ba lần, báo "Cannot connect to Ollama", và
+  người dùng không nhận được gì. Giờ lỗi này có tên riêng, agent nhắc model gọi lại một lần, không được thì trả lời bằng
+  những gì đã tra. Các lỗi 5xx khác báo đúng mã và chữ lỗi của server. Đo cô lập: ca tái hiện doc-44 có câu trả lời 2/2;
+  main 62 bài giống hệt trước và sau.
 - **Agent không còn mất tin Discord mới nhất khi kết quả công cụ quá dài** (27/10). Trước đây kết quả
   bị cắt ở 2 400 ký tự giữa chừng: "N tin mới nhất" mất đúng các tin mới nhất (hist-05 mất 8/18 tin),
   và tìm 5 đoạn tài liệu thì JSON gãy (12/12 lượt trong baseline). Giờ kết quả tràn bỏ trọn từng mục
@@ -1072,7 +1083,8 @@ dẫn nguồn đã đo được chất lượng, hai kênh web và Discord dùng
 - Bộ eval mới phủ một tài liệu và đã bão hòa ở 100%, chưa đo được tiến bộ tiếp theo (G7).
 - BM25 chạy trong tiến trình, giới hạn quy mô corpus (G8).
 
-[Unreleased]: https://github.com/BuiTienDunghe/Un/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/BuiTienDunghe/Un/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/BuiTienDunghe/Un/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/BuiTienDunghe/Un/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/BuiTienDunghe/Un/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/BuiTienDunghe/Un/compare/v1.0.0...v1.1.0

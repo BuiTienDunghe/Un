@@ -1,0 +1,80 @@
+{
+  "run_id": "v0.7-27-repro-after-r1",
+  "commit": "48b5c0fe83951aca7f88c14060907b2652552aa2",
+  "worktree_dirty": false,
+  "general_version": {
+    "requested_id": "general-v0",
+    "loaded_id": "general-v0",
+    "source": "registry",
+    "status": "active",
+    "verified": true
+  },
+  "probed": true,
+  "ollama_loaded_at_start": [
+    "qwen3-embedding:0.6b"
+  ],
+  "gpu_shared": false,
+  "gpu_at_start": {
+    "utilization_percent": 0,
+    "memory_used_mib": 1782,
+    "processes": [
+      "llama-server.exe"
+    ]
+  },
+  "probe_read_database": "local_ai_core (read-only: 2 COUNTs)",
+  "registry_fallback": "ok",
+  "env_file": "C:\\Users\\dungbt06\\local-ai-core\\.env",
+  "model": "qwen3.5:9b",
+  "provider": "ollama",
+  "temperature": 0.0,
+  "top_p": 0.9,
+  "seed": 42,
+  "think": false,
+  "num_ctx": 16384,
+  "overrides": {
+    "temperature": 0.0,
+    "seed": 42
+  },
+  "argv": [
+    "--probe",
+    "--env-file",
+    "C:/Users/dungbt06/local-ai-core/.env",
+    "--temperature",
+    "0",
+    "--seed",
+    "42",
+    "--run-id",
+    "v0.7-27-repro-after-r1",
+    "--gpu-shared",
+    "no",
+    "--tasks",
+    "doc-44",
+    "--unload-between-tasks"
+  ],
+  "max_steps": 3,
+  "tool_result_max_chars": 2400,
+  "read_result_max_chars": 6000,
+  "input_max_chars": {
+    "web": 100000,
+    "discord": 10000
+  },
+  "turn_budget_seconds": 90.0,
+  "final_reserve_seconds": 20.0,
+  "injection_defense": true,
+  "agent_guide_sha256": "6194cf0fbd65bd04a1601e0d5eb6e1e1571e84650dbf43f1c0080872e9531f13",
+  "system_prompt_sha256": "385cb475e59e26ccd0b67b48d9dfc9100906e4bf5996a1d3832f2f8f32f79207",
+  "discord_context_sha256": "6a479de5abfd8e1a584e56bbfa635888862bc8c52134d982cea000646bf6ba4b",
+  "tools_sha256": "153209652c0672a2337be105bd711a1e343a9c7bdf93911e7d14dba18a75e500",
+  "dataset": {
+    "version": "agent-eval-v0.7",
+    "sha256": "d87c4155eb3e244a4f63b04a4556f0aa6fbf3b969d785bc9196f7841e56efb10",
+    "path": "C:\\Users\\dungbt06\\local-ai-core-wt\\meas-48b5c0f\\data\\benchmarks\\agent_eval\\v0",
+    "tasks_run": [
+      "doc-44"
+    ]
+  },
+  "grader_version": "agent-eval-grader-v0.4",
+  "unload_between_tasks": true,
+  "started_at": "2026-10-28T17:15:44.294966+00:00",
+  "finished_at": "2026-10-28T17:16:00.604281+00:00"
+}
