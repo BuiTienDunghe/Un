@@ -527,10 +527,10 @@ unloads the model before every run; the seed has no effect at temperature 0.
 
 | | |
 | --- | ---: |
-| Tests | **811** collected (554 test functions, expanded by parametrisation) across 90 files, against real PostgreSQL, Redis and Qdrant |
+| Tests | **1,492** collected on 30/10/2026 (1,417 in `backend/tests`, 75 in `tests`; 1,040 test functions, expanded by parametrisation) across 139 files, against real PostgreSQL, Redis and Qdrant |
 | CI jobs | 4: static checks, backend tests, retrieval-eval gate, bot/tools tests |
-| Schema migrations | 32, each with a working downgrade, `alembic check` gated |
-| Alembic head | `20260828_32` |
+| Schema migrations | 35, each with a downgrade (four exercised by tests), `alembic check` gated |
+| Alembic head | `20261027_35` |
 | Backups | automatic, with a quarterly restore rehearsal |
 
 ## Per-question gating

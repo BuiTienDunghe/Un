@@ -1,5 +1,11 @@
 # PostgreSQL Foundation Migration
 
+*Historical record of the July 2026 migration (Phases 1–2). The cutover finished on
+2026-07-19: the runtime is PostgreSQL-only, `DOCUMENT_DATABASE_BACKEND` no longer exists,
+and SQLite is a read-only archive (`current_architecture.md`, `sqlite_to_postgres_final_report.md`).
+The container and `alembic upgrade head` steps below still work; the SQLite copy and
+rollback steps describe that migration only.*
+
 ## Scope and safety boundary
 
 Phase 1 introduces PostgreSQL schema, Alembic migrations, and a one-way copy

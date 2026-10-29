@@ -1,5 +1,10 @@
 # Worker architecture — PostgreSQL-only baseline
 
+*For documents this path applies only with `INGESTION_EXECUTION_BACKEND=rq`. The default is
+`thread`: OCR and indexing run in a background thread of the API, and `run-local-ai-core.bat`
+starts no OCR or index worker (`current_architecture.md`). The Discord memory worker always
+uses RQ.*
+
 ## Execution path
 
 ```text
