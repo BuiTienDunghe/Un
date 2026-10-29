@@ -230,7 +230,7 @@ async def lifespan(app: FastAPI):
         document_reader=app.state.chunk_inspection_service,
         read_result_max_chars=int(agent_config.get("read_result_max_chars", READ_RESULT_MAX_CHARS)),
         # N1's ceiling from the window of the general version this process serves (ticket 28 #4).
-        inline_max_tokens=inline_ceiling(settings.load_models().get("general")),
+        inline_max_tokens=inline_ceiling(router.models.get("general")),
     )
     # ChatService is built before the retrieval stack the agent needs, so the
     # agent is handed over here instead of through the constructor.

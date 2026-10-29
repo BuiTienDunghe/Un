@@ -86,5 +86,6 @@ When `INGESTION_EXECUTION_BACKEND=rq`, this document's extraction and indexing
 steps run in separate RQ worker processes rather than the FastAPI thread. Their
 state transitions, version activation, and retrieval semantics are unchanged;
 see `worker_architecture.md` for queue/recovery details. `thread` is the default
-and the mode `run-local-ai-core.bat` runs: the launcher starts neither the compose
-`worker-ocr` / `worker-index` containers nor, for documents, the outbox dispatcher.
+and the mode `run-local-ai-core.bat` runs: the launcher does not start the compose
+`worker-ocr` / `worker-index` containers, and documents write no outbox events in this mode
+(the outbox dispatcher still runs for Discord memory when `DISCORD_MEMORY_INGESTION_ENABLED=true`).

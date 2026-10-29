@@ -16,8 +16,9 @@ run-local-ai-core.bat   # starts PostgreSQL 16, Qdrant and Redis in Docker, runs
 ```
 
 Requires Docker and [Ollama](https://ollama.com). The models are the active versions in
-`backend/app/config/model_versions.yaml`; the launcher pulls them, except the OCR model
-`ocr-v1`, which is built once by hand (`docs/model_registry.md`). It opens
+`backend/app/config/model_versions.yaml`; the launcher pulls them, and builds the OCR model
+`ocr-v1` with `ollama create` from its tracked Modelfile once its gguf exists, which is made
+once by hand (`docs/model_registry.md`). It opens
 `http://127.0.0.1:8000/ui/`.
 
 ## What it is measured at
