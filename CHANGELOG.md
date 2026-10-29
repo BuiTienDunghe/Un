@@ -11,6 +11,23 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+### Added
+- **Agent Eval v0.8** (ticket 20, 29/10): thêm bốn bài dán mù doc-54..57. Ba bài có đáp án ở 40–60 % văn bản dài
+  25–29 nghìn ký tự, một bài có số mồi. Bài thứ tư dài 45 166 ký tự, quá ngưỡng nạp nguyên văn. 62 bài cũ và bộ chấm không đổi.
+
+### Changed
+- **Văn bản dán dài được đọc nguyên văn khi còn vừa cửa sổ** (ticket 20 N1, 29/10). Ở chế độ công cụ, tin người dùng vừa gửi
+  là đoạn dán được giữ nguyên văn nếu ước token của cả prompt ≤ 16 384 − 4 096. Ước token = 1 253 + số ký tự / 3,3, nên đoạn
+  dán đi nguyên văn tới khoảng 36 000 ký tự khi không có lịch sử. Đoạn dán dài hơn, hoặc nằm trong lịch sử, vẫn thành phiếu.
+- Phiếu đoạn dán #3-C cũng lên main cùng lúc. Phiếu nói rõ mỗi lần `read_document` đọc tối đa ba đoạn, không nêu tổng số đoạn,
+  và dặn trả lời ngay khi hai mép đã đủ.
+- Đo cô lập trên đợt phân xử (`kept/agent-eval-v0.8-paste-arbitration/`): 18/19 bài dán và 3/3 bài giữa mù. Bảy vòng công cụ
+  được 14 và 1, nền được 10 và 0. Trung vị độ trễ giảm từ 12,1 s xuống 5,5 s.
+- Lần kiểm đủ 66 bài (`kept/agent-eval-v0.8-n1-gate/`): mọi câu trả lời giống mốc từng chữ. Trên 62 bài v0.7, điểm tăng từ
+  45 lên 55, và mọi bài đổi đều là bài dán.
+- Agent Eval là test hồi quy nội bộ, không phải khẳng định chất lượng. Discord giới hạn tin ở 10 000 ký tự, nên không bao giờ
+  dùng tới cách này.
+
 ## [1.4.0] - 2026-10-29
 
 ### Added
