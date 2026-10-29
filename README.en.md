@@ -10,12 +10,15 @@ is in [README.md](README.md).
 ## Run it
 
 ```bash
-docker compose up -d          # PostgreSQL 16, Redis, Qdrant
-run-local-ai-core.bat         # API + OCR/index/cleanup/backup workers, runs migrations
+run-local-ai-core.bat   # starts PostgreSQL 16, Qdrant and Redis in Docker, runs migrations,
+                        # pulls the models, then the API (OCR/indexing run in its threads)
+                        # plus the cleanup and backup workers
 ```
 
-Requires Docker and [Ollama](https://ollama.com) with the models listed in
-`backend/app/config/models.yaml`. Open `http://127.0.0.1:8000`.
+Requires Docker and [Ollama](https://ollama.com). The models are the active versions in
+`backend/app/config/model_versions.yaml`; the launcher pulls them, except the OCR model
+`ocr-v1`, which is built once by hand (`docs/model_registry.md`). It opens
+`http://127.0.0.1:8000/ui/`.
 
 ## What it is measured at
 
@@ -31,8 +34,8 @@ Every number below resolves to a JSON file in this repository. The chain of evid
 | Prompt-injection attack success | **0.000** (from 0.143), benign pass 1.000 | 12-case red-team suite |
 | Memory extraction, end to end | P **0.94** · R **0.80** · 0 forged facts | 21-case pipeline eval |
 | Memory poison rate after guard | **21.6%** (from 36.2%) at 96.7% coverage | 150-case extractor benchmark |
-| Tests | **811** across 90 files, on real PostgreSQL/Redis/Qdrant | 4 CI jobs |
-| Schema migrations | **32**, each with a working downgrade | `alembic check` gated in CI |
+| Tests | **1,492** collected across 139 files (30/10/2026), on real PostgreSQL/Redis/Qdrant | 4 CI jobs |
+| Schema migrations | **35**, each with a downgrade | `alembic check` gated in CI |
 
 ## How it is built
 
@@ -43,7 +46,7 @@ Discord ┘     │                              └─ BM25 + pyvi (sparse inde
               ├─ retrieval: hybrid BM25 + dense → RRF → cross-encoder rerank
               ├─ grounding self-check + prompt-injection defense (no extra model calls)
               ├─ memory: raw ledger → extractor → deterministic guard → verifier → review
-              └─ RQ workers (OCR, index, memory) + outbox + cleanup + backup
+              └─ OCR/index in API threads · RQ memory worker + outbox · cleanup · backup
 ```
 
 Retrieval is hybrid: BM25 over `pyvi`-segmented Vietnamese lexemes and dense vectors are
@@ -52,8 +55,9 @@ passages in overlapping windows. Answers carry citations that are persisted with
 message, so reopening an old conversation shows the sources it actually used.
 
 The Discord agent's memory never trusts a single model. A message reaches long-term memory
-only after a rule filter, an extractor, a deterministic evidence guard, and an entailment
-verifier agree; anything applied automatically is audited and revocable in one click.
+automatically only after a rule filter, an extractor, a deterministic evidence guard and
+(when switched on; it ships off) an entailment verifier agree; everything else waits for a
+human. Anything applied automatically is audited and revocable in one click.
 
 Design decisions and their measurements live in `docs/`, one document per phase, including
 the experiments that were run and rejected.

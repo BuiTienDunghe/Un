@@ -19,6 +19,7 @@ Các tính năng cốt lõi đã sẵn sàng để vận hành gồm chat AI, do
 ### Trợ lý AI cục bộ
 
 - Trò chuyện tổng quát với mô hình cục bộ.
+- Chế độ công cụ (agent, bật theo từng tin): model tự tra tài liệu (`search_documents`, `read_document`) và trạng thái hệ thống trước khi trả lời. Ở chế độ này tin nhắn dài được tới 100 000 ký tự (chat thường 10 000): đoạn dán vừa gửi đi nguyên văn khi cả prompt còn vừa cửa sổ của model, dài hơn thì model nhận một phiếu và đọc dần bằng `read_document`.
 - Quản lý hội thoại và lịch sử phiên chat.
 - Cấu hình model chat, embedding, vision và OCR theo môi trường triển khai.
 - Giao diện web và API FastAPI dùng chung một backend.
@@ -50,20 +51,20 @@ Khi thay nội dung, version cũ vẫn active cho tới khi version mới OCR/in
 
 | Thành phần | Trách nhiệm |
 | --- | --- |
-| Web UI | Một trang duy nhất (`/ui/`, hash router, không build step) với 10 màn: Chat, Tài liệu, Ghi nhớ, Bảng điều khiển, OCR, Bot Discord, Model, Người dùng, Cài đặt, Chunks. Link cũ `/ui/dashboard.html`, `/ui/ocr.html`, `/ui/chunks.html?document_id=` vẫn chạy nhờ redirect. |
+| Web UI | Một trang duy nhất (`/ui/`, hash router, không build step) với 11 màn: Chat, Tài liệu, Nghiên cứu, Ghi nhớ, Bảng điều khiển, OCR, Bot Discord, Model, Người dùng, Cài đặt, Chunks. Link cũ `/ui/dashboard.html`, `/ui/ocr.html`, `/ui/chunks.html?document_id=` vẫn chạy nhờ redirect. |
 | FastAPI | API, khóa truy cập X-API-Key (lớp 1), hội thoại, upload, RAG và nghiệp vụ ứng dụng. |
 | PostgreSQL 16 | Dữ liệu chuẩn: users, conversations, documents, versions, chunks, jobs, outbox và metadata. |
-| Redis + RQ | Hàng đợi và điều phối tác vụ nền. |
-| OCR worker | Trích xuất/OCR nội dung tài liệu. |
-| Index worker | Chunking, embedding và index vector theo version. |
-| Outbox dispatcher | Phát tác vụ nghiệp vụ đáng tin cậy từ PostgreSQL. |
+| Redis + RQ | Hàng đợi tác vụ nền: job trí nhớ Discord (khi bật), và OCR/index chỉ khi đặt `INGESTION_EXECUTION_BACKEND=rq`. |
+| OCR + index | Trích xuất/OCR, chunking, embedding và index vector theo version. Mặc định (`INGESTION_EXECUTION_BACKEND=thread`) chạy trong luồng phụ của chính tiến trình API; container `worker-ocr` / `worker-index` của compose chỉ dùng với `rq`, launcher không bật chúng. |
+| Outbox dispatcher + memory worker | Đẩy job trí nhớ Discord từ PostgreSQL sang Redis và xử lý chúng; launcher chỉ bật khi `DISCORD_MEMORY_INGESTION_ENABLED=true`. |
 | Cleanup worker | Thực thi retention policy đã cấu hình. |
+| Backup worker | Dump PostgreSQL định kỳ, kèm bản lưu tệp gốc và `.env` (`docs/backup_restore.md`). |
 | Qdrant | Chỉ mục vector phục vụ retrieval. |
 | Ollama | Cung cấp model AI chạy cục bộ. |
 | Docker Compose | Điều phối các dịch vụ runtime. |
 | Discord bot Ún | Client Discord tùy chọn gọi API backend. |
 
-Luồng dữ liệu chính là: tệp gốc → PostgreSQL lưu document/version và metadata → OCR/index worker → chunks chuẩn trong PostgreSQL → vector versioned trong Qdrant → RAG xác thực version active từ PostgreSQL trước khi trả lời.
+Luồng dữ liệu chính là: tệp gốc → PostgreSQL lưu document/version và metadata → OCR/index (luồng phụ của API theo mặc định) → chunks chuẩn trong PostgreSQL → vector versioned trong Qdrant → RAG xác thực version active từ PostgreSQL trước khi trả lời.
 
 ## Dữ liệu và retrieval
 
@@ -78,7 +79,8 @@ Runtime chỉ truy vấn Qdrant point có đầy đủ `version_id` và `chunk_i
 - `/ping` kiểm tra bot có phản hồi.
 - `/ask` gửi câu hỏi tới backend Local AI Core.
 - `/docs` hỏi đáp theo tài liệu đã index (RAG): chọn tài liệu bằng autocomplete hoặc bỏ trống để tìm trong tất cả; câu trả lời kèm nguồn theo tên tệp và số trang.
-- Mention `@Ún` trong kênh rồi đặt câu hỏi để chat tự nhiên.
+- `/memory` cho riêng người gọi xem agent đang nhớ gì về họ trong server; `/status` cho riêng người gọi xem sức khỏe hệ thống.
+- Mention `@Ún` trong kênh rồi đặt câu hỏi để chat tự nhiên. Lượt Discord chỉ chạy chế độ công cụ ở server có trong `DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST` (mặc định rỗng: không server nào, mọi lượt là chat thường).
 - Tính cách bot được cấu hình riêng trong `discord_bot/system_prompt.md`.
 - Bot có thể gửi ngữ cảnh server gồm tên server, số thành viên và tối đa 100 display name của thành viên không phải bot. Giới hạn này điều chỉnh được qua `DISCORD_MEMBER_CONTEXT_LIMIT`.
 - Discord token chỉ được đọc từ `DISCORD_TOKEN` trong môi trường cục bộ; token không thuộc source code, README hay commit.
@@ -87,10 +89,12 @@ Runtime chỉ truy vấn Qdrant point có đầy đủ `version_id` và `chunk_i
 
 `run-discord-bot.bat` chạy bot ở foreground. Đóng cửa sổ chạy hoặc nhấn Ctrl+C sẽ dừng bot. Bot cần backend đã sẵn sàng và file `.env` cục bộ có cấu hình Discord/backend hợp lệ.
 
+Ngoài ra còn hai công tắc: màn **Bot Discord** trên web bật/tắt cùng container `discord-bot` đó, còn `discord-bot-control.bat` mở panel chạy bot thẳng trên máy (không qua Docker). Hai đường thấy nhau: web từ chối bật bot thứ hai khi panel đang chạy một bot (`409 BOT_RUNNING_ON_HOST`).
+
 ## Vận hành và độ tin cậy
 
 - Endpoint `/health` theo dõi FastAPI, PostgreSQL, Redis, Qdrant, Ollama, các worker chính và độ tươi của bản backup PostgreSQL.
-- Khi bật memory đề xuất (`DISCORD_MEMORY_INGESTION_ENABLED=true`), launcher khởi động thêm outbox dispatcher và memory worker; candidate memory chờ duyệt, không gì tự áp dụng.
+- Khi bật memory đề xuất (`DISCORD_MEMORY_INGESTION_ENABLED=true`), launcher khởi động thêm outbox dispatcher và memory worker; candidate memory chờ duyệt, không gì tự áp dụng. Bật thêm extractor (`DISCORD_MEMORY_EXTRACTOR_ENABLED=true`) thì khác: đề xuất có độ tin ≥ 0,8 (`DISCORD_MEMORY_AUTO_APPLY_THRESHOLD`, đặt `off` để duyệt tay tất cả) và qua bộ kiểm bằng chứng tất định được agent tự áp dụng, ghi vết và hoàn tác được một cú click; đề xuất xoá luôn chờ người duyệt.
 - Backup PostgreSQL chạy tự động cùng launcher (mặc định 24 giờ một bản, giữ 14 ngày). Xem `docs/backup_restore.md` cho bài diễn tập restore hàng quý.
 - PostgreSQL backup và Qdrant snapshot là các điểm phục hồi trước thay đổi quan trọng.
 - Restore phải được kiểm chứng trong môi trường cô lập trước khi áp dụng vào môi trường vận hành.
@@ -98,7 +102,7 @@ Runtime chỉ truy vấn Qdrant point có đầy đủ `version_id` và `chunk_i
 - Thay thế tài liệu không ghi đè version đang hoạt động trước khi version mới hoàn tất.
 - SQLite archive lịch sử chỉ dành cho migration/audit read-only, không được đưa lại vào runtime path.
 
-Alembic head hiện tại là `20260828_32` (`20260828_32_edit_ordering_token.py`).
+Alembic head hiện tại là `20261027_35` (`20261027_35_agent_trace_summaries.py`).
 
 ## Model mặc định
 
@@ -113,7 +117,7 @@ Cách promote, demote, revert và rebuild collection: `docs/model_registry.md`.
 | --- | --- | --- |
 | Chat tổng quát và RAG (`general`) | `general-v0` | qwen3.5:9b |
 | Embedding (`embedding`) | `embedding-v0` | qwen3-embedding:0.6b — collection `documents` / `memories` |
-| OCR (`ocr`) | `ocr-v0` | glm-ocr:latest |
+| OCR (`ocr`) | `ocr-v1` | local-ai/glm-ocr:eot-v1 — glm-ocr:latest khai thêm token kết thúc, dựng tay một lần bằng `scripts.build_ocr_model` (`docs/model_registry.md`); máy chưa dựng thì lùi về `ocr-v0`, bản này không qua probe trên Ollama 0.34.x nên OCR thành `disabled` |
 | Reranker (`reranker`) | `reranker-v0` | cross-encoder/mmarco-mMiniLMv2-L12-H384-v1 |
 | Extractor / verifier trí nhớ Discord | `extractor-v0` / `verifier-v0` | qwen3.5:9b (cả hai tắt mặc định: `DISCORD_MEMORY_EXTRACTOR_ENABLED` / `_VERIFIER_ENABLED`) |
 | Condenser (Gemini, tắt mặc định) | `condenser-v0` | gemini-2.5-flash |
@@ -155,7 +159,10 @@ Bot Discord đọc cùng biến `LOCAL_AI_API_KEY`; `docker-compose.yml` đã tr
 Nếu bật khóa mà quên cấu hình cho bot thì mọi lượt Discord sẽ bị từ chối.
 
 Đây là xác thực **lớp 1**: một khóa dùng chung, không phải phân quyền nhiều người dùng.
-Tài khoản riêng và phân quyền thuộc phase P2 trong `docs/DEVELOPMENT_PLAN.md`.
+Chế độ tài khoản (quản trị viên / thành viên, P3-1) có sẵn nhưng tắt mặc định: `LOCAL_AI_AUTH_ENABLED=true`
+bắt buộc kèm `LOCAL_AI_JWT_SECRET` dài ít nhất 32 ký tự và `LOCAL_AI_API_KEY` (làn dịch vụ cho bot, eval,
+smoke test), thiếu thì backend không khởi động. Người đăng ký đầu tiên trên web là quản trị viên; sau đó mọi
+endpoint, kể cả đọc, cần đăng nhập hoặc khóa (trừ `/health`, `/models` và đăng nhập).
 
 ## Giới hạn cần biết
 
@@ -164,16 +171,17 @@ Tài khoản riêng và phân quyền thuộc phase P2 trong `docs/DEVELOPMENT_P
 - Citation phản ánh phần nội dung đã trích xuất được từ tài liệu nguồn.
 - Bot Ún cần Discord gateway, token hợp lệ, privileged intents và backend hoạt động.
 - Ngữ cảnh thành viên Discord cần được sử dụng phù hợp với chính sách riêng tư của từng server.
-- Phiên hội thoại Discord lưu bền trong PostgreSQL theo mặc định (`DISCORD_PERSISTENT_SESSIONS_ENABLED=true`); bot khởi động lại vẫn giữ ngữ cảnh. Tắt cờ này thì mapping rơi về bộ nhớ tiến trình bot.
+- Phiên hội thoại Discord lưu bền trong PostgreSQL theo mặc định (`DISCORD_PERSISTENT_SESSIONS_ENABLED=true`, do `docker-compose.yml` và `.env.example` đặt; panel trên máy luôn bật); bot khởi động lại vẫn giữ ngữ cảnh. Tắt cờ này cho bot container thì mapping rơi về bộ nhớ tiến trình bot.
 
 ## Kiểm thử và CI
 
-Mỗi pull request và mỗi lần push vào `main` đều chạy `.github/workflows/ci.yml` với ba job:
+Mỗi pull request và mỗi lần push vào `main` đều chạy `.github/workflows/ci.yml` với bốn job:
 
 | Job | Chạy trên | Nội dung |
 | --- | --- | --- |
-| Static checks | Ubuntu | `compileall` toàn bộ Python, `node --check` cho script giao diện, kiểm tra các file YAML cấu hình parse được |
+| Static checks | Ubuntu | `compileall` toàn bộ Python, `node --check` cho script giao diện, kiểm tra các file YAML cấu hình và `pyproject.toml` parse được, `python -m app.config.model_registry --check` |
 | Backend tests | Ubuntu + service container PostgreSQL 16, Redis 7 và Qdrant | `alembic upgrade head` → `alembic check` (cửa chặn schema) → `pytest backend/tests`, cuối cùng khẳng định database vẫn ở head |
+| Retrieval eval gate | Ubuntu + PostgreSQL 16, Redis 7, Qdrant và Ollama với model embedding | Bật API thật rồi chạy `scripts.evaluate_rag --retrieval-only` trên bộ đánh giá nhiều tài liệu, so với baseline "bare" (tắt contextual retrieval và reranker vì runner không có model sinh chữ lẫn extra `[rerank]`) |
 | Bot and tools tests | Windows | `pytest tests` cho Discord API client, control panel và quy tắc định danh kênh; đồng thời chứng minh `requirements.txt` cài được sạch trên Windows |
 
 Chạy đúng bộ kiểm thử đó tại máy cần một database cô lập có tên kết thúc bằng `_test` và Redis DB 15 — `backend/tests/conftest.py` từ chối mọi database khác:
@@ -187,7 +195,7 @@ cd backend; ..\.venv\Scripts\python.exe -m pytest tests -q; cd ..
 .\.venv\Scripts\python.exe -m pytest tests -q
 ```
 
-Ba test migration cố ý hạ cấp database để kiểm tra một revision theo cả hai chiều, rồi khôi phục về `head` trong `finally`. Nếu một test mới hạ cấp mà không khôi phục, bước cuối của job backend sẽ báo lỗi ngay thay vì để các test sau thất bại vì schema cũ.
+Bốn test migration cố ý hạ cấp database để kiểm tra một revision theo cả hai chiều, rồi khôi phục về `head` trong `finally`. Nếu một test mới hạ cấp mà không khôi phục, bước cuối của job backend sẽ báo lỗi ngay thay vì để các test sau thất bại vì schema cũ.
 
 ## Tài liệu bổ sung
 
@@ -206,6 +214,5 @@ Ba test migration cố ý hạ cấp database để kiểm tra một revision th
 Kế hoạch phát triển tổng thể (phase, KPI, đối chiếu thị trường) nằm tại `docs/DEVELOPMENT_PLAN.md` — đây là tài liệu định hướng chính thức, thay cho danh sách dưới đây.
 
 - Mở rộng chính sách retention và backup theo môi trường triển khai.
-- Nâng độ bền vững của mapping hội thoại Discord qua lần khởi động lại bot.
 - Bổ sung đánh giá retrieval/model theo bộ tài liệu thực tế.
 - Chỉ thực hiện legacy Qdrant cleanup sau khi có mapping, evidence và phê duyệt riêng.

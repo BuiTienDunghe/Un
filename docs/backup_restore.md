@@ -17,9 +17,15 @@ backend/scripts/backup_worker.py --loop
 | Chu kỳ | 24 giờ | `backend/app/config/models.yaml` → `storage.backup_interval_hours` |
 | Giữ lại | 14 ngày | `storage.backups_ttl_days` |
 | Tối thiểu luôn giữ | 3 bản mới nhất | `storage.backups_keep_minimum` |
-| Thư mục | `data/backups/postgres` | `BACKUP_DIR` trong `.env` |
+| Thư mục | `data/backups/postgres` | `BACKUP_DIR` trong `.env` (mặc định `data/backups`; dump nằm ở `<BACKUP_DIR>/postgres`) |
+| Bản sao thứ hai | tắt | `BACKUP_MIRROR_DIR` trong `.env` |
 
 Tệp có dạng `local-ai-YYYYMMDD-HHMMSS.dump`, định dạng custom của `pg_dump`.
+
+Mỗi chu kỳ, sau bản dump, worker còn nén tệp gốc `data/documents` vào `<BACKUP_DIR>/sources`
+và chép `.env` vào `<BACKUP_DIR>/env` khi nó đổi; hai việc này lỗi thì chỉ ghi cảnh báo, không
+làm hỏng bản dump. Khi đặt `BACKUP_MIRROR_DIR`, cả ba thư mục được chép sang đó, xoay vòng cùng
+chính sách.
 
 **Vì sao worker chạy trên host chứ không trong container:** bản dump được tạo bằng chính
 `pg_dump` bên trong container PostgreSQL (`docker compose exec -T postgres pg_dump`), nên
@@ -123,7 +129,8 @@ Chỉ làm khi database thật đã hỏng và bạn đã chấp nhận mất d�
 
 - Backup **không** gồm Qdrant. Vector dựng lại được từ chunk trong PostgreSQL nên không
   cần backup riêng; đổi lại, sau restore phải chạy `rebuild_qdrant`.
-- Backup **không** gồm tệp gốc trong `data/documents`. Dùng `backend/scripts/backup_sources.py`
-  nếu cần giữ cả bản gốc.
-- Bản dump nằm cùng ổ đĩa với database. Muốn chống hỏng ổ đĩa, trỏ `BACKUP_DIR` sang ổ khác
-  hoặc sao chép định kỳ ra nơi khác — đây là việc ngoài phạm vi hệ thống.
+- Bản dump **không** gồm tệp gốc trong `data/documents`; worker nén chúng thành một tệp riêng
+  trong `<BACKUP_DIR>/sources` (mục 1), nên restore đủ cần cả hai.
+- Mặc định mọi bản backup nằm cùng ổ đĩa với database. Muốn chống hỏng ổ đĩa, đặt
+  `BACKUP_MIRROR_DIR` sang một ổ vật lý khác (USB/NAS/thư mục đồng bộ đám mây) — một phân vùng
+  khác của cùng ổ chỉ chống mất hệ thống tệp và xoá nhầm.
