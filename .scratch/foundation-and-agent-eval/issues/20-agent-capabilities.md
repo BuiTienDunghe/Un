@@ -1,6 +1,6 @@
 # 20 — Khả năng cơ bản cho agent: đọc dài, kiểm câu trả lời, báo tiến độ
 
-Status: đang làm — cách A (chủ dự án 28/10 00:20): v0.3 → #1 → #2 → #3 → #4; bỏ #5. #3-B trượt luật (15:13); #3-C trượt điều 3 (19:02): 6/9 trên 9 bài đoạn dán (cũ 2/9), `n` sạch, nhưng bài mới chỉ 1/3; phiếu cũ giữ. Gói #3-D duyệt 21:20 (bước 1 nhắc lại + 3' tìm trong đoạn dán, ba nhánh, bài mới mù): dừng giữa lần đo (22:45), câu trả lời một bài phụ thuộc bài chạy trước nó; #3-D đo lại dưới cô lập (23:42): cả hai đề xuất trượt (B ở B3, C ở C2 + C3), không gộp gì; mốc mới nền 50/62 cô lập; chờ chủ dự án chọn bước tiếp
+Status: đang làm — cách A (chủ dự án 28/10 00:20): v0.3 → #1 → #2 → #3 → #4; bỏ #5. #3-B trượt luật (15:13); #3-C trượt điều 3 (19:02): 6/9 trên 9 bài đoạn dán (cũ 2/9), `n` sạch, nhưng bài mới chỉ 1/3; phiếu cũ giữ. Gói #3-D duyệt 21:20 (bước 1 nhắc lại + 3' tìm trong đoạn dán, ba nhánh, bài mới mù): dừng giữa lần đo (22:45), câu trả lời một bài phụ thuộc bài chạy trước nó; #3-D đo lại dưới cô lập (23:42): cả hai đề xuất trượt (B ở B3, C ở C2 + C3), không gộp gì; mốc mới nền 50/62 cô lập. 29/10 chủ dự án duyệt đợt đo phân xử N1 (nạp nguyên văn bản dán khi vừa cửa sổ) / C7 (7 vòng công cụ khi có đoạn dán) trên `int/20-arb` (08:55): NV1 hai nhánh, NV3 bài mù, opus đăng ký
 Type: task
 Blocked by: — (cần bộ bài v0.3 có bài đọc dài để đo)
 
@@ -436,3 +436,46 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
     - F. Sửa bộ chia đoạn bỏ dòng tiêu đề đánh số (việc riêng).
     - Ý kiến opus: B trước. Đó là lỗi làm người dùng mất câu trả lời, có ca tái hiện, và độc lập với chuyện đoạn dán. Sau đó C,
       vì trần 9 đoạn là nguyên nhân duy nhất còn lại của hai bài trượt chung.
+- 29/10 08:55 (opus) — **Đợt đo phân xử N1 / C7.** Chủ dự án duyệt (qua fable, 06:xx), nguyên văn: "Duyệt đợt đo phân xử
+  theo tong-hop.md: NV1 viết N1 (~20 dòng) và C7, NV3 viết ≥ 4 bài mù dài, opus đăng ký trước, fable duyệt, chạy cô lập sau
+  khi Quản lý trả GPU; dừng nếu GPU ≥ 85 °C hoặc hạn tuần ≥ 35 %." Tổng hợp của fable và bốn báo cáo:
+  `research-2026-10-29/` (chép vào main cùng commit này). GPU về lúc 05:33.
+  - **Nền chung `int/20-arb` `62e7ca0`** = `94e321f` (phiếu #3-C) + main `b100d56` (thêm ticket 27). Khác main chỉ ở
+    `pastes.py` và test của nó. Lý do: N1 đổi prompt cả 15 bài dán, C7 thêm vòng công cụ. Thiếu ticket 27 thì một lệnh công cụ
+    hỏng làm mất lượt và lẫn vào kết quả. Hệ quả: nền chạy lại trên commit mới. Dự đoán: 15 bài cũ giống hệt
+    `v0.7-3d-iso-base-r1`, vì ticket 27 chưa từng bắn ở nền (r1 không có lỗi nào). Test agent/paste/eval giữ im: 272 qua,
+    8 hỏng cũ ở `test_eval_stack_model_version.py` (thiếu `DATABASE_URL` trong worktree, như trước).
+  - **NV1**: hai nhánh, đều cắt từ `int/20-arb` `62e7ca0`.
+    - `wip/20-paste-inline` (N1), trong `pastes.take_pastes`. Tin cuối của người dùng là đoạn dán, và ước token cả prompt ≤
+      hằng mới → giữ nguyên văn: không thành phiếu, không vào `pastes`, nên không có id cho `read_document` mở. Đoạn dán cũ trong
+      lịch sử vẫn thành phiếu. Không đụng `PASTE_THRESHOLD`.
+      - Ước = phần cố định (hướng dẫn, system, schema công cụ) + tổng ký tự mọi tin model sẽ thấy (đoạn dán cũ tính theo phiếu,
+        tin cuối tính nguyên văn) / 3,3. Tỉ lệ 3,3 đo từ 186 câu (`c-noi-tran-doc.md`). Phần cố định lấy từ `tokens_in` vòng đầu
+        của một bài không dán trong lần chạy đã giữ (≈ 1,3k); ghi nguồn trong chú thích.
+      - Ngưỡng = `num_ctx` 16 384 − 4 096 dự trữ (câu trả lời, một lần thử #2, một vòng công cụ) = 12 288. Cách tính ghi trong
+        chú thích; không chỉnh theo bài.
+      - Test: dán 31 681 ký tự không lịch sử → nguyên văn; 40 000 → phiếu; đoạn dán cũ trong lịch sử → phiếu; lịch sử dài đẩy
+        một đoạn dán 30 000 qua ngưỡng → phiếu; tin không dán → messages model thấy giữ nguyên (ghim); `tools_sha256` giữ
+        `153209…a75e500`.
+      - Manifest ghi hằng mới. Báo opus con số ước cho 31 681 và 40 000 ký tự.
+    - `wip/20-paste-rounds` (C7): `rounds = max_steps + 4` khi lượt có đoạn dán. Hai lần +1 (ticket 27, #2) vẫn cộng thêm.
+      Manifest ghi khoá mới. Test: có dán → 7, không dán → 3, lần thử lại vẫn +1, bài không chạm trần giữ nguyên từng byte.
+    - Không mở nhánh bài của NV3. Không chạy `agent_eval`. Test theo luật giữ im. Không push. Xong nhắn fable + opus.
+  - **NV3**: `wip/20-paste-tasks-e`, cắt từ main `b100d56`, v0.8, bài doc-54 trở đi.
+    - ≥ 3 bài giữa: văn bản 25 000–29 000 ký tự (cả câu hỏi). Mọi mảnh đáp án nằm ở 40–60 % chiều dài, ở đoạn ≥ 10 (bộ chia
+      thật), ngoài 600 ký tự hai mép, không lặp ở chỗ khác. Kiểu khác nhau: một mảnh, hai mảnh, có số mồi kiểu doc-53 (ít
+      nhất một bài).
+    - ≥ 1 bài dài: ≥ 42 000 ký tự, đáp án ở đoạn 12–18. Bảy lần đọc của C7 tới được; ba lần của nền thì không.
+    - Mẫu chấm chặt, đáp án khó đoán; tránh mẫu khớp câu đoán khoảng (doc-51 "3-7 ngày"). Không sửa 15 bài cũ và bộ chấm của
+      chúng.
+    - Mở rộng `paste_check_d.py` để kiểm vị trí bằng bộ chia thật. Gửi opus bảng chỉ có siêu dữ liệu: id, độ dài, số đoạn,
+      đoạn đáp án, % vị trí, kiểu, có mồi không. Fable duyệt nội dung.
+    - Không mở nhánh của NV1. Không chạy `agent_eval`. Không push.
+  - **fable**: duyệt hai nhánh NV1, nhánh bài, bản đăng ký, báo cáo, qua tệp như cũ.
+  - **opus**: gộp bài vào main và `int/20-arb`; dựng commit nền / N1 / C7; viết bản đăng ký và `analyze.py` trước khi chạy.
+    Chạy cô lập, mỗi nhánh một lần: nền (15 cũ + bài mới), N1, C7. Thêm một lần N1 thứ hai trên các bài giữa, vì N1 đưa
+    prompt lên ~11k token mà r1 = r2 mới chứng minh tới ~6,5k. GPU ước ~25 phút. Dừng nếu GPU ≥ 85 °C hoặc hạn tuần ≥ 35 %.
+  - Luật, đăng ký chi tiết sau: theo `tong-hop.md`, thêm nhánh "không kết luận" để mọi kết quả có chỗ. Bài giữa = mọi mảnh
+    đáp án ở 40–60 % chiều dài, làm tròn hai chữ số: bài cũ doc-39, 40, 41, 44, 46, 50 cộng bài mới. Chặn cắt ngữ cảnh: vòng
+    nào có `tokens_in` > 14 500 thì bài đó tính riêng. Đây là phép thử cơ chế, không phải cổng gộp; N1 lên main sẽ đứng trên
+    phiếu #3, trừ khi #3-C cũng gộp.
