@@ -32,7 +32,7 @@ roles:
     active: <id> | null      # null = not served (vision); never null for general and embedding
     versions:                # OLDEST FIRST — the order is the fallback rule
       - id: <id>
-        provider: ollama | gemini | deepseek | sentence-transformers
+        provider: ollama | gemini | deepseek | anthropic | sentence-transformers
         config: {...}        # the runtime block, verbatim (every role except the reranker)
         ...
 ```
@@ -101,7 +101,7 @@ downloads a checkpoint: a rejected version may never start a download (invariant
 | `disabled` | ocr / extractor / verifier / condenser / reranker: chain exhausted; ocr is served with `enabled: false`, the memory worker runs the rule filter only, the reranker passes candidates through | **yes** | no |
 
 Per provider: an Ollama version passes when its tag is in `/api/tags` (and its `digest`
-matches when set); Gemini / DeepSeek pass when the API key is set; the embedding version
+matches when set); Gemini / DeepSeek / Anthropic pass when the API key is set; the embedding version
 additionally gets the width and completeness checks above. **An ocr version must also read one
 line and end its turn**: `local-ai-core probe 4831` is rendered to a PNG, sent with the
 version's `prompt` and `num_predict: 64`, and passes only on `done_reason: "stop"` with the

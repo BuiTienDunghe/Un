@@ -45,7 +45,8 @@ NO_FALLBACK_ROLES = ("embedding",)                                  # constraint
 DISABLE_ON_MISS_ROLES = ("ocr", "extractor", "verifier", "condenser")
 PINNABLE_ROLES = ("general", "condenser", "embedding", "ocr", "reranker", "extractor", "verifier")  # MODEL_VERSION_<ROLE>
 GATED_ROLES = ("general", "embedding", "reranker", "extractor")     # --check: the ACTIVE version needs an eval report
-PROVIDERS = ("ollama", "gemini", "deepseek", "sentence-transformers")
+PROVIDERS = ("ollama", "gemini", "deepseek", "anthropic", "sentence-transformers")
+CLOUD_PROVIDERS = ("gemini", "deepseek", "anthropic")   # probe = "API key registered", nothing to download
 RESERVED_RECORD_KEYS = frozenset({                                   # a key from this set INSIDE `config:` is a load error
     "id", "config", "fallback", "vram_mib", "digest", "ollama", "eval", "provenance", "notes",
     "collection_suffix", "hub", "path", "activation", "num_labels", "max_length", "probe",
@@ -1010,7 +1011,7 @@ class _Walker:
         assert self.probes is not None
         started = perf_counter()
         elapsed = lambda: int((perf_counter() - started) * 1000)  # noqa: E731
-        if candidate.provider in ("gemini", "deepseek"):
+        if candidate.provider in CLOUD_PROVIDERS:
             if candidate.provider in self.overrides.registered_providers:
                 return "pass", ProbeOutcome("provider", True, f"{candidate.provider} registered", elapsed()), None
             return "next", ProbeOutcome("provider", False, f"provider {candidate.provider} not registered (no API key)", elapsed()), None
@@ -1133,7 +1134,7 @@ def resolve(registry: Registry, overrides: Overrides, probes: Probes | None = No
               (reason names both numbers and the remedy "rebuild_qdrant --missing-only" /
               "rebuild_memories --missing-only"); skipped when allow_missing_collections.
            degraded wins over incomplete; the first contradiction stops the walk.
-       - provider gemini / deepseek: registered -> passes; else next.
+       - provider gemini / deepseek / anthropic: registered -> passes; else next.
        - reranker: no probe here; status pending; chain handed to RerankerService.
     6. Chain exhausted: general / embedding -> missing (record = requested; first use 502
        MODEL_NOT_LOADED as today; collections still derived); DISABLE_ON_MISS_ROLES -> disabled
@@ -1208,6 +1209,8 @@ def overrides_from_settings(settings: "Settings") -> Overrides:
         providers.add("gemini")
     if settings.deepseek_api_key:
         providers.add("deepseek")
+    if settings.anthropic_api_key:
+        providers.add("anthropic")
     return Overrides(
         pins=pins, raw_tags=raw_tags, disabled_roles=frozenset(disabled), registered_providers=frozenset(providers),
         documents_collection=settings.qdrant_documents_collection, memories_collection=settings.qdrant_memories_collection,

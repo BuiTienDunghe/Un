@@ -188,6 +188,10 @@ class Settings(BaseSettings):
     deepseek_base_url: str = "https://api.deepseek.com"
     deepseek_chat_timeout_seconds: float = 90.0
     deepseek_retry_count: int = 2
+    # Anthropic (Claude): registers the `anthropic` provider for model_versions.yaml records.
+    anthropic_api_key: str | None = None
+    anthropic_chat_timeout_seconds: float = 60.0
+    anthropic_retry_count: int = 2
     qdrant_url: str = "http://127.0.0.1:6333"
     qdrant_timeout_seconds: float = 10.0
     # Memory vectors live in their own named collection. Tests point this at a
