@@ -1,7 +1,8 @@
 """A long paste becomes a document the agent reads, not text the model carries (ticket 20 #3).
 
 A message longer than PASTE_THRESHOLD stays whole in the conversation; the model gets a slip
-with its two edges and an id, and read_document opens it from the turn's own pastes. Plain
+with its two edges and an id, and read_document opens it from the turn's own pastes. Under
+N1 the user's last message, when the whole prompt still fits, reaches the model whole. Plain
 chat keeps the old limit (422 INPUT_TOO_LONG) and sees a paste in its history as a one-line
 note, the stream path included. No database, no model: stores and models are fakes.
 """
@@ -17,6 +18,8 @@ from app.security.api_key import require_api_key
 from app.services.agent_service import ANSWER_CHECK_STEP, BAD_ARGUMENTS, NOT_READABLE, READ_MAX_CHUNKS, AgentService
 from app.services.chat_service import ChatService
 from app.services.pastes import (
+    CHARS_PER_TOKEN,
+    INLINE_MAX_TOKENS,
     PASTE_MAX,
     PASTE_THRESHOLD,
     SLIP_EDGE_CHARS,
@@ -24,6 +27,7 @@ from app.services.pastes import (
     is_paste,
     note,
     paste_id,
+    prompt_tokens,
     read_paste,
     search_text,
     shorten_pastes,
@@ -42,6 +46,14 @@ def paste(middle: str = SECRET, length: int = 12_000) -> str:
 
 
 PASTED = paste()
+# Past N1's ceiling with nothing else in the prompt, so as the user's last message it is a slip.
+LONG = paste(length=40_000)
+
+
+def sized(length: int) -> str:
+    """A paste of exactly `length` characters, the secret in its middle."""
+    text = paste(length=length - 500)
+    return text.replace("\n\n", "\n\n" + " " * (length - len(text)), 1)
 
 
 def final(text: str) -> dict:
@@ -145,11 +157,13 @@ def test_the_slip_says_to_answer_at_once_when_the_edges_are_enough_before_how_to
 
 
 def test_only_a_message_past_the_threshold_becomes_a_slip():
+    # In the history, where N1 never keeps a paste whole.
+    after = {"role": "user", "content": "tiếp"}
     at_limit = {"role": "user", "content": "x" * PASTE_THRESHOLD}
-    assert take_pastes([at_limit]) == ([at_limit], {})
+    assert take_pastes([at_limit, after]) == ([at_limit, after], {})
     over = {"role": "user", "content": "x" * (PASTE_THRESHOLD + 1)}
-    shown, pastes = take_pastes([over])
-    assert shown == [{**over, "content": slip(over["content"])}] and list(pastes) == [paste_id(over["content"])]
+    shown, pastes = take_pastes([over, after])
+    assert shown == [{**over, "content": slip(over["content"])}, after] and list(pastes) == [paste_id(over["content"])]
 
     service, router = agent([final("ok")])
     service.run([at_limit])
@@ -171,10 +185,10 @@ def test_plain_chat_keeps_a_note_and_memory_search_reads_only_the_edges():
 
 
 def test_the_agent_sees_the_slip_and_reads_the_middle_through_read_document():
-    pid = paste_id(PASTED)
-    middle = next(c["chunk_index"] for c in read_paste(pid, PASTED, 0, 50)["chunks"] if "14/11" in c["content"])
+    pid = paste_id(LONG)
+    middle = next(c["chunk_index"] for c in read_paste(pid, LONG, 0, 50)["chunks"] if "14/11" in c["content"])
     service, router = agent([call("read_document", {"document_id": pid, "from_chunk": middle, "n": 1}), final("Hạn 14/11, chị Thu Hà phụ trách.")])
-    answer, _, steps = service.run([{"role": "user", "content": PASTED}])
+    answer, _, steps = service.run([{"role": "user", "content": LONG}])
 
     first_prompt = json.dumps(router.prompts[0], ensure_ascii=False)
     assert SECRET not in first_prompt and pid in first_prompt, "the model carries the slip, not the paste"
@@ -208,8 +222,8 @@ def test_only_this_turns_own_pastes_open_never_a_callers_or_the_stores():
 
 
 def test_a_paste_read_by_page_says_it_has_no_pages():
-    service, _ = agent([call("read_document", {"document_id": paste_id(PASTED), "page": 2}), final("xong")])
-    _, _, steps = service.run([{"role": "user", "content": PASTED}])
+    service, _ = agent([call("read_document", {"document_id": paste_id(LONG), "page": 2}), final("xong")])
+    _, _, steps = service.run([{"role": "user", "content": LONG}])
     payload = json.loads([s for s in steps if s["kind"] == "tool_result"][0]["content"])
     assert "from_chunk" in payload["result"]
 
@@ -217,10 +231,78 @@ def test_a_paste_read_by_page_says_it_has_no_pages():
 def test_a_figure_only_in_the_unread_middle_sends_the_agent_back_to_read_it():
     # #2's check sees the slip, not the paste: quoting the middle without opening it is a
     # figure from nowhere, and the retry is the agent's chance to read first.
-    pid = paste_id(PASTED)
+    pid = paste_id(LONG)
     service, router = agent([final("Hạn là ngày 14/11."), call("read_document", {"document_id": pid, "n": 3}), final("Hạn 14/11.")])
-    _, _, steps = service.run([{"role": "user", "content": PASTED}])
+    _, _, steps = service.run([{"role": "user", "content": LONG}])
     assert [s["kind"] for s in steps][:2] == [ANSWER_CHECK_STEP, "tool_call"]
+
+
+# N1 (ticket 20's arbitration round): the user's last paste reaches the model whole while the
+# whole prompt, by estimate, fits under INLINE_MAX_TOKENS.
+
+SYSTEM = {"role": "system", "content": "Bạn là trợ lý."}
+
+
+def test_the_ceiling_is_the_window_less_the_reserve_and_sits_at_36_415_characters():
+    assert INLINE_MAX_TOKENS == 12_288
+    assert take_pastes([{"role": "user", "content": sized(36_415)}])[1] == {}
+    assert len(take_pastes([{"role": "user", "content": sized(36_416)}])[1]) == 1
+
+
+def test_a_paste_of_31_681_characters_reaches_the_model_whole_and_has_no_id():
+    # doc-50's length, the longest paste task: about 10.9k tokens with the guide and tools.
+    text = sized(31_681)
+    user = {"role": "user", "content": text}
+    shown, pastes = take_pastes([SYSTEM, user])
+    assert shown[-1] is user and pastes == {}
+    assert prompt_tokens([SYSTEM, user]) <= INLINE_MAX_TOKENS
+
+    reader = Reader()
+    service, router = agent([call("read_document", {"document_id": paste_id(text), "n": 3}), final("Hạn 14/11.")], reader)
+    _, _, steps = service.run([SYSTEM, user])
+    assert router.prompts[0][-1] == user and SECRET in router.prompts[0][-1]["content"]
+    assert "read_document(document_id=" not in json.dumps(router.prompts[0], ensure_ascii=False)
+    result = [s for s in steps if s["kind"] == "tool_result"][0]
+    assert json.loads(result["content"])["error"] == NOT_READABLE and reader.asked == [], "a paste kept whole has no id to open"
+
+
+def test_a_paste_of_40_000_characters_is_still_a_slip():
+    text = sized(40_000)
+    shown, pastes = take_pastes([SYSTEM, {"role": "user", "content": text}])
+    assert shown[-1]["content"] == slip(text) and pastes == {paste_id(text): text}
+
+
+def test_a_paste_in_the_history_is_a_slip_even_beside_one_kept_whole():
+    # The earlier paste counts as its slip: as text, the two would not fit together.
+    text = sized(29_000)
+    earlier = {"role": "user", "content": text}
+    reply = {"role": "assistant", "content": "Đã đọc."}
+    for last in ({"role": "user", "content": "Ai phụ trách?"}, {"role": "user", "content": sized(30_000)}):
+        shown, pastes = take_pastes([SYSTEM, earlier, reply, last])
+        assert shown == [SYSTEM, {**earlier, "content": slip(text)}, reply, last]
+        assert pastes == {paste_id(text): text}
+    assert prompt_tokens([SYSTEM, earlier, reply, last]) > INLINE_MAX_TOKENS
+
+
+def test_a_long_history_tips_a_paste_that_fits_alone_over_the_ceiling():
+    user = {"role": "user", "content": sized(30_000)}
+    assert take_pastes([user])[1] == {}
+    # The history the 30 000 characters leave room for, plus a little: no message in it a paste.
+    room = int((INLINE_MAX_TOKENS - prompt_tokens([user])) * CHARS_PER_TOKEN) + 10
+    history = [{"role": "user", "content": "ý trước"}, {"role": "assistant", "content": "x" * room}]
+    assert all(not is_paste(m) for m in history)
+    shown, pastes = take_pastes([*history, user])
+    assert shown[:2] == history and shown[-1]["content"] == slip(user["content"]) and list(pastes) == [paste_id(user["content"])]
+
+
+def test_a_turn_without_a_paste_shows_the_model_exactly_what_it_did():
+    messages = [SYSTEM, {"role": "user", "content": "trước"}, {"role": "assistant", "content": "x" * 9_000}, {"role": "user", "content": "Ai phụ trách?"}]
+    shown, pastes = take_pastes(messages)
+    assert pastes == {} and len(shown) == len(messages) and all(a is b for a, b in zip(shown, messages))
+
+    service, router = agent([final("ok")])
+    service.run(messages)
+    assert [router.prompts[0][0], *router.prompts[0][2:]] == messages and router.prompts[0][1]["role"] == "system"
 
 
 def client(chat_service) -> TestClient:

@@ -10,6 +10,10 @@ is indexed, so no GPU is needed, and a paste opens only in the conversation that
 (ticket 20 #1, A2). The same text always gets the same id, so a later turn of the same
 conversation reads it again.
 
+N1 (ticket 20's arbitration round, owner's approval 29/10): the paste the user just sent
+stays whole when the whole prompt, by estimate, still fits the model's window, so the model
+reads it all at once instead of in slices. A paste further up the history is a slip as ever.
+
 Plain chat has no tool to open a slip: there PASTE_THRESHOLD stays the limit, and a paste
 already in the history becomes a one-line note.
 """
@@ -27,6 +31,18 @@ SLIP_EDGE_CHARS = 600
 # The chunker's own defaults, which are models.yaml's rag.chunk_tokens / chunk_overlap_tokens:
 # a paste reads in chunks the size of an uploaded document's (median ~1 700 characters).
 CHUNK_TOKENS, CHUNK_OVERLAP_TOKENS = 480, 80
+# N1's ceiling: general's num_ctx (16 384) less 4 096 kept for the answer, one #2 retry and one
+# tool round. A constant, not read from models.yaml: a change of num_ctx must change it too.
+INLINE_MAX_TOKENS = 16_384 - 4_096
+# What the model reads that is not in `messages`, the agent guide and the tool schemas: round 1's
+# tokens_in on stat-01 (a 29-character question, the shortest) in
+# kept/agent-eval-v0.7-paste-nudge-search/v0.7-3d-iso-base-full, run on 94e321f, whose guide and
+# tools are this commit's. It also holds the 95-character system prompt and the question, which
+# the estimate counts again: about 40 tokens to the safe side.
+INLINE_FIXED_TOKENS = 1_253
+# Characters per token of plain Vietnamese text, from 186 answers
+# (.scratch/foundation-and-agent-eval/research-2026-10-29/c-noi-tran-doc.md).
+CHARS_PER_TOKEN = 3.3
 
 
 def is_paste(message: dict[str, Any]) -> bool:
@@ -85,12 +101,20 @@ def note(text: str) -> str:
     return f"[Người dùng đã dán một văn bản dài {len(text)} ký tự; chỉ đọc được ở chế độ công cụ.]"
 
 
+def prompt_tokens(messages: list[dict[str, Any]]) -> float:
+    """N1's estimate of the prompt the model reads for `messages`, as the agent shows them."""
+    return INLINE_FIXED_TOKENS + sum(len(str(message.get("content") or "")) for message in messages) / CHARS_PER_TOKEN
+
+
 def take_pastes(messages: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, str]]:
-    """The agent's view: every paste replaced by its slip, and the pastes by id."""
+    """The agent's view: every paste replaced by its slip, and the pastes by id — save the
+    user's last message, kept as it is when the whole prompt still fits (N1): no slip, and
+    no id to open."""
     pastes: dict[str, str] = {}
     shown: list[dict[str, Any]] = []
-    for message in messages:
-        if is_paste(message):
+    for index, message in enumerate(messages):
+        whole = index == len(messages) - 1 and prompt_tokens([*shown, message]) <= INLINE_MAX_TOKENS
+        if is_paste(message) and not whole:
             text = str(message["content"])
             pastes[paste_id(text)] = text
             shown.append({**message, "content": slip(text)})
