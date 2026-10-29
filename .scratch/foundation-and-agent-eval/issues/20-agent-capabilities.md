@@ -1,6 +1,6 @@
 # 20 — Khả năng cơ bản cho agent: đọc dài, kiểm câu trả lời, báo tiến độ
 
-Status: đang làm — cách A (chủ dự án 28/10 00:20): v0.3 → #1 → #2 → #3 → #4; bỏ #5. #3-B trượt luật (15:13); #3-C trượt điều 3 (19:02): 6/9 trên 9 bài đoạn dán (cũ 2/9), `n` sạch, nhưng bài mới chỉ 1/3; phiếu cũ giữ. Gói #3-D duyệt 21:20 (bước 1 nhắc lại + 3' tìm trong đoạn dán, ba nhánh, bài mới mù): dừng giữa lần đo (22:45), câu trả lời một bài phụ thuộc bài chạy trước nó; #3-D đo lại dưới cô lập (23:42): cả hai đề xuất trượt (B ở B3, C ở C2 + C3), không gộp gì; mốc mới nền 50/62 cô lập. 29/10 chủ dự án duyệt đợt đo phân xử N1 (nạp nguyên văn bản dán khi vừa cửa sổ) / C7 (7 vòng công cụ khi có đoạn dán) trên `int/20-arb` (08:55): NV1 hai nhánh, NV3 bài mù, opus đăng ký
+Status: đang làm — cách A (chủ dự án 28/10 00:20): v0.3 → #1 → #2 → #3 → #4; bỏ #5. #3-B trượt luật (15:13); #3-C trượt điều 3 (19:02): 6/9 trên 9 bài đoạn dán (cũ 2/9), `n` sạch, nhưng bài mới chỉ 1/3; phiếu cũ giữ. Gói #3-D duyệt 21:20 (bước 1 nhắc lại + 3' tìm trong đoạn dán, ba nhánh, bài mới mù): dừng giữa lần đo (22:45), câu trả lời một bài phụ thuộc bài chạy trước nó; #3-D đo lại dưới cô lập (23:42): cả hai đề xuất trượt (B ở B3, C ở C2 + C3), không gộp gì; mốc mới nền 50/62 cô lập. 29/10 chủ dự án duyệt đợt đo phân xử N1 (nạp nguyên văn bản dán khi vừa cửa sổ) / C7 (7 vòng công cụ khi có đoạn dán) trên `int/20-arb` (08:55); đo xong 10:13: R2, chọn N1 (18/19 so với C7 14, nền 10; ba bài giữa mù 3/3); chờ chủ dự án chọn A–D
 Type: task
 Blocked by: — (cần bộ bài v0.3 có bài đọc dài để đo)
 
@@ -479,3 +479,15 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
     đáp án ở 40–60 % chiều dài, làm tròn hai chữ số: bài cũ doc-39, 40, 41, 44, 46, 50 cộng bài mới. Chặn cắt ngữ cảnh: vòng
     nào có `tokens_in` > 14 500 thì bài đó tính riêng. Đây là phép thử cơ chế, không phải cổng gộp; N1 lên main sẽ đứng trên
     phiếu #3, trừ khi #3-C cũng gộp.
+- 29/10 10:30 (opus) — **Đợt phân xử đo xong: luật ra R2, chọn N1, bỏ C.** Báo cáo:
+  `kept/agent-eval-v0.8-paste-arbitration/REPORT.md`. Bản đăng ký `e6666c0`, fable duyệt `bcb76b7`; chạy 09:58–10:13, cô
+  lập, GPU riêng, nóng nhất 79 °C. Bài v0.8 gộp main `818a997`. Commit đo: nền `613f0b2`, N1 `d40d4e0`, C7 `bc93975`.
+  - Điểm 19 bài: nền 10, N1 18, C7 14. Ba bài giữa mù: 0, 3, 1. doc-57 (quá ngưỡng N1): chỉ C7 đạt.
+  - N1 không thua C7 bài nào, không làm hỏng bài nào nền đạt. N1 lần 2 trên 9 bài giữa giống lần 1 từng byte. Không bài nào
+    gần cửa sổ.
+  - Vòng đầu doc-50 là 9 763 token: R3 không bật, bộ ước của N1 dư về phía an toàn.
+  - Trung vị độ trễ: N1 5,5 s; nền 12,1 s; C7 11,8 s.
+  - p5 sai: #2 vẫn bắn một lần dưới N1 (doc-47) và câu thử lại lộ lời "Xin lỗi, tôi đã nhầm lẫn".
+  - Ngoài luật: năm bài C7 trượt là năm bài model không chịu đọc hoặc dừng ở mồi; C7 giống hệt nền ở cả năm.
+  - Cách cho chủ dự án (A–D trong báo cáo): A gộp N1 lên main trên phiếu #3; B gộp #3-C + N1; C thêm C7 cho văn bản quá
+    ngưỡng; D đếm nhu cầu trước. Ý kiến opus: B kèm một lần chạy đủ 62 bài cô lập làm điều kiện, rồi D. Chờ fable kiểm số.
