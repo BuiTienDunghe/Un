@@ -115,8 +115,9 @@ def main() -> None:
         "new_tasks_registered": bool(NEW_MIDDLE) and len(LONG) >= 1,
         "middle_set_recomputed": tuple(t for t in PASTE_TASKS if in_middle(defs[t])) == MIDDLE,
         "old_tasks_unchanged": old_defs is not None and all(defs[t] == old_defs[t] for t in OLD),
+        # By tokens only; a paste read under N1 (an id it was never shown) is reported, not a precondition.
         "n1_inlined_all_but_long": all(
-            (per["n1"][t]["first_round_tokens_in"] or 0) - (per["base"][t]["first_round_tokens_in"] or 0) >= INLINED_MIN_GAIN and not per["n1"][t]["paste_reads"]
+            (per["n1"][t]["first_round_tokens_in"] or 0) - (per["base"][t]["first_round_tokens_in"] or 0) >= INLINED_MIN_GAIN
             for t in PASTE_TASKS if t not in LONG
         ),
         "n1_long_not_inlined": all(per["n1"][t]["first_round_tokens_in"] == per["base"][t]["first_round_tokens_in"] for t in LONG),
@@ -131,7 +132,8 @@ def main() -> None:
     # R1 counts the blind middle tasks only (fable's review of 0adc697); the seen ones are reported beside it.
     lose_middle = [t for t in NEW_MIDDLE if counted(t) and per["c7"][t]["passed"] and not n1_pass(t)]
     lose_old_middle = [t for t in OLD_MIDDLE if counted(t) and per["c7"][t]["passed"] and not n1_pass(t)]
-    lose_any = [t for t in PASTE_TASKS if counted(t) and per["c7"][t]["passed"] and not n1_pass(t)]
+    # R2 counts the 18 tasks N1 applies to: past its ceiling N1 is base by construction (fable's review of 9062a9e).
+    lose_any = [t for t in PASTE_TASKS if t not in LONG and counted(t) and per["c7"][t]["passed"] and not n1_pass(t)]
     regress = [t for t in PASTE_TASKS if counted(t) and per["base"][t]["passed"] and not n1_pass(t)]
     doc50 = per["n1"]["doc-50"]["first_round_tokens_in"] or 0
     r1 = len(lose_middle) >= 2
@@ -178,6 +180,8 @@ def main() -> None:
         "regress_base_pass_n1_fail": regress,
         "win_n1_pass_c7_fail": [t for t in PASTE_TASKS if counted(t) and n1_pass(t) and not per["c7"][t]["passed"]],
         "not_counted_near_window": [t for t in PASTE_TASKS if not counted(t)],
+        "n1_paste_reads": sorted(t for t in PASTE_TASKS if t not in LONG and per["n1"][t]["paste_reads"]),
+        "long_passed": {arm: sorted(t for t in LONG if per[arm][t]["passed"]) for arm in ("base", "n1", "c7")},
         "over_window_16384": {arm: sorted(t for t, v in per[arm].items() if v["max_round_tokens_in"] > 16_384) for arm in per},
         # fable's note on 32a2d50: doc-50's text ran 2,79 characters a token in the old reads, not 3,3.
         "n1_chars_per_token_round1": {

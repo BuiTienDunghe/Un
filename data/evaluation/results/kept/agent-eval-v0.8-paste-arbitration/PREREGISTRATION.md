@@ -81,8 +81,7 @@ Thiếu một điều thì không đọc luật, chỉ báo cáo.
 - Cả bốn lần chạy có `unload_between_tasks`.
 - Manifest phân biệt nhánh: N1 có `paste_inline.max_tokens` = 12 288, C7 có `paste_extra_rounds` = 4, nền không có khoá nào.
 - Tập bài giữa tính lại khớp danh sách trên.
-- N1 thật sự nạp nguyên: mọi bài trừ bài dài có vòng đầu nhiều hơn nền ≥ 1 000 token và không có lần đọc đoạn dán nào. Bài
-  dài: vòng đầu N1 bằng đúng nền.
+- N1 thật sự nạp nguyên: mọi bài trừ bài dài có vòng đầu nhiều hơn nền ≥ 1 000 token. Bài dài: vòng đầu N1 bằng đúng nền.
 
 ## Luật
 
@@ -94,11 +93,19 @@ N1 đạt một bài giữa chỉ khi đạt ở cả hai lần chạy.
 | Mã | Điều kiện | Kết luận |
 |---|---|---|
 | R1 | Ở ≥ 2 trong 3 bài giữa mù (doc-54, 55, 56) được tính: C7 đạt, N1 trượt | "Bỏ sót khúc giữa" có thật với 9B: giữ C cho khúc giữa, hạ ngưỡng N1 |
-| R2 | Trong cả 19 bài được tính: không bài nào C7 đạt mà N1 trượt, và không bài nào nền đạt mà N1 trượt | Chọn N1, bỏ C |
+| R2 | Trong 18 bài N1 áp dụng được (trừ doc-57): không bài nào C7 đạt mà N1 trượt. Trong cả 19 bài: không bài nào nền đạt mà N1 trượt | Chọn N1, bỏ C |
 | R0 | Không R1, không R2 | Không kết luận; báo cáo kèm vết từng bài, chủ dự án quyết |
 | R3 | Vòng đầu N1 ở doc-50 lệch > 15 % so với 10 900 token (ngoài 9 265–12 535) | Tính lại mọi ngưỡng trước khi bàn tiếp; R0–R2 vẫn báo nhưng gắn cờ |
 
 R1 và R2 loại trừ nhau, nên mỗi kết quả rơi vào đúng một trong R1, R2, R0.
+
+Sửa trước lần chạy, theo bài duyệt của fable về `9062a9e`:
+- R2 không đếm doc-57. Bài này vượt trần N1 nên N1 đi đúng đường của nền: C7 đọc tới đáp án còn N1 thì không, theo cách dựng.
+  Nếu đếm thì R2 gần như không thể xảy ra, và luật trộn câu "N1 có bỏ sót khúc giữa không" với câu "quá trần thì làm gì".
+  doc-57 được báo riêng: nhánh nào tới được đáp án.
+- Điều kiện "N1 nạp nguyên" chỉ xét token. Một lần đọc đoạn dán dưới N1 (model bịa ra id chưa từng thấy) chỉ được báo, không
+  làm hỏng cả đợt.
+- Báo cáo in danh sách bài bị loại vì gần cửa sổ ngay cạnh R1/R2, vì bài bị loại dễ là bài khó nhất.
 
 **Kiểm nguồn gốc**: mọi bài đổi đạt/trượt giữa hai nhánh được đọc vết. Một lần đạt mà chuỗi khớp chỉ nằm trong một khoảng đoán
 hay câu rào ("khoảng", "tầm", "có thể"), không nêu là số của văn bản, thì ghi là đoán; fable xác nhận. Bài đoán tính là trượt.
