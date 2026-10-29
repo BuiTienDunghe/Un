@@ -310,9 +310,42 @@ def test_an_input_the_api_would_reject_fails_without_a_model_call(tmp_path):
     rejected, answered = _jsonl(out_dir / "task_results.jsonl")
     assert rejected["error"].startswith("INPUT_TOO_LONG") and rejected["model_rounds"] == 0 and rejected["passed"] is False
     assert answered["passed"] is True
-    assert json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))["input_max_chars"] == INPUT_MAX_CHARS
+    manifest = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["input_max_chars"] == INPUT_MAX_CHARS
+    # N1's constants (ticket 20's arbitration round), and the tools it leaves as they were.
+    assert manifest["paste_inline"] == {"max_tokens": 12_288, "fixed_tokens": 1_253, "chars_per_token": 3.3}
+    assert manifest["tools_sha256"] == "153209652c0672a2337be105bd711a1e343a9c7bdf93911e7d14dba18a75e500"
 
 
+def test_doc_50_the_longest_paste_task_reaches_the_model_whole(tmp_path):
+    # N1: with the system prompt the eval runs with, doc-50's 31 681 characters estimate
+    # under the ceiling, and the runner hands them to the model as they are.
+    from app.services.pastes import INLINE_MAX_TOKENS, prompt_tokens
+    from scripts.agent_eval import SYSTEM_PROMPT_PATH
+
+    task = next(t for t in load_dataset(DATASET_DIR).tasks if t["id"] == "doc-50")
+    assert len(task["input"]) == 31_681
+    assert prompt_tokens(build_messages(task, SYSTEM_PROMPT_PATH.read_text(encoding="utf-8"))) <= INLINE_MAX_TOKENS
+
+    class Recording(ScriptedRouter):
+        def chat_tools(self, mode, messages, tools):
+            self.seen = getattr(self, "seen", None) or [m["content"] for m in messages if m["role"] == "user"]
+            return super().chat_tools(mode, messages, tools)
+
+    router = Recording([final("Không rõ.")])
+    _run(tmp_path, [task], [], router)
+    assert router.seen == [task["input"]]
+
+
+@pytest.fixture
+def slips_only(monkeypatch):
+    """The slip path on a real paste task, which under N1 reaches the model whole."""
+    from app.services import pastes
+
+    monkeypatch.setattr(pastes, "INLINE_MAX_TOKENS", 0)
+
+
+@pytest.mark.usefixtures("slips_only")
 def test_a_paste_task_reads_its_far_chunk_through_the_runner(tmp_path):
     # v0.5 (ticket 20 #3-B): kept runs show the runner handing doc-39's slip to the model,
     # never a read of a paste. doc-41's answer chunk comes back through read_document.
@@ -339,6 +372,7 @@ def test_a_paste_task_reads_its_far_chunk_through_the_runner(tmp_path):
     assert '"chunk_index": 6' in read["content"] and "Minh Khôi" in read["content"]
 
 
+@pytest.mark.usefixtures("slips_only")
 def test_a_far_paste_answer_arrives_on_the_third_read_from_chunk_0(tmp_path):
     # v0.6 (ticket 20 #3-C): doc-46 is reachable reading on from chunk 0, three chunks a
     # read, only while every read fits the read cap whole; the real cap decides it here.
@@ -357,6 +391,7 @@ def test_a_far_paste_answer_arrives_on_the_third_read_from_chunk_0(tmp_path):
     assert "Sóng Biếc" not in first + second and "Sóng Biếc" in third
 
 
+@pytest.mark.usefixtures("slips_only")
 def test_a_paste_answer_past_three_reads_from_chunk_0_never_arrives_that_way(tmp_path):
     # v0.7 (j): doc-49 read on from chunk 0, three chunks a read, spends every tool round
     # and ends at chunk 8; the answer is in chunk 10.
@@ -379,6 +414,7 @@ def test_a_paste_answer_past_three_reads_from_chunk_0_never_arrives_that_way(tmp
     ("doc-45", "Không đúng: nhận số báo danh vào thứ Bảy 28/11/2026, từ 8 giờ đến 18 giờ, tại sảnh B nhà thi đấu Phú Lâm."),
     ("doc-52", "Mặc theo tông màu xanh ngọc; xe đón lúc 16 giờ 45 ở sảnh Sao Khuê, tầng trệt tòa văn phòng công ty."),
 ])
+@pytest.mark.usefixtures("slips_only")
 def test_a_paste_answer_the_slip_shows_passes_only_without_a_read(tmp_path, task_id, answer):
     # The task allows no tool call, so the same answer after one read fails on the tool
     # budget alone.
