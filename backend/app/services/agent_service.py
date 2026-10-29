@@ -22,7 +22,7 @@ from app.llm_clients.deadline import ModelCallTimeoutError, call_within
 from app.llm_clients.ollama_client import OllamaToolCallParseError
 from app.llm_clients.usage import consume_usage, record_usage
 from app.services.answer_figures import grounding_summary, retry_instruction, turn_texts, unsupported_figures
-from app.services.pastes import read_paste, take_pastes
+from app.services.pastes import INLINE_MAX_TOKENS, read_paste, take_pastes
 from app.services.injection_defense import InjectionDefense
 from app.services.model_router import ModelRouter
 
@@ -271,6 +271,7 @@ class AgentService:
         document_reader: DocumentReader | None = None,
         read_result_max_chars: int = READ_RESULT_MAX_CHARS,
         registry: ToolRegistry | None = None,
+        inline_max_tokens: int = INLINE_MAX_TOKENS,
     ) -> None:
         self.defense = defense or InjectionDefense(enabled=False)
         self.router = router
@@ -283,6 +284,8 @@ class AgentService:
         self.max_steps = max(1, max_steps)
         self.tool_result_max_chars = max(200, tool_result_max_chars)
         self.read_result_max_chars = max(200, read_result_max_chars)
+        # N1's ceiling, from the caller: pastes.inline_ceiling of general's config (ticket 28 #4).
+        self.inline_max_tokens = int(inline_max_tokens)
         self.turn_budget_seconds = max(1.0, float(turn_budget_seconds))
         self.final_reserve_seconds = min(max(0.0, float(final_reserve_seconds)), self.turn_budget_seconds)
         self.clock = clock
@@ -319,7 +322,7 @@ class AgentService:
 
         # A paste longer than PASTE_THRESHOLD reaches the model as a slip, and is read
         # through read_document from this turn's own pastes (ticket 20 #3).
-        working, pastes = take_pastes(list(messages))
+        working, pastes = take_pastes(list(messages), self.inline_max_tokens)
         guide = {"role": "system", "content": self.defense.agent_guide(AGENT_GUIDE)}
         insert_at = 1 if working and working[0].get("role") == "system" else 0
         working.insert(insert_at, guide)

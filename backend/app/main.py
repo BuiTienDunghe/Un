@@ -31,6 +31,7 @@ from app.services.ocr_service import OCRService
 from app.services.rag_service import RagService
 from app.services.research_service import ResearchService
 from app.services.agent_service import FINAL_RESERVE_SECONDS, READ_RESULT_MAX_CHARS, TURN_BUDGET_SECONDS, AgentService
+from app.services.pastes import inline_ceiling
 from app.services.memory_service import MemoryService
 from app.services.postgres_retrieval_service import PostgresRetrievalService
 from app.services.job_queue_service import JobQueueService
@@ -221,6 +222,8 @@ async def lifespan(app: FastAPI):
         # read_document reads the active version's chunks exactly as the retriever indexes them.
         document_reader=app.state.chunk_inspection_service,
         read_result_max_chars=int(agent_config.get("read_result_max_chars", READ_RESULT_MAX_CHARS)),
+        # N1's ceiling from the window of the general version this process serves (ticket 28 #4).
+        inline_max_tokens=inline_ceiling(settings.load_models().get("general")),
     )
     # ChatService is built before the retrieval stack the agent needs, so the
     # agent is handed over here instead of through the constructor.
