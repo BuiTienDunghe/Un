@@ -10,13 +10,17 @@ downloading PyTorch.
 ```
 training/
 ├── requirements-train.txt   installed into a SEPARATE .venv-train
+├── requirements-eval.txt    installed into .venv-eval
 ├── common/                  shared guards, used before any training run
 │   ├── split_manifest.py    what each evaluation set is, and its hash
-│   └── leak_check.py        text overlap + generator/template collisions
-├── reranker/                H1 — Vietnamese cross-encoder (not started)
-├── d2_extractor/            H2 — distil the memory extractor (spec written)
-└── vi_nli/                  H3 — NLI encoder for verifier + grounding (conditional)
+│   ├── leak_check.py        text overlap + generator/template collisions
+│   └── ...                  held-out corpus, eval stack/worker, MTEB runner, re-index
+└── reranker/                H1 — Vietnamese cross-encoder: mine_negatives, train,
+                             export_checkpoint (run 07/09/2026, failed its gate; docs/RESULTS.md)
 ```
+
+H2 (distil the memory extractor) and H3 (NLI encoder) have no directory yet: H2 is a spec in
+`.scratch/d2-distillation/spec.md`, H3 is conditional.
 
 ## Which Python runs what
 
@@ -91,7 +95,9 @@ is around, and an earlier plan to train overnight would have contended with both
 users and the one unattended quality check.
 
 Training window: **05:00–21:00**. GPU off limits 22:00–04:59. A long run holds a lock
-file so the nightly eval can skip with a logged reason instead of failing.
+file so the nightly eval can skip with a logged reason instead of failing. (Not built yet:
+as of 30/10/2026 neither `training/` nor `backend/scripts/nightly_eval.py` writes or reads
+such a lock.)
 
 Caveat, because this is a small sample: 2 days and 44 messages, from a handful of
 people. It is enough to reject "train at night" and not enough to claim the shape of

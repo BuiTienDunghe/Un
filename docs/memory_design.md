@@ -2,6 +2,8 @@
 
 **Ngày:** 27/08/2026 · **Trạng thái:** 🟡 **THIẾT KẾ — CHƯA THI CÔNG** · **có 1 chốt chặn phải giải trước tầng 3 (§9.3)**
 
+> **Ghi chú 30/10/2026 (ticket 29):** dòng trạng thái trên là của ngày 27/08. Phần lớn thiết kế đã thi công ngay sau đó (§13.6–13.8): sổ gốc tầng 1 (`discord_channel_messages`, migration `20260828_30`), rút gọn tầng 3 (`20260828_31`, tắt mặc định, cần `DISCORD_CONDENSATION_ENABLED` và `GEMINI_API_KEY`), verifier (tắt mặc định) và công cụ `search_history`. Hành vi hiện tại: `docs/current_architecture.md` và `backend/app/discord/README.md`; tài liệu này là hồ sơ thiết kế.
+
 **Phương pháp:** 7 agent khảo sát Meta AI (5 tra cứu + 1 tổng hợp + 1 phản biện), sau đó 5 agent nữa **kiểm ngược chính tài liệu này** trên mã nguồn thật. Vòng kiểm ngược tìm ra **8 lỗi nghiêm trọng trong bản nháp đầu**, gồm cả việc cách sửa tôi đề xuất là **ngược**. §11 ghi đủ.
 
 Mọi con số đều ghi rõ **ai kiểm**: ✅ tôi tự mở nguồn / tự chạy · ⚠️ từ agent, chưa tự kiểm.
