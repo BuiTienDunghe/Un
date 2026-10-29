@@ -45,7 +45,7 @@ khi băm, nên Windows và CI ra cùng một hash).
 | `corpus_source` | Chỉ có ở bài hỏi về tài liệu thật: `{file, chunk_index, corpus}`, tức đoạn mà đáp án nằm trong **400 ký tự đầu**. Agent chỉ đọc 400 ký tự đầu của mỗi đoạn (`agent_service`) |
 | `evidence` | Tuỳ chọn: những regex mà đoạn ghi được phải chứa, khi đáp án là kết quả tính toán hoặc dịch (doc-22, doc-27). Không có thì dùng `must_mention` |
 | `long_read` | Từ v0.3: đáp án **không** nằm trong 400 ký tự đầu của bất kỳ đoạn nào; phải đọc tiếp mới thấy (doc-33..37, hist-11). Với bài tài liệu, `corpus_source` khi đó trỏ tới đoạn có đáp án và thêm `char_offset` |
-| `long_input` | Từ v0.3: tin dài hơn 10 000 ký tự, tức đoạn dán (doc-39; doc-40..43 từ v0.5; doc-44..47 từ v0.6; doc-48..53 từ v0.7). Lúc thêm doc-39 đó là giới hạn của API; từ #3 (ticket 20), agent chỉ thấy phiếu (600 ký tự đầu và cuối) và mở phần giữa bằng `read_document` |
+| `long_input` | Từ v0.3: tin dài hơn 10 000 ký tự, tức đoạn dán (doc-39; doc-40..43 từ v0.5; doc-44..47 từ v0.6; doc-48..53 từ v0.7; doc-54..57 từ v0.8). Lúc thêm doc-39 đó là giới hạn của API; từ #3 (ticket 20), agent chỉ thấy phiếu (600 ký tự đầu và cuối) và mở phần giữa bằng `read_document` |
 
 `expect`: mọi khoá đều tuỳ chọn. Một bài đạt khi **mọi** kiểm tra áp dụng cho nó đều đạt.
 
@@ -386,3 +386,45 @@ Giới hạn:
 - (n) đo "ít từ chung" bằng chữ của cả câu hỏi; truy vấn thật do model tự đặt và có thể khác.
 - doc-51 và doc-53 đọc lần lượt từ đoạn 0 thì cần đủ ba lượt công cụ.
 - Băm bộ bài đổi, nên bảng điểm không so một lần v0.6 với một lần v0.7. 56 bài cũ không đổi một byte nào.
+
+**agent-eval-v0.8** (ticket 20, đợt đo phân xử N1 / C7, 29/10). Thêm 4 bài đoạn dán doc-54..57; 62 bài cũ và bộ chấm v0.4
+giữ nguyên. Bài viết **trước** mọi lần chạy có chúng; người viết không xem nhánh `wip/20-paste-inline`, `wip/20-paste-rounds`.
+Ba bài giữa đủ ngắn để N1 nạp nguyên văn, đáp án nằm ở khúc giữa văn bản; một bài dài quá cỡ đó, N1 vẫn ra phiếu.
+
+| Bài | Loại | Ký tự | Đoạn | Đáp án ở đoạn | % chiều dài | Câu hỏi ở, kiểu hỏi | Gây nhiễu |
+|---|---|---:|---:|---|---|---|---|
+| doc-54 | (o) giữa, một mảnh | 27 076 | 19 | 10 | 56 | đầu; tên trạm cắt thời gian và giờ đóng | hai điểm cắt của cự ly 42 km ngay sau đáp án; khu đích đóng 11 giờ 30 trong phiếu |
+| doc-55 | (p) giữa, hai mảnh | 28 596 | 21 | 10 và 12 | 47 và 58 | cuối; nơi nộp hồ sơ tạm ngừng học, khoản tiền giữ chỗ | phòng 105, 201 nhà Bằng Lăng trong phiếu; học bù 95.000, cấp lại thẻ 50.000 cạnh mảnh hai |
+| doc-56 | (q) giữa, đoạn mồi như (n) | 28 058 | 20 | 10 (đoạn mồi 4) | 55 | đầu; nói kiểu thường ngày, hỏi tạm dừng bao lâu, mất bao nhiêu | đoạn mồi: tạm dừng thẻ khi đi xa, 30 ngày, 150.000 |
+| doc-57 | (r) dài, N1 không nạp | 45 166 | 33 | 13 | 38 | cuối; tiền phòng tối đa và phụ cấp lưu trú vùng Tây Nguyên | bốn vùng khác cùng bảng; khoán 330.000 một đêm trong phiếu |
+
+- "% chiều dài" là vị trí ký tự đầu và ký tự cuối của chỗ khớp regex chia cho độ dài cả tin (gồm câu hỏi), làm tròn hai chữ
+  số. Bài giữa: mọi mảnh ở 0,40–0,60 và ở đoạn 10 trở đi. doc-57 cố ý ở 0,38: N1 không nạp nguyên văn bài này, nên nếu nằm
+  trong dải nó thành một bài giữa mà N1 và nền giống nhau theo cách dựng. `test_v08_paste_answers_sit_where_the_arbitration_round_reads_them`
+  tính lại các điều này.
+- Độ dài chọn theo cách ước của đề bài N1 (1 300 + ký tự / 3,3, ngưỡng 12 288): ba bài giữa 9 505–9 965, dưới ngưỡng; doc-57
+  14 987, trên. Đây chỉ là ước để chọn độ dài; ngưỡng thật là hằng của nhánh N1.
+- Đọc lần lượt từ đoạn 0, mỗi lần 3 đoạn: ba lượt dừng ở đoạn 8 ở cả bốn bài. Đáp án tới ở lần đọc thứ tư (doc-54, doc-56,
+  mảnh đầu doc-55) và thứ năm (mảnh hai doc-55, doc-57), trong bảy lượt của C7. Mọi lần đọc 3 đoạn liền nhau, đọc bằng chính
+  `read_document` của AgentService, đều trả đủ 3 đoạn dưới trần 6 000 ký tự (rộng nhất 5 983, ở doc-56).
+- (p): với văn bản xuôi, mỗi đoạn dài khoảng 1 450 ký tự, nên đoạn 10 bắt đầu quanh 45 % và đoạn 13 quanh 60 % của 29 000
+  ký tự; ở doc-55, phần chỉ thuộc đoạn 13 bắt đầu sau mốc 60 %. Vì vậy hai mảnh cách 2 đoạn: một lần đọc từ đoạn 10 lấy
+  được cả hai, khác (d), (h), (l). Test vị trí bỏ điều kiện "cách ít nhất 3 đoạn" cho bài giữa.
+- (q): như doc-53. Đếm chữ chung với câu hỏi (bỏ chữ có ở quá nửa số đoạn): đoạn đáp án 4, đoạn mồi 17, nhiều nhất trong
+  các đoạn không chứa câu hỏi; đoạn mồi không khớp regex nào. Đoạn mồi ở đoạn 4, trong ba lần đọc từ đoạn 0, nên đọc lần
+  lượt sẽ gặp mồi trước đáp án. Đo thêm, không đưa vào test: BM25 với cả câu hỏi làm truy vấn đưa đoạn mồi lên thứ hai, đoạn
+  đáp án thứ 19 trên 20.
+- Mẫu số không khớp khi đứng ngay sau "-", "–", "~", kể cả cách một dấu cách ("700.000 - 870.000", "60–75 ngày"), và không
+  khớp phần đuôi của số lớn hơn (1.265.000): câu đoán khoảng như doc-51 "3-7 ngày" không còn đạt. doc-54 và doc-55 có thêm
+  một tên riêng (Suối Mơ, Hoa Sữa). Mỗi bài có câu đúng, câu lấy số gây nhiễu và câu đoán khoảng trong test cách viết.
+- Mọi câu của bốn bài nằm trong ít nhất một đoạn; tiêu đề viết "MỤC 16.", "ĐIỀU 22.", không mở đầu bằng số.
+- Truy xuất: như doc-39..53, không có dòng trong `retrieval.jsonl`.
+- `expect` theo mẫu doc-53.
+- Nội dung hư cấu; mỗi cặp thứ–ngày khớp lịch. Tên công ty, cơ sở, người đều bịa.
+
+Giới hạn:
+- Không có `must_not_mention`: ở doc-56, câu nêu cả số của đoạn mồi lẫn số đúng vẫn đạt.
+- Chặn đoán khoảng không bắt "từ 60 đến 75 ngày", vì "lên đến 75 ngày" là câu đúng.
+- Mẫu số chỉ nhận chữ số: "bảy mươi lăm ngày" viết bằng chữ sẽ trượt.
+- doc-55 hai mảnh cách 2 đoạn, nên không đo được việc gom hai mảnh mà một lần đọc không với tới.
+- Băm bộ bài đổi, nên bảng điểm không so một lần v0.7 với một lần v0.8. 62 bài cũ không đổi một byte nào.
