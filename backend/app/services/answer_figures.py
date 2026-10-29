@@ -6,6 +6,13 @@ model was given this turn: the system and user messages, the conversation histor
 tool result. A figure found nowhere is unsupported, and AgentService asks the model once
 to look it up, say it was not found, or show its arithmetic (option T1).
 
+A number before a scale word (SCALES) also stands for its full value (ticket 28 #3): "54
+triệu" is 54000000 and "1,5 tỷ" 1500000000, a run of them multiplying ("3 trăm nghìn" =
+300000). So "54 triệu" in the answer is found by a source's "54.000.000", and the other way
+round. The digits as written still count as well ("54"), so whatever was found before is
+found now — "54 triệu" by a table's "54" under "Đơn vị: triệu đồng" — and the check flags
+no figure it did not flag before.
+
 Measured on the kept Agent Eval v0.3 runs (baseline, #1, #1-B; 144 answers): it flags 3,
 all of them failing answers — doc-10's invented allowance among them — and no passing one.
 answer_grounding's word-overlap verdict flags 7 of the 28 passing answers that looked
@@ -16,7 +23,11 @@ Blind spots, by construction:
   the retry asks it to show the arithmetic. A one-digit result ("2 giờ") is never checked;
 - a figure written in words ("hai trăm nghìn") is not a digit run and is not seen at all;
 - a short decimal ("3,5 triệu", "1.5 giờ", "10,5%") splits into one-digit pieces, since a
-  separator only joins groups of three digits, and is never checked (fable, 28/10);
+  separator only joins groups of three digits, and is never checked (fable, 28/10). A
+  decimal is read only before a scale word: a source's "3,5 triệu" now vouches for
+  3.500.000, but in the answer it is still not checked, as its digits are single;
+- a scale word is read after any number: "năm 2025 tỷ lệ…" also stands for 2025 tỷ,
+  which costs nothing while the digits as written count too;
 - an invented claim that carries no figure is not caught.
 Single digits are skipped: in an answer they number a list more often than they claim.
 """
@@ -25,22 +36,45 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Iterable
+from decimal import Decimal
 
 from app.services.answer_grounding import grade_answer
 
 MIN_DIGITS = 2
 SHOWN_IN_RETRY = 5
-_NUMBER = re.compile(r"\d+(?:[.,]\d{3})+|\d+")
+# A Vietnamese scale word and its power of ten.
+SCALES = {"trăm": 2, "nghìn": 3, "ngàn": 3, "triệu": 6, "tỷ": 9, "tỉ": 9}
+_DIGITS = re.compile(r"\d+(?:[.,]\d{3})+|\d+")
+_SCALE = "|".join(SCALES)
+# A run of digits, or one followed by scale words, with a decimal part before them only
+# ("1,5 tỷ"), so "10,5%" still splits as it always has.
+_NUMBER = re.compile(rf"(\d+(?:[.,]\d{{3}})*)(?:[.,](\d+))?\s*((?:{_SCALE})(?:\s+(?:{_SCALE}))*)\b|{_DIGITS.pattern}", re.IGNORECASE)
 
 
-def _figures(text: str) -> list[tuple[str, str]]:
-    """(normalised, as written) for each figure, in order of first appearance."""
-    found: dict[str, str] = {}
-    for written in _NUMBER.findall(text or ""):
-        number = re.sub(r"[.,]", "", written).lstrip("0") or "0"
-        if len(number) >= MIN_DIGITS and number not in found:
-            found[number] = written
-    return list(found.items())
+def _digits(written: str) -> str:
+    return re.sub(r"[.,]", "", written).lstrip("0") or "0"
+
+
+def _figures(text: str) -> list[tuple[set[str], set[str], str]]:
+    """(digits, numbers, as written) for each figure, in order of first appearance: `digits`
+    are its runs of at least MIN_DIGITS digits, normalised; `numbers` are those and, for a
+    scaled figure, its full value. A figure written twice ("54 triệu", "54.000.000") is one."""
+    found: dict[str, tuple[set[str], set[str], str]] = {}
+    for match in _NUMBER.finditer(text or ""):
+        written, whole, fraction, words = match.group(0), *match.groups()
+        digits = {number for piece in _DIGITS.findall(written) if len(number := _digits(piece)) >= MIN_DIGITS}
+        numbers = set(digits)
+        key = next(iter(digits), "")
+        if words:
+            value = Decimal(f"{_digits(whole)}.{fraction or 0}").scaleb(sum(SCALES[word.lower()] for word in words.split()))
+            key = str(int(value)) if value == value.to_integral_value() else format(value.normalize(), "f")
+            if len(key) >= MIN_DIGITS:
+                numbers.add(key)
+        if numbers:
+            seen_digits, seen_numbers, _ = found.setdefault(key, (set(), set(), written))
+            seen_digits.update(digits)
+            seen_numbers.update(numbers)
+    return list(found.values())
 
 
 def turn_texts(messages: list[dict], skip: set[int]) -> tuple[list[str], list[str]]:
@@ -53,9 +87,10 @@ def turn_texts(messages: list[dict], skip: set[int]) -> tuple[list[str], list[st
 
 
 def unsupported_figures(answer: str, seen_texts: Iterable[str]) -> list[str]:
-    """The answer's figures, as written, that appear in none of `seen_texts`."""
-    available = {number for text in seen_texts for number, _ in _figures(text)}
-    return [written for number, written in _figures(answer) if number not in available]
+    """The answer's figures, as written, that appear in none of `seen_texts`: any number a
+    figure stands for will do. A figure without digits to check ("1,5 tỷ") only vouches."""
+    available = {number for text in seen_texts for _, numbers, _ in _figures(text) for number in numbers}
+    return [written for digits, numbers, written in _figures(answer) if digits and not numbers & available]
 
 
 def retry_instruction(unsupported: list[str]) -> str:
