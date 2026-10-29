@@ -506,3 +506,4 @@ Luật đo: gỡ model trước mỗi lần, đăng ký trước, so từng bài
     - lịch sử dài chưa đo bằng model.
   - Chưa push.
 - 30/10 00:30 (opus 5.5): #4 phía bot: chủ dự án chọn **D2**. Một tin "⏳ Ún đang làm…" sửa dần theo bước, rồi thay bằng câu trả lời. Làm trên `wip/20-discord-progress`. Đuôi #2 và ngưỡng N1 chuyển sang ticket 28.
+- 30/10 (opus 5.5): #4 phía bot (D2) gộp main `ed67344`, fable GỘP ĐƯỢC. `/ask`, `/docs` và DM không đổi. Chưa chạy trên Discord thật. Bốn khác biệt do Discord: câu trả lời mang dấu "(đã chỉnh sửa)"; người được @ trong câu trả lời gửi bằng sửa tin không nhận thông báo; người hỏi xoá tin sau khi tin ⏳ đã đăng thì vẫn được trả lời; tắt bot giữa lượt thì tin ⏳ ở lại.

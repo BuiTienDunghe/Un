@@ -1,6 +1,6 @@
 # 28 — Đuôi ticket 20: bước soát số và ngưỡng nạp nguyên văn
 
-Status: đang làm — chủ dự án (30/10): "xử lý nốt phần code và những thứ xung quanh đi, rồi ta sẽ chấm điểm sau"
+Status: xong code — gộp main d1725b6 (30/10); mục 2 và 3 chưa đo
 Type: task
 Blocked by: —
 
@@ -50,3 +50,8 @@ Sau khi N1 lên main (3a2b769, Release v1.5.0), còn bốn chỗ lỏng:
 Đo Agent Eval, BFCL; văn bản dán trên khoảng 36k ký tự; lịch sử dài. Những việc này để tới lần chấm điểm.
 
 ## Comments
+- 30/10 (opus 5.5): bốn commit `ff2f6ca`, `0cff26b`, `a2e2690`, `f348364`; gộp main `d1725b6`, fable GỘP ĐƯỢC.
+  - #1: con số lưu ở `AgentTrace.arguments`, không ở `content`, vì `content` bị băm vào bảng rút gọn và băm một con số ngắn thì đoán ngược được.
+  - #3: luật chỉ bớt bắt, không bắt thêm. Fable kiểm trên 147 câu trả lời đã giữ: không câu nào đổi. Số một chữ số kèm đơn vị ("2 triệu") vẫn không được kiểm; muốn kiểm thì là một thay đổi nhỏ, nhưng #2 sẽ bắn nhiều hơn.
+  - #4: theo ghi chú của fable, `main.py` lấy config từ `router.models` (`f072e69`).
+  - Chưa chạy với DB: phần đọc `answer_check` trong `forget_member`. Bộ DB sau gộp không có ca cho phần này.

@@ -20,6 +20,30 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   `MODEL_VERSION_GENERAL=general-haiku-v1` trong shell với `ANTHROPIC_API_KEY` trong `.env`. Promote
   cần báo cáo D1 đóng dấu id. Không gửi `temperature`/`top_p` (Claude 5.x từ chối); token vào/ra được
   ghi vào request log (Gemini/DeepSeek vẫn NULL).
+- **Discord hiện tiến độ khi Ún đang làm** (ticket 20 #4 phía bot, cách D2, 30/10). Một lượt @mention sau 2 s vẫn chưa xong
+  thì bot đăng một tin "⏳". Tin này đổi theo bước agent đang làm, mỗi lần sửa cách nhau ít nhất 1,5 s, rồi được sửa thành phần
+  đầu câu trả lời. Lượt hỏng, bị huỷ hay quá giờ: tin được sửa thành đúng câu báo lỗi cũ. Sửa tin không được thì trả lời như
+  trước. `/ask`, `/docs` và tin nhắn riêng không đổi. Chưa thấy chạy trên Discord thật.
+- **Chặn nợ Discord lan thêm vào lõi** (ticket 25, cách 1B, 30/10). Một test đỏ khi module lõi nào ngoài `app/discord/` đọc
+  trường `discord_*` của Settings mà không thuộc 8 cặp (module, trường) đang đọc hôm nay. Thêm một test đỏ khi một trường
+  `discord_*` nằm ngoài khối của nó. Settings giống từng byte trước và sau.
+
+### Changed
+- **Bước soát số (#2) không xin lỗi người dùng, và hiểu "54 triệu"** (ticket 28, 30/10).
+  - Vết của bước `answer_check` ghi chính các con số bị bắt (ở `arguments`, xoá theo hội thoại, `forget_member` xử lý được).
+  - Lời thử lại dặn viết lại như lần đầu: không xin lỗi, không nhắc tới việc kiểm.
+  - Số kèm trăm, nghìn, ngàn, triệu, tỷ, tỉ khớp với giá trị đầy đủ theo cả hai chiều. Luật này chỉ làm bước soát bắt ít đi.
+  - Hai thay đổi sau đổi hành vi và **chưa đo**. Mốc cô lập 55/62 của 1.5.0 không còn áp cho main tới lần chấm sau.
+- **Ngưỡng nạp nguyên văn đọc từ cấu hình model** (ticket 28 #4). Ngưỡng = `context` của phiên bản general đang phục vụ − 4 096.
+  Phiên bản không có `context` (như `general-haiku-v1`) giữ 12 288. Một test chốt rằng hôm nay ngưỡng vẫn là 12 288.
+- **Tài liệu khớp code** (ticket 29). README, README.en, `current_architecture.md` và các tài liệu chúng trỏ tới nay mô tả
+  main đúng như nó chạy:
+  - OCR và index chạy trong luồng của API.
+  - Trí nhớ Discord tự áp dụng khi bộ trích bật.
+  - Migration tới `20261027_35`, OCR `ocr-v1`, 11 màn.
+  - Chế độ công cụ và văn bản dán dài.
+  - CI có 4 việc.
+  `.env.example` chỉ đổi chú thích.
 
 ## [1.5.0] - 2026-10-29
 

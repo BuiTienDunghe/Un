@@ -91,11 +91,11 @@ chưa rõ phiên nào.
 | 4 | BFCL: cài venv | phiên NV3 bị bộ phân loại quyền chặn `pip install`; 119 gói, 94,5 MB; hai lệnh ở mục 1 của thiết kế. Opus không chạy thay |
 | 5 | Đợt đo GPU gom lại | **A+B xong 08:29** (duyệt 07:58); C ba nhánh e5 (~3 giờ) và D BFCL chưa duyệt |
 | 5b | ~~Ticket 20 #3 trượt luật~~ | **chủ dự án chọn sửa lời phiếu, hai người độc lập (08:45)**: NV3 bài đoạn dán `wip/20-paste-tasks`, NV1 lời phiếu `wip/20-paste-slip-b`; chi tiết trong ticket 20, 08:50. 13:20: fable GỘP ĐƯỢC cả hai nhánh và bản đăng ký; bài đã gộp main `8bb58e1`; phía sau `c54e3eb` trên `int/20-3b`. **15:13 đo xong: trượt điều 4** (doc-42 đạt → trượt vì `n` vượt trần); phiếu mới mở 5/5, đủ ý 4/5, nhưng điểm vẫn 1/5. Không gộp. **Chủ dự án chọn B (15:40): #3-C**, NV1 lời phiếu `wip/20-paste-slip-c`, NV3 bài mới `wip/20-paste-tasks-c`, không thấy việc của nhau (ticket 20, 15:40). Bài v0.6 gộp main `8b91199`; đăng ký `9f2a23a`. **19:02 đo xong: trượt điều 3** (bài mới cần phần giữa 1/3); 2/9 → 6/9, `n` sạch, không bài nào đạt → trượt. Không gộp; `int/20-3c` `ed210e4`. Chờ chủ dự án chọn A–E (ticket 20, 19:10). **21:20 chủ dự án duyệt #3-D**: nền `int/20-3c`, NV1 bước 1 nhắc lại `wip/20-paste-nudge`, NV2 3' tìm trong đoạn dán `wip/20-paste-search`, NV3 bài mới mù `wip/20-paste-tasks-d`, một bản đăng ký ba nhánh (ticket 20, 21:25). **22:45 dừng giữa lần đo**: câu trả lời một bài phụ thuộc bài chạy trước; nền 9/15, +1 10/15; chờ chủ dự án chọn cách đo 1–3 (ticket 20, 22:45). **23:05 chọn cách 2**: NV3 runner cô lập từng bài `wip/20-eval-isolate`; phiếu (b) bỏ, NV2 `92f5796`; đăng ký lại rồi đo lại ba nhánh (ticket 20, 23:05). **23:42 đo xong dưới cô lập: B và C trượt**, không gộp; mốc nền 50/62 cô lập; chờ chủ dự án chọn A–F (ticket 20, 23:55). **29/10 chủ dự án duyệt đợt đo phân xử N1 / C7** (`research-2026-10-29/tong-hop.md`): nền `int/20-arb` `62e7ca0` (#3-C + ticket 27), NV1 `wip/20-paste-inline` + `wip/20-paste-rounds`, NV3 bài mù `wip/20-paste-tasks-e`, opus đăng ký, fable duyệt (ticket 20, 08:55). **10:13 đo xong: R2, chọn N1** (N1 18/19, C7 14, nền 10; bài giữa mù 3/1/0), chủ dự án chọn B; **N1 + phiếu #3-C gộp main `3a2b769`** sau lần kiểm 66 bài giống mốc từng byte, main 45 → 55/62 cô lập (ticket 20, 10:55); chưa push |
-| 5c | Ticket 20 #2: câu làm lại để lộ "tôi cần điều chỉnh lại câu trả lời" ra người dùng (doc-22) | ngoài luật; `kept/agent-eval-v0.3-answer-check/REPORT.md` |
-| 6 | Ticket 25 — nợ Discord sau 22 (3 món, mỗi món 2–3 cách) | `issues/25-discord-debt.md`; NV2 nghiêng 1B (test chặn lõi đọc thêm `discord_*`), 2A, 3A (để nguyên) |
-| 7 | Ticket 20 #4 — Discord hiện tiến độ thế nào: D1 giữ "đang nhập", D2 một tin "⏳ Ún đang làm…" sửa dần rồi thay bằng câu trả lời, D3 đổi emoji trên tin người hỏi (👀→🔎→✅) | NV1 nghiêng D2. Đêm nay chỉ code móc lõi + web (SSE `progress`) + endpoint tiến độ, chưa code phía bot |
+| 5c | ~~Ticket 20 #2: câu làm lại để lộ "tôi cần điều chỉnh lại câu trả lời" ra người dùng (doc-22)~~ | **xong code** ở ticket 28 (gộp `d1725b6`, 30/10): lời thử lại dặn không xin lỗi; chưa đo |
+| 6 | ~~Ticket 25 — nợ Discord sau 22~~ | **chủ dự án chọn 1B, 2A, 3A (30/10)**; 1B gộp `9a46f54` |
+| 7 | ~~Ticket 20 #4 — Discord hiện tiến độ thế nào~~ | **chủ dự án chọn D2 (30/10)**; gộp `ed67344`, chưa chạy trên Discord thật |
 | 8 | `POSTGRES_TEST_URL` (và có thể `REDIS_TEST_URL`) trong biến môi trường người dùng Windows | giữ thì mọi phiên phải nhớ bỏ khi chạy test; xoá khỏi `HKCU\Environment` thì chỉ ai đặt tường minh mới chạm DB test (opus đặt trong script của mình) |
-| 9 | Việc cũ còn treo | push, bot B1/B2, ticket 21 (tài liệu chưa có chủ), 5 collection Qdrant đo, v0.4 (L-b, L-c), 14/15 |
+| 9 | Việc cũ còn treo | bot B1/B2, 5 collection Qdrant đo, v0.4 (L-b, L-c), 14/15; ticket 21 để sau (chủ dự án, 30/10) |
 
 ## Giữ im Ollama đêm 28/10 (phiên Quản lý xin, 01:00)
 
@@ -205,11 +205,15 @@ GPU nóng do dự án khác thì opus báo cả phiên Quản lý. Thay ngưỡn
 | 18 | test_debt_t1_t2_t3 tự deadlock lúc teardown | — | Nhân viên 1 | **đã gộp** |
 | 19 | forget_member bước 6 xoá turn ở mọi guild | 17 | Nhân viên 1 | **đã gộp** (cả test bổ sung) |
 | 20 | Khả năng cơ bản cho agent: đọc dài, kiểm câu trả lời, báo tiến độ | — | NV3 (v0.3), NV1 (#1–#4) | **xong phần code**: #1 2d4a830, #2 86c419c, #3 80cd369, #4 7a2d71b; bộ test có DB 1 315 xanh; đo 28/10 08:00–08:14: #2 **đạt** luật (39/48, doc-10 hết số bịa), #3 **trượt** luật (doc-39 tới agent nhưng không mở đoạn dán; 4 cách chờ chủ dự án); bot hiển thị tiến độ chờ chủ dự án |
-| 21 | Tài liệu không có chủ: agent đọc mọi tài liệu, kể cả PDF Nghiên cứu của người khác | — | — | chờ chủ dự án |
+| 21 | Tài liệu không có chủ: agent đọc mọi tài liệu, kể cả PDF Nghiên cứu của người khác | — | — | **để sau** (chủ dự án, 30/10) |
 | 22 | Tách mềm Discord: lõi không import Discord; Discord tự cắm qua registry | 20 #1 (1) | NV2 (C1–C3, C5–C6), NV1 (C4) | **xong**: C1–C3 + tài liệu gộp d1711e7, C4 gộp 79065d7 (shim đã xoá); bộ test có DB 1 300 xanh; Agent Eval "trùng câu trả lời" đo 08:14–08:21: **48/48 trùng**, trace trùng từng bước; nợ còn lại ở ticket 25 |
 | 23 | Bảng điểm harness: đúng, hiệu quả, bền, minh bạch + lịch sử | — | Nhân viên 3 | **xong** — gộp 2818573 + cột số liệu không tra 8bfaf46 |
 | 24 | Đo harness bằng benchmark uy tín có điểm công bố | — | Nhân viên 3 | BFCL cách A; thiết kế gộp 2f362cd; chờ chủ dự án: chỗ cắm, nhiệt độ, cài venv |
 | 27 | Lệnh gọi công cụ viết hỏng làm mất cả lượt | — | Nhân viên 1 | chủ dự án chọn B sau #3-D (28/10 23:58); **đã gộp** `5f60277` (29/10): đo cô lập đạt 4/4 điều, doc-44 hết mất lượt, main 62/62 giống hệt |
+| 25 | Nợ Discord còn lại sau 22 | 22 | NV2 (soạn), subagent (1B) | **xong**: 1B gộp `9a46f54` (30/10); 2A, 3A để nguyên |
+| 26 | Claude Haiku làm provider thứ tư cho `general` | — | phiên khác (code), opus (gộp) | **đã gộp** `8f61012` (30/10), chưa bật; promote là quyết định riêng |
+| 28 | Đuôi ticket 20: vết số bị bắt, lời thử lại, "54 triệu", ngưỡng N1 từ cấu hình | 20 | subagent | **đã gộp** `d1725b6` (30/10); mục 2 và 3 chưa đo, mốc 55/62 hết hiệu lực |
+| 29 | Tài liệu khớp code | — | subagent | **đã gộp** `5d670ea` (30/10); 4 nghi lỗi code ghi trong ticket |
 
 ## Mốc so sánh của bộ test
 

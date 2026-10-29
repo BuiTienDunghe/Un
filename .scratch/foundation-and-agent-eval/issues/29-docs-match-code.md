@@ -1,6 +1,6 @@
 # 29 — Tài liệu khớp code
 
-Status: đang làm — chủ dự án (30/10): "xử lý nốt phần code và những thứ xung quanh"
+Status: xong — gộp main 5d670ea (30/10); bốn nghi lỗi code chờ chủ dự án
 Type: task
 Blocked by: —
 
@@ -45,3 +45,9 @@ Có chỗ lệch cũ đã được sửa (panel bot 401 ở ticket 04), có ch�
 - `.env` thật không được đọc.
 
 ## Comments
+- 30/10 (opus 5.5): năm commit, gộp main `5d670ea`, fable GỘP ĐƯỢC: 0 câu sai trong hơn 60 câu đối chiếu được. Hai câu fable muốn nói đủ hơn đã sửa ở `f072e69`.
+- Bốn nghi lỗi code, không sửa ở ticket này:
+  1. **`/docs` của bot không có cổng guild** (fable xác nhận). `discord_bot/main.py:488-520` → `/rag/chat`; autocomplete liệt kê mọi tên tệp đã index (`:443-463`). Danh sách guild được phép chỉ chặn lượt agent (`turn_service.py:127-132`). Hệ quả: server nào có bot cũng tra được cả kho. Cần ticket riêng.
+  2. **Luật 5 của README.en bị code trái từ trước** (fable xác nhận). Luật nói không thêm lần sinh chữ nào vào đường mặc định, nhưng `rag_service` viết lại câu hỏi nối tiếp (`condense_enabled: true`). Thêm vào đó còn lần thử lại của #2 và lần nhắc lại khi lệnh công cụ hỏng. Hoặc sửa luật, hoặc đo giá các bước đó.
+  3. **Khoá train không tồn tại**: `training/README.md:97-99` tả một khoá khiến eval đêm bỏ qua, nhưng không có code nào làm việc đó. Đã thêm ghi chú.
+  4. **`DISCORD_PERSISTENT_SESSIONS_ENABLED` có ba giá trị mặc định** (bot `false`, compose `true`, panel bật cứng). Chú thích compose nói là cố ý; chỉ ghi lại.

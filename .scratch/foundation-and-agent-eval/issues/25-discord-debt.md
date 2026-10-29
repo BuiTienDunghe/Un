@@ -1,6 +1,6 @@
 # 25 — Nợ còn lại sau khi tách mềm Discord: lõi vẫn biết tên Discord ở ba chỗ
 
-Status: đang làm 1B — chủ dự án chọn 1B, 2A, 3A (30/10)
+Status: xong — 1B gộp main 9a46f54 (30/10); 2A, 3A để nguyên theo lựa chọn của chủ dự án
 Type: task
 Blocked by: 22 (đã gộp d1711e7); C4 của 22 nên gộp trước, để shim không còn
 
@@ -76,3 +76,4 @@ Nếu sau này thật sự thêm Telegram, lúc đó làm 2B và 3B cùng một 
 
 ## Comments
 - 30/10 00:30 (opus 5.5): chủ dự án chọn **1B, 2A, 3A** ("chặn lan, rẻ"). 1B làm trên `wip/25-config-guard`; 2A và 3A là để nguyên.
+- 30/10 (opus 5.5): 1B gộp main `9a46f54`, fable GỘP ĐƯỢC. Bộ dò cây cú pháp thấy 8 cặp (module, trường), gồm 7 trường trong 3 module, khớp spec; 23 trường `discord_*`. Kiểm đột biến 5 kiểu đều đỏ. Bản dump Settings trước và sau giống từng byte.

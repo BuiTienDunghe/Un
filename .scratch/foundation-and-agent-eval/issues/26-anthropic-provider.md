@@ -1,6 +1,6 @@
 # 26 — Claude (Anthropic) làm lựa chọn thứ hai cho vai trò `general`
 
-Status: code xong trên `wip/26-anthropic-provider`, chờ chủ dự án duyệt và quyết định promote
+Status: đã gộp main 8f61012 (30/10), chưa bật — chủ dự án chọn "gộp, chưa bật"; promote là quyết định riêng
 Type: task
 Blocked by: —
 
@@ -53,3 +53,4 @@ pointer nên nightly sẽ từ chối chấm — đúng thiết kế.
 - Router chat vẫn chỉ map lỗi Ollama ra mã 502/504; lỗi Claude (và Gemini/DeepSeek từ trước) ra 500
   INTERNAL_ERROR. Nợ chung của mọi provider đám mây, chưa thuộc ticket này.
 - `strict: true` cho schema công cụ chưa bật.
+- 30/10 (opus 5.5): chủ dự án chọn "gộp, chưa bật". Merge qua `int/26-main` (`1c7f73e`, mục CHANGELOG dời từ [1.4.0] sang [Unreleased]), gộp main `8f61012`; fable GỘP ĐƯỢC, lần duyệt code 26 đầu tiên. `general-haiku-v1` không có `context`, nên ngưỡng nạp nguyên văn giữ 12 288; cửa sổ thật của Haiku 5.5 lớn hơn nhiều, đó là việc tinh chỉnh sau.
