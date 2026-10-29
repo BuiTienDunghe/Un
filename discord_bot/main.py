@@ -34,6 +34,7 @@ from discord_bot.passive_listener import (
     parse_listen_channel_ids,
     resolve_listened_channel,
 )
+from discord_bot.progress_message import ProgressMessage
 from discord_bot.session_location import (
     UnsupportedDiscordLocationError,
     canonical_discord_location,
@@ -144,12 +145,18 @@ async def send_discord_answer(
     answer: str,
     *,
     reply_to: discord.Message | None = None,
+    progress: ProgressMessage | None = None,
 ) -> list[discord.Message]:
-    """Send every response chunk once and retain Discord's returned objects."""
+    """Send every response chunk once and retain Discord's returned objects. A progress
+    message (ticket 20 #4, D2) becomes the first chunk; when it cannot, the first chunk goes
+    out as it would have without one."""
 
     chunks = split_for_discord(answer)
     sent: list[discord.Message] = []
-    if reply_to is not None:
+    replaced = await progress.replace(chunks[0]) if progress is not None else None
+    if replaced is not None:
+        sent.append(replaced)
+    elif reply_to is not None:
         sent.append(await reply_to.reply(chunks[0], mention_author=False))
     else:
         sent.append(await channel.send(chunks[0]))
@@ -202,6 +209,7 @@ class DiscordConversationGateway:
         author_display_name: str,
         discord_message_id: str,
         reply_to_discord_message_id: str | None = None,
+        progress: ProgressMessage | None = None,
     ) -> PreparedDiscordAnswer | None:
         # DMs have no canonical location, so the session pipeline rejects them
         # — and until 26/08 that rejection was sent to the user as an error
@@ -244,35 +252,48 @@ class DiscordConversationGateway:
             system_prompt=self.prompt_for(guild),
         )
         turn_id = turn.turn_id
+        # Ticket 20 #4: the progress message follows whichever turn is executing, and
+        # stops before this returns, so nothing writes to it once the answer is in hand.
+        if progress is not None:
+            progress.watch(turn_id, self._progress_label)
         deadline = monotonic() + self.poll_budget_seconds
-        while True:
-            execution = await self.api_client.execute_discord_turn(turn_id)
-            if execution.status == "requeued" and execution.replacement_turn_id:
-                turn_id = execution.replacement_turn_id
+        try:
+            while True:
+                execution = await self.api_client.execute_discord_turn(turn_id)
+                if execution.status == "requeued" and execution.replacement_turn_id:
+                    turn_id = execution.replacement_turn_id
+                    if progress is not None:
+                        progress.watch(turn_id, self._progress_label)
+                    if monotonic() >= deadline:
+                        break
+                    continue
+                if (
+                    execution.status == "running"
+                    and execution.answer
+                    and execution.execution_token
+                ):
+                    return PreparedDiscordAnswer(
+                        execution.answer,
+                        execution.turn_id,
+                        execution.execution_token,
+                    )
+                if execution.status == "completed":
+                    # An idempotent duplicate delivery has already been handled.
+                    return None
+                if execution.status in {"failed", "cancelled"}:
+                    raise BackendClientError(
+                        f"Discord turn ended with status {execution.status}."
+                    )
                 if monotonic() >= deadline:
                     break
-                continue
-            if (
-                execution.status == "running"
-                and execution.answer
-                and execution.execution_token
-            ):
-                return PreparedDiscordAnswer(
-                    execution.answer,
-                    execution.turn_id,
-                    execution.execution_token,
-                )
-            if execution.status == "completed":
-                # An idempotent duplicate delivery has already been handled.
-                return None
-            if execution.status in {"failed", "cancelled"}:
-                raise BackendClientError(
-                    f"Discord turn ended with status {execution.status}."
-                )
-            if monotonic() >= deadline:
-                break
-            await asyncio.sleep(0.5)
+                await asyncio.sleep(0.5)
+        finally:
+            if progress is not None:
+                await progress.stop()
         raise BackendClientError("Discord turn did not become ready before the polling deadline.")
+
+    async def _progress_label(self, turn_id: str) -> str | None:
+        return (await self.api_client.get_discord_turn_progress(turn_id)).label
 
     async def rag_prepare(
         self,
@@ -358,6 +379,67 @@ class DiscordConversationGateway:
                 error,
                 retryable=retryable,
             )
+
+
+async def answer_mention(
+    gateway: DiscordConversationGateway,
+    message: discord.Message,
+    question: str,
+    progress: ProgressMessage,
+) -> None:
+    """Answer one @mention that passed on_message's gates. While the turn runs, `progress`
+    may post its one message (ticket 20 #4, D2); every way out below either turns that
+    message into what the bot would have sent without it, or removes it."""
+    async with message.channel.typing():
+        try:
+            author_id, author_display_name = discord_author_metadata(
+                message.author
+            )
+            prepared = await gateway.prepare(
+                question,
+                message.guild,
+                message.channel,
+                int(author_id),
+                author_display_name,
+                str(message.id),
+                discord_reply_message_id(message),
+                progress=progress,
+            )
+        except BackendClientError as error:
+            await progress.fail(str(error))
+            return
+        except Exception:
+            # Nothing reaches the user on this path, so neither may a "⏳" left behind.
+            await progress.discard()
+            raise
+    if prepared is None:
+        await progress.discard()
+        return
+    try:
+        sent_messages = await send_discord_answer(
+            message.channel,
+            prepared.answer,
+            reply_to=message,
+            progress=progress,
+        )
+    except discord.NotFound:
+        await gateway.delivery_failed(
+            prepared,
+            "Discord source message was deleted before response delivery.",
+            retryable=False,
+        )
+        return
+    except Exception as error:
+        await gateway.delivery_failed(
+            prepared,
+            f"Discord delivery failed: {type(error).__name__}",
+            retryable=True,
+        )
+        raise
+    await gateway.delivered(
+        prepared,
+        [str(sent_message.id) for sent_message in sent_messages],
+    )
 
 
 def create_bot(
@@ -623,49 +705,7 @@ def create_bot(
         if not question:
             await message.reply("Hãy gắn kèm câu hỏi sau @Ún.", mention_author=False)
             return
-        async with message.channel.typing():
-            try:
-                author_id, author_display_name = discord_author_metadata(
-                    message.author
-                )
-                prepared = await gateway.prepare(
-                    question,
-                    message.guild,
-                    message.channel,
-                    int(author_id),
-                    author_display_name,
-                    str(message.id),
-                    discord_reply_message_id(message),
-                )
-            except BackendClientError as error:
-                await message.reply(str(error), mention_author=False)
-                return
-        if prepared is None:
-            return
-        try:
-            sent_messages = await send_discord_answer(
-                message.channel,
-                prepared.answer,
-                reply_to=message,
-            )
-        except discord.NotFound:
-            await gateway.delivery_failed(
-                prepared,
-                "Discord source message was deleted before response delivery.",
-                retryable=False,
-            )
-            return
-        except Exception as error:
-            await gateway.delivery_failed(
-                prepared,
-                f"Discord delivery failed: {type(error).__name__}",
-                retryable=True,
-            )
-            raise
-        await gateway.delivered(
-            prepared,
-            [str(sent_message.id) for sent_message in sent_messages],
-        )
+        await answer_mention(gateway, message, question, ProgressMessage(message))
 
     def _raw_event_listened(payload) -> bool:
         if getattr(payload, "guild_id", None) is None:

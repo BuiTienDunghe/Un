@@ -115,6 +115,21 @@ class BackendDiscordTurnExecution:
     replacement_turn_id: str | None
 
 
+@dataclass(frozen=True)
+class BackendDiscordTurnProgress:
+    """What a running turn is doing (ticket 20 #4): a step label, never content.
+    running=False once the turn ended, before it started, or for a plain-chat turn."""
+
+    turn_id: str
+    running: bool
+    label: str | None = None
+
+
+# The progress endpoint reads API memory only; a poll slower than this is skipped
+# rather than waited on, since the answer never depends on it.
+PROGRESS_TIMEOUT_SECONDS = 5.0
+
+
 class LocalAgentClient:
     """A small client for the backend; it does not implement chat or RAG logic."""
 
@@ -470,6 +485,38 @@ class LocalAgentClient:
             token,
             replacement,
         )
+
+    async def get_discord_turn_progress(self, turn_id: str) -> BackendDiscordTurnProgress:
+        """Polled while execute_discord_turn blocks, for the bot's progress message."""
+
+        async def send() -> httpx.Response:
+            try:
+                return await self._http.get(
+                    f"/api/discord/sessions/turns/{turn_id}/progress",
+                    headers=self._headers(),
+                    timeout=min(self.settings.timeout_seconds, PROGRESS_TIMEOUT_SECONDS),
+                )
+            except httpx.TimeoutException as error:
+                raise BackendTimeoutError("Discord turn progress timed out.") from error
+            except httpx.HTTPError as error:
+                raise BackendUnavailableError("Backend is unavailable. Please try again later.") from error
+
+        response = await send()
+        if response.status_code == 401:
+            self._jwt = None
+            await self._refresh_jwt()
+            response = await send()
+        if response.status_code == 401:
+            raise BackendAuthenticationError("Backend authentication was rejected.")
+        if response.status_code >= 500:
+            raise BackendUnavailableError("Backend is unavailable. Please try again later.")
+        if response.status_code >= 400:
+            raise BackendResponseError(self._error_message(response))
+        body = self._json_object(response, "turn progress")
+        running, label = body.get("running"), body.get("label")
+        if not isinstance(running, bool) or (label is not None and not isinstance(label, str)):
+            raise BackendResponseError("Backend returned an invalid Discord turn progress.")
+        return BackendDiscordTurnProgress(turn_id, running, label if running and label else None)
 
     async def complete_discord_turn(
         self,
