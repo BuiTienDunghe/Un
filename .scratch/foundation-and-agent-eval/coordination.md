@@ -214,6 +214,7 @@ GPU nóng do dự án khác thì opus báo cả phiên Quản lý. Thay ngưỡn
 | 26 | Claude Haiku làm provider thứ tư cho `general` | — | phiên khác (code), opus (gộp) | **đã gộp** `8f61012` (30/10), chưa bật; promote là quyết định riêng |
 | 28 | Đuôi ticket 20: vết số bị bắt, lời thử lại, "54 triệu", ngưỡng N1 từ cấu hình | 20 | subagent | **đã gộp** `d1725b6` (30/10); mục 2 và 3 chưa đo, mốc 55/62 hết hiệu lực |
 | 29 | Tài liệu khớp code | — | subagent | **đã gộp** `5d670ea` (30/10); 4 nghi lỗi code ghi trong ticket |
+| 30 | `/docs` của bot kiểm server (cách A) | 29 | opus | **đã gộp** `cb7ce59` (30/10); chưa thử trên Discord thật, chưa push |
 
 ## Mốc so sánh của bộ test
 

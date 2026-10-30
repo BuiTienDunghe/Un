@@ -1,6 +1,6 @@
 # 30 — Lệnh /docs kiểm server
 
-Status: đang làm — chủ dự án chọn cách A (30/10)
+Status: xong code — gộp main (30/10); chưa thử trên Discord thật, chưa push
 Type: bug
 Blocked by: —
 
@@ -28,3 +28,10 @@ xác nhận. Trong cơ sở dữ liệu thật có 2 server từng dùng bot.
 
 Kiểm ở backend (cách B). `/rag/chat` và danh sách tài liệu vẫn mở cho ai có khoá API; web không đổi. Tách tài liệu theo
 người là ticket 21.
+
+## Comments
+- 30/10 (opus 5.5): commit `09e2658`, phiên duyệt độc lập GỘP ĐƯỢC (`reviews/wip-30-docs-guild-gate-09e2658.md`). Gỡ từng phần trong 8 phần của bản sửa thì bài kiểm tra đỏ.
+- Ghi nhận, không chặn:
+  - `DISCORD_AGENT_TOOLS_ENABLED=false` không tắt `/docs`; đã ghi trong `.env.example`.
+  - `followup.send(ephemeral=True)` sau defer công khai (`discord_bot/main.py:622, 634`) có thể đang hiện công khai. Chuyện cũ, chưa kiểm trên Discord thật.
+  - `control.py:59-75` không cắt chú thích cùng dòng trong `.env`, nên `=111 # nhà` làm bot chạy từ panel tắt `/docs` còn backend vẫn nhận `111`. Lỗi có sẵn.
