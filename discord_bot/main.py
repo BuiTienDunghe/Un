@@ -57,6 +57,8 @@ class DiscordSettings:
     # memory_design.md 13.6 job 1: channels whose traffic is COUNTED (never
     # stored) to size the raw ledger before its migration exists.
     listen_channel_ids: frozenset[str] = frozenset()
+    # Ticket 30: the guilds where /docs may reach the document store. None = every guild.
+    docs_guild_allowlist: frozenset[str] | None = frozenset()
 
     @classmethod
     def from_env(cls) -> "DiscordSettings":
@@ -95,7 +97,26 @@ class DiscordSettings:
             listen_channel_ids=parse_listen_channel_ids(
                 os.environ.get("DISCORD_LISTEN_CHANNEL_IDS", "")
             ),
+            docs_guild_allowlist=parse_docs_guild_allowlist(
+                os.environ.get("DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST", "")
+            ),
         )
+
+
+def parse_docs_guild_allowlist(raw: str) -> frozenset[str] | None:
+    """DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST as the backend reads it for the @mention tools:
+    "*" is every guild (None), anything else a comma-separated list, and empty is no guild."""
+    if raw.strip() == "*":
+        return None
+    return frozenset(part.strip() for part in raw.split(",") if part.strip())
+
+
+def docs_allowed(guild_id: int | str | None, allowlist: frozenset[str] | None) -> bool:
+    """/docs reads the owner's whole document store. A DM has no guild to check, so it is
+    refused even when every guild is allowed."""
+    if guild_id is None:
+        return False
+    return allowlist is None or str(guild_id) in allowlist
 
 
 def load_system_prompt(path: Path) -> str:
@@ -448,6 +469,7 @@ def create_bot(
     member_context_limit: int,
     persistent_sessions_enabled: bool = False,
     listener: PassiveListener | None = None,
+    docs_guild_allowlist: frozenset[str] | None = frozenset(),
 ) -> LocalAgentDiscordBot:
     bot = LocalAgentDiscordBot()
     listener = listener or PassiveListener(DEFAULT_COUNTS_PATH, frozenset())
@@ -468,6 +490,12 @@ def create_bot(
                 ",".join(sorted(listener.listened_channel_ids)),
                 listener.counts_path,
             )
+        if docs_guild_allowlist is None:
+            logger.info("/docs is on in every server")
+        elif docs_guild_allowlist:
+            logger.info("/docs is on in %d server(s)", len(docs_guild_allowlist))
+        else:
+            logger.warning("/docs is off in every server: DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST is empty")
 
     @bot.tree.command(name="ping", description="Check that the Discord bot is responding.")
     async def ping(interaction):
@@ -541,6 +569,8 @@ def create_bot(
         return list(documents_cache["items"])
 
     async def document_autocomplete(interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+        if not docs_allowed(interaction.guild_id, docs_guild_allowlist):
+            return []
         needle = current.strip().casefold()
         documents = await indexed_documents()
         matches = [d for d in documents if needle in d.filename.casefold()] if needle else documents
@@ -574,6 +604,12 @@ def create_bot(
     )
     @app_commands.autocomplete(document=document_autocomplete)
     async def docs(interaction, question: str, document: str | None = None):
+        # Before the defer: Discord fixes a reply's visibility there, so a private
+        # refusal cannot follow a public one.
+        if not docs_allowed(interaction.guild_id, docs_guild_allowlist):
+            refusal = "Lệnh này chỉ dùng trong server." if interaction.guild_id is None else "Lệnh này chưa bật ở server này."
+            await interaction.response.send_message(refusal, ephemeral=True)
+            return
         if len(question) > 10_000:
             await interaction.response.send_message("Câu hỏi quá dài (tối đa 10.000 ký tự).", ephemeral=True)
             return
@@ -775,6 +811,7 @@ async def run() -> None:
         settings.member_context_limit,
         settings.persistent_sessions_enabled,
         listener=PassiveListener(DEFAULT_COUNTS_PATH, settings.listen_channel_ids),
+        docs_guild_allowlist=settings.docs_guild_allowlist,
     )
     try:
         # Never log settings.token or any password.
