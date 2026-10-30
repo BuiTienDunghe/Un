@@ -256,6 +256,16 @@ async def lifespan(app: FastAPI):
         pass
 
 
+class UiFiles(StaticFiles):
+    """Browsers may check before reusing a screen, never skip the check: without this they kept an
+    old models.js for days after the server had a new one, and the Model screen looked broken."""
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 app = FastAPI(title="Local AI Core", version=__version__, lifespan=lifespan)
 # /health and /models stay public unconditionally: the launcher, the smoke test
 # and the Settings dialog all read them before anyone can supply a key.
@@ -282,7 +292,7 @@ app.include_router(conversations.router, dependencies=read_guard)
 app.include_router(dashboard.router, dependencies=admin_guard)
 app.include_router(vision.router, dependencies=read_guard)
 discord.register_routes(app, admin_guard=admin_guard)
-app.mount("/ui", StaticFiles(directory=str(Path(__file__).parent / "frontend"), html=True), name="ui")
+app.mount("/ui", UiFiles(directory=str(Path(__file__).parent / "frontend"), html=True), name="ui")
 
 
 @app.exception_handler(HTTPException)

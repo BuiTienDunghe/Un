@@ -7,12 +7,25 @@ so they keep grading the registry's `active`, and the tracked model_versions.yam
 from __future__ import annotations
 
 import os
+import threading
 from pathlib import Path
 
 from app.config.model_registry import PROJECT_ROOT
 
 CHOICE_PATH = PROJECT_ROOT / "data" / "model_choice.env"
 _PREFIX = "MODEL_VERSION_"
+# tools/supervisor.py starts the API again at once on this code, reading the file afresh.
+RESTART_EXIT_CODE = 75
+SUPERVISED_ENV = "LOCAL_AI_SUPERVISED"
+
+
+def restart_to_apply() -> bool:
+    """Under the supervisor: leave in a moment, after the reply is out, and come back on the pick.
+    Started any other way nothing would bring the API back, so it keeps running on the old model."""
+    if os.environ.get(SUPERVISED_ENV) != "1":
+        return False
+    threading.Timer(1.0, os._exit, (RESTART_EXIT_CODE,)).start()
+    return True
 
 
 def read_choices(path: Path) -> dict[str, str]:

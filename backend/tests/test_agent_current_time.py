@@ -32,3 +32,13 @@ def test_the_tool_says_the_date_the_weekday_and_the_time_in_vietnam(monkeypatch)
 def test_the_guide_names_the_tool_so_the_model_knows_to_use_it() -> None:
     assert "current_time" in agent_service.AGENT_GUIDE
     assert core_tools().get("current_time").label == "Đang xem giờ…"
+
+
+def test_a_turn_without_tools_is_told_the_time_just_before_the_new_message(monkeypatch) -> None:
+    class Fixed(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return datetime(2026, 10, 30, 18, 30, 5, tzinfo=agent_service.timezone.utc).astimezone(tz)
+
+    monkeypatch.setattr(agent_service, "datetime", Fixed)
+    assert agent_service.clock_note() == {"role": "system", "content": "Bây giờ là 01:30, Thứ Bảy, ngày 31/10/2026, giờ Việt Nam."}

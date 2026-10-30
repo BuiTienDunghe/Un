@@ -137,6 +137,14 @@ VIETNAM_TIME = timezone(timedelta(hours=7))
 WEEKDAYS = ("Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ Nhật")
 
 
+def clock_note() -> dict[str, str]:
+    """What the clock says, for a turn with no tools to ask it with. Goes just before the new
+    message: the time changes every minute, and a line earlier would make Ollama read the whole
+    history again each turn."""
+    now = datetime.now(VIETNAM_TIME)
+    return {"role": "system", "content": f"Bây giờ là {now:%H:%M}, {WEEKDAYS[now.weekday()]}, ngày {now:%d/%m/%Y}, giờ Việt Nam."}
+
+
 # A failed tool call reaches the model as {"error": <what to do next>, "code": <CODE>}:
 # the sentence is for the model (actionable, per Anthropic's "Writing tools for
 # agents"), the code for the trace (a low-cardinality error.type, per OTel GenAI).

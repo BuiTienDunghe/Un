@@ -7,7 +7,7 @@ from uuid import uuid4
 from collections.abc import Callable, Iterator
 
 from app.llm_clients.usage import consume_usage
-from app.services.agent_service import STOP_TURN_BUDGET_EXHAUSTED
+from app.services.agent_service import STOP_TURN_BUDGET_EXHAUSTED, clock_note
 from app.services.logging_service import LoggingService
 from app.services.model_router import ModelRouter
 from app.services.memory_service import MemoryService
@@ -137,6 +137,7 @@ class ChatService:
             messages.extend(
                 [
                     *history,
+                    clock_note(),
                     current_model_message or {"role": "user", "content": message},
                 ]
             )
@@ -196,7 +197,7 @@ class ChatService:
             if memories:
                 context = "\n".join(f"- {memory['content']}" for memory in memories)
                 messages.append({"role": "system", "content": f"{self.memory_prompt}\n\nRelevant memories:\n{context}"})
-        messages.extend([*history, {"role": "user", "content": message}])
+        messages.extend([*history, clock_note(), {"role": "user", "content": message}])
         started = perf_counter()
         tokens, model_used = self.router.stream_chat("general", messages)
         prompt_hash = sha256(str(messages[0]["content"]).encode("utf-8")).hexdigest()

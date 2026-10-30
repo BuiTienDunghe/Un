@@ -28,6 +28,9 @@ STOP_EVENT_NAME = "Local\\LocalAICoreSupervisorStop"
 QUICK_FAILURE_SECONDS = 60
 MAX_QUICK_FAILURES = 5
 CONSOLE_BACKLOG = 5000
+# The API leaves with this after a pick on the Model screen (app/services/model_choice.py).
+RESTART_EXIT_CODE = 75
+CHOICE_FILE = ROOT / "data" / "model_choice.env"
 RESET, RED = "\033[0m", "\033[91m"
 COLOURS = ("\033[96m", "\033[92m", "\033[93m", "\033[95m", "\033[94m", "\033[36m", "\033[32m", "\033[33m")
 SECRET_NAME = re.compile(r"(KEY|TOKEN|SECRET|PASSWORD)$", re.I)
@@ -74,6 +77,18 @@ def services(python: str = sys.executable) -> list[Service]:
         Service("decided", ("cmd", "/c", str(ROOT / "run-decided.bat")), ROOT, ("DECIDED_URL", "")),
         worker("decided-worker", "scripts.decided_worker", needs=("DECIDED_URL", "")),
     ]
+
+
+def service_env(base: dict[str, str], choice_file: Path) -> dict[str, str]:
+    """Read at every start, so a restart serves what was picked since. An empty value clears a pin,
+    as the launcher's `set` does."""
+    env = {**base, "PYTHONUNBUFFERED": "1", "PYTHONUTF8": "1", "LOCAL_AI_SUPERVISED": "1"}
+    for name, value in read_env(choice_file).items():
+        if value:
+            env[name] = value
+        else:
+            env.pop(name, None)
+    return env
 
 
 def enabled(all_services: list[Service], env: dict[str, str]) -> list[Service]:
@@ -167,7 +182,7 @@ class Supervisor:
     def _run_once(self, service: Service, log: DailyLog) -> int:
         child = subprocess.Popen(
             service.command, cwd=service.cwd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            env={**os.environ, "PYTHONUNBUFFERED": "1", "PYTHONUTF8": "1"},
+            env=service_env(dict(os.environ), CHOICE_FILE),
         )
         for raw in child.stdout:
             self.say(service.name, raw.decode("utf-8", errors="replace"), log)
@@ -185,6 +200,10 @@ class Supervisor:
                 code = f"could not start: {error}"
             if self.stopping.is_set():
                 return
+            if code == RESTART_EXIT_CODE:
+                self.say(service.name, "[restarting on the model picked on the Model screen]", log)
+                failures = 0
+                continue
             if code == 0:
                 # Workers exit cleanly when a setting tells them there is nothing to do.
                 self.say(service.name, "[finished, not restarting]", log)
