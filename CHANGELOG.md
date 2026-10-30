@@ -11,6 +11,13 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+### Security
+- **`/docs` của bot kiểm server** (ticket 30, 30/10). Trước đây ai ở server nào có bot cũng đọc được mọi tài liệu qua `/docs` và
+  thấy tên tệp khi gõ. Giờ lệnh chỉ chạy ở server có trong `DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST` (`*` là mọi server); server khác
+  nhận câu từ chối chỉ mình họ thấy, ô chọn tài liệu trống, và tin nhắn riêng luôn bị từ chối. **Danh sách trống thì `/docs` tắt ở
+  mọi server**, kể cả server của bạn: thêm mã server vào `.env` rồi khởi động lại bot. Log khởi động ghi số server được bật.
+  Kiểm tra nằm ở bot, chưa thử trên Discord thật.
+
 ### Added
 - **Claude (Anthropic) làm provider thứ tư cho vai trò `general`** (28/10, ticket 26): client mới
   `backend/app/llm_clients/anthropic_client.py` dùng SDK chính thức, chạy cả ba đường chat, stream và

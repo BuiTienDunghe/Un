@@ -145,6 +145,8 @@ services:
       DISCORD_TURN_EXECUTE_TIMEOUT_SECONDS:
       # memory_design.md 13.6 job 1: channels whose traffic is counted (no content).
       DISCORD_LISTEN_CHANNEL_IDS:
+      # Ticket 30: /docs obeys the same guild list as the backend's @mention tools.
+      DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST:
     extra_hosts:
       - "api:host-gateway"
     volumes:

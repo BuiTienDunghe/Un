@@ -78,7 +78,7 @@ Runtime chỉ truy vấn Qdrant point có đầy đủ `version_id` và `chunk_i
 
 - `/ping` kiểm tra bot có phản hồi.
 - `/ask` gửi câu hỏi tới backend Local AI Core.
-- `/docs` hỏi đáp theo tài liệu đã index (RAG): chọn tài liệu bằng autocomplete hoặc bỏ trống để tìm trong tất cả; câu trả lời kèm nguồn theo tên tệp và số trang.
+- `/docs` hỏi đáp theo tài liệu đã index (RAG): chọn tài liệu bằng autocomplete hoặc bỏ trống để tìm trong tất cả; câu trả lời kèm nguồn theo tên tệp và số trang. Lệnh chỉ chạy ở server có trong `DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST`; server khác và tin nhắn riêng bị từ chối, không thấy cả tên tệp. Khi khởi động, log của bot ghi `/docs` đang bật ở mấy server.
 - `/memory` cho riêng người gọi xem agent đang nhớ gì về họ trong server; `/status` cho riêng người gọi xem sức khỏe hệ thống.
 - Mention `@Ún` trong kênh rồi đặt câu hỏi để chat tự nhiên. Lượt Discord chỉ chạy chế độ công cụ ở server có trong `DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST` (mặc định rỗng: không server nào, mọi lượt là chat thường).
 - Tính cách bot được cấu hình riêng trong `discord_bot/system_prompt.md`.

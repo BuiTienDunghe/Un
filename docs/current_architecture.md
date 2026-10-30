@@ -85,7 +85,9 @@ and the core infers nothing from that prefix.
 A web turn goes through `AgentService` only when the request sets `use_tools` (default
 false, `chat_schema.py`); a Discord turn does when `DISCORD_AGENT_TOOLS_ENABLED` (default
 true) and its guild is in `DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST` (default empty = no guild,
-`*` = every guild). Every other turn is plain chat. The tools sit in one `ToolRegistry`:
+`*` = every guild). Every other turn is plain chat. The bot's `/docs` command reads the same
+variable itself and refuses a guild outside it, and any DM, before calling `/rag/chat`; the
+backend does not check, so `/rag/chat` stays open to any holder of the API key. The tools sit in one `ToolRegistry`:
 the core registers `search_documents`, `read_document` and `system_status`; the Discord
 package adds `search_history`. `read_document` reads up to three consecutive chunks whole
 per call (at most `agent.read_result_max_chars`, 6 000), and only a document that the same
