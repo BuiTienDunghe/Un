@@ -216,7 +216,14 @@ def test_one_message_the_service_cannot_label_does_not_block_the_rest(factory, g
     assert rows[0]["confidence"] == 0.0
 
 
-def test_the_launcher_starts_the_trial_only_when_it_is_set() -> None:
-    launcher = (REPO / "run-local-ai-core.bat").read_text(encoding="utf-8")
-    assert '"^DECIDED_URL=."' in launcher and "scripts.decided_worker" in launcher
-    assert launcher.index("^DECIDED_URL=.") < launcher.index("uvicorn app.main:app")
+def test_a_model_that_cannot_start_leaves_the_message_waiting(factory, guild) -> None:
+    service = MessageLabelService(factory)
+    heard(factory, guild, "Tin chờ")
+
+    class OnlyOurs(MessageLabelService):
+        def unlabelled(self, limit=20):
+            return ours(service, guild)
+
+    with httpx.Client(transport=httpx.MockTransport(lambda request: httpx.Response(503, json={"error": "gpu"}))) as client, pytest.raises(httpx.HTTPError):
+        run_once(OnlyOurs(factory), "http://decided", client)
+    assert len(ours(service, guild)) == 1

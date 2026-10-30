@@ -124,8 +124,7 @@ def test_the_launcher_loads_the_pick_before_anything_starts() -> None:
     launcher = (REPO / "run-local-ai-core.bat").read_text(encoding="utf-8")
     loaded = launcher.index('"data\\model_choice.env"')
     assert 'set "%%A=%%B"' in launcher
-    assert loaded < launcher.index("--ollama-pull-list") < launcher.index("uvicorn app.main:app")
-    assert loaded < launcher.index("scripts.memory_worker")
+    assert loaded < launcher.index("--ollama-pull-list") < launcher.index("-m tools.supervisor")
 
 
 def test_the_pick_stays_out_of_git() -> None:

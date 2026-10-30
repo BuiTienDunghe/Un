@@ -146,91 +146,30 @@ for /f "usebackq delims=" %%T in (`.venv\Scripts\python.exe -m app.config.model_
 )
 for /f "usebackq tokens=1,2 delims=	" %%T in (`.venv\Scripts\python.exe -m app.config.model_registry --ollama-create-list`) do call :ensure_created "%%T" "%%U"
 
-REM Periodic PostgreSQL backup. It runs on the host because the dump is taken by
-REM the PostgreSQL container's own pg_dump, so no image needs a database client.
-REM The window is titled so stop-local-ai-core.bat can close exactly this one.
-REM `start /d` sets the working directory directly. Wrapping this in `cmd /c "..."`
-REM would nest quotes inside an already quoted string, which cmd mis-parses.
-tasklist /v /fi "windowtitle eq LocalAICoreBackup*" 2>nul | find /i "python.exe" >nul
-if errorlevel 1 (
-    echo [START] Starting the periodic backup worker...
-    start "LocalAICoreBackup" /min /d "%~dp0backend" "%~dp0.venv\Scripts\python.exe" -m scripts.backup_worker --loop
-)
-
-REM Without the cleanup worker, deleted documents stay in status 'deleting'
-REM forever: the API only marks them, this worker does the actual removal.
-REM The compose cleanup-worker service is not started by this launcher.
-tasklist /v /fi "windowtitle eq LocalAICoreCleanup*" 2>nul | find /i "python.exe" >nul
-if errorlevel 1 (
-    echo [START] Starting the cleanup worker...
-    start "LocalAICoreCleanup" /min /d "%~dp0backend" "%~dp0.venv\Scripts\python.exe" -m scripts.cleanup_worker --loop
-)
-
-REM ── Discord memory proposal mode (P1-3) ─────────────────────────────────
-REM Only when the .env flag is on: the outbox dispatcher (publishes memory jobs
-REM to Redis) and the memory worker (consumes them). The extractor's model is
-REM pulled by the registry block above whenever its flag is on.
-REM Note: document OCR/index jobs use the in-process thread backend by default;
-REM a future INGESTION_EXECUTION_BACKEND=rq setup would need these two as well.
-findstr /R /C:"^DISCORD_MEMORY_INGESTION_ENABLED=true" .env >nul 2>&1
+REM Everything long-running from here is one process: the API and the workers run
+REM under tools/supervisor.py, in this window, with their logs in data/logs/services/.
+.venv\Scripts\python.exe -m tools.supervisor --running
 if not errorlevel 1 (
-    tasklist /v /fi "windowtitle eq LocalAICoreOutbox*" 2>nul | find /i "python.exe" >nul
-    if errorlevel 1 (
-        echo [START] Starting the outbox dispatcher...
-        start "LocalAICoreOutbox" /min /d "%~dp0backend" "%~dp0.venv\Scripts\python.exe" -m scripts.outbox_dispatcher
-    )
-    tasklist /v /fi "windowtitle eq LocalAICoreMemoryWorker*" 2>nul | find /i "python.exe" >nul
-    if errorlevel 1 (
-        echo [START] Starting the memory worker...
-        start "LocalAICoreMemoryWorker" /min /d "%~dp0backend" "%~dp0.venv\Scripts\python.exe" -m scripts.memory_worker
-    )
-)
-
-REM ── Tier 3 condensation (memory_design.md 7) ────────────────────────────
-REM The only component that sends member text to a third party, so it takes
-REM its own flag AND a real GEMINI_API_KEY; the worker itself refuses to run
-REM without both and says which one is missing.
-findstr /R /C:"^DISCORD_CONDENSATION_ENABLED=true" .env >nul 2>&1
-if not errorlevel 1 (
-    tasklist /v /fi "windowtitle eq LocalAICoreCondenser*" 2>nul | find /i "python.exe" >nul
-    if errorlevel 1 (
-        echo [START] Starting the condensation worker...
-        start "LocalAICoreCondenser" /min /d "%~dp0backend" "%~dp0.venv\Scripts\python.exe" -m scripts.condensation_worker --loop
-    )
-)
-
-REM Decided's trial (ticket 36): suggestions for heard messages, all waiting for a person.
-findstr /R /C:"^DECIDED_URL=." .env >nul 2>&1
-if not errorlevel 1 (
-    tasklist /v /fi "windowtitle eq LocalAICoreDecided*" 2>nul | find /i "cmd.exe" >nul
-    if errorlevel 1 (
-        echo [START] Starting the decided service...
-        start "LocalAICoreDecided" /min "%~dp0run-decided.bat"
-    )
-    tasklist /v /fi "windowtitle eq LocalAICoreDecidedWorker*" 2>nul | find /i "python.exe" >nul
-    if errorlevel 1 (
-        echo [START] Starting the decided worker...
-        start "LocalAICoreDecidedWorker" /min /d "%~dp0backend" "%~dp0.venv\Scripts\python.exe" -m scripts.decided_worker
-    )
-)
-
-powershell -NoProfile -Command "if (Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }" >nul 2>&1
-if not errorlevel 1 (
-    echo [INFO] Local AI Core is already running. Opening the UI...
+    echo [INFO] Local AI Core is already running in another window. Opening the UI...
     start "" "http://127.0.0.1:8000/ui/"
     goto :done
 )
 
-echo [START] Starting FastAPI. Keep this window open while using the system.
+powershell -NoProfile -Command "if (Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }" >nul 2>&1
+if not errorlevel 1 (
+    echo [ERROR] Another program is already using port 8000, so the API could not start.
+    echo         Close that program, or run stop-local-ai-core.bat if it is an older copy of this one.
+    goto :error
+)
+
+echo [START] Starting the API and the workers. Keep this window open while using the system.
 echo [START] Opening UI at http://127.0.0.1:8000/ui/
 start "" "http://127.0.0.1:8000/ui/"
 echo.
-cd backend
-..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+.venv\Scripts\python.exe -m tools.supervisor
 if errorlevel 1 (
-    cd ..
     echo.
-    echo [ERROR] The API stopped with an error ^(see the traceback above^). The browser tab cannot connect until this is fixed.
+    echo [ERROR] The supervisor stopped with an error ^(see above^).
     goto :error
 )
 goto :done
