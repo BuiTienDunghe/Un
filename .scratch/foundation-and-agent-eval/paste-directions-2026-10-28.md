@@ -97,3 +97,9 @@ bài, ghi vào manifest), mục Quy trình sửa của bản đăng ký, và câ
 2. Ước lượng cho từng hướng: số dòng code, băm nào đổi, lần đo nào cần (52 bài hay chỉ đoạn dán), bao nhiêu phút GPU.
 3. Rủi ro fable bỏ sót, nhất là hướng 1 chồng lên #2 (hai lần thử lại một lượt, ngân sách 90 s, lộ lời nhắc).
 4. Có gộp #3-C làm nền trước không.
+
+## Quyết định chủ dự án 29/10 (sáng) — đợt đo phân xử N1 / C7
+
+Nguyên văn: "Duyệt đợt đo phân xử theo tong-hop.md: NV1 viết N1 (~20 dòng) và C7, NV3 viết ≥ 4 bài mù dài, opus đăng ký trước, fable duyệt, chạy cô lập sau khi Quản lý trả GPU; dừng nếu GPU ≥ 85 °C hoặc hạn tuần ≥ 35 %."
+
+Trạng thái lúc duyệt: GPU đã về (Quản lý trả 05:33, opus kiểm 0 MiB, 42 °C); hạn tuần 14 %, Fable 16 %. Luật đo và phân công xem `research-2026-10-29/tong-hop.md`, mục "Đề xuất một đợt đo phân xử".
