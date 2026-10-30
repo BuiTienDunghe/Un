@@ -23,6 +23,7 @@ const Shell = (() => {
     { name: "documents", label: "Tài liệu", icon: "docs" },
     { name: "research", label: "Nghiên cứu", icon: "book" },
     { name: "memory", label: "Ghi nhớ", icon: "memory" },
+    { name: "labels", label: "Duyệt phân loại", icon: "check", admin: true },
     { name: "dashboard", label: "Bảng điều khiển", icon: "dash" },
     { name: "ocr", label: "OCR", icon: "ocr", admin: true },
     { name: "bot", label: "Bot Discord", icon: "bot", admin: true },

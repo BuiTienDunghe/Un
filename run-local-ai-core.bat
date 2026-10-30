@@ -199,6 +199,21 @@ if not errorlevel 1 (
     )
 )
 
+REM Decided's trial (ticket 36): suggestions for heard messages, all waiting for a person.
+findstr /R /C:"^DECIDED_URL=." .env >nul 2>&1
+if not errorlevel 1 (
+    tasklist /v /fi "windowtitle eq LocalAICoreDecided*" 2>nul | find /i "cmd.exe" >nul
+    if errorlevel 1 (
+        echo [START] Starting the decided service...
+        start "LocalAICoreDecided" /min "%~dp0run-decided.bat"
+    )
+    tasklist /v /fi "windowtitle eq LocalAICoreDecidedWorker*" 2>nul | find /i "python.exe" >nul
+    if errorlevel 1 (
+        echo [START] Starting the decided worker...
+        start "LocalAICoreDecidedWorker" /min /d "%~dp0backend" "%~dp0.venv\Scripts\python.exe" -m scripts.decided_worker
+    )
+)
+
 powershell -NoProfile -Command "if (Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }" >nul 2>&1
 if not errorlevel 1 (
     echo [INFO] Local AI Core is already running. Opening the UI...

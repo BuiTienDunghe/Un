@@ -196,6 +196,8 @@ class Settings(BaseSettings):
     # Ticket 35: web_search and read_webpage. Off by default: the query leaves the machine, and
     # the evals must keep grading the same tool list.
     agent_web_tools_enabled: bool = False
+    # Ticket 36: the local decided service (run-decided.bat). Unset = the labelling worker stays off.
+    decided_url: str | None = None
     qdrant_url: str = "http://127.0.0.1:6333"
     qdrant_timeout_seconds: float = 10.0
     # Memory vectors live in their own named collection. Tests point this at a
