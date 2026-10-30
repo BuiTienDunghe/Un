@@ -104,9 +104,9 @@ class DiscordSettings:
         )
 
 
-# Ticket 33: images on a mention, read once by the backend's vision model and handed to the
-# turn as text, so any answer model can use them. Same guild list as /docs: an image goes to
-# the same model as the owner's documents, and costs the owner money.
+# Ticket 33: images on a mention, read once by the backend's local vision model and handed to
+# the turn as text, so any answer model can use them. Same guild list as /docs: a stranger's
+# server should not be able to occupy the owner's GPU.
 MAX_IMAGES_PER_MESSAGE = 3
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
 IMAGE_PROMPT = (

@@ -48,7 +48,7 @@ def test_models_offers_the_switch_only_on_the_answer_role(mock_ollama, client, c
     assert versions[QWEN]["status"] == "active" and versions[QWEN]["cloud"] is False
     assert versions[HAIKU]["status"] == "candidate" and versions[HAIKU]["cloud"] is True
     assert registry["ocr"]["switchable"] is True and registry["vision"]["switchable"] is True
-    assert "vision-haiku-v1" in versions_by_id(registry["vision"])
+    assert "vision-v1" in versions_by_id(registry["vision"])
     for role in ("embedding", "reranker", "extractor"):
         assert "switchable" not in registry[role] and "versions" not in registry[role]
 
@@ -81,7 +81,8 @@ def test_picking_the_default_or_reverting_drops_the_pick(mock_ollama, client, ch
 
 
 def test_a_shell_pin_with_no_pick_is_not_shown_as_waiting_for_a_restart(mock_ollama, client, choice_file, monkeypatch) -> None:
-    view = {"general": {"active": QWEN, "requested": HAIKU, "loaded": HAIKU, "source": "env", "fallback": False}}
+    view = client.app.state.model_registry.registry_view()
+    view["general"].update(active=QWEN, requested=HAIKU, loaded=HAIKU, source="env", fallback=False)
     monkeypatch.setattr(client.app.state.model_registry, "registry_view", lambda: view)
     row = client.get("/models").json()["registry"]["general"]
     assert row["chosen"] == HAIKU

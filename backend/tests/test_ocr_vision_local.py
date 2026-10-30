@@ -1,4 +1,4 @@
-"""Ticket 33: Haiku reads images for the OCR and vision roles, and the bot hands a turn what it saw."""
+"""Ticket 33: the local Qwen 9B reads images for the OCR and vision roles, and the bot hands a turn what it saw."""
 from __future__ import annotations
 
 import asyncio
@@ -7,54 +7,55 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.llm_clients.anthropic_client import AnthropicClient, image_block
+from app.llm_clients.ollama_client import OllamaClient
 from app.services.model_router import ModelRouter
+from app.services.ocr_service import OCRService
 from discord_bot.main import question_with_images
 
 PNG = base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"0" * 20).decode()
-JPEG = base64.b64encode(b"\xff\xd8\xff" + b"0" * 20).decode()
 HOME = 111
 
 
-class FakeMessages:
-    def __init__(self) -> None:
-        self.calls: list[dict] = []
+class FakeOllama(OllamaClient):
+    def __init__(self, answer: str = "đã đọc") -> None:
+        self.answer, self.calls = answer, []
 
-    def create(self, **kwargs):
+    def vision_chat(self, **kwargs) -> str:
         self.calls.append(kwargs)
-        return SimpleNamespace(
-            content=[SimpleNamespace(type="text", text="đã đọc")], stop_reason="end_turn", model=kwargs["model"],
-            usage=SimpleNamespace(input_tokens=1, output_tokens=1, cache_read_input_tokens=0, cache_creation_input_tokens=0),
-        )
+        return self.answer
 
 
-def claude() -> tuple[AnthropicClient, FakeMessages]:
-    messages = FakeMessages()
-    client = AnthropicClient(api_key="k", sdk_client=SimpleNamespace(messages=messages))
-    return client, messages
+def test_ocr_and_vision_send_no_thinking_when_the_version_says_so() -> None:
+    client = FakeOllama()
+    config = {"provider": "ollama", "name": "qwen3.5:9b", "enabled": True, "think": False}
+    router = ModelRouter({"ollama": client}, {"ocr": config, "vision": config})
+    assert router.ocr(PNG, prompt="Chép lại") == ("đã đọc", "qwen3.5:9b")
+    assert router.vision("Gì đây?", PNG) == ("đã đọc", "qwen3.5:9b")
+    assert [call["think"] for call in client.calls] == [False, False]
 
 
-def test_the_media_type_comes_from_the_bytes() -> None:
-    assert image_block(PNG)["source"]["media_type"] == "image/png"
-    assert image_block(JPEG)["source"]["media_type"] == "image/jpeg"
+def test_a_model_without_the_setting_gets_no_think_field() -> None:
+    client = FakeOllama()
+    ModelRouter({"ollama": client}, {"ocr": {"provider": "ollama", "name": "glm", "enabled": True}}).ocr(PNG)
+    assert client.calls[0]["think"] is None
+
+
+def test_vision_refuses_when_nothing_serves() -> None:
     with pytest.raises(ValueError):
-        image_block(base64.b64encode(b"not an image").decode())
+        ModelRouter({"ollama": FakeOllama()}, {}).vision("Gì đây?", PNG)
 
 
-def test_ocr_goes_to_claude_when_a_claude_version_serves() -> None:
-    client, messages = claude()
-    router = ModelRouter({"anthropic": client}, {"ocr": {"provider": "anthropic", "name": "claude-haiku-5-5", "enabled": True, "max_tokens": 4096}})
-    assert router.ocr(PNG, prompt="Chép lại") == ("đã đọc", "claude-haiku-5-5")
-    content = messages.calls[0]["messages"][0]["content"]
-    assert content[0]["type"] == "image" and content[1]["text"] == "Chép lại"
+@pytest.mark.parametrize("answer", ["markdown", "Không có chữ nào trong hình này.", "Trong ảnh không có chữ.", "Không có văn bản."])
+def test_a_page_with_no_text_indexes_nothing(answer) -> None:
+    config = {"provider": "ollama", "name": "qwen3.5:9b", "enabled": True}
+    service = OCRService(ModelRouter({"ollama": FakeOllama(answer)}, {"ocr": config}))
+    assert service.recognize_png(b"png", 200).text == ""
 
 
-def test_vision_refuses_when_nothing_serves_and_answers_when_something_does() -> None:
-    client, _ = claude()
-    with pytest.raises(ValueError):
-        ModelRouter({"anthropic": client}, {}).vision("Gì đây?", PNG)
-    router = ModelRouter({"anthropic": client}, {"vision": {"provider": "anthropic", "name": "claude-haiku-5-5"}})
-    assert router.vision("Gì đây?", PNG)[0] == "đã đọc"
+def test_real_text_that_mentions_no_text_is_kept() -> None:
+    config = {"provider": "ollama", "name": "qwen3.5:9b", "enabled": True}
+    page = "Điều 3. Hợp đồng không có chữ ký của hai bên thì không có giá trị pháp lý và phải lập lại bằng văn bản mới."
+    assert OCRService(ModelRouter({"ollama": FakeOllama(page)}, {"ocr": config})).recognize_png(b"png", 200).text == page
 
 
 class FakeApi:

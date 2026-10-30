@@ -11,11 +11,15 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+### Changed
+- **OCR đọc bằng Qwen 9B trên máy** (`ocr-v2`, ticket 33, 30/10). Trên văn bản tiếng Việt tự viết có đáp án, 7 trang giữ riêng, gồm scan và ảnh chụp giả
+  lập, 100 dpi: `ocr-v1` sai 9,0–35,1% ký tự, `ocr-v2` sai 0–0,42%; trang dày chữ 8 pt 17,5% xuống 0,21%. Đổi lại mỗi trang ~10 giây thay vì ~4 giây, chiếm
+  6,4 GB VRAM thay vì 2,2 GB nếu `general` không giữ sẵn model. Chưa đo trên scan thật hay chữ viết tay. Không dùng được thì tự lùi về `ocr-v1`. Câu trả lời
+  "không có chữ" của model không còn bị nạp thành nội dung trang.
+
 ### Added
-- **OCR và đọc ảnh bằng Haiku, chọn trên màn hình Model** (ticket 33, 30/10). Đo trên 158 từ tiếng Việt tự viết, 6 trang 200 dpi gồm cả scan
-  giả lập: OCR trên máy (`ocr-v1`) sai 9,8–13,1% ký tự, `ocr-haiku-v1` sai 0%. Chưa đo trên scan thật hay chữ viết tay. Bật `vision-haiku-v1` thì
-  `/vision/chat` chạy thật và `@Ún` đọc được tối đa 3 ảnh đính kèm, chỉ ở server trong `DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST`. Trang scan và ảnh
-  sẽ rời khỏi máy, tính phí theo lượt. Mặc định vẫn là OCR trên máy và vision tắt.
+- **Vision chạy trên máy** (`vision-v1`, ticket 33, 30/10). `/vision/chat` chạy thật bằng Qwen 9B, không còn trả 501, và `@Ún` đọc được tối đa 3 ảnh đính
+  kèm, chỉ ở server trong `DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST`. Chưa thử trên Discord thật.
 - **Đổi model trả lời ngay trên màn hình Model** (ticket 31, 30/10). Nút "Đổi model" và "Về mặc định" ở thẻ "Trò chuyện & RAG" trước đây
   chỉ báo máy chủ chưa hỗ trợ; giờ chọn được Qwen hoặc Haiku, có hiệu lực sau khi khởi động lại backend. Lựa chọn chỉ áp dụng cho máy
   này (`data/model_choice.env`, launcher đọc khi khởi động); bài đánh giá vẫn chấm bản mặc định. Vai trò khác vẫn chưa đổi được từ

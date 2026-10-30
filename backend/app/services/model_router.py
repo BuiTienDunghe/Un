@@ -250,16 +250,15 @@ class ModelRouter:
             raise ValueError("no vision version is serving")
         model_name = str(config["name"])
         client = self._get_client(config)
-        if isinstance(client, AnthropicClient):
-            return client.read_image(model_name, prompt, image_base64, config.get("max_tokens")), model_name
-        if isinstance(client, OllamaClient):
-            answer = client.vision_chat(
-                model=model_name, prompt=prompt, images_base64=[image_base64],
-                options={"temperature": config.get("temperature", 0.3), "num_ctx": config.get("context", 16384)},
-                keep_alive=str(config.get("keep_alive", "5m")),
-            )
-            return answer, model_name
-        raise RuntimeError(f"vision is not supported on {type(client).__name__}")
+        if not isinstance(client, OllamaClient):
+            raise RuntimeError(f"vision is not supported on {type(client).__name__}")
+        answer = client.vision_chat(
+            model=model_name, prompt=prompt, images_base64=[image_base64],
+            options={"temperature": config.get("temperature", 0.3), "num_ctx": config.get("context", 16384)},
+            keep_alive=str(config.get("keep_alive", "5m")),
+            think=config.get("think") if isinstance(config.get("think"), bool) else None,
+        )
+        return answer, model_name
 
     def ocr(self, image_base64: str, prompt: str = "Text Recognition:") -> tuple[str, str]:
         """Extract text from a base64-encoded image using the OCR version that serves."""
@@ -267,9 +266,6 @@ class ModelRouter:
         if config is None or not config.get("enabled", False):
             raise ValueError("OCR fallback is disabled or not configured in models.yaml")
         model_name = str(config["name"])
-        if config.get("provider") == "anthropic":
-            client = self._get_client(config)
-            return client.read_image(model_name, prompt, image_base64, config.get("max_tokens")), model_name
         ollama = self.clients.get("ollama")
         if not isinstance(ollama, OllamaClient):
             raise RuntimeError("OCR requires the 'ollama' provider to be configured")
@@ -286,5 +282,6 @@ class ModelRouter:
             images_base64=[image_base64],
             options=options,
             keep_alive=str(config.get("keep_alive", "5m")),
+            think=config.get("think") if isinstance(config.get("think"), bool) else None,
         )
         return answer, model_name

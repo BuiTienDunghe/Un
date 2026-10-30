@@ -134,7 +134,7 @@ class FakeProbes:
         self.calls.append(("embed", model))
         return self.width
 
-    def ollama_ocr_stops(self, model, prompt):
+    def ollama_ocr_stops(self, model, prompt, **_):
         self.calls.append(("ocr", model))
         return self.ocr_stops.get(model, True)
 
@@ -165,8 +165,8 @@ def test_shipped_registry_loads_every_role_with_todays_pointers():
     assert registry.path == DEFAULT_REGISTRY_PATH
     assert tuple(registry.roles) == ROLES
     assert {role: entry.active for role, entry in registry.roles.items()} == {
-        "general": "general-v0", "condenser": "condenser-v0", "embedding": "embedding-v0", "vision": None,
-        "ocr": "ocr-v1", "reranker": "reranker-v0", "extractor": "extractor-v0", "verifier": "verifier-v0",
+        "general": "general-v0", "condenser": "condenser-v0", "embedding": "embedding-v0", "vision": "vision-v1",
+        "ocr": "ocr-v2", "reranker": "reranker-v0", "extractor": "extractor-v0", "verifier": "verifier-v0",
     }
     assert registry.get("embedding", "embedding-v0").collection_suffix == ""
     assert registry.get("embedding", "embedding-e5l-v1").collection_suffix == "e5l"
@@ -182,18 +182,19 @@ def test_flat_models_equals_the_models_yaml_blocks_the_registry_replaced():
     # fingerprints every key, so order-insensitive equality would not be enough).
     for role in ("general", "condenser", "embedding"):
         assert list(flat[role].items()) == list(TODAY[role].items()), role
-    # ocr is the one block that moved on purpose (ocr-v1, 29/09/2026: v0 stopped ending its
-    # turn on Ollama 0.34.x). v0 stays recorded verbatim; v1 differs in the tag and the cap only.
+    # ocr moved on purpose twice (ocr-v1, 29/09/2026: v0 stopped ending its turn on Ollama 0.34.x;
+    # ocr-v2, 30/10/2026: Qwen 9B reads Vietnamese far better). v0 stays recorded verbatim; v1
+    # differs in the tag and the cap only.
     assert list(resolved.registry.get("ocr", "ocr-v0").config.items()) == list(TODAY["ocr"].items())
-    assert flat["ocr"] == {**TODAY["ocr"], "name": "local-ai/glm-ocr:eot-v1", "max_tokens": 4096}
-    # vision: active null = not served, so the block is absent from the served dict
-    # but still recorded verbatim under its version id.
-    assert "vision" not in flat
+    assert dict(resolved.registry.get("ocr", "ocr-v1").config) == {**TODAY["ocr"], "name": "local-ai/glm-ocr:eot-v1", "max_tokens": 4096}
+    assert flat["ocr"]["name"] == "qwen3.5:9b" and flat["ocr"]["think"] is False
+    # vision: v0 stays recorded verbatim; v1 serves, the same model without the thinking pass.
+    assert flat["vision"] == {**TODAY["vision"], "think": False}
     assert list(resolved.registry.get("vision", "vision-v0").config.items()) == list(TODAY["vision"].items())
     # extractor / verifier carry config too (MODEL_ROLES); they were env-only before.
     assert flat["extractor"] == {"provider": "ollama", "name": "qwen3.5:9b"}
     assert flat["verifier"] == {"provider": "ollama", "name": "qwen3.5:9b"}
-    assert set(flat) == set(MODEL_ROLES) - {"vision"}
+    assert set(flat) == set(MODEL_ROLES)
     assert resolved.flat_models() is flat, "flat_models() must hand every caller the same object"
 
 

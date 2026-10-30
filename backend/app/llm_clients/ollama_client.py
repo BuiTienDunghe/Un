@@ -268,9 +268,9 @@ class OllamaClient:
             time.sleep(1 + attempt * 2)
         raise OllamaUnavailableError("Cannot connect to Ollama for embedding")
 
-    def vision_chat(self, model: str, prompt: str, images_base64: list[str], options: dict[str, Any], keep_alive: str) -> str:
+    def vision_chat(self, model: str, prompt: str, images_base64: list[str], options: dict[str, Any], keep_alive: str, think: bool | None = None) -> str:
         """Send a vision/multimodal chat request with base64-encoded images."""
-        payload = {
+        payload: dict[str, Any] = {
             "model": model,
             "messages": [
                 {
@@ -283,6 +283,9 @@ class OllamaClient:
             "options": options,
             "keep_alive": keep_alive,
         }
+        # A model with no thinking mode refuses the field, so it goes only when asked for.
+        if think is not None:
+            payload["think"] = think
         for attempt in range(self.retry_count + 1):
             try:
                 response = httpx.post(
