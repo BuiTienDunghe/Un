@@ -23,6 +23,8 @@ if __name__ == "__main__":
     )
     while True:
         count = dispatcher.dispatch_pending()
-        logger.info("outbox dispatcher published {} event(s)", count)
+        # Once a second, in a window and a file shared with every other service: only when it did something.
+        if count or args.once:
+            logger.info("outbox dispatcher published {} event(s)", count)
         if args.once: break
         time.sleep(1)
