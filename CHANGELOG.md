@@ -11,6 +11,10 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
 
 ## [Unreleased]
 
+### Changed
+- **Một cửa sổ cho cả hệ thống** (ticket 38). API và các worker chạy dưới `tools/supervisor.py` trong cửa sổ launcher, thay vì mỗi việc một cửa sổ. Mỗi dòng có tên việc đứng trước và được lưu 30 ngày ở `data/logs/services/`, đã che khoá bí mật. Việc nào chết được chạy lại và báo đỏ; hỏng nhanh 5 lần liên tiếp thì dừng thử và báo. Đóng cửa sổ là tắt tất cả.
+- **Decided nhả hết máy khi rảnh** (ticket 38). Model chạy ở tiến trình con và thoát sau 5 phút không dùng, thay vì chỉ dỡ trọng số (còn giữ 459 MiB card và 1,6 GB RAM). Khi model không khởi động được, tin nhắn chờ chứ không bị đánh dấu hỏng.
+
 ### Removed
 - **Dọn repo** (30/10). Gỡ mã không ai dùng và công cụ chuyển SQLite đã xong từ tháng 8; gộp 11 tài liệu theo giai đoạn thành `docs/history.md`; gỡ `docs/archive/`, các kế hoạch, bản duyệt và ticket đã xong. Danh sách và cách đọc lại ở `.scratch/ARCHIVE.md`.
 

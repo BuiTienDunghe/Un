@@ -10,16 +10,11 @@ echo ==========================================
 echo         Local AI Core - Tat he thong
 echo ==========================================
 
-echo [STOP] Dung backend FastAPI (cong 8000)...
+echo [STOP] Dung backend va cac worker nen...
+.venv\Scripts\python.exe -m tools.supervisor --stop
+if errorlevel 1 echo [WARN] Khong dung kip trong 15 giay: hay dong cua so Local AI Core.
+REM A copy started before the supervisor existed, or by hand, is not under it.
 powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }"
-
-echo [STOP] Dung cac worker nen (backup, cleanup, outbox, memory)...
-taskkill /fi "windowtitle eq LocalAICoreBackup*" /t /f >nul 2>&1
-taskkill /fi "windowtitle eq LocalAICoreCleanup*" /t /f >nul 2>&1
-taskkill /fi "windowtitle eq LocalAICoreOutbox*" /t /f >nul 2>&1
-taskkill /fi "windowtitle eq LocalAICoreMemoryWorker*" /t /f >nul 2>&1
-taskkill /fi "windowtitle eq LocalAICoreCondenser*" /t /f >nul 2>&1
-taskkill /fi "windowtitle eq LocalAICoreDecided*" /t /f >nul 2>&1
 
 echo [STOP] Dung cac container PostgreSQL, Qdrant, Redis (giu nguyen du lieu)...
 docker compose --profile postgres --profile workers --profile discord stop

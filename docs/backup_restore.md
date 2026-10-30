@@ -6,7 +6,7 @@ Tài liệu này mô tả backup tự động đang chạy và **bài diễn t�
 
 ## 1. Backup tự động
 
-`run-local-ai-core.bat` khởi động một worker nền cùng lúc với backend:
+`run-local-ai-core.bat` khởi động một worker nền cùng lúc với backend, dưới `tools/supervisor.py` (log ở `data/logs/services/`):
 
 ```
 backend/scripts/backup_worker.py --loop

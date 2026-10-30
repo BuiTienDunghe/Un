@@ -26,6 +26,9 @@ def run_once(service: MessageLabelService, url: str, client: httpx.Client) -> in
             service.record(message_id, guild_id, {"label": "ignore", "confidence": 1.0, "stable": True, "probs": {}, "model": "too-short"})
             continue
         response = client.post(f"{url.rstrip('/')}/classify", json={"text": text})
+        if response.status_code == 503:
+            # The model could not start, say the GPU is full: nothing to do with this message.
+            response.raise_for_status()
         try:
             response.raise_for_status()
             service.record(message_id, guild_id, response.json())
@@ -48,13 +51,20 @@ def main() -> int:
         print({"worker": "decided", "status": "disabled", "reason": "DECIDED_URL is not set"}, flush=True)
         return 0
     service = MessageLabelService(create_session_factory(create_postgres_engine(str(settings.database_url))))
+    last_wait = None
     with httpx.Client(timeout=REQUEST_TIMEOUT_SECONDS) as client:
         while True:
             try:
                 done = run_once(service, settings.decided_url, client)
-                print({"worker": "decided", "labelled": done}, flush=True)
+                last_wait = None
+                # Quiet when there is nothing to say: this shares one window with every other service.
+                if done or arguments.once:
+                    print({"worker": "decided", "labelled": done}, flush=True)
             except httpx.HTTPError as error:
-                print({"worker": "decided", "status": "waiting", "reason": type(error).__name__}, flush=True)
+                reason = type(error).__name__
+                if reason != last_wait:
+                    print({"worker": "decided", "status": "waiting", "reason": reason}, flush=True)
+                last_wait = reason
                 done = 0
             if arguments.once:
                 return 0
