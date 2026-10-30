@@ -181,7 +181,7 @@ jobs:
     # rag_multidoc_baseline_bare.json. That still protects what CI can protect:
     # embedding + BM25 + RRF. The shipped configuration's own baseline lives in
     # rag_multidoc_baseline.json and is measured on the heavy machine
-    # (docs/d1_retrieval_eval.md, docs/p4_progress.md).
+    # (docs/history.md#d1_retrieval_eval, docs/history.md#p4_progress).
     name: Retrieval eval gate (D1, bare index)
     runs-on: ubuntu-latest
     timeout-minutes: 30

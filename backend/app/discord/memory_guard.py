@@ -1,6 +1,6 @@
 """Deterministic auto-apply guard for extractor proposals (P2-1b).
 
-The 19/08 benchmark (docs/p2_progress.md) proved extractor confidence is a
+The 19/08 benchmark (docs/history.md#p2_progress) proved extractor confidence is a
 constant 1.0 on right and wrong proposals alike, so the threshold alone cannot
 filter content. This guard is the signal that measurably works: the proposal's
 evidence must be a verbatim quote of the source message, and the fact's content

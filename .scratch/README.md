@@ -25,3 +25,5 @@ trên container ephemeral — không commit là mất trắng.
 
 Đừng thêm `.scratch/` vào `.gitignore`. Nếu có thứ gì thực sự nhạy cảm, đừng viết nó vào
 ticket ngay từ đầu.
+
+Việc đã xong được gỡ khỏi đây; danh sách và cách đọc lại ở `ARCHIVE.md`.

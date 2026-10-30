@@ -6,10 +6,13 @@ Mọi thay đổi đáng chú ý của Local AI Core được ghi tại đây.
 phiên bản tuân theo [Semantic Versioning 2.0.0](https://semver.org/lang/vi/).
 
 Quy ước version của dự án: `1.0.0` là **ảnh chụp nền** của hệ thống tại thời điểm
-có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMENT_PLAN.md`
+có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md#DEVELOPMENT_PLAN`
 đóng lại thì tăng một minor version.
 
 ## [Unreleased]
+
+### Removed
+- **Dọn repo** (30/10). Gỡ mã không ai dùng và công cụ chuyển SQLite đã xong từ tháng 8; gộp 11 tài liệu theo giai đoạn thành `docs/history.md`; gỡ `docs/archive/`, các kế hoạch, bản duyệt và ticket đã xong. Danh sách và cách đọc lại ở `.scratch/ARCHIVE.md`.
 
 ### Changed
 - **OCR đọc bằng Qwen 9B trên máy** (`ocr-v2`, ticket 33, 30/10). Trên văn bản tiếng Việt tự viết có đáp án, 7 trang giữ riêng, gồm scan và ảnh chụp giả
@@ -577,7 +580,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   hạng 1. Sổ sách: **11 câu tốt lên, 2 xấu đi**. ⚠ **Điều kiện nghiệm thu tự chốt bị vi phạm ở đúng
   một câu** (`br_backup_thu_cong` 5 → miss, do max-over-windows đơn điệu không giảm nên chỉ nâng
   đoạn dài); vẫn nhận vì câu đó **vốn đã là nạn nhân của chính lỗi này** (RRF hạng 1 → rerank hạng 5
-  từ 21/08) — ghi rõ trong `p4_progress.md` rằng đây là nới ngưỡng SAU khi thấy số, để không thành
+  từ 21/08) — ghi rõ trong `docs/history.md#p4_progress` rằng đây là nới ngưỡng SAU khi thấy số, để không thành
   tiền lệ im lặng. Baseline ghi lại lên mức mới để gate bảo vệ thành quả.
 - **Ngưỡng chống-giá-trị-giả trong chính bản vá trên** đặt ở 100 000, thấp hơn context thật của các
   reranker dài (Qwen3 131 072) → mọi model context dài sẽ bị ép về 512, vứt đúng thứ đáng để đổi.
@@ -634,7 +637,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   tắt**. Chạy lại với đủ stack: **636 pass, 0 fail** — suite xanh 100%.
 
 ### Added
-- **P4-5 đóng cả hai phase — mở hộp đen chunking** (25/08, thiết kế `docs/p4_5_design.md` duyệt
+- **P4-5 đóng cả hai phase — mở hộp đen chunking** (25/08, thiết kế `docs/history.md#p4_5_design` duyệt
   nguyên trạng). Trang mới «Đoạn» cạnh mỗi tài liệu: xem tài liệu bị cắt thành đoạn nào đúng như bộ
   truy xuất index (chỉ version active), mỗi thẻ hiện trang/mục/token/loại, khối context P4-2 tách
   nền riêng, và **phần overlap với chunk trước tô xám** — chỗ nhìn ra bệnh biên chunk đang kìm
@@ -658,7 +661,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   Test: TTL 1 giờ + ghi ngoài → không thấy (đúng thiết kế), `invalidate()` → thấy ngay; wiring thật
   delete→search-kế-tiếp-trống. Phần đắt của P4-4a — (c) dựng nền vs phương án B — **gác chờ chuông
   2 500 chunk** (cold đo được chỉ ~0.5 s, chưa ai đau). **P4-5 có bản thiết kế chờ duyệt**
-  (`docs/p4_5_design.md`): 2 phase (chỉ-xem không đụng schema · đánh dấu qua bảng `chunk_feedback`
+  (`docs/history.md#p4_5_design`): 2 phase (chỉ-xem không đụng schema · đánh dấu qua bảng `chunk_feedback`
   mới — cột trên `document_chunks` sẽ mất sạch mỗi lần re-index vì `replace_chunks` xoá-tạo-lại),
   API + UI + nghiệm thu ghi sẵn, **chưa code dòng nào** đúng bất biến #8.
 - **Lưới backup vá xong ba lỗ — rủi ro một-máy hạ Cao → Trung** (24/08). Trước đó: dump nằm
@@ -748,8 +751,8 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   `doc_hit` 0.842 là số P4-2 chép nhầm → **0.854** (baseline JSON 0.8537); (2) §3e "cả bốn cờ dùng
   chung idiom" → đúng là **ba** (`QDRANT_DOCUMENTS_COLLECTION` là tên collection đọc thẳng từ
   settings, không log nguồn — biến từng gây trộn vector lab/prod ở T11); (3) toàn bộ con trỏ
-  `§9a/§9b/§9c/§9d` chết sau lượt đánh số lại 24/08 đã vá ở `p4_4_design.md` (banner "plan thắng"
-  trỏ vào mục không tồn tại), `d1_retrieval_eval.md`, `p4_progress.md`, CHANGELOG; (4) §9.3 hàng
+  `§9a/§9b/§9c/§9d` chết sau lượt đánh số lại 24/08 đã vá ở `docs/history.md#p4_4_design` (banner "plan thắng"
+  trỏ vào mục không tồn tại), `docs/history.md#d1_retrieval_eval`, `docs/history.md#p4_progress`, CHANGELOG; (4) §9.3 hàng
   "v2-A không giải được G8-3" hạ xuống **chưa kết luận được** — phán quyết cũ đứng trên số #5 mà
   chính §9.4 đã vô hiệu (EXPLAIN thiếu `ANALYZE`, truy vấn không đại diện); (5) §8 ô đối sách rủi ro
   một-máy viết đúng thực tế: dump nằm **cùng ổ** với DB, `backup_sources.py` tồn tại nhưng 0 nơi
@@ -769,7 +772,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   dùng (vẫn gitignore để marker cũ không lọt vào git). Máy nhẹ `hehehhe` còn đúng vai
   trò client LAN; quy tắc an toàn duy nhất còn lại: chỉ một máy chạy bot Discord và chạm
   dữ liệu thật. Plan cũng nén lịch sử đã đóng còn một dòng mỗi mục (chi tiết ở
-  `p1..p4_progress.md`) và bổ sung **§4 — danh sách đầy đủ 14 việc còn lại** kèm thứ tự
+  `p1..docs/history.md#p4_progress`) và bổ sung **§4 — danh sách đầy đủ 14 việc còn lại** kèm thứ tự
   thi công, phụ thuộc và ước lượng, để không mục nào rơi khi đổi phiên làm việc.
 - **Sửa hai chỗ số liệu yếu hơn kết luận trong báo cáo P4-4b** (plan §9.4): truy vấn dùng
   cho `EXPLAIN` chỉ chọn lọc ~7% (GIN chạm 8/247 buffer) nên không đại diện cho workload
@@ -794,11 +797,11 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   5 000 chunk — tại đúng ngưỡng kích hoạt của §1, v2-A **chậm hơn** BM25 in-process (~50 ms).
   Ba con số trong plan sai và đã sửa (v1 "1.06×" bỏ quên index GIN — thật là 1.89–3.65×;
   posting "~7×" → 12.3×; "v2-A có thể giải G8-3" → không). Giữ P4-4a + hướng "chỉ lưu token";
-  điều kiện mở lại ghi trong `docs/p4_progress.md`. Không đổi schema, code retrieval hay
+  điều kiện mở lại ghi trong `docs/history.md#p4_progress`. Không đổi schema, code retrieval hay
   cấu hình vận hành.
 
 ### Documentation
-- **Thiết kế P4-4 + P4-5 chốt** (`docs/p4_4_design.md`): chỉ mục sparse chuyển vào PostgreSQL bằng
+- **Thiết kế P4-4 + P4-5 chốt** (`docs/history.md#p4_4_design`): chỉ mục sparse chuyển vào PostgreSQL bằng
   lexeme pyvi dạng `text[]` + GIN (không `tsvector` — parser tách đôi từ ghép), tf/len theo chunk,
   DF tính trong truy vấn (bỏ bảng DF ⇒ hết rủi ro DF trôi), BM25 chấm trong app. Nêu rõ điều
   KHÔNG đảm bảo được: parity điểm với `rank_bm25` (sàn epsilon theo từ vựng) ⇒ đo lại D1. Đính
@@ -812,7 +815,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   tài liệu bẫy). Chất lượng với ON không cần đo lại: prompt phòng thủ không đổi so lần 1, nơi D1
   và grounding đã Δ 0. Chi phí: 0 lời gọi model, chỉ thêm delimiter + 1 quy tắc vào prompt; có
   hiệu lực khi API khởi động lại, không re-index. Baseline hai lần:
-  `data/evaluation/redteam_baseline.json`; đọc tay: `docs/d5_redteam.md`. Production không bị đụng.
+  `data/evaluation/redteam_baseline.json`; đọc tay: `docs/history.md#d5_redteam`. Production không bị đụng.
 
 ### Fixed
 - **D5: fixture bẫy viết lại có dấu** (5/6 tài liệu từng không dấu → BM25/pyvi không khớp câu hỏi,
@@ -830,7 +833,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   bẫy viết không dấu (agent tìm toàn corpus không khớp token) — artifact dữ liệu, không phải
   thoái lui do phòng thủ. Theo ngưỡng đã chốt (benign ≥ 0.9) → **cờ vẫn TẮT**; việc còn lại là
   fixture có dấu + đo lại. Baseline hai vòng: `data/evaluation/redteam_baseline.json`;
-  bảng đọc tay + chẩn đoán: `docs/d5_redteam.md`. Production :8000 không bị đụng.
+  bảng đọc tay + chẩn đoán: `docs/history.md#d5_redteam`. Production :8000 không bị đụng.
 
 ### Fixed
 - **`scripts/rebuild_qdrant.py` chạy lại được và dựng đúng chỉ mục contextual**: script vỡ ở
@@ -848,14 +851,14 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   lập project lạ, pip/cp1252 từng chết. Dời có kiểm tra trước/sau (backup `--force`, `compose
   down` không `-v`, đếm DB 8/2/209 bằng nhau, project + volume postgres không đổi, torch CUDA
   giữ nguyên); downtime ~12 phút. Scheduled Task phải tạo lại với đường mới. Chi tiết và bài
-  học: `docs/DEVELOPMENT_PLAN.md` §3.
+  học: `docs/history.md#DEVELOPMENT_PLAN` §3.
 
 ### Added
 - **T14 đóng — lưới backup thứ hai chạy thật**: Scheduled Task `LocalAICore Backup` (02:00 hằng ngày,
   user `dungbt06`, đường dẫn ASCII `C:\Users\dungbt06\local-ai-core`, tạo từ prompt admin) chạy thử
   `Last Result: 0` và ra dump mới; cùng backup worker của launcher thành hai lưới độc lập.
 - **T11 đóng — collection Qdrant `documents` cấu hình theo môi trường** (`QDRANT_DOCUMENTS_COLLECTION`):
-  suite dùng `documents_test`; phiên đo trên DB lab (`DEVELOPMENT_PLAN.md` §3) dùng `documents_lab` +
+  suite dùng `documents_test`; phiên đo trên DB lab (`docs/history.md#DEVELOPMENT_PLAN` §3) dùng `documents_lab` +
   `rebuild_qdrant` nên vector lab và vector vận hành không còn trộn lẫn. Harness D5 **xóa vĩnh viễn
   corpus bẫy khi kết thúc** (kể cả khi lỗi; exit 1 nếu còn sót) — tài liệu chứa chỉ thị độc không
   được sống sót sau một lần chạy; test đầu-cuối bootstrap→bị lừa→dọn sạch→404.
@@ -866,7 +869,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   `rag.injection_defense`, override `RAG_INJECTION_DEFENSE_ENABLED`, mặc định TẮT): bọc mỗi passage
   và kết quả tool trong delimiter "dữ liệu không phải chỉ dẫn" + 1 quy tắc trong RAG prompt & agent
   guide; 0 lời gọi model thêm; cờ TẮT = prompt cũ nguyên byte. 10 test không-model. Chạy tấn công
-  thật trước/sau là việc máy nặng (`docs/d5_redteam.md`).
+  thật trước/sau là việc máy nặng (`docs/history.md#d5_redteam`).
 - **Máy nặng `PC-dungbt` thành máy vận hành (22/08)**: restore dữ liệu thật từ dump
   `local-ai-20260821-131518.dump` (3 tài liệu, 1 hội thoại, 91 chunk; DB lab cũ giữ
   lại dưới tên `local_ai_core_lab_20260821`), khởi động bằng launcher — `/health` `ok`
@@ -876,7 +879,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   chạy thử ra dump + drill restore đạt. Phát hiện: DB thật chứa tài liệu song sinh của
   fixture bẫy `xuong_in_anh_duong.txt` nên D1 sanity trên DB vận hành tụt MRR/doc_hit
   (recall giữ nguyên) → thí nghiệm đo trên DB lab, không dùng DB vận hành làm thước
-  (`docs/DEVELOPMENT_PLAN.md` §3).
+  (`docs/history.md#DEVELOPMENT_PLAN` §3).
 
 ### Fixed
 - **Suite backend không còn dừng bot Discord thật**: `test_api_key_auth.py` đi qua mọi
@@ -897,7 +900,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 - **Launcher không còn vỡ trên máy cài mới sau P4-3**: `run-local-ai-core.bat` tự ghim
   `RAG_RERANKER_ENABLED=false` vào `.env` khi máy thiếu extra `[rerank]` (một lần, idempotent,
   ghi rõ lý do), và báo lỗi + dừng màn hình khi uvicorn thoát lỗi thay vì đóng cửa sổ sau
-  khi đã mở trình duyệt. Phát hiện bởi hội đồng kiểm chứng đối kháng (`docs/p4_progress.md`).
+  khi đã mở trình duyệt. Phát hiện bởi hội đồng kiểm chứng đối kháng (`docs/history.md#p4_progress`).
 - `RerankerService` tắt không còn cắt kết quả theo `candidate_limit` (slice chạy trước kiểm tra
   `enabled` từ 07/2026; mặc định `RerankerService(False, "", 1)` cắt còn 1 dòng). Test hồi quy.
 
@@ -911,7 +914,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   `/rag/search` p50 587 → 622ms (**+35ms**, trần 300ms), riêng bước rerank p50
   65ms; số lượt gọi model sinh của một câu hỏi **không đổi**, bất biến ngân sách
   inference còn nguyên. Đo `candidate_limit` 30 thì kém hơn 15 ở mọi chỉ số
-  xếp hạng (MRR/doc_hit; recall@5 hòa) lẫn tốc độ, nên giữ 15. Chi tiết: `docs/p4_progress.md`.
+  xếp hạng (MRR/doc_hit; recall@5 hòa) lẫn tốc độ, nên giữ 15. Chi tiết: `docs/history.md#p4_progress`.
 - **Baseline D1 ghi lại vì P4-3** (`rag_multidoc_baseline.json`, cấu hình
   contextual ON + reranker ON). Gate CI vẫn dùng `rag_multidoc_baseline_bare.json`;
   bước ghim cờ trong job `retrieval-eval` nay tắt **cả hai** cờ và **fail nếu
@@ -930,7 +933,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   với chunk Việt không liên quan — ghi hồ sơ, 1/82, phía an toàn). Quyết định hành vi:
   **giữ "chỉ báo"** vì `ungrounded` chưa từng có dương tính thật để đáng gắn hành vi
   tự động; mở lại khi baseline này bị vượt hoặc D5 tạo được câu bịa chủ đích.
-  Bảng đầy đủ: `docs/d3a_answer_grounding.md`.
+  Bảng đầy đủ: `docs/history.md#d3a_answer_grounding`.
 
 ### Added
 - **Baseline faithfulness đầu tiên (D3a, đo trên máy nặng)**:
@@ -943,14 +946,14 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   Kết luận: giữ mức "chỉ báo"; việc còn lại trước khi đóng D3a là cap theo-nguồn-khớp-nhất
   (giữ nguyên ngưỡng 0.60/0.34) rồi đo lại. Hai câu retrieval miss được chấm
   `grounded` + `answer_pass=False` — chữ ký "trung thành với chunk sai": guard đo
-  faithfulness, không đo correctness. Bảng đầy đủ: `docs/d3a_answer_grounding.md`.
+  faithfulness, không đo correctness. Bảng đầy đủ: `docs/history.md#d3a_answer_grounding`.
 - **D3a self-check bám nguồn (không model)**: `answer_grounding.py` chấm từng câu của
   câu trả lời RAG theo văn bản trần của chunk đã trích (fold dấu, content-word overlap,
   chuỗi nguyên văn — tư duy guard memory P2-1b); nhãn grounded/weak/ungrounded, câu
   khác ngôn ngữ nguồn trần ở weak + `language_mismatch`. Báo cáo qua field `grounding`
   của `/rag/chat` (response thường và SSE `done`) và chip "bám nguồn" trên web — chỉ
   báo, không chặn. `evaluate_rag` chế độ full thêm `grounding_rate`; 0 lời gọi model
-  thêm. Đo trên bộ 82 câu là việc máy mạnh (`docs/d3a_answer_grounding.md`).
+  thêm. Đo trên bộ 82 câu là việc máy mạnh (`docs/history.md#d3a_answer_grounding`).
 - **Override reranker theo máy**: biến `.env` `RAG_RERANKER_ENABLED` (không đặt =
   theo `models.yaml`) qua `RerankerService.from_config` — cùng khuôn resolver với
   P4-2. Kèm **warmup lúc khởi động**: máy bật cờ mà thiếu `pip install -e .[rerank]`
@@ -961,11 +964,11 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   **Lưu ý cài đặt:** extra `[rerank]` kéo về bản **torch CPU-only** trên PyPI —
   đo trên đó thì mỗi câu hỏi đắt thêm ~990ms (28× so với GPU). Máy có GPU NVIDIA
   cài thêm torch từ index `cu128`; máy không có thì ghim `RAG_RERANKER_ENABLED=false`
-  (`docs/DEVELOPMENT_PLAN.md` §3).
+  (`docs/history.md#DEVELOPMENT_PLAN` §3).
 - **Override contextual retrieval theo máy**: biến `.env` `RAG_CONTEXTUAL_RETRIEVAL_ENABLED`
   (không đặt = theo `models.yaml`; `true`/`false` = máy này tự quyết) qua
   `ChunkContextService.from_config` dùng chung cho API lẫn RQ worker — máy nhẹ tắt
-  sinh context lúc index, máy mạnh giữ bật (`docs/DEVELOPMENT_PLAN.md` §3). Test cô lập
+  sinh context lúc index, máy mạnh giữ bật (`docs/history.md#DEVELOPMENT_PLAN` §3). Test cô lập
   cờ này (`false`) để suite chạy đường index trần trừ khi test bật tường minh.
 
 ### Changed
@@ -976,13 +979,13 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   Chi phí nằm trọn ở lúc index — 1 lời gọi model general/chunk (corpus 5 tài
   liệu: 27 chunk, 144.0s, 0 lỗi), đường hỏi-đáp **không thêm lời gọi model nào**
   nên bất biến ngân sách inference còn nguyên. Số liệu đầy đủ, bảng chi phí và
-  danh sách câu đổi hạng: `docs/p4_progress.md`.
+  danh sách câu đổi hạng: `docs/history.md#p4_progress`.
 - **Baseline D1 ghi lại vì P4-2** và tách làm hai mốc: `rag_multidoc_baseline.json`
   là cấu hình đang ship (contextual BẬT, đo trên máy nặng), còn
   `rag_multidoc_baseline_bare.json` là bản trần cho gate CI. Job `retrieval-eval`
   nay tắt cờ tường minh rồi gate bản trần — runner không tải nổi model sinh 6.6GB
   để dựng chỉ mục contextual, nên so cùng-điều-kiện là cách duy nhất giữ gate có
-  nghĩa. Tolerance vẫn 0.02, dataset không đổi. Chi tiết: `docs/d1_retrieval_eval.md`.
+  nghĩa. Tolerance vẫn 0.02, dataset không đổi. Chi tiết: `docs/history.md#d1_retrieval_eval`.
 
 ### Added
 - **P4-2 contextual retrieval — phần code, cờ TẮT mặc định** (lane nhẹ): cột
@@ -993,7 +996,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   lỗi model ở chunk nào thì chunk đó index bản trần, ingestion không fail; chi
   phí ghi log (giây, số lời gọi). Bật qua `rag.contextual_retrieval.enabled` —
   chỉ thành mặc định sau khi thí nghiệm D1 trên máy nặng đạt ngưỡng
-  (`docs/p4_progress.md`).
+  (`docs/history.md#p4_progress`).
 - **Bộ eval retrieval đa tài liệu** (D1, gỡ G7): corpus 5 tài liệu thật snapshot
   trong `data/evaluation/fixtures/multidoc/`, bộ câu hỏi tiếng Việt
   `rag_multidoc_eval.jsonl` (nhóm single + cross-doc) chấm trên **toàn corpus
@@ -1003,7 +1006,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   ngân sách inference); job CI `retrieval-eval` dựng Ollama chỉ với embedding
   0.6b và gate theo baseline đã ghi (chưa có baseline thì chỉ báo cáo; tụt quá
   2 điểm recall/MRR là đỏ; đổi model embedding buộc đo lại). Cách dùng:
-  `docs/d1_retrieval_eval.md`.
+  `docs/history.md#d1_retrieval_eval`.
 - **Chế độ tài khoản admin/member** (P3-1): bật `LOCAL_AI_AUTH_ENABLED` (kèm
   `LOCAL_AI_JWT_SECRET` ≥32 ký tự và `LOCAL_AI_API_KEY` — validator ép đủ, mặt
   HTTP fail-closed) là web thành nhiều người dùng: người đầu tiên đăng ký làm
@@ -1025,7 +1028,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   trích **nguyên văn** từ tin gốc và fact **trùng từ-nội-dung** với tin gốc —
   benchmark chứng minh confidence là hằng 1.0 kể cả khi sai nên ngưỡng τ chỉ còn
   là công tắc. Extractor mặc định chuyển `qwen3.5:2b` → `qwen3.5:9b` (2b để lọt
-  ~49% fact độc, không harness nào cứu được — xem `docs/p2_progress.md`).
+  ~49% fact độc, không harness nào cứu được — xem `docs/history.md#p2_progress`).
   Đề xuất trượt guard chờ người duyệt, không mất gì.
 - **Lệnh Discord `/memory` và `/status`** (P2-3): xem điều agent đang nhớ về
   chính mình trong server (ephemeral, phân biệt 🤖/👤) và sức khỏe hệ thống rút
@@ -1069,7 +1072,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 - **Hợp nhất kho memory** (P1-5): duyệt một đề xuất Discord thì `canonical_fact`
   được mirror (idempotent, id `mem_dc_*`) vào kho `/memory` mà web chat «Ghi nhớ»
   sử dụng — trợ lý web dùng được điều học từ Discord. Phase P1 đóng.
-- Nhật ký thi công P1 kèm lý do từng quyết định: `docs/p1_progress.md`.
+- Nhật ký thi công P1 kèm lý do từng quyết định: `docs/history.md#p1_progress`.
 - CI GitHub Actions chạy trên mọi pull request và push vào `main`: static check,
   bộ test backend với service container PostgreSQL 16 + Redis 7 + Qdrant, và bộ
   test bot/tools trên Windows (P0-1).

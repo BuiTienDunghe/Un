@@ -5,7 +5,7 @@ indexing — so the thing to watch is latency, not model-call count. The
 inference-budget invariant (plan §1) is about *generation* calls: a
 cross-encoder is a small scoring model, so the number of generation calls per
 question is unchanged. That is not a licence to ignore the cost; the added
-milliseconds are measured and gated in docs/p4_progress.md.
+milliseconds are measured and gated in docs/history.md#p4_progress.
 
 Model registry: ``warmup()`` walks a chain of version records (active first,
 then the earlier versions the registry allows as fallbacks) and NEVER raises.
@@ -14,7 +14,7 @@ not download), fails to load, or loads but is not the checkpoint the record
 describes — digest, activation, head size, input window, or probe-pair parity.
 "Loadable" alone was never enough: a ST 5.x export whose config lacks the
 activation name loads fine under 3.4.1 and then scores through Sigmoid, and a
-random classification head passes the constructor (docs/p4_progress.md). The
+random classification head passes the constructor (docs/history.md#p4_progress). The
 chain ends in ``disabled`` rather than a refused boot (invariant #5); the
 resolver upstream reports that as a deviation.
 """
@@ -462,7 +462,7 @@ class RerankerService:
         ]
         # One line per question so the added milliseconds are attributable: the
         # /rag/search latency the eval reports is retrieval + this, and P4-3 is
-        # gated on the delta (docs/p4_progress.md).
+        # gated on the delta (docs/history.md#p4_progress).
         logger.bind(event="rerank_done", candidates=len(candidates), windows=len(pairs), top_k=top_k, ms=int((perf_counter() - started) * 1000)).info(
             "Reranked {} candidates ({} windows) in {}ms", len(candidates), len(pairs), int((perf_counter() - started) * 1000)
         )
