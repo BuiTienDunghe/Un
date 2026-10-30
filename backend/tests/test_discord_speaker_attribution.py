@@ -121,7 +121,8 @@ def test_shared_session_model_input_keeps_each_discord_speaker(
     assert "reply_to_discord_message_id=message-1" in current_speaker
     assert "author-tuan" not in attributed_history
     assert "author-dung" not in current_speaker
-    reply_target = model_input[-2]["content"]
+    assert model_input[-2]["content"].startswith("Bây giờ là ")
+    reply_target = model_input[-3]["content"]
     assert "Discord reply target" in reply_target
     assert "discord_message_id=message-1" in reply_target
     assert "author_id=author-dung" in reply_target

@@ -367,16 +367,41 @@
       { align: "start", className: "mdl-menu" });
   }
 
+  /* Máy chủ tự khởi động lại khi row.restarting: chờ nó lên với đúng bản đã chọn. Lúc này gọi hỏng
+     là chuyện bình thường nên không báo lỗi, chỉ hỏi lại. */
+  async function afterPick(v, role, row, label) {
+    if (!row || !row.restarting) {
+      toast(row && row.chosen === row.loaded ? `Đang dùng ${label}.` : `Đã chọn ${label} — có hiệu lực sau khi khởi động lại backend.`);
+      if (live(v)) load(v, { focusRole: role });
+      return;
+    }
+    toast(`Đang đổi sang ${label}, chờ khoảng nửa phút…`);
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    const deadline = Date.now() + 120000;
+    let done = false;
+    while (!done && Date.now() < deadline && live(v)) {
+      try {
+        const now = (await Shell.api("/models", { signal: v.ctx.signal })).registry[role];
+        done = Boolean(now && now.loaded === now.chosen);
+      } catch (error) { /* Chưa lên. */ }
+      if (!done) await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+    if (!live(v)) return;
+    toast(done ? `Đang dùng ${label}.` : "Chưa thấy phần trả lời lên lại. Xem cửa sổ Local AI Core.", done ? undefined : "danger");
+    load(v, { focusRole: role });
+  }
+
   async function confirmPromote(v, item) {
     if (!live(v)) return;
     const ok = await confirmDialog({
       title: `Dùng ${item.name || item.id}?`,
-      body: `Chỉ áp dụng cho máy này. Backend vẫn chạy bản hiện tại cho tới khi khởi động lại.${item.cloud ? " Bản này chạy trên máy chủ của nhà cung cấp: câu hỏi, lịch sử chat và tài liệu sẽ rời khỏi máy, và tính phí theo lượt dùng." : ""}`,
+      body: `Chỉ áp dụng cho máy này. Phần trả lời sẽ tự khởi động lại, mất khoảng nửa phút, và câu đang trả lời dở sẽ bị ngắt.${item.cloud ? " Bản này chạy trên máy chủ của nhà cung cấp: câu hỏi, lịch sử chat và tài liệu sẽ rời khỏi máy, và tính phí theo lượt dùng." : ""}`,
       confirmLabel: "Dùng bản này", tone: "accent", icon: "check-circle", signal: v.ctx.signal,
     });
     if (!ok || !live(v)) return;
+    let row;
     try {
-      await Shell.api(`/models/${encodeURIComponent(item.role)}/promote`, {
+      row = await Shell.api(`/models/${encodeURIComponent(item.role)}/promote`, {
         method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ version: item.id }), signal: v.ctx.signal,
       });
     } catch (error) {
@@ -387,8 +412,7 @@
       toast(isMissingApi(error) ? MISSING_SWITCH : errText(error, "Không đổi được phiên bản."), "danger");
       return;
     }
-    toast(`Đã chọn ${item.name || item.id} — có hiệu lực sau khi khởi động lại backend.`);
-    load(v, { focusRole: item.role });
+    await afterPick(v, item.role, row, item.name || item.id);
   }
 
   /* Card gộp (extractor + verifier) không có "con trỏ trước đó" chung: hỏi vai trò trước. */
@@ -403,19 +427,19 @@
     if (!live(v)) return;
     const ok = await confirmDialog({
       title: "Dùng lại bản mặc định?",
-      body: "Bỏ lựa chọn riêng của máy này. Backend vẫn chạy bản hiện tại cho tới khi khởi động lại.",
+      body: "Bỏ lựa chọn riêng của máy này. Phần trả lời sẽ tự khởi động lại, mất khoảng nửa phút, và câu đang trả lời dở sẽ bị ngắt.",
       confirmLabel: "Về mặc định", tone: "warn", icon: "retry", signal: v.ctx.signal,
     });
     if (!ok || !live(v)) return;
+    let row;
     try {
-      await Shell.api(`/models/${encodeURIComponent(role)}/revert`, { method: "POST", headers: JSON_HEADERS, signal: v.ctx.signal });
+      row = await Shell.api(`/models/${encodeURIComponent(role)}/revert`, { method: "POST", headers: JSON_HEADERS, signal: v.ctx.signal });
     } catch (error) {
       if (isAbort(error) || !live(v) || handledByShell(error)) return;
       toast(isMissingApi(error) ? MISSING_SWITCH : errText(error, "Không quay lại được phiên bản trước."), "danger");
       return;
     }
-    toast("Đã chọn lại bản mặc định — có hiệu lực sau khi khởi động lại backend.");
-    load(v, { focusRole: role });
+    await afterPick(v, role, row, "bản mặc định");
   }
 
   /* ── Chi tiết → ──────────────────────────────────────────────── */

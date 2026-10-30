@@ -60,6 +60,12 @@ def _switchable(role: str, request: Request) -> None:
         raise HTTPException(status_code=409, detail={"error_code": "MODEL_ROLE_NOT_SWITCHABLE", "message": "Vai trò này chưa đổi được từ giao diện."})
 
 
+def _applied(request: Request, role: str) -> dict[str, Any]:
+    row = _registry_view(request)[role]
+    row["restarting"] = row["chosen"] != row["loaded"] and model_choice.restart_to_apply()
+    return row
+
+
 @router.get("/models", response_model=ModelsResponse)
 def models(request: Request) -> ModelsResponse:
     state = request.app.state
@@ -80,11 +86,11 @@ def promote(role: str, payload: PromoteRequest, request: Request) -> dict[str, A
         raise HTTPException(status_code=404, detail={"error_code": "MODEL_VERSION_NOT_FOUND", "message": f"Unknown version {payload.version}"})
     # Picking the registry's own `active` is no pick at all: the machine follows the file again.
     model_choice.save_choice(model_choice.CHOICE_PATH, role, None if payload.version == entry.active else payload.version)
-    return _registry_view(request)[role]
+    return _applied(request, role)
 
 
 @router.post("/models/{role}/revert", dependencies=_GUARDS)
 def revert(role: str, request: Request) -> dict[str, Any]:
     _switchable(role, request)
     model_choice.save_choice(model_choice.CHOICE_PATH, role, None)
-    return _registry_view(request)[role]
+    return _applied(request, role)

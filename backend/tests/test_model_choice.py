@@ -129,3 +129,28 @@ def test_the_launcher_loads_the_pick_before_anything_starts() -> None:
 
 def test_the_pick_stays_out_of_git() -> None:
     assert "data/model_choice.env" in (REPO / ".gitignore").read_text(encoding="utf-8")
+
+
+def test_a_pick_restarts_the_api_only_under_the_supervisor(monkeypatch) -> None:
+    from tools import supervisor
+
+    assert model_choice.RESTART_EXIT_CODE == supervisor.RESTART_EXIT_CODE
+    started = []
+
+    class FakeTimer:
+        def __init__(self, delay, function, arguments):
+            self.call = (function, arguments)
+
+        def start(self):
+            started.append(self.call)
+
+    monkeypatch.setattr(model_choice.threading, "Timer", FakeTimer)
+    monkeypatch.delenv(model_choice.SUPERVISED_ENV, raising=False)
+    assert model_choice.restart_to_apply() is False and started == []
+    monkeypatch.setenv(model_choice.SUPERVISED_ENV, "1")
+    assert model_choice.restart_to_apply() is True
+    assert started == [(model_choice.os._exit, (model_choice.RESTART_EXIT_CODE,))]
+
+
+def test_screens_are_checked_with_the_server_before_being_reused(client, mock_ollama) -> None:
+    assert client.get("/ui/views/models.js").headers["cache-control"] == "no-cache"

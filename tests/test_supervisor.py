@@ -181,3 +181,29 @@ def test_launcher_and_stop_go_through_the_supervisor() -> None:
     assert "tools.supervisor --stop" in (REPO / "stop-local-ai-core.bat").read_text(encoding="utf-8")
     decided = (REPO / "run-decided.bat").read_text(encoding="utf-8").lower()
     assert "\ntitle " not in decided and "windowtitle" not in decided
+
+
+def test_every_start_reads_the_pick_and_an_empty_one_clears_the_pin(tmp_path: Path) -> None:
+    choice = tmp_path / "model_choice.env"
+    choice.write_text("MODEL_VERSION_GENERAL=\nMODEL_VERSION_OCR=ocr-v1\n", encoding="utf-8")
+    env = supervisor.service_env({"MODEL_VERSION_GENERAL": "general-haiku-v1", "KEEP": "1"}, choice)
+    assert "MODEL_VERSION_GENERAL" not in env
+    assert env["MODEL_VERSION_OCR"] == "ocr-v1" and env["KEEP"] == "1" and env["LOCAL_AI_SUPERVISED"] == "1"
+    assert supervisor.service_env({"A": "1"}, tmp_path / "absent")["A"] == "1"
+
+
+def test_leaving_to_apply_a_pick_is_a_restart_not_a_failure(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(supervisor, "MAX_QUICK_FAILURES", 1)
+    flag = tmp_path / "ran"
+    command = script(tmp_path, f"""
+        import pathlib, sys
+        flag = pathlib.Path(r'{flag}')
+        if flag.exists():
+            sys.exit(0)
+        flag.write_text('x')
+        sys.exit({supervisor.RESTART_EXIT_CODE})
+    """)
+    sup = Supervisor([Service("w", command, tmp_path)], lambda line: line, tmp_path)
+    run_until(sup, lambda: any("not restarting" in p.read_text(encoding="utf-8") for p in tmp_path.glob("w_*.log")))
+    text = next(tmp_path.glob("w_*.log")).read_text(encoding="utf-8")
+    assert text.count("[started]") == 2 and "restarting on the model" in text and sup.down == []
