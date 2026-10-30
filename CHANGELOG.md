@@ -18,6 +18,8 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   "không có chữ" của model không còn bị nạp thành nội dung trang.
 
 ### Added
+- **Ún tính toán chính xác** (ticket 34, 30/10). Công cụ `calculate` tính biểu thức số học bằng số thập phân chính xác, chỉ nhận số và phép toán, không chạy
+  được mã. Cùng phạm vi server với mọi công cụ khác.
 - **Vision chạy trên máy** (`vision-v1`, ticket 33, 30/10). `/vision/chat` chạy thật bằng Qwen 9B, không còn trả 501, và `@Ún` đọc được tối đa 3 ảnh đính
   kèm, chỉ ở server trong `DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST`. Chưa thử trên Discord thật.
 - **Đổi model trả lời ngay trên màn hình Model** (ticket 31, 30/10). Nút "Đổi model" và "Về mặc định" ở thẻ "Trò chuyện & RAG" trước đây

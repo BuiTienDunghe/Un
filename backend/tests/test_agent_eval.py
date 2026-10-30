@@ -323,7 +323,7 @@ def test_an_input_the_api_would_reject_fails_without_a_model_call(tmp_path):
     assert manifest["input_max_chars"] == INPUT_MAX_CHARS
     # N1's constants (ticket 20's arbitration round), and the tools it leaves as they were.
     assert manifest["paste_inline"] == {"max_tokens": 12_288, "fixed_tokens": 1_253, "chars_per_token": 3.3}
-    assert manifest["tools_sha256"] == "df287afe9701d53c7c15416733445ecd580a9213e89d89efd4636ee5e2ee7a54"
+    assert manifest["tools_sha256"] == "93410c4659cd9b129cb08c2c459aac6dc8b7c309b05ddd870186a42a437903fd"
 
 
 def test_doc_50_the_longest_paste_task_reaches_the_model_whole(tmp_path):

@@ -22,6 +22,7 @@ from typing import Any, Protocol
 from app.llm_clients.deadline import ModelCallTimeoutError, call_within
 from app.llm_clients.ollama_client import OllamaToolCallParseError
 from app.llm_clients.usage import consume_usage, record_usage
+from app.services.calculator import CalculationError, calculate
 from app.services.answer_figures import grounding_summary, retry_instruction, turn_texts, unsupported_figures
 from app.services.pastes import INLINE_MAX_TOKENS, read_paste, take_pastes
 from app.services.injection_defense import InjectionDefense
@@ -51,7 +52,7 @@ AGENT_GUIDE = (
     "tài liệu người dùng đã tải lên, `search_history` đọc tin nhắn cũ của "
     "server (có query = tìm từ khóa; bỏ trống query = N tin mới nhất, dùng "
     "khi cần tóm tắt gần đây), `system_status` xem sức khỏe hệ "
-    "thống, `current_time` xem ngày giờ hiện tại. Chỉ gọi công cụ khi câu hỏi thật sự "
+    "thống, `current_time` xem ngày giờ hiện tại, `calculate` tính phép tính chính xác (có phép tính thì dùng công cụ này, đừng tự nhẩm). Chỉ gọi công cụ khi câu hỏi thật sự "
     "cần dữ liệu đó; câu chào hỏi hay kiến thức chung thì trả lời thẳng, không "
     "gọi gì. Khi dùng nội dung tài liệu, nêu tên tệp và số trang. Khi dùng "
     "tin nhắn cũ, nêu ai nói và lúc nào. Khi đã đủ "
@@ -114,6 +115,20 @@ CURRENT_TIME_SCHEMA: dict[str, Any] = {
         "name": "current_time",
         "description": "Đọc ngày giờ hiện tại theo giờ Việt Nam. Dùng khi câu hỏi cần biết hôm nay, bây giờ, thứ mấy, hoặc cần tính khoảng thời gian tới hiện tại.",
         "parameters": {"type": "object", "properties": {}, "required": []},
+    },
+}
+CALCULATE_SCHEMA: dict[str, Any] = {
+    "type": "function",
+    "function": {
+        "name": "calculate",
+        "description": "Tính chính xác một biểu thức số học. Dùng cho mọi phép tính có từ hai bước trở lên, tiền, phần trăm, chia trung bình. Ví dụ tăng 7,5% trên 14.500.000: 14500000 * 1.075. Không dùng cho ngày tháng.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "expression": {"type": "string", "description": "Biểu thức chỉ gồm số, + - * / // % ** và dấu ngoặc; số viết liền, phần thập phân dùng dấu chấm: 1250000 * 0.15"},
+            },
+            "required": ["expression"],
+        },
     },
 }
 # Vietnam has one offset and no daylight saving; a fixed one needs no tzdata, which Windows lacks.
@@ -668,6 +683,15 @@ class AgentService:
             "timezone": "Asia/Ho_Chi_Minh (UTC+7)",
         }), None, None
 
+    def _calculate(self, arguments: dict[str, Any], tool_context: dict[str, Any] | None) -> ToolOutput:
+        expression = arguments.get("expression")
+        if not isinstance(expression, str):
+            return self._error(BAD_ARGUMENTS, "Cần expression là một chuỗi, ví dụ 1250000 * 0.15.")
+        try:
+            return self._dump({"expression": expression, "result": calculate(expression)}), None, None
+        except CalculationError as error:
+            return self._error(BAD_ARGUMENTS, str(error))
+
     def _dump(self, payload: object, *, drop: str = "last", limit: int | None = None) -> str:
         """JSON for the model, at most tool_result_max_chars.
 
@@ -707,7 +731,7 @@ class AgentService:
 # Where the core's tools stand (ticket 22, C4). The gap at 20 is app.discord's
 # search_history (app/discord/agent_tools.py ORDER): with it registered, the model is
 # shown the same four tools in the same order as before the move.
-SEARCH_DOCUMENTS_ORDER, READ_DOCUMENT_ORDER, SYSTEM_STATUS_ORDER, CURRENT_TIME_ORDER = 10, 15, 30, 40
+SEARCH_DOCUMENTS_ORDER, READ_DOCUMENT_ORDER, SYSTEM_STATUS_ORDER, CURRENT_TIME_ORDER, CALCULATE_ORDER = 10, 15, 30, 40, 50
 
 
 def core_tools() -> ToolRegistry:
@@ -719,4 +743,5 @@ def core_tools() -> ToolRegistry:
     registry.register(AgentTool(READ_DOCUMENT_SCHEMA, AgentService._read_document, "Đang đọc tài liệu…"), READ_DOCUMENT_ORDER)
     registry.register(AgentTool(SYSTEM_STATUS_SCHEMA, AgentService._system_status, "Đang xem trạng thái hệ thống…"), SYSTEM_STATUS_ORDER)
     registry.register(AgentTool(CURRENT_TIME_SCHEMA, AgentService._current_time, "Đang xem giờ…"), CURRENT_TIME_ORDER)
+    registry.register(AgentTool(CALCULATE_SCHEMA, AgentService._calculate, "Đang tính…"), CALCULATE_ORDER)
     return registry

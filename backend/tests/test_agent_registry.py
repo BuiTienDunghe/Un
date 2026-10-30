@@ -47,10 +47,10 @@ def test_a_name_registers_once():
 
 
 def test_the_core_alone_has_no_discord_tool_and_the_package_puts_it_back_in_its_place():
-    assert core_tools().names() == ("search_documents", "read_document", "system_status", "current_time")
+    assert core_tools().names() == ("search_documents", "read_document", "system_status", "current_time", "calculate")
     registry = core_tools()
     agent_tools.register(registry, None)
-    assert registry.names() == ("search_documents", "read_document", "search_history", "system_status", "current_time")
+    assert registry.names() == ("search_documents", "read_document", "search_history", "system_status", "current_time", "calculate")
 
 
 def test_a_tool_registered_after_the_agent_was_built_is_shown_declared_and_shaped():
@@ -59,7 +59,7 @@ def test_a_tool_registered_after_the_agent_was_built_is_shown_declared_and_shape
         {"content": "xong", "tool_calls": [], "raw_tool_calls": []},
     ])
     agent = AgentService(router, None, None)
-    agent.registry.register(tool("late", {"q": {"type": "string"}}), 40)
+    agent.registry.register(tool("late", {"q": {"type": "string"}}), 90)
 
     _, _, steps = agent.run([{"role": "user", "content": "thử"}])
     assert router.tools_seen[0][-1] == "late"
