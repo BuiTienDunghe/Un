@@ -154,3 +154,13 @@ def test_a_pick_restarts_the_api_only_under_the_supervisor(monkeypatch) -> None:
 
 def test_screens_are_checked_with_the_server_before_being_reused(client, mock_ollama) -> None:
     assert client.get("/ui/views/models.js").headers["cache-control"] == "no-cache"
+
+
+def test_a_pick_is_refused_while_a_document_is_being_read(client, mock_ollama, choice_file, monkeypatch) -> None:
+    monkeypatch.setenv(model_choice.SUPERVISED_ENV, "1")
+    monkeypatch.setattr(client.app.state.ocr_job_service, "_active", "ocr_running")
+    monkeypatch.setattr(model_choice, "restart_to_apply", lambda: pytest.fail("restarted under running work"))
+    response = client.post("/models/general/promote", json={"version": QWEN})
+    assert response.status_code == 409 and response.json()["error_code"] == "MODEL_SWITCH_BUSY"
+    assert client.post("/models/general/revert").status_code == 409
+    assert not choice_file.exists()

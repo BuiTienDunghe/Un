@@ -12,6 +12,8 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
 ## [Unreleased]
 
 ### Fixed
+- **Tài liệu không còn kẹt khi khởi động lại** (ticket 40). Lần lập chỉ mục bị cắt ngang tự chạy tiếp, giữ nguyên các trang đã đọc. Không đổi được model trong lúc đang đọc hoặc lập chỉ mục tài liệu.
+- **OCR không chép lại trang đã có sẵn chữ** (ticket 40). 13 trang của một bài báo từng tốn 5 phút GPU; giờ chỉ trang là ảnh mới dùng model, và có ô để ép đọc mọi trang khi cần thử chất lượng.
 - **Nút đổi model** (ticket 39). Trình duyệt giữ màn hình cũ nhiều ngày nên nút mới không hiện; màn hình giờ luôn kiểm với máy chủ trước khi dùng lại. Chọn xong, phần trả lời tự khởi động lại trên model đã chọn, không phải đóng mở cửa sổ.
 - **Ún biết giờ cả khi không bật công cụ** (ticket 39). Lượt chat thường trước đây trả lời là không biết ngày.
 

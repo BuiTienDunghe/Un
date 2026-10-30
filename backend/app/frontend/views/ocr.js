@@ -76,6 +76,7 @@
   /* ── trạng thái sống qua các lần mount ───────────────────────── */
   const S = {
     dpi: 200,            // lựa chọn DPI trong phiên (trang cũ không lưu gì)
+    forceOcr: false,     // đọc bằng model cả trang đã có sẵn chữ, để thử chất lượng OCR
     file: null,          // tệp đang chọn
     model: null,         // {name, enabled} của models.ocr
     runs: [],            // lịch sử đã tải lần gần nhất
@@ -734,7 +735,7 @@
       }
       budget -= text.length;
       const duration = page.duration_seconds == null ? NaN : Number(page.duration_seconds);
-      const meta = [Number.isFinite(duration) ? fmtDuration(duration * 1000) : null, page.cache_hit ? "lấy từ bộ nhớ đệm" : null]
+      const meta = [page.extraction_method === "native" ? "chữ có sẵn, không dùng model" : (Number.isFinite(duration) ? fmtDuration(duration * 1000) : null), page.cache_hit ? "lấy từ bộ nhớ đệm" : null]
         .filter(Boolean).join(" · ");
       blocks.push(h("div", { class: "ocr-page" },
         h("div", { class: "ocr-page-head" },
@@ -858,7 +859,7 @@
       body.append("file", file, file.name);
       // KHÔNG gắn ctx.signal: rời màn hình giữa chừng mà máy chủ đã nhận tệp thì job
       // vẫn chạy — hủy request chỉ làm mất id, và lần sau người dùng chỉ thấy "bị từ chối".
-      const job = await Shell.api(`/api/ocr/jobs?dpi=${enc(dpi)}`, { method: "POST", body });
+      const job = await Shell.api(`/api/ocr/jobs?dpi=${enc(dpi)}${S.forceOcr ? "&force_ocr=true" : ""}`, { method: "POST", body });
       if (job && job.id && isActive(job)) S.lastActive = job.id;   // giữ lối quay lại, kể cả khi đã rời màn hình
       if (!alive(ctx)) return;
       if (job && job.id) {
@@ -1097,6 +1098,9 @@
       h("h2", { class: "card-title" }, "Chạy OCR mới"),
       zone, fileInput,
       h("div", { class: "ocr-dpi" }, h("span", { class: "ocr-dpi-label" }, "DPI"), dpiSeg, model),
+      h("label", { class: "ocr-force", title: "Trang đã có sẵn chữ thường được lấy nguyên, không tốn GPU. Bật để đọc mọi trang bằng model, ví dụ khi thử chất lượng OCR." },
+        h("input", { type: "checkbox", checked: S.forceOcr, onChange: (event) => { S.forceOcr = event.currentTarget.checked; } }),
+        "Đọc mọi trang bằng model, kể cả trang có sẵn chữ"),
       start, hint, msg);
 
     const jobBody = h("div", { class: "ocr-job-body" });

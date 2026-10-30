@@ -15,8 +15,8 @@ def _job(request: Request, job_id: str):
     except KeyError as error: raise HTTPException(404, detail={"error_code":"OCR_JOB_NOT_FOUND", "message":"OCR job was not found"}) from error
 
 @router.post("/jobs", status_code=201, dependencies=[Depends(require_api_key)])
-async def create_job(request: Request, file: UploadFile = File(...), dpi: int = 200, page_range: str | None = None, output_format: str = "all"):
-    try: return await request.app.state.ocr_job_service.create(file, dpi, page_range, output_format)
+async def create_job(request: Request, file: UploadFile = File(...), dpi: int = 200, page_range: str | None = None, output_format: str = "all", force_ocr: bool = False):
+    try: return await request.app.state.ocr_job_service.create(file, dpi, page_range, output_format, force_ocr)
     except ValueError as error: raise HTTPException(422, detail={"error_code":"INVALID_OCR_INPUT", "message":str(error)}) from error
 
 @router.get("/jobs/{job_id}")

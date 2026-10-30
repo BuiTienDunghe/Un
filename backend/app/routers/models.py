@@ -1,3 +1,4 @@
+import os
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -60,6 +61,15 @@ def _switchable(role: str, request: Request) -> None:
         raise HTTPException(status_code=409, detail={"error_code": "MODEL_ROLE_NOT_SWITCHABLE", "message": "Vai trò này chưa đổi được từ giao diện."})
 
 
+def _refuse_while_busy(request: Request) -> None:
+    """The pick restarts the API, which would cut these off. Chat is warned about on the screen."""
+    if os.environ.get(model_choice.SUPERVISED_ENV) != "1":
+        return
+    state = request.app.state
+    if state.ocr_job_service._active or state.document_service.indexing_in_progress():
+        raise HTTPException(status_code=409, detail={"error_code": "MODEL_SWITCH_BUSY", "message": "Đang đọc hoặc lập chỉ mục tài liệu. Đợi xong rồi đổi model."})
+
+
 def _applied(request: Request, role: str) -> dict[str, Any]:
     row = _registry_view(request)[role]
     row["restarting"] = row["chosen"] != row["loaded"] and model_choice.restart_to_apply()
@@ -84,6 +94,7 @@ def promote(role: str, payload: PromoteRequest, request: Request) -> dict[str, A
     entry = request.app.state.model_registry.registry.roles[role]
     if payload.version not in (record.id for record in entry.versions):
         raise HTTPException(status_code=404, detail={"error_code": "MODEL_VERSION_NOT_FOUND", "message": f"Unknown version {payload.version}"})
+    _refuse_while_busy(request)
     # Picking the registry's own `active` is no pick at all: the machine follows the file again.
     model_choice.save_choice(model_choice.CHOICE_PATH, role, None if payload.version == entry.active else payload.version)
     return _applied(request, role)
@@ -92,5 +103,6 @@ def promote(role: str, payload: PromoteRequest, request: Request) -> dict[str, A
 @router.post("/models/{role}/revert", dependencies=_GUARDS)
 def revert(role: str, request: Request) -> dict[str, Any]:
     _switchable(role, request)
+    _refuse_while_busy(request)
     model_choice.save_choice(model_choice.CHOICE_PATH, role, None)
     return _applied(request, role)
