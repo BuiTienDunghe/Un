@@ -565,7 +565,10 @@ class DiscordTurnService:
             base_instruction = speaker_context.system_instruction
         # Ticket 36: what a person approved from decided's suggestions. Its own short read.
         if self.message_labels is not None:
-            memory_lines = "\n".join(line for line in (memory_lines, *self.message_labels.memory_lines(guild_id)) if line)
+            try:
+                memory_lines = "\n".join(line for line in (memory_lines, *self.message_labels.memory_lines(guild_id)) if line)
+            except Exception:
+                logger.warning("approved labels unavailable; answering without them")
 
         # Tier 3 read path (§9.4 — the section that refused to let tier 3 ship
         # write-only). Its own short transaction, outside the one above, and

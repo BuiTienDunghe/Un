@@ -7,6 +7,7 @@ in the first trial. Binds to loopback only.
 """
 from __future__ import annotations
 
+import gc
 import json
 import os
 import sys
@@ -65,6 +66,7 @@ def _unload_when_idle() -> None:
             if _loaded and time.monotonic() - _last_used > IDLE_SECONDS:
                 torch = _loaded["torch"]
                 _loaded.clear()
+                gc.collect()
                 torch.cuda.empty_cache()
                 print("decided: unloaded after idle", flush=True)
 
@@ -73,6 +75,8 @@ def classify(text: str) -> dict:
     global _last_used
     with _lock:
         state = _load()
+        # Before the work, so a failure just after a slow load does not unload at once.
+        _last_used = time.monotonic()
         torch = state["torch"]
         totals = {key: 0.0 for key in KEYS}
         picks = []

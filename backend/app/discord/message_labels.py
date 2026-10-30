@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import sessionmaker
 
 from app.postgres.models import DiscordChannelMessage, DiscordMessageLabel
@@ -21,6 +21,9 @@ LABELS = ("fact", "decision", "joke", "ignore")
 SURE_IGNORE = 0.8
 BATCH = 20
 MIN_TEXT_CHARS = 2
+MEMORY_LINE_CHARS = 400
+# What a person approved is that text: an edit made afterwards needs reviewing again.
+_UNCHANGED = or_(DiscordChannelMessage.edited_at.is_(None), DiscordChannelMessage.edited_at <= DiscordMessageLabel.reviewed_at)
 
 
 class LabelNotFoundError(LookupError):
@@ -75,10 +78,12 @@ class MessageLabelService:
             ]
 
     def pending(self, limit: int = 50, offset: int = 0) -> list[dict[str, object]]:
-        return self._rows(DiscordMessageLabel.status == "pending", limit=limit, offset=offset)
+        edited = DiscordMessageLabel.status == "approved", ~_UNCHANGED
+        rows = self._rows(or_(DiscordMessageLabel.status == "pending", and_(*edited)), limit=limit, offset=offset)
+        return [{**row, "status": "pending"} for row in rows]
 
     def approved(self, guild_id: str | None = None, labels: tuple[str, ...] = LABELS, limit: int = 50) -> list[dict[str, object]]:
-        conditions = [DiscordMessageLabel.status == "approved", DiscordMessageLabel.final_label.in_(labels)]
+        conditions = [DiscordMessageLabel.status == "approved", DiscordMessageLabel.final_label.in_(labels), _UNCHANGED]
         if guild_id is not None:
             conditions.append(DiscordMessageLabel.guild_id == guild_id)
         return self._rows(*conditions, limit=limit)
@@ -114,5 +119,7 @@ class MessageLabelService:
         lines = []
         for row in self.approved(guild_id, ("fact", "decision"), limit):
             about = f"về author_id={row['author_id']}" if row["final_label"] == "fact" else "quyết định chung"
-            lines.append(f"- [đã duyệt | {about}] {row['text']}")
+            # On one line and clipped: a message cannot forge a second approved line in the block.
+            text = " ".join(str(row["text"]).split())[:MEMORY_LINE_CHARS]
+            lines.append(f"- [đã duyệt | {about}] {text}")
         return lines

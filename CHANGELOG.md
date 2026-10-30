@@ -18,7 +18,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   "không có chữ" của model không còn bị nạp thành nội dung trang.
 
 ### Added
-- **Thử model decided phân loại tin nhắn** (ticket 36, 30/10). Bật bằng `DECIDED_URL`. Mỗi tin của người trong kênh đang nghe được decided 2b đề xuất một ngăn: sự thật,
+- **Thử model decided phân loại tin nhắn** (ticket 36, 30/10). `DECIDED_URL` bật việc phân loại; màn hình duyệt và `search_jokes` luôn có. Mỗi tin của người trong kênh đang nghe được decided 2b đề xuất một ngăn: sự thật,
   quyết định, câu đùa, bỏ qua. Mọi đề xuất chờ người duyệt ở màn hình Duyệt phân loại, trừ câu bỏ qua mà decided chắc từ 0,8; không có gì tự vào trí nhớ. Điều đã duyệt vào khối
   trí nhớ của lượt Discord; câu đùa nằm kho riêng, Ún chỉ đọc qua công cụ `search_jokes`. Chạy trên máy, tự trả GPU sau 5 phút rảnh.
 - **Ún ghi nhớ khi được dặn** (ticket 35, 30/10). Công cụ `remember` lưu một điều về người đang nói, chỉ khi chính tin nhắn của họ có lời dặn nhớ và điều đó

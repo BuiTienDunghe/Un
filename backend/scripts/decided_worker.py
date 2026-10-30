@@ -8,6 +8,7 @@ import argparse
 import time
 
 import httpx
+from sqlalchemy.exc import IntegrityError
 
 from app.config.settings import get_settings
 from app.discord.message_labels import MIN_TEXT_CHARS, MessageLabelService
@@ -25,8 +26,15 @@ def run_once(service: MessageLabelService, url: str, client: httpx.Client) -> in
             service.record(message_id, guild_id, {"label": "ignore", "confidence": 1.0, "stable": True, "probs": {}, "model": "too-short"})
             continue
         response = client.post(f"{url.rstrip('/')}/classify", json={"text": text})
-        response.raise_for_status()
-        service.record(message_id, guild_id, response.json())
+        try:
+            response.raise_for_status()
+            service.record(message_id, guild_id, response.json())
+        except (httpx.HTTPStatusError, ValueError, KeyError, TypeError) as error:
+            # This one message cannot be labelled: a person sees it at 0%, and the queue behind it moves.
+            print({"worker": "decided", "status": "unlabelled", "reason": type(error).__name__}, flush=True)
+            service.record(message_id, guild_id, {"label": "fact", "confidence": 0.0, "stable": False, "probs": {}, "model": "failed"})
+        except IntegrityError:
+            pass  # Another worker labelled it first.
         done += 1
     return done
 
