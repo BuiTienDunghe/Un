@@ -12,6 +12,7 @@ from __future__ import annotations
 import ipaddress
 import re
 import socket
+import time
 from html.parser import HTMLParser
 from typing import Any
 from urllib.parse import parse_qs, urljoin, urlsplit
@@ -25,6 +26,8 @@ SEARCH_ORDER, READ_ORDER = 60, 65
 SEARCH_URL = "https://html.duckduckgo.com/html/"
 USER_AGENT = "Mozilla/5.0 (compatible; Un-local-agent/1.0)"
 TIMEOUT_SECONDS = 10.0
+# httpx's timeout is per read: a server sending a byte every 9 s would never trip it.
+PAGE_DEADLINE_SECONDS = 20.0
 MAX_BYTES = 2_000_000
 MAX_REDIRECTS = 3
 SNIPPET_CHARS = 300
@@ -160,6 +163,7 @@ def public_address(url: str) -> bool:
 def fetch_page(url: str) -> tuple[str, str]:
     """(final url, html). ValueError says, for the model, why the page cannot be read."""
     current = url
+    deadline = time.monotonic() + PAGE_DEADLINE_SECONDS
     with httpx.Client(timeout=TIMEOUT_SECONDS, follow_redirects=False, headers={"User-Agent": USER_AGENT}) as client:
         for _ in range(MAX_REDIRECTS + 1):
             if not public_address(current):
@@ -178,6 +182,8 @@ def fetch_page(url: str) -> tuple[str, str]:
                     body.extend(chunk)
                     if len(body) >= MAX_BYTES:
                         break
+                    if time.monotonic() > deadline:
+                        raise ValueError("Trang tải quá chậm nên không đọc được.")
                 return current, bytes(body[:MAX_BYTES]).decode(response.encoding or "utf-8", errors="replace")
     raise ValueError("Trang chuyển hướng quá nhiều lần.")
 

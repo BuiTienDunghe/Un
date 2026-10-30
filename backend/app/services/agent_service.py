@@ -185,6 +185,9 @@ TOOL_CALL_RETRY = (
 ANSWER_CHECK = True
 ANSWER_CHECK_STEP = "answer_check"
 UNSUPPORTED_FIGURES = "UNSUPPORTED_FIGURES"
+# Where the bot's description of an attached image starts in a message: what follows is not
+# the speaker's own writing, so a URL in it is not one the speaker asked to open (ticket 35).
+IMAGE_NOTE = "\n\n[Ảnh đính kèm"
 # What a watching client is told while a turn runs (ticket 20 #4). A tool brings its own
 # label (AgentTool.label); TOOL_LABEL stands in for one without, or a name never declared.
 THINKING_LABEL = "Đang suy nghĩ…"
@@ -362,7 +365,7 @@ class AgentService:
             **(tool_context or {}),
             "readable_documents": set((tool_context or {}).get("readable_documents") or ()) | set(pastes),
             # What read_webpage may open: a URL the speaker wrote, and what web_search adds.
-            "web_urls": {url.rstrip(".,;:!?)]}") for message in working[-1:] if message.get("role") == "user" for url in re.findall(r"https?://\S+", str(message.get("content") or ""))},
+            "web_urls": {url.rstrip(".,;:!?)]}") for message in working[-1:] if message.get("role") == "user" for url in re.findall(r"https?://\S+", str(message.get("content") or "").split(IMAGE_NOTE, 1)[0])},
             "pastes": pastes,
         }
 

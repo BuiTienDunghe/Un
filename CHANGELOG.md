@@ -19,7 +19,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ### Added
 - **Ún ghi nhớ khi được dặn** (ticket 35, 30/10). Công cụ `remember` lưu một điều về người đang nói, chỉ khi chính tin nhắn của họ có lời dặn nhớ và điều đó
-  dùng lời, số của họ, nên nội dung trong ảnh, tài liệu hay trang web không tự ghi được. Đi qua đường duyệt sẵn có: màn hình Ghi nhớ thấy và hoàn tác được. Chỉ ở Discord.
+  dùng lời, số của họ, nên nội dung trong ảnh, tài liệu hay trang web không tự ghi được. Ghi ngay, không chờ người duyệt; màn hình Ghi nhớ thấy và hoàn tác được. Chỉ ở Discord, ở server trong danh sách công cụ.
 - **Ún tra được web** (ticket 35, 30/10, mặc định tắt, `AGENT_WEB_TOOLS_ENABLED=true` để bật). `web_search` qua DuckDuckGo, không cần khoá, và `read_webpage`, chỉ mở
   được url vừa tìm thấy hoặc người dùng tự viết, và chỉ địa chỉ công khai. Câu tìm kiếm rời khỏi máy. Bài đánh giá không thấy hai công cụ này.
 - **Ún tính toán chính xác** (ticket 34, 30/10). Công cụ `calculate` tính biểu thức số học bằng số thập phân chính xác, chỉ nhận số và phép toán, không chạy
