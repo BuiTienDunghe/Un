@@ -630,12 +630,14 @@ class ProductionProbes:
     def ollama_ocr_stops(self, model: str, prompt: str, **options: Any) -> bool | None:
         """A present tag is not a working OCR model: glm-ocr:latest kept its tag through the
         Ollama 0.34.x update and then looped on every page. keep_alive 0 so the probe does
-        not hold 2.2 GB of VRAM beside the general model."""
+        not hold 2.2 GB of VRAM beside the general model; a version sharing general's tag passes
+        its keep_alive and num_ctx instead, so the probe leaves the resident model loaded."""
         import base64
 
         import fitz
         import httpx
 
+        num_ctx = options.pop("num_ctx", None)
         document = fitz.open()
         try:
             page = document.new_page(width=360, height=48)
@@ -647,7 +649,7 @@ class ProductionProbes:
             response = httpx.post(
                 f"{self._settings.ollama_base_url.rstrip('/')}/api/chat",
                 json={"model": model, "stream": False, "keep_alive": "0s", **options,
-                      "options": {"temperature": 0, "num_predict": OCR_PROBE_MAX_TOKENS},
+                      "options": {"temperature": 0, "num_predict": OCR_PROBE_MAX_TOKENS, **({"num_ctx": num_ctx} if num_ctx else {})},
                       "messages": [{"role": "user", "content": prompt, "images": [base64.b64encode(png).decode("ascii")]}]},
                 timeout=OCR_PROBE_TIMEOUT_SECONDS,
             )
@@ -1039,7 +1041,9 @@ class _Walker:
         elapsed = lambda: int((perf_counter() - started) * 1000)  # noqa: E731
         assert self.probes is not None
         # A model that thinks first would spend the probe's few tokens before it reads a thing.
-        options = {"think": candidate.config["think"]} if isinstance(candidate.config.get("think"), bool) else {}
+        options: dict[str, Any] = {}
+        if isinstance(candidate.config.get("think"), bool):
+            options = {"think": candidate.config["think"], "keep_alive": candidate.config.get("keep_alive", "5m"), "num_ctx": candidate.config.get("context")}
         stops = self.probes.ollama_ocr_stops(str(candidate.config["name"]), str(candidate.config.get("prompt", "Text Recognition:")), **options)
         if stops is None:
             return "unverified", ProbeOutcome("ocr_stop", None, "probe OCR did not answer", elapsed()), f"{candidate.id}: probe OCR did not answer; pointer kept"

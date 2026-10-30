@@ -16,7 +16,10 @@ from app.stores.auxiliary_store import AuxiliaryStore
 
 # Measured on pages with no text: glm-ocr answers "markdown", Qwen a sentence saying so. Neither
 # is the page's content, and either would be indexed as if it were.
-NO_TEXT_ANSWER = re.compile(r"^(?:markdown|(?:trong )?(?:ảnh|hình)?[^.\n]{0,30}không có (?:chữ|văn bản)[^\n]{0,60})\W*$", re.IGNORECASE)
+NO_TEXT_ANSWER = re.compile(
+    r"markdown|(?:trong (?:ảnh|hình)(?: này)? )?không có (?:chữ|văn bản)(?: nào)?(?: trong (?:ảnh|hình)(?: này)?(?:[,;:][^\n]{0,120})?)?\W*",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)

@@ -772,7 +772,9 @@ def create_bot(
         if message.author.bot or bot.user is None or not bot.user.mentioned_in(message):
             return
         question = message.content.replace(f"<@{bot.user.id}>", "").replace(f"<@!{bot.user.id}>", "").strip()
-        question = await question_with_images(api_client, message, question, docs_guild_allowlist)
+        if message.attachments:
+            async with message.channel.typing():
+                question = await question_with_images(api_client, message, question, docs_guild_allowlist)
         if not question:
             await message.reply("Hãy gắn kèm câu hỏi sau @Ún.", mention_author=False)
             return

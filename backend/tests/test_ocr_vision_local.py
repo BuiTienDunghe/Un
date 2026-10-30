@@ -45,16 +45,21 @@ def test_vision_refuses_when_nothing_serves() -> None:
         ModelRouter({"ollama": FakeOllama()}, {}).vision("Gì đây?", PNG)
 
 
-@pytest.mark.parametrize("answer", ["markdown", "Không có chữ nào trong hình này.", "Trong ảnh không có chữ.", "Không có văn bản."])
+@pytest.mark.parametrize("answer", ["markdown", "Không có chữ nào trong hình này.", "Trong ảnh không có chữ.", "Không có văn bản.", "Không có chữ nào trong ảnh, chỉ có một biểu đồ cột."])
 def test_a_page_with_no_text_indexes_nothing(answer) -> None:
     config = {"provider": "ollama", "name": "qwen3.5:9b", "enabled": True}
     service = OCRService(ModelRouter({"ollama": FakeOllama(answer)}, {"ocr": config}))
     assert service.recognize_png(b"png", 200).text == ""
 
 
-def test_real_text_that_mentions_no_text_is_kept() -> None:
+@pytest.mark.parametrize("page", [
+    "Điều 3. Hợp đồng không có chữ ký của hai bên thì không có giá trị pháp lý và phải lập lại bằng văn bản mới.",
+    "Hợp đồng không có chữ ký thì vô hiệu.",
+    "Mục 2: không có văn bản",
+    "Tôi không có chữ in hoa",
+])
+def test_real_text_that_mentions_no_text_is_kept(page) -> None:
     config = {"provider": "ollama", "name": "qwen3.5:9b", "enabled": True}
-    page = "Điều 3. Hợp đồng không có chữ ký của hai bên thì không có giá trị pháp lý và phải lập lại bằng văn bản mới."
     assert OCRService(ModelRouter({"ollama": FakeOllama(page)}, {"ocr": config})).recognize_png(b"png", 200).text == page
 
 

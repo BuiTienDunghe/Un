@@ -24,8 +24,8 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   kèm, chỉ ở server trong `DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST`. Chưa thử trên Discord thật.
 - **Đổi model trả lời ngay trên màn hình Model** (ticket 31, 30/10). Nút "Đổi model" và "Về mặc định" ở thẻ "Trò chuyện & RAG" trước đây
   chỉ báo máy chủ chưa hỗ trợ; giờ chọn được Qwen hoặc Haiku, có hiệu lực sau khi khởi động lại backend. Lựa chọn chỉ áp dụng cho máy
-  này (`data/model_choice.env`, launcher đọc khi khởi động); bài đánh giá vẫn chấm bản mặc định. Vai trò khác vẫn chưa đổi được từ
-  giao diện. "Kiểm tra registry" cũng chạy thật (`GET /models/check`).
+  này (`data/model_choice.env`, launcher đọc khi khởi động); bài đánh giá vẫn chấm bản mặc định. OCR và vision đổi được cùng cách; các vai
+  trò khác chưa đổi được từ giao diện. "Kiểm tra registry" cũng chạy thật (`GET /models/check`).
 - **Ún xem được ngày giờ** (ticket 32, 30/10). Công cụ `current_time` trả ngày, thứ và giờ Việt Nam. Như mọi công cụ khác, nó chỉ có ở
   server trong danh sách công cụ; server khác rơi về chat thường và vẫn không biết giờ.
 
