@@ -85,6 +85,16 @@ if errorlevel 1 (
     )
 )
 
+REM The model picked on the web UI's Model screen (data/model_choice.env, this machine
+REM only). Loaded into this window, so every process started below inherits the pin, and
+REM the evals, which never start through this launcher, keep grading the registry's active.
+if exist "data\model_choice.env" (
+    for /f "usebackq tokens=1,* delims==" %%A in ("data\model_choice.env") do (
+        set "%%A=%%B"
+        echo [MODEL] %%A=%%B ^(chosen on the Model screen^)
+    )
+)
+
 echo [START] Starting PostgreSQL, Qdrant and Redis...
 docker compose --profile postgres up -d
 if errorlevel 1 (

@@ -18,8 +18,9 @@
    reason, 8 vai trò) và §7 (/health.ollama, model_fallback); spec F6
    (POST /models/{role}/promote {version}, POST /models/{role}/revert,
    GET /models/check). Hành vi cũ: old-chat 107, old-secondary 64-66.
-   Promote/Revert CHỈ đổi con trỏ trong model_versions.yaml — máy chủ vẫn chạy
-   bản cũ tới khi khởi động lại, mọi lời trong UI phải nói đúng như vậy.
+   Đổi model CHỈ ghi lựa chọn của máy này (data/model_choice.env), không đụng
+   model_versions.yaml — máy chủ vẫn chạy bản cũ tới khi khởi động lại, mọi lời
+   trong UI phải nói đúng như vậy. Chỉ vai trò có `switchable` mới có nút đổi.
    Gọi mạng: chỉ Shell.api. V là DOM + dữ liệu của lần mount đang sống, null khi
    đã rời view — mọi việc bất đồng bộ kiểm tra live(v) trước khi vẽ.
    ══════════════════════════════════════════════════════════════════ */
@@ -150,6 +151,7 @@
         const kind = str(item && item.status) || "candidate";
         return {
           role, fromServer: true, id,
+          cloud: Boolean(item && item.cloud),
           name: versionName(id === active ? role : null, row, str(item && item.name)),
           // Máy chủ nói "serving" cho bản đang chạy dù vai trò lành hay hỏng: warn chỉ khi hỏng.
           kind: kind === "serving" && !warnRole ? "serving_ok" : kind,
@@ -243,7 +245,7 @@
       // Con trỏ đến từ MODEL_VERSION_<ROLE> / tag env chứ không phải tệp registry.
       const source = str(row.source);
       if (source && source !== "registry") {
-        add(role, `Con trỏ đến từ biến môi trường (source: ${source}), không phải model_versions.yaml.`, "muted");
+        add(role, `Máy này đang dùng bản chọn riêng (source: ${source}), không phải bản mặc định trong model_versions.yaml.`, "muted");
       }
     }
     return notes;
@@ -311,21 +313,22 @@
     /* Ứng viên = mọi version không phải con trỏ active hiện tại. Nút Promote vẫn bấm được khi
        danh sách rỗng (lead chốt: chỉ khóa khi KHÔNG BIẾT vai trò có phiên bản nào) — cú bấm
        mở menu nói "Không còn phiên bản nào khác", hoặc câu "máy chủ chưa hỗ trợ" khi chưa có F6. */
-    const activeIds = new Set(rows.map(({ row }) => str(row.active)).filter(Boolean));
+    const activeIds = new Set(rows.map(({ row }) => str(row.chosen) || str(row.active)).filter(Boolean));
+    const switchable = rows.some(({ row }) => row.switchable === true);
     const candidates = versions.filter((item) => !activeIds.has(item.id));
     // Máy chủ chưa có F6+: các dòng version là do UI suy ra, không phải danh sách thật — nói rõ ở tooltip.
     const derived = !hasServerList ? "Danh sách dưới đây do UI suy ra: GET /models chưa trả registry.versions. " : "";
-    const promoteBtn = admin ? h("button", {
+    const promoteBtn = admin && switchable ? h("button", {
       type: "button", class: "btn btn-30 btn-outline", disabled: noVersions,
       title: noVersions ? "Máy chủ không cho biết vai trò này có phiên bản nào"
-        : `${derived}Đổi con trỏ active trong model_versions.yaml`,
+        : `${derived}Chọn model khác cho máy này`,
       onClick: (event) => promote(v, spec, candidates, hasServerList, event.currentTarget),
-    }, "Promote") : null;
-    const revertBtn = admin ? h("button", {
+    }, "Đổi model") : null;
+    const revertBtn = admin && switchable ? h("button", {
       type: "button", class: "btn btn-30 btn-outline", disabled: noVersions,
-      title: noVersions ? "Máy chủ không cho biết vai trò này có phiên bản nào" : `${derived}Quay lại con trỏ active trước đó`,
+      title: noVersions ? "Máy chủ không cho biết vai trò này có phiên bản nào" : `${derived}Bỏ lựa chọn riêng, dùng lại bản mặc định`,
       onClick: (event) => revert(v, rows, event.currentTarget),
-    }, "Revert") : null;
+    }, "Về mặc định") : null;
     const detailBtn = h("button", {
       type: "button", class: "btn btn-30 btn-ghost-accent",
       onClick: () => detailDialog(v, spec, rows),
@@ -367,9 +370,9 @@
   async function confirmPromote(v, item) {
     if (!live(v)) return;
     const ok = await confirmDialog({
-      title: `Đặt ${item.id} làm active?`,
-      body: `Vai trò ${item.role}. Con trỏ active trong model_versions.yaml đổi sang ${item.id}; backend vẫn chạy bản hiện tại cho tới khi khởi động lại.`,
-      confirmLabel: "Đặt làm active", tone: "accent", icon: "check-circle", signal: v.ctx.signal,
+      title: `Dùng ${item.name || item.id}?`,
+      body: `Chỉ áp dụng cho máy này. Backend vẫn chạy bản hiện tại cho tới khi khởi động lại.${item.cloud ? " Bản này chạy trên máy chủ của nhà cung cấp: câu hỏi, lịch sử chat và tài liệu sẽ rời khỏi máy, và tính phí theo lượt dùng." : ""}`,
+      confirmLabel: "Dùng bản này", tone: "accent", icon: "check-circle", signal: v.ctx.signal,
     });
     if (!ok || !live(v)) return;
     try {
@@ -384,7 +387,7 @@
       toast(isMissingApi(error) ? MISSING_SWITCH : errText(error, "Không đổi được phiên bản."), "danger");
       return;
     }
-    toast(`Đã đặt ${item.id} làm active — có hiệu lực sau khi khởi động lại backend.`);
+    toast(`Đã chọn ${item.name || item.id} — có hiệu lực sau khi khởi động lại backend.`);
     load(v, { focusRole: item.role });
   }
 
@@ -399,9 +402,9 @@
   async function confirmRevert(v, role) {
     if (!live(v)) return;
     const ok = await confirmDialog({
-      title: `Quay lại phiên bản trước của ${role}?`,
-      body: "Con trỏ active trở về giá trị trước đó trong model_versions.yaml; backend vẫn chạy bản hiện tại cho tới khi khởi động lại.",
-      confirmLabel: "Quay lại", tone: "warn", icon: "retry", signal: v.ctx.signal,
+      title: "Dùng lại bản mặc định?",
+      body: "Bỏ lựa chọn riêng của máy này. Backend vẫn chạy bản hiện tại cho tới khi khởi động lại.",
+      confirmLabel: "Về mặc định", tone: "warn", icon: "retry", signal: v.ctx.signal,
     });
     if (!ok || !live(v)) return;
     try {
@@ -411,7 +414,7 @@
       toast(isMissingApi(error) ? MISSING_SWITCH : errText(error, "Không quay lại được phiên bản trước."), "danger");
       return;
     }
-    toast(`Đã trả con trỏ active của ${role} về bản trước — có hiệu lực sau khi khởi động lại backend.`);
+    toast("Đã chọn lại bản mặc định — có hiệu lực sau khi khởi động lại backend.");
     load(v, { focusRole: role });
   }
 

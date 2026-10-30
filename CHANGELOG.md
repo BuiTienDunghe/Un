@@ -11,6 +11,12 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+### Added
+- **Đổi model trả lời ngay trên màn hình Model** (ticket 31, 30/10). Nút "Đổi model" và "Về mặc định" ở thẻ "Trò chuyện & RAG" trước đây
+  chỉ báo máy chủ chưa hỗ trợ; giờ chọn được Qwen hoặc Haiku, có hiệu lực sau khi khởi động lại backend. Lựa chọn chỉ áp dụng cho máy
+  này (`data/model_choice.env`, launcher đọc khi khởi động); bài đánh giá vẫn chấm bản mặc định. Vai trò khác vẫn chưa đổi được từ
+  giao diện. "Kiểm tra registry" cũng chạy thật (`GET /models/check`).
+
 ### Security
 - **`/docs` của bot kiểm server** (ticket 30, 30/10). Trước đây ai ở server nào có bot cũng đọc được mọi tài liệu qua `/docs` và
   thấy tên tệp khi gõ. Giờ lệnh chỉ chạy ở server có trong `DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST` (`*` là mọi server); server khác
