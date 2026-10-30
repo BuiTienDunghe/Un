@@ -13,7 +13,7 @@ to change models deliberately (a fine-tuned reranker, a distilled extractor, pos
 new embedding model), and each change must be measurable, reversible and safe to ship
 while the old version keeps serving.
 
-`docs/d4_design.md` §5 had rejected a prompt registry as "a registry nobody writes to".
+`docs/history.md#d4_design` §5 had rejected a prompt registry as "a registry nobody writes to".
 That objection is the constraint here, not an argument against.
 
 ## Decision

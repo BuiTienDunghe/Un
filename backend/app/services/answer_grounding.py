@@ -18,7 +18,7 @@ What it is and is not:
   ``retrieval_context`` (P4-2), which is index-only text the user cannot see.
 
 Only reporting happens here. Blocking or rewriting an answer is a product
-decision that needs the heavy-machine measurement first (docs/d3a_answer_grounding.md).
+decision that needs the heavy-machine measurement first (docs/history.md#d3a_answer_grounding).
 """
 from __future__ import annotations
 

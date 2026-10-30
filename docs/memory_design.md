@@ -330,7 +330,7 @@ Câu hỏi *"tôi nói câu ... khi nào"* là **tra cứu gần-nguyên-văn** 
 
 ### 6.2. Vì sao vẫn không trộn vào kho `documents` ✅
 
-> ⚠️ **Đính chính:** bản nháp đầu nói *"đường chuẩn RAG (recall@5 = 0,9878) đo trên kho đó"*. **Sai** — nó đo trên **corpus lab** (`DEVELOPMENT_PLAN.md:481` "trên corpus lab (đúng luật §3d)"; `nightly_eval.py:37-38` ghi cứng `LAB_DB` và `documents_lab`). Gate **không bao giờ đọc** `documents`, nên trộn vào **không phá được đường chuẩn**.
+> ⚠️ **Đính chính:** bản nháp đầu nói *"đường chuẩn RAG (recall@5 = 0,9878) đo trên kho đó"*. **Sai** — nó đo trên **corpus lab** (`docs/history.md#DEVELOPMENT_PLAN:481` "trên corpus lab (đúng luật §3d)"; `nightly_eval.py:37-38` ghi cứng `LAB_DB` và `documents_lab`). Gate **không bao giờ đọc** `documents`, nên trộn vào **không phá được đường chuẩn**.
 
 Lý do thật để không trộn là **§6.1**: service giả định một kho, và trộn tin nhắn vào chỉ mục tài liệu làm hỏng chính việc tìm tài liệu.
 
@@ -338,7 +338,7 @@ Lý do thật để không trộn là **§6.1**: service giả định một kho
 
 `postgres_bm25_service.py:14,112,144` dùng `tokenize_vietnamese` — đúng, và tin nhắn nên dùng cùng tokenizer.
 
-> ⚠️ **Đính chính:** bản nháp đầu viết *"bản pyvi được ghim và canh bằng băm SHA-256 (việc T16)"* như một sự bảo đảm. **Dự án đã tự bác điều đó**: `DEVELOPMENT_PLAN.md:195` — *"**nhưng cái ghim đo ra là vô hiệu** (pyvi 0.1.1 là bản duy nhất từ 2021)"*, và `:237` — *"Vì sao cái ghim không ghim được gì"*. Băm SHA-256 chỉ tồn tại **trong test** (`backend/tests/test_vi_tokenizer.py`); lúc chạy thật chỉ có `TOKENIZER_VERSION` — một chuỗi để ghi log, **không so với gì cả**.
+> ⚠️ **Đính chính:** bản nháp đầu viết *"bản pyvi được ghim và canh bằng băm SHA-256 (việc T16)"* như một sự bảo đảm. **Dự án đã tự bác điều đó**: `docs/history.md#DEVELOPMENT_PLAN:195` — *"**nhưng cái ghim đo ra là vô hiệu** (pyvi 0.1.1 là bản duy nhất từ 2021)"*, và `:237` — *"Vì sao cái ghim không ghim được gì"*. Băm SHA-256 chỉ tồn tại **trong test** (`backend/tests/test_vi_tokenizer.py`); lúc chạy thật chỉ có `TOKENIZER_VERSION` — một chuỗi để ghi log, **không so với gì cả**.
 >
 > Tôi đã nhận lại một niềm tin mà chính dự án đã rút lại. Đây là lỗi §11.
 
@@ -352,7 +352,7 @@ Lý do thật để không trộn là **§6.1**: service giả định một kho
 
 Ghim lại để sáu tháng nữa còn biết:
 
-> Tuyên ngôn dự án (`docs/DEVELOPMENT_PLAN.md:30`): **"mọi dữ liệu ở trên máy của bạn"**.
+> Tuyên ngôn dự án (`docs/history.md#DEVELOPMENT_PLAN:30`): **"mọi dữ liệu ở trên máy của bạn"**.
 >
 > Quyết định 25/08 (`:505`): chấp nhận **mất sạch dữ liệu khi chết SSD** thay vì đẩy backup lên cloud — lý do ghi đủ là **"(giữ riêng tư + không tốn phần cứng)"**, hai vế ngang nhau.
 >
@@ -563,7 +563,7 @@ Và §5.4 lập luận bật-theo-kênh *"không phải riêng tư"*, trong khi 
 
 ### 9.6. Guard xuyên ngữ
 
-`docs/DEVELOPMENT_PLAN.md:282` đã ghi nợ: *"fact tiếng Anh vs tin Việt bị từ chối oan"*. Cách khắc phục đã ghi ở đó — *"prompt extractor v6 viết fact bằng ngôn ngữ tin gốc"* — chính là điều cần áp cho prompt Gemini. Model mạnh **dễ tự chuẩn hoá sang tiếng Anh** hơn, nên rủi ro này tăng chứ không giảm.
+`docs/history.md#DEVELOPMENT_PLAN:282` đã ghi nợ: *"fact tiếng Anh vs tin Việt bị từ chối oan"*. Cách khắc phục đã ghi ở đó — *"prompt extractor v6 viết fact bằng ngôn ngữ tin gốc"* — chính là điều cần áp cho prompt Gemini. Model mạnh **dễ tự chuẩn hoá sang tiếng Anh** hơn, nên rủi ro này tăng chứ không giảm.
 
 ### 9.7. Hàng chờ duyệt **không thể** chứa mệnh đề tầng 3 — lối thoát không tồn tại ✅
 
@@ -611,7 +611,7 @@ Và §5.4 lập luận bật-theo-kênh *"không phải riêng tư"*, trong khi 
 
 ## 11. Kỷ luật — những chỗ tôi nói sai
 
-Theo tinh thần `docs/DEVELOPMENT_PLAN.md` §7c.
+Theo tinh thần `docs/history.md#DEVELOPMENT_PLAN` §7c.
 
 | Tôi đã nói | Thực tế | Bắt được nhờ |
 |---|---|---|

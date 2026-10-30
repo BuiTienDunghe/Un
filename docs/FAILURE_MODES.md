@@ -33,14 +33,14 @@ is `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1`, whose input window is 512 subwo
 tokens, and `CrossEncoder(model_name)` was constructed without `max_length` — so
 every passage longer than 512 subwords was silently truncated before scoring.
 
-The worked example is chunk 2 of `p3_progress.md`: 778 subword tokens, with all four
+The worked example is chunk 2 of `docs/history.md#p3_progress`: 778 subword tokens, with all four
 answer phrases sitting at tokens **583–743**, entirely behind the cut. The reranker
 scored the first 512 tokens — which are about something else — and concluded that
 chunk 3 (531 tokens) and chunk 4 (385 tokens), both of which fit nearly whole, were
 more relevant.
 
 This was never about two questions. The width of the defect, measured on both
-corpora (`docs/p4_progress.md:568-569`):
+corpora (`docs/history.md#p4_progress:568-569`):
 
 | Corpus | chunks over 512 subwords | median | longest |
 | --- | --- | --- | --- |
@@ -79,7 +79,7 @@ That line went nowhere. `logging_service.py` configured loguru and nothing else 
 
 A human measuring the retrieval stages separately, using the chunk viewer shipped the
 previous day. Isolating each stage on the two failing questions eliminated four
-hypotheses by number (`docs/p4_progress.md:548-553`):
+hypotheses by number (`docs/history.md#p4_progress:548-553`):
 
 | Stage | verdict on the chunk that contains the answer |
 | --- | --- |
@@ -151,7 +151,7 @@ production corpus, far wider than 82 eval questions can sample.
 
 The progress log records this in its own words as *loosening a threshold after seeing
 the numbers — exactly what the P4-4b lesson forbids* — so it cannot become a silent
-precedent (`docs/p4_progress.md:638-640`). It is the one place in this repository
+precedent (`docs/history.md#p4_progress:638-640`). It is the one place in this repository
 where a pre-registered gate was overridden.
 
 ### What now catches it
@@ -268,7 +268,7 @@ The Discord memory extractor proposes facts to write into a member's memory, eac
 carrying a `confidence` field, and auto-apply was gated on `confidence >= 0.8`. The
 19 August benchmark showed the gate was decorative: **every severely wrong proposal**
 from both models — 72 of 72 on `qwen3.5:2b`, 17 of 17 on `qwen3.5:9b` — declared
-`confidence = 1.0` (`docs/p2_progress.md:82-83`).
+`confidence = 1.0` (`docs/history.md#p2_progress:82-83`).
 
 Reading the stored raw outputs directly confirms the mechanism: across the 150-case
 2b run, `confidence` takes only the values `{0.0, 0.9, 1.0}`, and every `0.0` is a
@@ -285,7 +285,7 @@ a number the model writes about itself, and it was never checked against outcome
 The first crack was a live incident, not a metric: a message asking for "answers with
 worked examples" was extracted by 2b as *"User dung-live prefers Vietnamese"*, with
 confidence 1.0, auto-applied, and caught only because a human saw it on the review
-dashboard (`docs/p2_progress.md:47-52`).
+dashboard (`docs/history.md#p2_progress:47-52`).
 
 ### What found it
 
@@ -315,7 +315,7 @@ source message, and the fact's content words must actually appear in that messag
 (`backend/app/discord/memory_guard.py`). `τ` survives only as a policy
 switch (`off` = review everything), and the docs say so explicitly.
 
-Simulated over the same 75 cases (`docs/p2_progress.md:89-92`):
+Simulated over the same 75 cases (`docs/history.md#p2_progress:89-92`):
 
 | Policy | 2b: coverage · poison | 9b: coverage · poison |
 | --- | --- | --- |
@@ -337,7 +337,7 @@ digit) while closing two measured holes: a negation-clause rule (the guard used 
 
 - **21.6% poison remains.** No model here is safe enough to run blind. The written
   conclusion is that the human review-and-revoke loop is not a stopgap but the correct
-  architecture: supervised autonomy (`docs/p2_progress.md:107-109`).
+  architecture: supervised autonomy (`docs/history.md#p2_progress:107-109`).
 - **9b's cost:** 11 real facts missed (more cautious, plus 6 schema slips). Accepted
   because a miss is cheap — the user says it again — while a poisoned memory makes the
   agent confidently wrong forever.

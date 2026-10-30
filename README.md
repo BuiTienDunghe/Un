@@ -210,12 +210,11 @@ Bốn test migration cố ý hạ cấp database để kiểm tra một revision
 - `docs/phase6_operations.md`: vận hành, kiểm tra và khắc phục sự cố.
 - `docs/backup_restore.md`: backup tự động và bài diễn tập restore.
 - `CHANGELOG.md`: lịch sử phát hành theo Keep a Changelog và quy ước version.
-- `docs/sqlite_to_postgres_final_report.md`: tổng kết migration SQLite sang PostgreSQL.
 - `backend/tests/` và `tests/`: regression test cho API, persistence, workers, RAG và Discord API client.
 
 ## Định hướng phát triển
 
-Kế hoạch phát triển tổng thể (phase, KPI, đối chiếu thị trường) nằm tại `docs/DEVELOPMENT_PLAN.md` — đây là tài liệu định hướng chính thức, thay cho danh sách dưới đây.
+Kế hoạch phát triển tổng thể (phase, KPI, đối chiếu thị trường) nằm tại `docs/history.md#DEVELOPMENT_PLAN` — đây là tài liệu định hướng chính thức, thay cho danh sách dưới đây.
 
 - Mở rộng chính sách retention và backup theo môi trường triển khai.
 - Bổ sung đánh giá retrieval/model theo bộ tài liệu thực tế.

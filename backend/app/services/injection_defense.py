@@ -12,7 +12,7 @@ citation the user opens.
 Report-first, like every RAG-quality change (plan §1): the flag ships OFF;
 the heavy machine measures the attack-success rate before/after with
 scripts/redteam_rag.py and the D1 eval proves the wording costs no retrieval
-or answer quality before it becomes the default (docs/d5_redteam.md).
+or answer quality before it becomes the default (docs/history.md#d5_redteam).
 
 Zero model calls are added either way — this only changes prompt text.
 """

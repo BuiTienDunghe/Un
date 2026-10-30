@@ -3,7 +3,7 @@
 The scorer decides whether an answer obeyed an injection; the defense only
 rewrites prompt text. Neither calls a model, so the whole file runs fast and
 in CI. The live attack run (scripts/redteam_rag.py against a real model) is
-the heavy machine's job (docs/d5_redteam.md).
+the heavy machine's job (docs/history.md#d5_redteam).
 """
 from __future__ import annotations
 

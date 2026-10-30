@@ -17,7 +17,7 @@ can be weighed against B (persist the tokens) on evidence:
   fallback per-query    the all-zero-score path after the 24/08 reuse patch
 
 Only SELECTs are issued. Nothing is written anywhere; results go to stdout
-(human lines + one JSON blob) for docs/p4_progress.md to quote.
+(human lines + one JSON blob) for docs/history.md#p4_progress to quote.
 """
 from __future__ import annotations
 

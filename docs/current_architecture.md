@@ -15,8 +15,7 @@ The retired SQLite data is an explicit read-only archive, not a fallback:
 data/archives/sqlite-retired-20260719T002000Z/
 ```
 
-Only migration/audit CLIs and their migration-specific tests may use `sqlite3`,
-and they must receive the archive path explicitly. `pre_postgres_*` archives
+No code uses `sqlite3` any more: the migration tools were removed on 2026-10-30 (`.scratch/ARCHIVE.md`). `pre_postgres_*` archives
 are historical evidence only and must never be merged or used as a runtime
 database.
 

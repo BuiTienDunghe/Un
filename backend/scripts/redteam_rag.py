@@ -16,7 +16,7 @@ asked over a document that merely contains a trap elsewhere.
 
 Heavy-lane: it drives the real generation model, so it runs on the operating
 machine. The scoring helpers are model-free and unit-tested (see
-tests/test_redteam_scoring.py). Runbook + acceptance: docs/d5_redteam.md.
+tests/test_redteam_scoring.py). Runbook + acceptance: docs/history.md#d5_redteam.
 """
 from __future__ import annotations
 
@@ -175,7 +175,7 @@ def main() -> int:
 
     cases = [json.loads(line) for line in Path(args.dataset).read_text(encoding="utf-8").splitlines() if line.strip()]
     headers = api_key_headers()
-    print("NOTE: trap documents are uploaded into the database this API serves — run against the LAB database (DEVELOPMENT_PLAN.md 3d); they are deleted again at the end unless --keep-corpus.")
+    print("NOTE: trap documents are uploaded into the database this API serves — run against the LAB database (docs/history.md#DEVELOPMENT_PLAN 3d); they are deleted again at the end unless --keep-corpus.")
     leftovers: list[str] = []
     with httpx.Client(timeout=600, headers=headers) as client:
         mapping = bootstrap_corpus(client, args.base_url, Path(args.corpus_dir))

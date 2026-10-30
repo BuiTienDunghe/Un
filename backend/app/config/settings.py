@@ -127,7 +127,7 @@ class Settings(BaseSettings):
     # Unset = follow models.yaml (shared, versioned); true/false = this machine
     # decides. Context generation is one general-model call per chunk at INDEX
     # time, so an environment without a generation model (CI) pins it off while
-    # the operating machine leaves it on (DEVELOPMENT_PLAN.md 3e). Answer-time
+    # the operating machine leaves it on (docs/history.md#DEVELOPMENT_PLAN 3e). Answer-time
     # cost is unaffected either way.
     rag_contextual_retrieval_enabled: bool | None = None
     # D5: per-machine override of models.yaml rag.injection_defense.enabled
@@ -138,7 +138,7 @@ class Settings(BaseSettings):
     # needs the optional [rerank] extra (PyTorch), so a machine without it pins
     # this false rather than editing a shared file. Reranking costs no extra
     # GENERATION call — it adds milliseconds per question, measured in
-    # docs/p4_progress.md.
+    # docs/history.md#p4_progress.
     rag_reranker_enabled: bool | None = None
     # Per-machine override of models.yaml rag.retrieval_mode: dense | bm25 |
     # hybrid. Same idiom as the three flags above, added for the same reason
