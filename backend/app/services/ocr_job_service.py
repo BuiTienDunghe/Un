@@ -11,6 +11,8 @@ from uuid import uuid4
 
 from fastapi import UploadFile
 
+from app.parsers.pymupdf_parser import PyMuPDFParser
+from app.parsers.smart_parser import SmartParser
 from app.services.model_router import ModelRouter
 from app.services.ocr_service import OCRService
 
@@ -36,7 +38,7 @@ class OcrJobService:
         self._lock = threading.Lock()
         self._active: str | None = None
 
-    async def create(self, file: UploadFile, dpi: int, page_range: str | None, output_format: str) -> dict[str, object]:
+    async def create(self, file: UploadFile, dpi: int, page_range: str | None, output_format: str, force_ocr: bool = False) -> dict[str, object]:
         suffix = Path(file.filename or "upload").suffix.lower()
         if suffix not in self.allowed:
             raise ValueError("UNSUPPORTED_OCR_FILE")
@@ -51,7 +53,7 @@ class OcrJobService:
         (root / "pages").mkdir()
         filename = f"input{suffix}"
         (root / "input" / filename).write_bytes(content)
-        job: dict[str, object] = {"id": job_id, "filename": file.filename or filename, "suffix": suffix, "path": str(root / "input" / filename), "root": str(root), "dpi": dpi, "page_range": page_range, "output_format": output_format, "status": "queued", "stage": "Queued", "progress": 0, "current_page": 0, "total_pages": 0, "events": [], "logs": [], "pages": [], "timings": {}, "cancel": False, "created_at": time.time(), "model": str(self.router.models.get("ocr", {}).get("name", "unconfigured")), "ocr_config_hash": self.ocr_service.config_hash(dpi)}
+        job: dict[str, object] = {"id": job_id, "filename": file.filename or filename, "suffix": suffix, "path": str(root / "input" / filename), "root": str(root), "dpi": dpi, "page_range": page_range, "output_format": output_format, "force_ocr": force_ocr, "status": "queued", "stage": "Queued", "progress": 0, "current_page": 0, "total_pages": 0, "events": [], "logs": [], "pages": [], "timings": {}, "cancel": False, "created_at": time.time(), "model": str(self.router.models.get("ocr", {}).get("name", "unconfigured")), "ocr_config_hash": self.ocr_service.config_hash(dpi)}
         self.jobs[job_id] = job
         self._save(job)
         threading.Thread(target=self._run, args=(job_id,), daemon=True).start()
@@ -76,19 +78,24 @@ class OcrJobService:
             pages = self._pages(source, suffix, int(job["dpi"]), job.get("page_range") if isinstance(job.get("page_range"), str) else None)
             job["total_pages"] = len(pages)
             if not pages: raise ValueError("No pages selected")
+            native = self._native_pages(source, suffix) if not job.get("force_ocr") else {}
             for index, (number, png) in enumerate(pages, start=1):
                 if job["cancel"]: job["status"] = "cancelled"; self._event(job, "Cancelled", int((index - 1) / len(pages) * 100), "Stopped at safe page boundary", "WARNING"); return
                 job["current_page"] = number
                 progress = 10 + int((index - 1) / len(pages) * 80)
                 self._event(job, "OCR inference", progress, f"Processing page {number}/{len(pages)}")
                 page_started = time.perf_counter()
-                result = self.ocr_service.recognize_png(png, int(job["dpi"]), allow_mock=True)
-                text = f"[MOCK OCR] Page {number}: simulated OCR output." if os.getenv("MOCK_OCR", "").lower() == "true" else result.text
+                if number in native:
+                    text, model, config_hash, cache_hit, method = native[number], None, None, False, "native"
+                else:
+                    result = self.ocr_service.recognize_png(png, int(job["dpi"]), allow_mock=True)
+                    text = f"[MOCK OCR] Page {number}: simulated OCR output." if os.getenv("MOCK_OCR", "").lower() == "true" else result.text
+                    model, config_hash, cache_hit, method = result.model, result.config_hash, result.cache_hit, "ocr"
                 page_dir = Path(str(job["root"])) / "pages" / f"page_{number:04d}"; page_dir.mkdir()
                 (page_dir / "original.png").write_bytes(png)
                 (page_dir / "text.txt").write_text(text, encoding="utf-8")
                 (page_dir / "result.md").write_text(text, encoding="utf-8")
-                payload = {"page": number, "text": text, "markdown": text, "extraction_method": "ocr", "model": result.model, "ocr_config_hash": result.config_hash, "cache_hit": result.cache_hit}
+                payload = {"page": number, "text": text, "markdown": text, "extraction_method": method, "model": model, "ocr_config_hash": config_hash, "cache_hit": cache_hit}
                 (page_dir / "result.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
                 job["pages"].append({**payload, "image_url": f"/api/ocr/jobs/{job_id}/files/pages/page_{number:04d}/original.png", "duration_seconds": round(time.perf_counter() - page_started, 3)})  # type: ignore[index]
             job["status"] = "completed"; self._event(job, "Completed", 100, "All selected pages processed")
@@ -98,6 +105,15 @@ class OcrJobService:
             job["timings"] = {"total_seconds": round(time.perf_counter() - started, 3)}; job["metrics"] = system_metrics()
             self._save(job)
             with self._lock: self._active = None
+
+    def _native_pages(self, source: Path, suffix: str) -> dict[int, str]:
+        """Pages whose own text is good enough, by the test the library already uses. 13 pages of a
+        paper with real text took the model five minutes at full GPU to copy out."""
+        if suffix != ".pdf" or os.getenv("MOCK_OCR", "").lower() == "true":
+            return {}
+        config = self.router.models.get("ocr", {})
+        minimum, ratio = int(config.get("min_text_characters", 80)), float(config.get("min_alphanumeric_ratio", 0.45))
+        return {page: text for page, text in PyMuPDFParser().parse(source) if page is not None and not SmartParser._needs_ocr(text, minimum, ratio)}
 
     def _pages(self, source: Path, suffix: str, dpi: int, page_range: str | None) -> list[tuple[int, bytes]]:
         if suffix != ".pdf": return [(1, source.read_bytes())]

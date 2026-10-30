@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import os
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -7,6 +8,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app import __version__
+from app.services import model_choice
 from app.config.model_registry import write_attention_marker
 from app.config.settings import PROJECT_ROOT, get_settings
 from app.llm_clients.ollama_client import OllamaClient
@@ -143,6 +145,13 @@ async def lifespan(app: FastAPI):
         chunk_context=chunk_context_service, on_corpus_change=bm25_service.invalidate,
         embedding_version=resolved.embedding_version_id(),
     )
+    # Under the supervisor a restart is routine. Not for evals and tests: they share nothing to resume.
+    if os.environ.get(model_choice.SUPERVISED_ENV) == "1":
+        try:
+            for run_id in app.state.document_service.resume_interrupted():
+                logger.warning("Resuming ingestion run {} cut off by a restart", run_id)
+        except Exception as error:  # A document can wait; the whole API must still come up.
+            logger.error("Could not resume interrupted ingestion runs: {}", error)
     app.state.operational_service = OperationalService(
         postgres_sessions,
         settings.redis_url,

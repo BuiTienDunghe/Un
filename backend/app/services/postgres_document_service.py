@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 from app.parsers.smart_parser import SmartParser
-from app.postgres.models import Document, DocumentVersion, IngestionRun, Job
+from app.postgres.models import Document, DocumentPage, DocumentVersion, IngestionRun, Job
 from app.postgres.repositories import InvalidStateTransition, PostgresDocumentRepository
 from app.services.logging_service import LoggingService
 from app.services.model_router import ModelRouter
@@ -265,7 +265,7 @@ class PostgresDocumentService:
         for item in raw_pages:
             if not isinstance(item, dict) or not isinstance(item.get("text"), str):
                 raise ValueError("OCR run contains invalid page output")
-            pages.append((int(item["page"]) if item.get("page") is not None else None, str(item["text"]), "ocr"))
+            pages.append((int(item["page"]) if item.get("page") is not None else None, str(item["text"]), str(item.get("extraction_method") or "ocr")))
         content = "\n\n".join(text for _, text, _ in pages).encode("utf-8")
         digest = hashlib.sha256(content).hexdigest()
         with self.sessions() as session:
@@ -351,7 +351,32 @@ class PostgresDocumentService:
             version = session.get(DocumentVersion, run.version_id)
             return self._run_payload(run, version)
 
-    def retry_ingestion(self, run_id: str) -> dict[str, object]:
+    def indexing_in_progress(self) -> bool:
+        with self.sessions() as session:
+            return session.scalar(select(IngestionRun.id).where(IngestionRun.status == "processing").limit(1)) is not None
+
+    def resume_interrupted(self) -> list[str]:
+        """Thread mode keeps its work in this process, so a run still "processing" when the process
+        starts has nobody working on it, and the document would stay stuck for good. A run that came
+        from OCR has only its stored pages to go back to: its source is one flat file."""
+        if self.job_queue is not None:
+            return []
+        resumed = []
+        with self.sessions.begin() as session:
+            repo = PostgresDocumentRepository(session)
+            stored: dict[str, list[tuple[int | None, str, str]] | None] = {}
+            for run in session.scalars(select(IngestionRun).where(IngestionRun.status == "processing")).all():
+                document = session.get(Document, run.document_id)
+                rows = session.scalars(select(DocumentPage).where(DocumentPage.version_id == run.version_id).order_by(DocumentPage.page_number)).all()
+                from_ocr = document is not None and document.mime_type == "text/markdown" and any(row.extraction_method == "ocr" for row in rows)
+                stored[run.id] = [(row.page_number, row.selected_text or "", row.extraction_method) for row in rows] if from_ocr else None
+                repo.fail_run(run.id, "INTERRUPTED_BY_RESTART", "The process stopped during this run")
+        for run_id, pages in stored.items():
+            self.retry_ingestion(run_id, pages)
+            resumed.append(run_id)
+        return resumed
+
+    def retry_ingestion(self, run_id: str, precomputed_pages: list[tuple[int | None, str, str]] | None = None) -> dict[str, object]:
         with self.sessions.begin() as session:
             repo = PostgresDocumentRepository(session)
             try:
@@ -370,7 +395,7 @@ class PostgresDocumentService:
             if job:
                 payload["job_id"], payload["queue_pending"] = job.id, True
         if not self.job_queue:
-            threading.Thread(target=self._run_index, args=(run_id, str(payload["document_id"]), str(payload["version_id"]), None), daemon=True).start()
+            threading.Thread(target=self._run_index, args=(run_id, str(payload["document_id"]), str(payload["version_id"]), precomputed_pages), daemon=True).start()
         return payload
 
     async def replace_source(self, document_id: str, file: UploadFile, max_bytes: int) -> dict[str, object]:
