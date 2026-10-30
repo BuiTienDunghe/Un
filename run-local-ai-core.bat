@@ -150,8 +150,8 @@ REM Everything long-running from here is one process: the API and the workers ru
 REM under tools/supervisor.py, in this window, with their logs in data/logs/services/.
 .venv\Scripts\python.exe -m tools.supervisor --running
 if not errorlevel 1 (
-    echo [INFO] Local AI Core is already running in another window. Opening the UI...
-    start "" "http://127.0.0.1:8000/ui/"
+    echo [INFO] Local AI Core is already running in another window. 127.0.0.1:8000/ui
+    REM Not opened: it is printed above.
     goto :done
 )
 
@@ -163,8 +163,8 @@ if not errorlevel 1 (
 )
 
 echo [START] Starting the API and the workers. Keep this window open while using the system.
-echo [START] Opening UI at http://127.0.0.1:8000/ui/
-start "" "http://127.0.0.1:8000/ui/"
+echo [START] The web UI at http://127.0.0.1:8000/ui/
+REM Not opened: it is printed above.
 echo.
 .venv\Scripts\python.exe -m tools.supervisor
 if errorlevel 1 (
