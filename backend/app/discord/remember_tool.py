@@ -3,8 +3,8 @@
 The model chooses the wording, so the model alone must not be able to write: an instruction
 hidden in a web page, a document or an image could otherwise plant a fact. The gate below reads
 only what the speaker typed in this turn: it must ask to remember, and the fact must be made of
-the speaker's own words and numbers. The write goes through the same candidate and approval path
-as every other memory, so the dashboard lists it and can revert it.
+the speaker's own words and numbers. It is then approved at once, with no human review, through
+the same candidate path as every other memory, so the memory screen lists it and can revert it.
 """
 from __future__ import annotations
 
@@ -20,16 +20,15 @@ from sqlalchemy.orm import sessionmaker
 from app.discord.memory_repositories import DiscordMemoryIdentity, DiscordMemoryRepository
 from app.discord.memory_review_service import DiscordMemoryReviewService, MemoryMirrorError
 from app.postgres.models import DiscordConversationSession, DiscordSessionTurn
-from app.services.agent_service import BAD_ARGUMENTS, TOOL_FAILED, TOOL_UNAVAILABLE_HERE, AgentTool, ToolOutput, ToolRegistry
+from app.services.agent_service import BAD_ARGUMENTS, IMAGE_NOTE, TOOL_FAILED, TOOL_UNAVAILABLE_HERE, AgentTool, ToolOutput, ToolRegistry
 
 ORDER = 25
 SCHEMA_VERSION = "agent-remember-v1"
 FACT_MAX_CHARS = 300
 MIN_OWN_WORDS = 0.6
-IMAGE_NOTE = "\n\n[Ảnh đính kèm"
 
 _ASKED = re.compile(
-    r"(?:^|[\s,.;:!?])(?:hãy\s+nhớ|hãy\s+ghi\s+nhớ|ghi\s+nhớ|nhớ\s+(?:giúp|hộ|dùm|giùm)|lưu\s+lại|ghi\s+lại|nhớ\s+(?:là|rằng)\b(?<=^nhớ là)|^nhớ\b)",
+    r"(?:^|[\s,.;:!?])(?:hãy\s+nhớ|hãy\s+ghi\s+nhớ|ghi\s+nhớ|nhớ\s+(?:giúp|hộ|dùm|giùm)|lưu\s+lại|ghi\s+lại|^nhớ\b)",
     re.IGNORECASE,
 )
 _REFUSED = re.compile(r"(?:đừng|không|chớ|khỏi)\s+(?:cần\s+)?(?:ghi\s+)?(?:nhớ|lưu|ghi)", re.IGNORECASE)
