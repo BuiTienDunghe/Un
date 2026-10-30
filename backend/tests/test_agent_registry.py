@@ -47,10 +47,10 @@ def test_a_name_registers_once():
 
 
 def test_the_core_alone_has_no_discord_tool_and_the_package_puts_it_back_in_its_place():
-    assert core_tools().names() == ("search_documents", "read_document", "system_status")
+    assert core_tools().names() == ("search_documents", "read_document", "system_status", "current_time")
     registry = core_tools()
     agent_tools.register(registry, None)
-    assert registry.names() == ("search_documents", "read_document", "search_history", "system_status")
+    assert registry.names() == ("search_documents", "read_document", "search_history", "system_status", "current_time")
 
 
 def test_a_tool_registered_after_the_agent_was_built_is_shown_declared_and_shaped():

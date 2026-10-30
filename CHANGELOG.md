@@ -11,6 +11,10 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 
 ## [Unreleased]
 
+### Added
+- **Ún xem được ngày giờ** (ticket 32, 30/10). Công cụ `current_time` trả ngày, thứ và giờ Việt Nam. Như mọi công cụ khác, nó chỉ có ở
+  server trong danh sách công cụ; server khác rơi về chat thường và vẫn không biết giờ.
+
 ### Security
 - **`/docs` của bot kiểm server** (ticket 30, 30/10). Trước đây ai ở server nào có bot cũng đọc được mọi tài liệu qua `/docs` và
   thấy tên tệp khi gõ. Giờ lệnh chỉ chạy ở server có trong `DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST` (`*` là mọi server); server khác

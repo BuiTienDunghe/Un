@@ -35,7 +35,7 @@ def test_register_services_builds_every_discord_service_and_plugs_search_history
 
     assert [name for name in DISCORD_STATE if not hasattr(app.state, name)] == []
     # The agent's Discord tool, in the place it always had (ticket 22, C4), reading this guild history.
-    assert agent.registry.names() == ("search_documents", "read_document", "search_history", "system_status")
+    assert agent.registry.names() == ("search_documents", "read_document", "search_history", "system_status", "current_time")
     assert agent.registry.get("search_history").run.history_service is app.state.discord_history_service
     assert app.state.discord_turn_service.chat_service is chat
 
