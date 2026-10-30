@@ -18,6 +18,10 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
   "không có chữ" của model không còn bị nạp thành nội dung trang.
 
 ### Added
+- **Ún ghi nhớ khi được dặn** (ticket 35, 30/10). Công cụ `remember` lưu một điều về người đang nói, chỉ khi chính tin nhắn của họ có lời dặn nhớ và điều đó
+  dùng lời, số của họ, nên nội dung trong ảnh, tài liệu hay trang web không tự ghi được. Đi qua đường duyệt sẵn có: màn hình Ghi nhớ thấy và hoàn tác được. Chỉ ở Discord.
+- **Ún tra được web** (ticket 35, 30/10, mặc định tắt, `AGENT_WEB_TOOLS_ENABLED=true` để bật). `web_search` qua DuckDuckGo, không cần khoá, và `read_webpage`, chỉ mở
+  được url vừa tìm thấy hoặc người dùng tự viết, và chỉ địa chỉ công khai. Câu tìm kiếm rời khỏi máy. Bài đánh giá không thấy hai công cụ này.
 - **Ún tính toán chính xác** (ticket 34, 30/10). Công cụ `calculate` tính biểu thức số học bằng số thập phân chính xác, chỉ nhận số và phép toán, không chạy
   được mã. Cùng phạm vi server với mọi công cụ khác.
 - **Vision chạy trên máy** (`vision-v1`, ticket 33, 30/10). `/vision/chat` chạy thật bằng Qwen 9B, không còn trả 501, và `@Ún` đọc được tối đa 3 ảnh đính
