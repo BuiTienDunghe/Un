@@ -912,7 +912,8 @@ class Resolved:
                          f"{restart}; the role then follows roles.{role}.active={active}")
         elif resolution.source == "env" and resolution.requested_id != active:
             alternative = f" (or set it to {previous})" if previous is not None else ""
-            lines.append(f"revert: unset {env} in this shell{alternative}, {restart}")
+            lines.append(f"revert: unset {env} in this shell{alternative}, {restart}; "
+                         "if it was picked on the web UI's Model screen, press Về mặc định instead")
         elif previous is not None:
             lines.append(f"revert: edit roles.{role}.active in backend/app/config/model_versions.yaml to {previous} "
                          f"or set {env}={previous} in the shell, {restart}")

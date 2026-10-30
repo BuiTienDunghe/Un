@@ -36,7 +36,8 @@ def test_a_pick_round_trips_and_can_be_dropped(tmp_path) -> None:
     assert path.read_bytes() == b"MODEL_VERSION_GENERAL=general-haiku-v1\r\n"
     assert model_choice.read_choices(path) == {"general": HAIKU}
     model_choice.save_choice(path, "general", None)
-    assert model_choice.read_choices(path) == {}
+    assert path.read_bytes() == b"MODEL_VERSION_GENERAL=\r\n"
+    assert model_choice.read_choices(path) == {"general": ""}
 
 
 def test_models_offers_the_switch_only_on_the_answer_role(mock_ollama, client, choice_file) -> None:
@@ -70,11 +71,20 @@ def test_a_pick_waits_for_the_restart_and_leaves_the_registry_alone(mock_ollama,
 def test_picking_the_default_or_reverting_drops_the_pick(mock_ollama, client, choice_file) -> None:
     client.post("/models/general/promote", json={"version": HAIKU})
     assert client.post("/models/general/promote", json={"version": QWEN}).status_code == 200
-    assert model_choice.read_choices(choice_file) == {}
+    assert model_choice.read_choices(choice_file) == {"general": ""}
     client.post("/models/general/promote", json={"version": HAIKU})
     row = client.post("/models/general/revert").json()
-    assert model_choice.read_choices(choice_file) == {}
+    assert model_choice.read_choices(choice_file) == {"general": ""}
     assert row["chosen"] == QWEN
+
+
+def test_a_shell_pin_with_no_pick_is_not_shown_as_waiting_for_a_restart(mock_ollama, client, choice_file, monkeypatch) -> None:
+    view = {"general": {"active": QWEN, "requested": HAIKU, "loaded": HAIKU, "source": "env", "fallback": False}}
+    monkeypatch.setattr(client.app.state.model_registry, "registry_view", lambda: view)
+    row = client.get("/models").json()["registry"]["general"]
+    assert row["chosen"] == HAIKU
+    assert versions_by_id(row)[HAIKU]["status"] == "active"
+    assert versions_by_id(row)[QWEN]["status"] == "candidate"
 
 
 @pytest.mark.parametrize(

@@ -37,7 +37,8 @@ def _registry_view(request: Request) -> dict[str, dict[str, Any]]:
     choices = model_choice.read_choices(model_choice.CHOICE_PATH)
     for role in SWITCHABLE_ROLES:
         row = view[role]
-        chosen = choices.get(role) or row["active"]
+        # No line in the file: a shell pin, if any, is still what the next start serves.
+        chosen = (choices[role] or row["active"]) if role in choices else row["requested"]
         row["switchable"] = True
         row["chosen"] = chosen
         row["versions"] = [
