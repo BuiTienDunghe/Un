@@ -178,6 +178,7 @@ def test_launcher_and_stop_go_through_the_supervisor() -> None:
     launcher = (REPO / "run-local-ai-core.bat").read_text(encoding="utf-8")
     assert launcher.index("--ollama-pull-list") < launcher.index("-m tools.supervisor")
     assert "windowtitle" not in launcher and "uvicorn app.main" not in launcher
+    assert 'start "" "http' not in launcher, "the owner asked that nothing opens by itself"
     assert "tools.supervisor --stop" in (REPO / "stop-local-ai-core.bat").read_text(encoding="utf-8")
     decided = (REPO / "run-decided.bat").read_text(encoding="utf-8").lower()
     assert "\ntitle " not in decided and "windowtitle" not in decided
