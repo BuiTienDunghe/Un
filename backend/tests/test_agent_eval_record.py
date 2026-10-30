@@ -31,7 +31,7 @@ class FakeProbes:
     def ollama_embed_dimension(self, model):
         return None
 
-    def ollama_ocr_stops(self, model, prompt):
+    def ollama_ocr_stops(self, model, prompt, **_):
         return None
 
     def qdrant_dimension(self, collection):

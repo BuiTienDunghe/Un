@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -11,6 +12,14 @@ import fitz
 
 from app.services.model_router import ModelRouter
 from app.stores.auxiliary_store import AuxiliaryStore
+
+
+# Measured on pages with no text: glm-ocr answers "markdown", Qwen a sentence saying so. Neither
+# is the page's content, and either would be indexed as if it were.
+NO_TEXT_ANSWER = re.compile(
+    r"markdown|(?:trong (?:ảnh|hình)(?: này)? )?không có (?:chữ|văn bản)(?: nào)?(?: trong (?:ảnh|hình)(?: này)?(?:[,;:][^\n]{0,120})?)?\W*",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -66,6 +75,8 @@ class OCRService:
         encoded = base64.b64encode(png).decode("ascii")
         text, model = self.router.ocr(encoded, prompt=str(config.get("prompt", "Text Recognition:")))
         cleaned = text.strip()
+        if NO_TEXT_ANSWER.fullmatch(cleaned):
+            cleaned = ""
         if self.store and cleaned:
             if hasattr(self.store, "save_ocr_cache_with_key") and isinstance(revision, str) and revision:
                 self.store.save_ocr_cache_with_key(image_hash, "ollama", model, revision, config_hash, cleaned)

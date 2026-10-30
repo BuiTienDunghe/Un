@@ -100,7 +100,7 @@ def fake_probes(monkeypatch) -> None:
     the fresh-install state, in which every probed pointer resolves `active`."""
     monkeypatch.setattr(ProductionProbes, "ollama_tags", lambda self: dict(TAGS))
     monkeypatch.setattr(ProductionProbes, "ollama_embed_dimension", lambda self, model: 1024)
-    monkeypatch.setattr(ProductionProbes, "ollama_ocr_stops", lambda self, model, prompt: True)
+    monkeypatch.setattr(ProductionProbes, "ollama_ocr_stops", lambda self, model, prompt, **_: True)
     monkeypatch.setattr(ProductionProbes, "qdrant_dimension", lambda self, collection: None)
     monkeypatch.setattr(ProductionProbes, "qdrant_point_count", lambda self, collection: 0)
     monkeypatch.setattr(ProductionProbes, "postgres_counts", lambda self: PostgresCounts(0, 0))
@@ -203,9 +203,9 @@ def test_suite_default_boot_serves_every_pointer_unverified_and_reports_ok(mock_
     # every other role can only come from the file.
     assert all(registry[role]["source"] == "registry" for role in ("general", "condenser", "embedding", "vision", "ocr", "reranker"))
     assert registry["reranker"]["status"] == "off", "RAG_RERANKER_ENABLED=false in the suite is a decision, not a deviation"
-    assert registry["vision"]["status"] == "unconfigured" and registry["vision"]["loaded"] is None
+    assert registry["vision"]["status"] == "active" and registry["vision"]["loaded"] == "vision-v1"
     assert registry["embedding"]["collections"] == {"documents": "documents_test", "memories": "memories_test"}
-    assert "vision" not in models["models"] and models["models"]["embedding"]["name"] == "qwen3-embedding:0.6b"
+    assert models["models"]["vision"]["name"] == "qwen3.5:9b" and models["models"]["embedding"]["name"] == "qwen3-embedding:0.6b"
     assert models["rag"]["contextual_retrieval"] is False and models["rag"]["reranker"] is False
     assert models["rag"]["retrieval_mode"] in {"dense", "bm25", "hybrid"}
     assert health["status"] == "ok" and health["model_fallback"] == "ok"
@@ -289,12 +289,12 @@ def test_shipped_registry_with_every_probe_answering_is_all_active_off_or_unconf
 
     assert set(rows) == set(ROLES) and len(rows) == 8
     assert {role: row["status"] for role, row in rows.items()} == {
-        "general": "active", "condenser": "off", "embedding": "active", "vision": "unconfigured",
+        "general": "active", "condenser": "off", "embedding": "active", "vision": "active",
         "ocr": "active", "reranker": "off", "extractor": "off", "verifier": "off",
     }
     assert all(row["fallback"] is False and row["source"] == "registry" for row in rows.values())
-    assert [role for role, row in rows.items() if row["verified"]] == ["general", "embedding", "ocr"]
-    assert {role: row["loaded"] for role, row in rows.items() if row["loaded"]} == {"general": "general-v0", "embedding": "embedding-v0", "ocr": "ocr-v1"}
+    assert [role for role, row in rows.items() if row["verified"]] == ["general", "embedding", "vision", "ocr"]
+    assert {role: row["loaded"] for role, row in rows.items() if row["loaded"]} == {"general": "general-v0", "embedding": "embedding-v0", "vision": "vision-v1", "ocr": "ocr-v2"}
     assert health["status"] == "ok" and health["model_fallback"] == "ok"
     assert not marker_path().exists(), "a stale marker is removed by a boot in which nothing deviates"
     assert events_named(registry_events, "model_version_fallback") == []

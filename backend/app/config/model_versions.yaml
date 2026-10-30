@@ -150,10 +150,10 @@ roles:
           query_prefix: "query: "      # inside config ON PURPOSE: a prefix change re-keys the cache
           passage_prefix: "passage: "
 
-  # ── vision: no consumer (/vision/chat is 501). active: null = not served,
+  # ── vision: /vision/chat, 501 while nothing serves. active: null = not served,
   # absent from /models.models (the app.js Vision row disappears; decision 5).
   vision:
-    active: null
+    active: vision-v1
     versions:
       - id: vision-v0
         provider: ollama
@@ -162,6 +162,15 @@ roles:
           name: qwen3.5:9b
           context: 16384
           temperature: 0.3
+          keep_alive: 5m
+      - id: vision-v1                  # the same local model, without the thinking pass an image does not need
+        provider: ollama
+        config:
+          provider: ollama
+          name: qwen3.5:9b
+          context: 16384
+          temperature: 0.3
+          think: false
           keep_alive: 5m
 
   # ── ocr: a missing tag turns the role OFF (config.enabled false on the served
@@ -173,7 +182,7 @@ roles:
   # after this machine's Ollama 0.33.3 -> 0.34.1 update (17/09/2026): tag present, every
   # page aborted (measured on 0.34.2 and 0.34.4; 0.34.1 itself never measured).
   ocr:
-    active: ocr-v1
+    active: ocr-v2
     versions:
       - id: ocr-v0                     # fails the stop probe on 0.34.2 / 0.34.4; kept as the fallback for a
         provider: ollama               #   machine where it still passes (never measured passing here)
@@ -208,6 +217,27 @@ roles:
           max_tokens: 4096             # num_predict; a page that reaches it is rejected, not indexed
           keep_alive: 5m
           prompt: "Text Recognition:"
+          dpi: 200
+          min_text_characters: 80
+          min_alphanumeric_ratio: 0.45
+      - id: ocr-v2                     # general's own model reading the page directly; falls back to ocr-v1
+        provider: ollama
+        notes: >-
+          30/10/2026, self-written Vietnamese with a known answer, synthetic degradation (rotation,
+          blur, noise, JPEG, 100 dpi). Held-out text, 7 pages: 0.00-0.42% of characters wrong, against
+          9.0-35.1% for ocr-v1; dense 8 pt page 0.21% against 17.5%. Slower: ~10 s a page against ~4 s,
+          and 6.4 GB of VRAM against 2.2 GB unless general already holds the tag. No real scan or
+          handwriting measured.
+        config:
+          provider: ollama
+          name: qwen3.5:9b
+          enabled: true
+          context: 16384
+          temperature: 0.0
+          think: false
+          max_tokens: 4096
+          keep_alive: 5m
+          prompt: "Chép lại nguyên văn toàn bộ chữ trong ảnh, giữ đúng dấu tiếng Việt, số và dấu câu. Chỉ trả về phần chữ, không thêm lời bình. Nếu ảnh không có chữ thì không trả về gì."
           dpi: 200
           min_text_characters: 80
           min_alphanumeric_ratio: 0.45

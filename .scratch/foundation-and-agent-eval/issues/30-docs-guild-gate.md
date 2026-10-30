@@ -1,6 +1,6 @@
 # 30 — Lệnh /docs kiểm server
 
-Status: xong code — gộp main (30/10); chưa thử trên Discord thật, chưa push
+Status: xong code — gộp main, đã push eba3794 (30/10); chưa thử trên Discord thật
 Type: bug
 Blocked by: —
 

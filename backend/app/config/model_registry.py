@@ -43,7 +43,7 @@ MODEL_ROLES = ("general", "condenser", "embedding", "vision", "ocr", "extractor"
 NEVER_NULL_ROLES = ("general", "embedding")
 NO_FALLBACK_ROLES = ("embedding",)                                  # constraint 13
 DISABLE_ON_MISS_ROLES = ("ocr", "extractor", "verifier", "condenser")
-PINNABLE_ROLES = ("general", "condenser", "embedding", "ocr", "reranker", "extractor", "verifier")  # MODEL_VERSION_<ROLE>
+PINNABLE_ROLES = ("general", "condenser", "embedding", "vision", "ocr", "reranker", "extractor", "verifier")  # MODEL_VERSION_<ROLE>
 GATED_ROLES = ("general", "embedding", "reranker", "extractor")     # --check: the ACTIVE version needs an eval report
 PROVIDERS = ("ollama", "gemini", "deepseek", "anthropic", "sentence-transformers")
 CLOUD_PROVIDERS = ("gemini", "deepseek", "anthropic")   # probe = "API key registered", nothing to download
@@ -580,7 +580,7 @@ class Probes(Protocol):
     a distinct value from 'decided no'."""
     def ollama_tags(self) -> Mapping[str, str] | None: ...                        # {tag: digest}; None = unreachable/timeout; called once per resolve()
     def ollama_embed_dimension(self, model: str) -> int | None: ...              # one POST /api/embed of "local-ai-core probe"; None = failed/timeout, NOT wrong size
-    def ollama_ocr_stops(self, model: str, prompt: str) -> bool | None: ...      # one POST /api/chat on OCR_PROBE_LINE rendered; True = read it AND ended the turn, None = no answer
+    def ollama_ocr_stops(self, model: str, prompt: str, **options: Any) -> bool | None: ...      # one POST /api/chat on OCR_PROBE_LINE rendered; True = read it AND ended the turn, None = no answer
     def qdrant_dimension(self, collection: str) -> int | None | QdrantUnreachable: ...
     def qdrant_point_count(self, collection: str) -> int | QdrantUnreachable: ...  # 0 when absent
     def postgres_counts(self) -> PostgresCounts | None: ...                       # None = DB did not answer (connect timeout 5 s)
@@ -627,15 +627,17 @@ class ProductionProbes:
             return None
         return len(embeddings[0])
 
-    def ollama_ocr_stops(self, model: str, prompt: str) -> bool | None:
+    def ollama_ocr_stops(self, model: str, prompt: str, **options: Any) -> bool | None:
         """A present tag is not a working OCR model: glm-ocr:latest kept its tag through the
         Ollama 0.34.x update and then looped on every page. keep_alive 0 so the probe does
-        not hold 2.2 GB of VRAM beside the general model."""
+        not hold 2.2 GB of VRAM beside the general model; a version sharing general's tag passes
+        its keep_alive and num_ctx instead, so the probe leaves the resident model loaded."""
         import base64
 
         import fitz
         import httpx
 
+        num_ctx = options.pop("num_ctx", None)
         document = fitz.open()
         try:
             page = document.new_page(width=360, height=48)
@@ -646,8 +648,8 @@ class ProductionProbes:
         try:
             response = httpx.post(
                 f"{self._settings.ollama_base_url.rstrip('/')}/api/chat",
-                json={"model": model, "stream": False, "keep_alive": "0s",
-                      "options": {"temperature": 0, "num_predict": OCR_PROBE_MAX_TOKENS},
+                json={"model": model, "stream": False, "keep_alive": "0s", **options,
+                      "options": {"temperature": 0, "num_predict": OCR_PROBE_MAX_TOKENS, **({"num_ctx": num_ctx} if num_ctx else {})},
                       "messages": [{"role": "user", "content": prompt, "images": [base64.b64encode(png).decode("ascii")]}]},
                 timeout=OCR_PROBE_TIMEOUT_SECONDS,
             )
@@ -1038,7 +1040,11 @@ class _Walker:
         instead of every page failing inside ingestion where nothing did."""
         elapsed = lambda: int((perf_counter() - started) * 1000)  # noqa: E731
         assert self.probes is not None
-        stops = self.probes.ollama_ocr_stops(str(candidate.config["name"]), str(candidate.config.get("prompt", "Text Recognition:")))
+        # A model that thinks first would spend the probe's few tokens before it reads a thing.
+        options: dict[str, Any] = {}
+        if isinstance(candidate.config.get("think"), bool):
+            options = {"think": candidate.config["think"], "keep_alive": candidate.config.get("keep_alive", "5m"), "num_ctx": candidate.config.get("context")}
+        stops = self.probes.ollama_ocr_stops(str(candidate.config["name"]), str(candidate.config.get("prompt", "Text Recognition:")), **options)
         if stops is None:
             return "unverified", ProbeOutcome("ocr_stop", None, "probe OCR did not answer", elapsed()), f"{candidate.id}: probe OCR did not answer; pointer kept"
         if not stops:

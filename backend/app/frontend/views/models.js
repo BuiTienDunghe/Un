@@ -241,7 +241,7 @@
         add(role, reason, "muted");
       }
       if (role === "embedding") add(null, "Embedding không bao giờ tự lùi phiên bản. Đổi model = rebuild collection.", "warn");
-      if (role === "vision" && status === "unconfigured") add(null, "/vision/chat trả 501 cho tới khi có con trỏ active.", "warn");
+      if (role === "vision" && status === "unconfigured") add(null, "Chưa bật: chọn một bản bằng nút Đổi model để Ún đọc được ảnh.", "warn");
       // Con trỏ đến từ MODEL_VERSION_<ROLE> / tag env chứ không phải tệp registry.
       const source = str(row.source);
       if (source && source !== "registry") {

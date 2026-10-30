@@ -243,11 +243,25 @@ class ModelRouter:
 
         return stream, model_name
 
-    def ocr(self, image_base64: str, prompt: str = "Text Recognition:") -> tuple[str, str]:
-        """Extract text from a base64-encoded image using the OCR vision model.
+    def vision(self, prompt: str, image_base64: str) -> tuple[str, str]:
+        """Answer about one image with the vision version that serves."""
+        config = self.models.get("vision")
+        if config is None:
+            raise ValueError("no vision version is serving")
+        model_name = str(config["name"])
+        client = self._get_client(config)
+        if not isinstance(client, OllamaClient):
+            raise RuntimeError(f"vision is not supported on {type(client).__name__}")
+        answer = client.vision_chat(
+            model=model_name, prompt=prompt, images_base64=[image_base64],
+            options={"temperature": config.get("temperature", 0.3), "num_ctx": config.get("context", 16384)},
+            keep_alive=str(config.get("keep_alive", "5m")),
+            think=config.get("think") if isinstance(config.get("think"), bool) else None,
+        )
+        return answer, model_name
 
-        OCR is always routed through Ollama (vision API requires local model).
-        """
+    def ocr(self, image_base64: str, prompt: str = "Text Recognition:") -> tuple[str, str]:
+        """Extract text from a base64-encoded image using the OCR version that serves."""
         config = self.models.get("ocr")
         if config is None or not config.get("enabled", False):
             raise ValueError("OCR fallback is disabled or not configured in models.yaml")
@@ -268,5 +282,6 @@ class ModelRouter:
             images_base64=[image_base64],
             options=options,
             keep_alive=str(config.get("keep_alive", "5m")),
+            think=config.get("think") if isinstance(config.get("think"), bool) else None,
         )
         return answer, model_name

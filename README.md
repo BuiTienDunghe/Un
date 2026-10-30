@@ -117,11 +117,11 @@ Cách promote, demote, revert và rebuild collection: `docs/model_registry.md`.
 | --- | --- | --- |
 | Chat tổng quát và RAG (`general`) | `general-v0` | qwen3.5:9b |
 | Embedding (`embedding`) | `embedding-v0` | qwen3-embedding:0.6b — collection `documents` / `memories` |
-| OCR (`ocr`) | `ocr-v1` | local-ai/glm-ocr:eot-v1 — glm-ocr:latest khai thêm token kết thúc, dựng tay một lần bằng `scripts.build_ocr_model` (`docs/model_registry.md`); máy chưa dựng thì lùi về `ocr-v0`, bản này không qua probe trên Ollama 0.34.x nên OCR thành `disabled` |
+| OCR (`ocr`) | `ocr-v2` | qwen3.5:9b đọc thẳng ảnh trang; không dùng được thì lùi về `ocr-v1` (local-ai/glm-ocr:eot-v1) |
 | Reranker (`reranker`) | `reranker-v0` | cross-encoder/mmarco-mMiniLMv2-L12-H384-v1 |
 | Extractor / verifier trí nhớ Discord | `extractor-v0` / `verifier-v0` | qwen3.5:9b (cả hai tắt mặc định: `DISCORD_MEMORY_EXTRACTOR_ENABLED` / `_VERIFIER_ENABLED`) |
 | Condenser (Gemini, tắt mặc định) | `condenser-v0` | gemini-2.5-flash |
-| Vision | `active: null` — chưa có gì dùng (`/vision/chat` trả 501) | — |
+| Vision | `vision-v1` — qwen3.5:9b đọc ảnh trên máy: `/vision/chat` và ảnh đính kèm khi gọi `@Ún` | — |
 
 Ứng viên đám mây cho `general`: `general-haiku-v1` (claude-haiku-5-5) nằm sau v0 nên không bao
 giờ tự phục vụ; dùng thử trên một máy bằng `MODEL_VERSION_GENERAL=general-haiku-v1` trong shell
