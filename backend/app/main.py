@@ -6,6 +6,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from loguru import logger
 
 from app import __version__
 from app.services import model_choice
@@ -198,8 +199,6 @@ async def lifespan(app: FastAPI):
     if settings.rag_retrieval_mode:
         # Say so where the operator will see it. A machine measuring one
         # retrieval layer must never look like a machine serving all of them.
-        from loguru import logger
-
         logger.bind(event="retrieval_mode_override", mode=retrieval_mode, source="env").info(
             "Retrieval mode {} (per-machine env override)", retrieval_mode)
     # /models.rag: the flags this process really runs with. Set AFTER warmup so
