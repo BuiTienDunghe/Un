@@ -23,9 +23,9 @@ def register_routes(app: Any, *, admin_guard: list[Any]) -> None:
     """The five Discord routers, all behind the admin guard. Their prefixes
     (/api/bot, /api/condensations, /api/memory-review, /api/discord/...) overlap no
     core route, so where they are included does not change which route answers."""
-    from app.discord.routers import bot, condensations, history, memory_review, sessions
+    from app.discord.routers import bot, condensations, history, memory_review, message_labels, sessions
 
-    for module in (bot, memory_review, condensations, sessions, history):
+    for module in (bot, memory_review, message_labels, condensations, sessions, history):
         app.include_router(module.router, dependencies=admin_guard)
 
 
@@ -38,6 +38,7 @@ def register_services(app: Any, settings: Any, postgres_sessions: Any, *, projec
     from app.discord.history_service import DiscordHistoryService
     from app.discord.memory_completion_service import DiscordMemoryCompletionService
     from app.discord import remember_tool
+    from app.discord.message_labels import MessageLabelService
     from app.discord.memory_review_service import DiscordMemoryReviewService
     from app.discord.session_service import DiscordSessionService
     from app.discord.turn_progress import TurnProgress
@@ -97,5 +98,9 @@ def register_services(app: Any, settings: Any, postgres_sessions: Any, *, projec
     agent_tools.register(state.agent_service.registry, state.discord_history_service)
     # Ticket 35: remember, through the same approval path as every memory.
     remember_tool.register(state.agent_service.registry, postgres_sessions, state.memory_review_service)
+    # Ticket 36: decided's suggestions, and the jokes a person approved.
+    state.message_label_service = MessageLabelService(postgres_sessions)
+    agent_tools.register_jokes(state.agent_service.registry, state.message_label_service)
+    state.discord_turn_service.message_labels = state.message_label_service
     # P3-2: dashboard start/stop for the compose-managed Discord bot.
     state.bot_control_service = BotControlService(project_root)

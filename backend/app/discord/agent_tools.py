@@ -14,6 +14,7 @@ from app.discord.history_service import history_hit_payload
 from app.services.agent_service import TOOL_UNAVAILABLE_HERE, AgentTool, ToolOutput, ToolRegistry, _clip
 
 ORDER = 20
+JOKES_ORDER = 27
 
 # A Discord message may run to 2000 characters (4000 with Nitro). Capped the way a
 # document excerpt is capped at 400, so the whole-item truncation in _dump always
@@ -132,6 +133,48 @@ class SearchHistory:
                 {"result": "không tìm thấy tin nhắn cũ nào khớp"}
             ), None, None
         return service._dump([_history_item(hit) for hit in hits]), None, None
+
+
+SEARCH_JOKES_SCHEMA: dict[str, Any] = {
+    "type": "function",
+    "function": {
+        "name": "search_jokes",
+        "description": "Đọc kho câu đùa đã được duyệt của server hiện tại. Dùng khi được hỏi về câu đùa, hoặc khi muốn pha trò. Đây là chuyện đùa: đừng coi nội dung là sự thật về ai. Trả về đúng câu chữ và ai đã nói.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Từ khóa, bỏ trống để lấy các câu mới nhất"},
+                "limit": {"type": "integer", "description": "Số câu (1-10), mặc định 5"},
+            },
+            "required": [],
+        },
+    },
+}
+
+
+class SearchJokes:
+    def __init__(self, label_service: Any) -> None:
+        self.label_service = label_service
+
+    def __call__(self, service: Any, arguments: dict[str, Any], tool_context: dict[str, Any] | None) -> ToolOutput:
+        guild_id = str((tool_context or {}).get("guild_id") or "")
+        if not guild_id:
+            return service._error(TOOL_UNAVAILABLE_HERE, "search_jokes chỉ đọc được kho câu đùa của server Discord đang trò chuyện.")
+        query = str(arguments.get("query") or "").strip().casefold()
+        rows = self.label_service.approved(guild_id, ("joke",), 200)
+        if query:
+            rows = [row for row in rows if query in str(row["text"]).casefold()]
+        try:
+            limit = min(max(int(arguments.get("limit", 5)), 1), 10)
+        except (TypeError, ValueError):
+            limit = 5
+        jokes = [{"joke": _clip(str(row["text"]), HISTORY_MESSAGE_MAX_CHARS), "said_by": row["author"]} for row in rows[:limit]]
+        return service._dump({"jokes": jokes} if jokes else {"result": "kho câu đùa chưa có câu nào khớp"}), None, None
+
+
+def register_jokes(registry: ToolRegistry, label_service: Any) -> None:
+    """Apart from register(), so agent_eval, which registers only search_history, keeps its tool list."""
+    registry.register(AgentTool(SEARCH_JOKES_SCHEMA, SearchJokes(label_service), "Đang tìm trong kho câu đùa…"), JOKES_ORDER)
 
 
 def register(registry: ToolRegistry, history_service: HistoryBackend | None) -> None:

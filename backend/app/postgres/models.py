@@ -414,6 +414,31 @@ class DiscordSessionTurn(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
 
+class DiscordMessageLabel(Base):
+    """The decided model's suggestion for one ledger message, and the person's verdict. No text
+    here: it is read from the ledger, so an edit or a delete there applies (ticket 36)."""
+
+    __tablename__ = "discord_message_labels"
+    __table_args__ = (
+        CheckConstraint("status IN ('pending','approved','rejected','skipped')", name="ck_discord_message_labels_status"),
+        UniqueConstraint("discord_message_id", name="uq_discord_message_labels_message"),
+        Index("ix_discord_message_labels_guild_status", "guild_id", "status", "final_label"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    discord_message_id: Mapped[str] = mapped_column(Text, nullable=False)
+    guild_id: Mapped[str] = mapped_column(Text, nullable=False)
+    suggested_label: Mapped[str] = mapped_column(Text, nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    stable: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    probs: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    model: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="pending", server_default="pending")
+    final_label: Mapped[str | None] = mapped_column(Text)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
 class DiscordChannelMessage(Base):
     """Sổ gốc (tier 1, memory_design.md §5.2): one row per Discord message the
     bot passively hears in a listened channel — bot rows included, tagged

@@ -24,7 +24,7 @@ INDEX = (FRONTEND / "index.html").read_text(encoding="utf-8")
 #: Script tags in document order, as paths relative to the frontend folder.
 SCRIPTS = [src for src in re.findall(r'<script[^>]*\ssrc="/ui/([^"?]+)(?:\?[^"]*)?"', INDEX)]
 #: The screens the design handoff names (README "Kiến trúc đề xuất").
-VIEWS = ["chat", "documents", "research", "memory", "dashboard", "ocr", "bot", "models", "users", "settings", "chunks"]
+VIEWS = ["chat", "documents", "research", "memory", "labels", "dashboard", "ocr", "bot", "models", "users", "settings", "chunks"]
 
 #: Top-level declarations that land in the shared global scope of a classic script.
 #: `var` and `async function` are in the list because an adversarial pass walked both

@@ -1,0 +1,7 @@
+/* /ui/views/labels.css — màn hình Duyệt phân loại. */
+.lbl-card { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.lbl-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.lbl-meta { font-size: 12px; color: var(--text-3); }
+.lbl-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.lbl-stats { margin-bottom: 12px; font-size: 13px; color: var(--text-2); }
+.lbl-tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }

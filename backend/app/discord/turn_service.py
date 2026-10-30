@@ -85,6 +85,7 @@ class DiscordTurnService:
         self.memory_completion_service = memory_completion_service
         # P2-2: Discord turns become agent turns (tool use + trace) when on.
         self.agent_tools_enabled = agent_tools_enabled
+        self.message_labels = None  # Ticket 36: set by discord.register_services.
         # The document corpus is backend-wide, so tools only run for guilds
         # the operator listed. None = allow every guild (explicit "*" in
         # settings); an EMPTY set fails CLOSED — a misconfigured allowlist
@@ -562,6 +563,9 @@ class DiscordTurnService:
             guild_id = session.guild_id
             channel_id = session.channel_id
             base_instruction = speaker_context.system_instruction
+        # Ticket 36: what a person approved from decided's suggestions. Its own short read.
+        if self.message_labels is not None:
+            memory_lines = "\n".join(line for line in (memory_lines, *self.message_labels.memory_lines(guild_id)) if line)
 
         # Tier 3 read path (§9.4 — the section that refused to let tier 3 ship
         # write-only). Its own short transaction, outside the one above, and
