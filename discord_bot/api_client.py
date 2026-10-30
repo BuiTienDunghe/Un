@@ -406,6 +406,16 @@ class LocalAgentClient:
             raise BackendResponseError("Backend returned an invalid Discord turn.")
         return BackendDiscordTurn(turn_id, returned_session_id, sequence, status, created)
 
+    async def read_image(self, prompt: str, image_base64: str) -> str:
+        """What the backend's vision model says about one image."""
+        response = await self._authorized_post(
+            "/vision/chat", {"message": prompt, "image_base64": image_base64}, "Image reading", timeout=90.0,
+        )
+        answer = response.json().get("message")
+        if not isinstance(answer, str) or not answer.strip():
+            raise BackendResponseError("Backend returned an empty image reading.")
+        return answer.strip()
+
     async def record_history_message(self, payload: dict) -> None:
         """Job 1 (sổ gốc): one write per heard message in a listened channel.
         Callers fire-and-forget and swallow failures — the answering path

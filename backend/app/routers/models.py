@@ -13,7 +13,7 @@ router = APIRouter(tags=["models"])
 
 # The roles the Model screen may switch. The others need more than a pick: embedding a rebuild
 # of its collections, and the extractor refuses boot beside its tag pin in .env.
-SWITCHABLE_ROLES = ("general",)
+SWITCHABLE_ROLES = ("general", "ocr", "vision")
 _GUARDS = [Depends(require_api_key), Depends(require_admin)]
 
 

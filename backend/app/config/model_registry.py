@@ -43,7 +43,7 @@ MODEL_ROLES = ("general", "condenser", "embedding", "vision", "ocr", "extractor"
 NEVER_NULL_ROLES = ("general", "embedding")
 NO_FALLBACK_ROLES = ("embedding",)                                  # constraint 13
 DISABLE_ON_MISS_ROLES = ("ocr", "extractor", "verifier", "condenser")
-PINNABLE_ROLES = ("general", "condenser", "embedding", "ocr", "reranker", "extractor", "verifier")  # MODEL_VERSION_<ROLE>
+PINNABLE_ROLES = ("general", "condenser", "embedding", "vision", "ocr", "reranker", "extractor", "verifier")  # MODEL_VERSION_<ROLE>
 GATED_ROLES = ("general", "embedding", "reranker", "extractor")     # --check: the ACTIVE version needs an eval report
 PROVIDERS = ("ollama", "gemini", "deepseek", "anthropic", "sentence-transformers")
 CLOUD_PROVIDERS = ("gemini", "deepseek", "anthropic")   # probe = "API key registered", nothing to download

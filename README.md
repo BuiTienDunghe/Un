@@ -121,7 +121,7 @@ Cách promote, demote, revert và rebuild collection: `docs/model_registry.md`.
 | Reranker (`reranker`) | `reranker-v0` | cross-encoder/mmarco-mMiniLMv2-L12-H384-v1 |
 | Extractor / verifier trí nhớ Discord | `extractor-v0` / `verifier-v0` | qwen3.5:9b (cả hai tắt mặc định: `DISCORD_MEMORY_EXTRACTOR_ENABLED` / `_VERIFIER_ENABLED`) |
 | Condenser (Gemini, tắt mặc định) | `condenser-v0` | gemini-2.5-flash |
-| Vision | `active: null` — chưa có gì dùng (`/vision/chat` trả 501) | — |
+| Vision | `active: null`, chọn `vision-haiku-v1` trên màn hình Model để bật `/vision/chat` và cho `@Ún` đọc ảnh đính kèm | — |
 
 Ứng viên đám mây cho `general`: `general-haiku-v1` (claude-haiku-5-5) nằm sau v0 nên không bao
 giờ tự phục vụ; dùng thử trên một máy bằng `MODEL_VERSION_GENERAL=general-haiku-v1` trong shell

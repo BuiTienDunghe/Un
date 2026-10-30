@@ -17,6 +17,7 @@ is mandatory on this API, so the version record carries one.
 """
 from __future__ import annotations
 
+import base64
 import time
 import uuid
 from collections.abc import Iterator
@@ -47,6 +48,8 @@ class AnthropicRefusalError(Exception):
 
 
 DEFAULT_MAX_TOKENS = 4096
+# The API refuses an image over 5 MB of base64; a noisy scan's PNG can pass that.
+IMAGE_MAX_BASE64 = 5_000_000
 
 # Errors worth a second attempt: the API is there, this request just did not get through.
 _RETRYABLE = (
@@ -178,6 +181,29 @@ def convert_messages(messages: list[dict[str, Any]]) -> tuple[str | None, list[d
     return system, out
 
 
+def image_block(image_base64: str) -> dict[str, Any]:
+    """An API image block, with the media type read from the bytes and an oversized image
+    re-encoded as JPEG."""
+    data = base64.b64decode(image_base64, validate=True)
+    if len(image_base64) > IMAGE_MAX_BASE64:
+        import fitz
+
+        pixmap = fitz.Pixmap(data)
+        data = (fitz.Pixmap(pixmap, 0) if pixmap.alpha else pixmap).tobytes("jpeg", jpg_quality=85)
+        image_base64 = base64.b64encode(data).decode("ascii")
+    if data.startswith(b"\x89PNG"):
+        media_type = "image/png"
+    elif data.startswith(b"\xff\xd8"):
+        media_type = "image/jpeg"
+    elif data[:6] in (b"GIF87a", b"GIF89a"):
+        media_type = "image/gif"
+    elif data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        media_type = "image/webp"
+    else:
+        raise ValueError("unsupported image format")
+    return {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_base64}}
+
+
 class AnthropicClient:
     def __init__(
         self,
@@ -276,6 +302,17 @@ class AnthropicClient:
         effort: str | None = None,
     ) -> str:
         response = self._create(**self._request_kwargs(model, messages, max_tokens, effort))
+        self._record(response)
+        self._check_stop(response, model)
+        return _text_of(response.content)
+
+    def read_image(self, model: str, prompt: str, image_base64: str, max_tokens: int | None = None) -> str:
+        """One image and one instruction: the OCR and vision roles."""
+        response = self._create(
+            model=model,
+            max_tokens=int(max_tokens) if max_tokens else DEFAULT_MAX_TOKENS,
+            messages=[{"role": "user", "content": [image_block(image_base64), {"type": "text", "text": prompt}]}],
+        )
         self._record(response)
         self._check_stop(response, model)
         return _text_of(response.content)

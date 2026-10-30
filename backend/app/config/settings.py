@@ -163,6 +163,7 @@ class Settings(BaseSettings):
     model_version_general: str | None = None
     model_version_condenser: str | None = None
     model_version_embedding: str | None = None
+    model_version_vision: str | None = None
     model_version_ocr: str | None = None
     model_version_reranker: str | None = None
     model_version_extractor: str | None = None
@@ -232,6 +233,7 @@ class Settings(BaseSettings):
         "model_version_general",
         "model_version_condenser",
         "model_version_embedding",
+        "model_version_vision",
         "model_version_ocr",
         "model_version_reranker",
         "model_version_extractor",

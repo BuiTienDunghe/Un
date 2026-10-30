@@ -12,6 +12,10 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/DEVELOPMEN
 ## [Unreleased]
 
 ### Added
+- **OCR và đọc ảnh bằng Haiku, chọn trên màn hình Model** (ticket 33, 30/10). Đo trên 158 từ tiếng Việt tự viết, 6 trang 200 dpi gồm cả scan
+  giả lập: OCR trên máy (`ocr-v1`) sai 9,8–13,1% ký tự, `ocr-haiku-v1` sai 0%. Chưa đo trên scan thật hay chữ viết tay. Bật `vision-haiku-v1` thì
+  `/vision/chat` chạy thật và `@Ún` đọc được tối đa 3 ảnh đính kèm, chỉ ở server trong `DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST`. Trang scan và ảnh
+  sẽ rời khỏi máy, tính phí theo lượt. Mặc định vẫn là OCR trên máy và vision tắt.
 - **Đổi model trả lời ngay trên màn hình Model** (ticket 31, 30/10). Nút "Đổi model" và "Về mặc định" ở thẻ "Trò chuyện & RAG" trước đây
   chỉ báo máy chủ chưa hỗ trợ; giờ chọn được Qwen hoặc Haiku, có hiệu lực sau khi khởi động lại backend. Lựa chọn chỉ áp dụng cho máy
   này (`data/model_choice.env`, launcher đọc khi khởi động); bài đánh giá vẫn chấm bản mặc định. Vai trò khác vẫn chưa đổi được từ

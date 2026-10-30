@@ -113,6 +113,7 @@ async def lifespan(app: FastAPI):
     # The SAME dict the router serves (the second load_models() call is gone):
     # /models and the answer path can never disagree about a name.
     app.state.models = router.models
+    app.state.model_router = router
     app.state.model_registry = resolved
     app.state.settings = settings
     app.state.qdrant_store = qdrant_store

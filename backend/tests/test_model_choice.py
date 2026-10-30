@@ -47,7 +47,9 @@ def test_models_offers_the_switch_only_on_the_answer_role(mock_ollama, client, c
     versions = versions_by_id(registry["general"])
     assert versions[QWEN]["status"] == "active" and versions[QWEN]["cloud"] is False
     assert versions[HAIKU]["status"] == "candidate" and versions[HAIKU]["cloud"] is True
-    for role in ("embedding", "reranker", "extractor", "ocr"):
+    assert registry["ocr"]["switchable"] is True and registry["vision"]["switchable"] is True
+    assert "vision-haiku-v1" in versions_by_id(registry["vision"])
+    for role in ("embedding", "reranker", "extractor"):
         assert "switchable" not in registry[role] and "versions" not in registry[role]
 
 

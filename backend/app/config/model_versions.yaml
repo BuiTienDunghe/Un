@@ -150,7 +150,7 @@ roles:
           query_prefix: "query: "      # inside config ON PURPOSE: a prefix change re-keys the cache
           passage_prefix: "passage: "
 
-  # ── vision: no consumer (/vision/chat is 501). active: null = not served,
+  # ── vision: /vision/chat, 501 while nothing serves. active: null = not served,
   # absent from /models.models (the app.js Vision row disappears; decision 5).
   vision:
     active: null
@@ -163,6 +163,12 @@ roles:
           context: 16384
           temperature: 0.3
           keep_alive: 5m
+      - id: vision-haiku-v1            # CANDIDATE: chosen per machine on the Model screen. Cloud: images leave.
+        provider: anthropic
+        config:
+          provider: anthropic
+          name: claude-haiku-5-5
+          max_tokens: 2048
 
   # ── ocr: a missing tag turns the role OFF (config.enabled false on the served
   # copy) instead of today's per-page silent warnings. `glm-ocr:latest` is a
@@ -208,6 +214,21 @@ roles:
           max_tokens: 4096             # num_predict; a page that reaches it is rejected, not indexed
           keep_alive: 5m
           prompt: "Text Recognition:"
+          dpi: 200
+          min_text_characters: 80
+          min_alphanumeric_ratio: 0.45
+      - id: ocr-haiku-v1               # CANDIDATE: chosen per machine on the Model screen. Cloud: scanned pages leave.
+        provider: anthropic
+        notes: >-
+          30/10/2026, 158 self-written Vietnamese words on 6 rendered pages at 200 dpi, clean and
+          with a synthetic scan (rotation, blur, noise): 0.00% of characters wrong on all 6,
+          against 9.8-13.1% for ocr-v1 on the same pages. No real scan or handwriting measured.
+        config:
+          provider: anthropic
+          name: claude-haiku-5-5
+          enabled: true
+          max_tokens: 4096
+          prompt: "Chép lại nguyên văn toàn bộ chữ trong ảnh, giữ đúng dấu tiếng Việt và số. Không thêm lời bình."
           dpi: 200
           min_text_characters: 80
           min_alphanumeric_ratio: 0.45

@@ -243,15 +243,33 @@ class ModelRouter:
 
         return stream, model_name
 
-    def ocr(self, image_base64: str, prompt: str = "Text Recognition:") -> tuple[str, str]:
-        """Extract text from a base64-encoded image using the OCR vision model.
+    def vision(self, prompt: str, image_base64: str) -> tuple[str, str]:
+        """Answer about one image with the vision version that serves."""
+        config = self.models.get("vision")
+        if config is None:
+            raise ValueError("no vision version is serving")
+        model_name = str(config["name"])
+        client = self._get_client(config)
+        if isinstance(client, AnthropicClient):
+            return client.read_image(model_name, prompt, image_base64, config.get("max_tokens")), model_name
+        if isinstance(client, OllamaClient):
+            answer = client.vision_chat(
+                model=model_name, prompt=prompt, images_base64=[image_base64],
+                options={"temperature": config.get("temperature", 0.3), "num_ctx": config.get("context", 16384)},
+                keep_alive=str(config.get("keep_alive", "5m")),
+            )
+            return answer, model_name
+        raise RuntimeError(f"vision is not supported on {type(client).__name__}")
 
-        OCR is always routed through Ollama (vision API requires local model).
-        """
+    def ocr(self, image_base64: str, prompt: str = "Text Recognition:") -> tuple[str, str]:
+        """Extract text from a base64-encoded image using the OCR version that serves."""
         config = self.models.get("ocr")
         if config is None or not config.get("enabled", False):
             raise ValueError("OCR fallback is disabled or not configured in models.yaml")
         model_name = str(config["name"])
+        if config.get("provider") == "anthropic":
+            client = self._get_client(config)
+            return client.read_image(model_name, prompt, image_base64, config.get("max_tokens")), model_name
         ollama = self.clients.get("ollama")
         if not isinstance(ollama, OllamaClient):
             raise RuntimeError("OCR requires the 'ollama' provider to be configured")
