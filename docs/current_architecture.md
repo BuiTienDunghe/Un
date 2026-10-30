@@ -15,7 +15,7 @@ The retired SQLite data is an explicit read-only archive, not a fallback:
 data/archives/sqlite-retired-20260719T002000Z/
 ```
 
-No code uses `sqlite3` any more: the migration tools were removed on 2026-10-30 (`.scratch/ARCHIVE.md`). `pre_postgres_*` archives
+Only `backend/scripts/migrate_document_storage.py` still opens `sqlite3`; the other migration tools were removed on 2026-10-30 (`.scratch/ARCHIVE.md`). `pre_postgres_*` archives
 are historical evidence only and must never be merged or used as a runtime
 database.
 
