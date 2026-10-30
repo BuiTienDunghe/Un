@@ -621,7 +621,7 @@ class DiscordTurnService:
                     use_tools=use_tools_for_turn,
                     # search_history scopes to THIS session's guild, server-side —
                     # a model-supplied guild id is never trusted (§3.1 lesson).
-                    tool_context={"guild_id": session.guild_id},
+                    tool_context={"guild_id": session.guild_id, "turn_id": str(turn_id)},
                     **progress,
                 )
         except ConversationNotFoundError:

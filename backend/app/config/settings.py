@@ -193,6 +193,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str | None = None
     anthropic_chat_timeout_seconds: float = 60.0
     anthropic_retry_count: int = 2
+    # Ticket 35: web_search and read_webpage. Off by default: the query leaves the machine, and
+    # the evals must keep grading the same tool list.
+    agent_web_tools_enabled: bool = False
     qdrant_url: str = "http://127.0.0.1:6333"
     qdrant_timeout_seconds: float = 10.0
     # Memory vectors live in their own named collection. Tests point this at a

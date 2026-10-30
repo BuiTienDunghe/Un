@@ -13,6 +13,7 @@ works on in-memory messages and returns; persistence belongs to the caller.
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -360,6 +361,8 @@ class AgentService:
         tool_context = {
             **(tool_context or {}),
             "readable_documents": set((tool_context or {}).get("readable_documents") or ()) | set(pastes),
+            # What read_webpage may open: a URL the speaker wrote, and what web_search adds.
+            "web_urls": {url.rstrip(".,;:!?)]}") for message in working[-1:] if message.get("role") == "user" for url in re.findall(r"https?://\S+", str(message.get("content") or ""))},
             "pastes": pastes,
         }
 

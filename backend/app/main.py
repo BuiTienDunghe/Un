@@ -246,6 +246,10 @@ async def lifespan(app: FastAPI):
     )
     # Last: the Discord services build on the chat, memory and agent services above.
     discord.register_services(app, settings, postgres_sessions, project_root=PROJECT_ROOT)
+    if settings.agent_web_tools_enabled:
+        from app.services import web_tools
+
+        web_tools.register(app.state.agent_service.registry)
     try:
         yield
     finally:

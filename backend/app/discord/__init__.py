@@ -37,6 +37,7 @@ def register_services(app: Any, settings: Any, postgres_sessions: Any, *, projec
     from app.discord.condensation_service import DiscordCondensationService
     from app.discord.history_service import DiscordHistoryService
     from app.discord.memory_completion_service import DiscordMemoryCompletionService
+    from app.discord import remember_tool
     from app.discord.memory_review_service import DiscordMemoryReviewService
     from app.discord.session_service import DiscordSessionService
     from app.discord.turn_progress import TurnProgress
@@ -94,5 +95,7 @@ def register_services(app: Any, settings: Any, postgres_sessions: Any, *, projec
     # The agent's search_history tool, plugged into the running agent's registry at the
     # place it always had in the tool list (C4): the core declares no Discord tool.
     agent_tools.register(state.agent_service.registry, state.discord_history_service)
+    # Ticket 35: remember, through the same approval path as every memory.
+    remember_tool.register(state.agent_service.registry, postgres_sessions, state.memory_review_service)
     # P3-2: dashboard start/stop for the compose-managed Discord bot.
     state.bot_control_service = BotControlService(project_root)
