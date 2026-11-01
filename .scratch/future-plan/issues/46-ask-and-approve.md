@@ -30,3 +30,7 @@ Quyết định đã chọn, đổi được:
 
 Chưa làm: nút/lệnh duyệt trên Discord (bot chưa gọi các cổng trên); công cụ `ask_user` (hỏi lại khi thiếu dữ kiện); đo tỉ lệ hỏi thừa
 (chưa đo); đo cô lập so với mốc 41 (không đổi gì trong prompt hay danh sách công cụ khi tắt nên chưa cần, nhưng chưa chạy Agent Eval).
+
+Lưu ý cho sau: `scripts/agent_eval.py` băm `registry.schemas()` còn model thật được đưa `AgentService._offered_schemas()`. Hôm nay hai
+danh sách giống hệt (chưa công cụ nào mang cờ). Ngày một công cụ như `remember` bị gắn cờ, `tools_sha256` của Agent Eval sẽ chứa một công cụ
+mà model thật (khi tắt duyệt) không thấy, nên so với mốc 41 phải đổi eval dùng `_offered_schemas()`.
