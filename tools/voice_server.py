@@ -35,7 +35,7 @@ REPLY_TIMEOUT_SECONDS = 150.0
 CLIENT_TIMEOUT_SECONDS = 30.0
 
 
-# â”€â”€ the child: holds the model, and everything it holds goes when it exits â”€â”€
+# ── the child: holds the model, and everything it holds goes when it exits ──
 def _load() -> dict:
     raise NotImplementedError("no speech model is chosen yet (ticket 49): see .scratch/future-plan/voice-survey.md")
 
@@ -59,7 +59,7 @@ def model_process() -> int:
     return 0
 
 
-# â”€â”€ the door â”€â”€
+# ── the door ──
 def transcribe(model: ModelProcess, audio: bytes) -> dict:
     """The child's reply for these bytes. The temporary file is gone whichever way this ends."""
     handle = tempfile.NamedTemporaryFile(prefix="voice-", suffix=".audio", delete=False)
