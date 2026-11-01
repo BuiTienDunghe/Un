@@ -222,3 +222,22 @@ def test_with_a_budget_the_oldest_results_are_cleared_before_the_last_round(tmp_
     assert cleared, "something was cleared"
     final_step = next(e for e in _jsonl(out_dir / "events.jsonl") if e["kind"] == "final")
     assert final_step.get("context_cleared", 0) >= 1
+
+
+@pytest.mark.parametrize("task_id", PASTE_IDS)
+def test_with_long_input_on_the_reading_pass_engages_through_the_runner_and_the_model_sees_the_notes(tmp_path, task_id):
+    """Not only reachable by a direct read: the runner's own path (N1 slip, then ticket 45's parts) takes these pastes."""
+    task = TASKS[task_id]
+
+    class Noting(Watching):
+        def chat(self, mode, messages, options=None):
+            self.notes_asked = getattr(self, "notes_asked", 0) + 1
+            return f"Ghi chú phần {self.notes_asked}: không có gì.", "qwen3.5:9b"
+
+    router = Noting([final("Chưa rõ.")])
+    out_dir, _ = run_one(tmp_path, task, router, long_input=True)
+    parts = len(split_parts(task["input"], part_chars(INLINE_MAX_TOKENS)))
+    kinds = [e["kind"] for e in _jsonl(out_dir / "events.jsonl")]
+    assert kinds.count("long_input_part") == parts == router.notes_asked, "one call per part, none dropped for the window"
+    seen = str(router.sent[0][-1]["content"])
+    assert "Đã đọc đủ mọi phần." in seen and "GHI CHÚ PHẦN 1/" in seen and len(seen) < len(task["input"]) / 4, "the digest, not the slip or the paste"

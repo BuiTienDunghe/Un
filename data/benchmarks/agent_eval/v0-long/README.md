@@ -39,11 +39,23 @@ ngân sách và dọn kết quả cũ khi có; bộ chấm cho đạt câu mẫu
 - Mẫu số chỉ nhận chữ số ("90 phút", không phải "chín mươi phút"), như v0.
 - Văn bản độn lặp mẫu câu, nên model có thể nhận ra chỗ khác thường; đo "đọc dài" bằng văn bản tự nhiên cần dữ liệu thật.
 
-## Lệnh đo
+## Giả định về cửa sổ
 
-```
-cd backend
-python -m scripts.agent_eval --dataset ../data/benchmarks/agent_eval/v0-long --temperature 0 --seed 42 --probe --unload-between-tasks
-AGENT_LONG_INPUT_ENABLED=true python -m scripts.agent_eval --dataset ../data/benchmarks/agent_eval/v0-long --tasks end-01,end-02,end-03,end-04,end-05,end-06,end-07 --temperature 0 --seed 42 --unload-between-tasks
+Bài ctx chạm trần **khi general có `context: 16384`** (đang là `general-v0`, trần N1 = 12 288 token). Ước lượng
+của đường ngắn nhất là 14 400–16 200 token; với cửa sổ 32 768 (trần 28 672) không bài nào chạm và bộ không đo gì
+cho ticket 44. Muốn ép trần ở máy khác: `--context-ceiling N`. Bài ctx cũng thưởng model gọi các lần đọc song song
+trong một vòng; model đọc lần lượt hết `max_steps` (3 vòng) trước khi đủ dữ kiện, đó là tính chất của bài, không
+phải lỗi. Khoá `context_ceiling` và `long_input` trong tệp bài chỉ là nhãn, bộ nạp và bộ chấm không đọc.
+
+## Lệnh đo (PowerShell, từ `backend`)
+
+```powershell
+# Đối chứng, cả bộ (end tắt long_input, ctx không ngân sách)
+python -m scripts.agent_eval --dataset ../data/benchmarks/agent_eval/v0-long --temperature 0 --seed 42 --unload-between-tasks
+# Ticket 45: bật đọc theo phần, chỉ 7 bài end
+$env:AGENT_LONG_INPUT_ENABLED='true'; python -m scripts.agent_eval --dataset ../data/benchmarks/agent_eval/v0-long --tasks end-01,end-02,end-03,end-04,end-05,end-06,end-07 --temperature 0 --seed 42 --unload-between-tasks; Remove-Item Env:AGENT_LONG_INPUT_ENABLED
+# Ticket 44: bật ngân sách ngữ cảnh, chỉ 7 bài ctx
 python -m scripts.agent_eval --dataset ../data/benchmarks/agent_eval/v0-long --tasks ctx-01,ctx-02,ctx-03,ctx-04,ctx-05,ctx-06,ctx-07 --context-budget --temperature 0 --seed 42 --unload-between-tasks
 ```
+
+Theo `.scratch/future-plan/map.md`: so nhánh với đối chứng cùng ngày, cùng phiên bản Ollama.
