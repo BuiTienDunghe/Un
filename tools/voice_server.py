@@ -11,6 +11,11 @@ or logged. Binds to loopback only.
 The speech model is PhoWhisper-small (owner's pick, .scratch/future-plan/voice-survey.md), read through
 transformers with PyAV decoding the recording. VOICE_MODEL_PYTHON names the interpreter the child runs
 in, for a model that needs libraries this one does not have.
+
+A sound with no speech in it (silence, a beep, a hum, noise) gets empty text, so the bot answers politely
+that it heard nothing: a filter before the model (_speech_seconds) and one on what it wrote (_invented).
+Both are plain signal and text arithmetic, with no extra model, and are only checked against generated
+sounds: nothing here shows they keep every real voice or drop every invention.
 """
 from __future__ import annotations
 
@@ -37,6 +42,29 @@ CLIENT_TIMEOUT_SECONDS = 30.0
 MODEL_DIR = Path(os.environ.get("VOICE_MODEL_DIR") or Path(__file__).resolve().parent.parent / "data" / "models" / "phowhisper-small")
 SAMPLE_RATE = 16_000
 MAX_RECORDING_SECONDS = 180.0
+# What counts as a person talking (_speech_seconds). Set from synthetic sounds only, never tuned on a real
+# voice; a quiet or unusual speaker may fall under them, so every one is a plain constant to change.
+FRAME_SECONDS = 0.03
+SPEECH_BAND = (100.0, 4000.0)
+MIN_LEVEL_DBFS = -50.0
+MIN_SPEECH_SECONDS = 0.3
+# A frame is a steady tone when this share of its power sits within TONE_BINS bins of its strongest one.
+TONE_SHARE = 0.85
+TONE_BINS = 2
+MIN_LEVEL_SPREAD_DB = 3.0
+# What the model may write for the sound it was given (_invented).
+MAX_LETTERS_PER_SECOND = 40.0
+REPEATED_WORD_SHARE = 0.6
+STOCK_PHRASE_SECONDS = 3.0
+# Lines Whisper models are known to write for silence in Vietnamese, from the usual reports, not from this model.
+STOCK_PHRASES = (
+    "ghiền mì gõ",
+    "đăng ký kênh",
+    "subscribe cho kênh",
+    "amara org",
+    "hẹn gặp lại các bạn trong những video",
+    "cảm ơn các bạn đã theo dõi",
+)
 
 
 # ── the child: holds the model, and everything it holds goes when it exits ──
@@ -63,6 +91,45 @@ def _decode(path: str, *, max_seconds: float = MAX_RECORDING_SECONDS) -> "numpy.
     return numpy.concatenate(pieces) if pieces else numpy.zeros(0, dtype=numpy.float32)
 
 
+def _speech_seconds(audio: "numpy.ndarray") -> float:
+    """Seconds of `audio` that could be a person talking, 0.0 when none: loud enough, not a steady tone,
+    and the loudness moves the way speech does. Whisper-family models write fluent words for a beep,
+    a hum or a room's noise, so the model is not asked about a recording that fails here. Cheap
+    (one FFT per 30 ms), and it measures the sound only, not the language or the voice."""
+    import numpy
+
+    size = int(FRAME_SECONDS * SAMPLE_RATE)
+    frames = audio[: audio.size // size * size].reshape(-1, size)
+    if frames.shape[0] == 0:
+        return 0.0
+    level = 20 * numpy.log10(numpy.sqrt(numpy.mean(frames**2, axis=1)) + 1e-10)
+    spectrum = numpy.abs(numpy.fft.rfft(frames * numpy.hanning(size), axis=1)) ** 2
+    hertz = numpy.fft.rfftfreq(size, 1 / SAMPLE_RATE)
+    band = spectrum[:, (hertz >= SPEECH_BAND[0]) & (hertz <= SPEECH_BAND[1])]
+    peak = band.argmax(axis=1)
+    near = numpy.array([row[max(0, at - TONE_BINS) : at + TONE_BINS + 1].sum() for row, at in zip(band, peak)])
+    tonal = near / (band.sum(axis=1) + 1e-20) > TONE_SHARE
+    speechlike = (level > MIN_LEVEL_DBFS) & ~tonal
+    seconds = float(speechlike.sum()) * FRAME_SECONDS
+    # Speech goes loud and soft from syllable to syllable; a hum, a siren or white noise does not.
+    if seconds < MIN_SPEECH_SECONDS or float(level[speechlike].std()) < MIN_LEVEL_SPREAD_DB:
+        return 0.0
+    return seconds
+
+
+def _invented(text: str, speech_seconds: float) -> bool:
+    """Text a speech model writes when it has nothing to hear: a word said over and over, more letters
+    than anyone says in that many seconds, or the stock closing lines it learned from video subtitles."""
+    letters = len(text.replace(" ", ""))
+    if letters > MAX_LETTERS_PER_SECOND * max(speech_seconds, 1.0):
+        return True
+    words = text.lower().split()
+    if len(words) >= 6 and max(words.count(word) for word in set(words)) / len(words) > REPEATED_WORD_SHARE:
+        return True
+    plain = " ".join("".join(c if c.isalnum() or c == " " else " " for c in text.lower()).split())
+    return speech_seconds < STOCK_PHRASE_SECONDS and any(phrase in plain for phrase in STOCK_PHRASES)
+
+
 def _load() -> dict:
     if not MODEL_DIR.is_dir():  # Named as a repository, a missing folder would go and fetch a gigabyte.
         raise FileNotFoundError(MODEL_DIR)
@@ -85,11 +152,15 @@ def _transcribe(state: dict, path: str) -> dict:
     audio = _decode(path)
     if audio.size == 0:
         return {"text": ""}
+    speech = _speech_seconds(audio)
+    if speech == 0.0:  # Not worth the card, and the model would only make words up.
+        return {"text": ""}
     heard = state["hear"](
         {"raw": audio, "sampling_rate": SAMPLE_RATE},
         generate_kwargs={"language": "vietnamese", "task": "transcribe"},
     )
-    return {"text": heard["text"].strip()}
+    text = heard["text"].strip()
+    return {"text": "" if _invented(text, speech) else text}
 
 
 def model_process() -> int:

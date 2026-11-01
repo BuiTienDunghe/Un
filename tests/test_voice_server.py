@@ -194,3 +194,103 @@ def test_health_answers_while_a_recording_is_being_heard(tmp_path: Path, spool: 
     assert time.monotonic() - began < 1.0
     worker.join(timeout=30)
     assert result == [200]
+
+
+# ── what is not speech never reaches the model, and what the model invents is dropped ──
+RATE = voice_server.SAMPLE_RATE
+
+
+def _seconds(count: float):
+    numpy = pytest.importorskip("numpy")
+    return numpy.arange(int(count * RATE)) / RATE
+
+
+def _beep(seconds: float = 2.0, hertz: float = 220.0):
+    numpy = pytest.importorskip("numpy")
+    return (0.3 * numpy.sin(2 * numpy.pi * hertz * _seconds(seconds))).astype(numpy.float32)
+
+
+def _talking(seconds: float = 4.0):
+    """Made-up speech: a gliding voice whose harmonics follow two formants, loud and soft at a syllable's pace, with pauses and a little room noise."""
+    numpy = pytest.importorskip("numpy")
+    rng = numpy.random.default_rng(7)
+    t = _seconds(seconds)
+    pitch = 120 + 40 * numpy.sin(2 * numpy.pi * 0.7 * t)
+    phase = 2 * numpy.pi * numpy.cumsum(pitch) / RATE
+    voice = sum(numpy.sin(k * phase) / (1 + ((k * pitch - 700) / 400) ** 2 + 0.3) for k in range(1, 30))
+    syllables = numpy.clip(numpy.sin(2 * numpy.pi * 3.5 * t), 0, None) ** 1.5 * (numpy.sin(2 * numpy.pi * 0.4 * t) > -0.6)
+    out = 0.12 * voice * syllables / numpy.abs(voice).max() * 3 + 0.002 * rng.standard_normal(t.size)
+    return out.astype(numpy.float32)
+
+
+def test_a_beep_a_hum_noise_and_silence_have_no_speech_in_them() -> None:
+    numpy = pytest.importorskip("numpy")
+    rng = numpy.random.default_rng(1)
+    hum = sum(0.1 * numpy.sin(2 * numpy.pi * 50 * k * _seconds(3)) for k in (1, 2, 3, 5)).astype(numpy.float32)
+    two_tones = (_beep(3, 697) + _beep(3, 1209)).astype(numpy.float32)
+    noise = (0.2 * rng.standard_normal(3 * RATE)).astype(numpy.float32)
+    for sound in (_beep(), _beep(2, 1000), hum, two_tones, noise, numpy.zeros(3 * RATE, numpy.float32), 0.0005 * noise):
+        assert voice_server._speech_seconds(sound) == 0.0
+
+
+def test_something_like_talking_is_let_through() -> None:
+    assert voice_server._speech_seconds(_talking()) > 1.0
+    numpy = pytest.importorskip("numpy")
+    assert voice_server._speech_seconds(_talking() * numpy.float32(0.3)) > 1.0, "10 dB quieter is still heard"
+    assert voice_server._speech_seconds(_talking() * numpy.float32(0.05)) == 0.0, "the floor: a voice 26 dB down (peaks at -48 dBFS) is taken for nothing"
+
+
+def test_a_click_is_too_short_to_be_speech() -> None:
+    numpy = pytest.importorskip("numpy")
+    click = numpy.zeros(2 * RATE, numpy.float32)
+    click[RATE : RATE + 300] = 0.5 * numpy.random.default_rng(2).standard_normal(300)
+    assert voice_server._speech_seconds(click) == 0.0
+
+
+class _Parrot:
+    """Stands for the speech model: writes whatever it is told to, and counts being asked."""
+
+    def __init__(self, text: str) -> None:
+        self.text, self.asked = text, 0
+
+    def __call__(self, *_args, **_kwargs) -> dict:
+        self.asked += 1
+        return {"text": f"  {self.text} "}
+
+
+def _hear(monkeypatch: pytest.MonkeyPatch, sound, text: str) -> tuple[dict, _Parrot]:
+    parrot = _Parrot(text)
+    monkeypatch.setattr(voice_server, "_decode", lambda _path: sound)
+    return voice_server._transcribe({"hear": parrot}, "unused"), parrot
+
+
+def test_a_beep_gets_empty_text_and_the_model_is_not_asked(monkeypatch: pytest.MonkeyPatch) -> None:
+    reply, parrot = _hear(monkeypatch, _beep(), "Xin chào các bạn, hôm nay mình sẽ nói về chủ đề mới")
+    assert reply == {"text": ""} and parrot.asked == 0
+
+
+def test_talking_is_written_down(monkeypatch: pytest.MonkeyPatch) -> None:
+    reply, parrot = _hear(monkeypatch, _talking(), "Mai mình họp lúc chín giờ nhé")
+    assert reply == {"text": "Mai mình họp lúc chín giờ nhé"} and parrot.asked == 1
+
+
+@pytest.mark.parametrize(
+    "invented",
+    [
+        "không không không không không không không không",
+        "Hãy subscribe cho kênh Ghiền Mì Gõ Để không bỏ lỡ những video hấp dẫn",
+        "Cảm ơn các bạn đã theo dõi, hẹn gặp lại các bạn trong những video tiếp theo!",
+        "a" * 400,
+    ],
+)
+def test_what_the_model_invents_over_a_short_sound_is_dropped(monkeypatch: pytest.MonkeyPatch, invented: str) -> None:
+    short = _talking()[: int(0.7 * RATE)]
+    assert 0.3 <= voice_server._speech_seconds(short) < voice_server.STOCK_PHRASE_SECONDS
+    reply, parrot = _hear(monkeypatch, short, invented)
+    assert reply == {"text": ""} and parrot.asked == 1
+
+
+def test_a_stock_line_said_in_a_long_recording_is_kept(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A person may really say it; the stock-line rule only applies to a sound too short to hold more."""
+    reply, _ = _hear(monkeypatch, _talking(12), "Cảm ơn các bạn đã theo dõi buổi họp hôm nay")
+    assert reply["text"] != ""
