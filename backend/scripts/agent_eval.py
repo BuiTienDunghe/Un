@@ -413,6 +413,7 @@ def run_eval(
     inline_max_tokens = int(agent_config.get("inline_max_tokens", INLINE_MAX_TOKENS))
     context_budget = agent_config.get("context_budget")
     long_input = bool(agent_config.get("long_input", False))
+    lookup_check = bool(agent_config.get("lookup_check", False))
     history = FixtureHistory(dataset.guild)
     # The tools as the API offers them: the core's, plus app.discord's search_history
     # plugged in with the fixture guild (ticket 22, C4). The manifest's hash and the
@@ -431,6 +432,8 @@ def run_eval(
         "context_budget": None if context_budget is None else {"ceiling_tokens": context_budget.ceiling_tokens or inline_max_tokens, "keep_recent": context_budget.keep_recent},
         # Ticket 45: a last-message paste past that estimate read in parts by the code; runs only compare when this agrees.
         "long_input": long_input,
+        # Harness-fix round: a turn that gave up before any lookup is sent back once; runs only compare when this agrees.
+        "lookup_check": lookup_check,
         "turn_budget_seconds": turn_budget_seconds,
         "final_reserve_seconds": final_reserve_seconds,
         "injection_defense": defense.enabled,
@@ -475,6 +478,7 @@ def run_eval(
             inline_max_tokens=inline_max_tokens,
             context_budget=context_budget,
             long_input=long_input,
+            lookup_check=lookup_check,
         )
         tool_context = {"guild_id": history.guild_id} if task.get("surface") == "discord" else None
         answer: str | None = None
@@ -570,6 +574,10 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--context-budget", action="store_true",
         help="clear the oldest tool results when the prompt nears the window (ticket 44); default: agent.context_budget in models.yaml, off",
+    )
+    parser.add_argument(
+        "--lookup-check", action="store_true",
+        help="send a turn that gave up before any lookup back once to look (harness-fix round); default: agent.lookup_check in models.yaml, off",
     )
     parser.add_argument(
         "--context-ceiling", type=int,
@@ -778,6 +786,7 @@ def main(argv: list[str] | None = None) -> int:
         "context_budget": context_budget_from_config(context_section(agent_section, args), general),
         # Ticket 45, off unless AGENT_LONG_INPUT_ENABLED says so, as in the API; the manifest records it.
         "long_input": settings.agent_long_input_enabled,
+        "lookup_check": bool(args.lookup_check or agent_section.get("lookup_check", False)),
     }
     defense = InjectionDefense.from_config(config.get("rag", {}), enabled_override=settings.rag_injection_defense_enabled)
 

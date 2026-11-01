@@ -225,6 +225,23 @@ def call_string(name: str, arguments_json: str) -> str:
     return f"{name}({','.join(f'{key}={value!r}' for key, value in arguments.items())})"
 
 
+def tool_traffic(steps: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The calls a turn made and what came back, as the messages the model would have held: per
+    call, an assistant message with the call and then the tool's message. BFCL's own runner keeps
+    all of it between turns; Ún's chat path keeps only the text, so this is the option
+    `--carry-tool-traffic`, off, to measure what persisting tool results across turns would give."""
+    messages: list[dict[str, Any]] = []
+    pending: dict[str, Any] | None = None
+    for step in steps:
+        if step["kind"] == "tool_call":
+            pending = step
+        elif step["kind"] == "tool_result" and pending is not None:
+            messages.append({"role": "assistant", "content": "", "tool_calls": [{"function": {"name": pending["tool_name"], "arguments": pending["arguments"] or {}}}]})
+            messages.append({"role": "tool", "tool_name": step["tool_name"], "content": step["content"] or ""})
+            pending = None
+    return messages
+
+
 class TurnLog:
     """The calls the loop executed, by model round. A round is the router's call count so far:
     UsageRecordingRouter appends to `rounds` when a call returns, so while a tool runs the
@@ -294,9 +311,12 @@ def run_entry(
     recording: UsageRecordingRouter,
     make_agent: Any,
     run_tag: str,
+    *,
+    carry_tool_traffic: bool = False,
 ) -> dict[str, Any]:
     """Every turn of one task through AgentService.run(); returns the line for the result file.
-    `make_agent(registry)` builds the service, so a test hands in a scripted model."""
+    `make_agent(registry)` builds the service, so a test hands in a scripted model.
+    `carry_tool_traffic` keeps each turn's tool calls and results in the history of the next."""
     multi = category in MULTI_TURN
     if multi and not (instance_prefix(run_tag, entry["id"]) + "GorillaFileSystem_instance").isidentifier():
         # Otherwise every call fails at BFCL's eval with a SyntaxError that reaches the model as a
@@ -348,7 +368,7 @@ def run_entry(
                 first_round_calls = list(by_round[0])
             all_calls.extend(call for calls in ordered for call in calls)
             answers.append(answer)
-            history += [*turn_messages, {"role": "assistant", "content": answer}]
+            history += [*turn_messages, *(tool_traffic(steps) if carry_tool_traffic else []), {"role": "assistant", "content": answer}]
             tokens_in.append([float(round_["tokens_in"] or 0) for round_ in rounds])
             tokens_out.append([float(round_["tokens_out"] or 0) for round_ in rounds])
             latency.append([round_["latency_ms"] / 1000 for round_ in rounds])
@@ -433,6 +453,7 @@ def run_all(
     run_tag: str,
     reloader: Any = None,
     progress: Any = print,
+    carry_tool_traffic: bool = False,
 ) -> dict[str, Any]:
     lines_by_category: dict[str, list[dict[str, Any]]] = {}
     for category, ids in selection.items():
@@ -443,7 +464,7 @@ def run_all(
         for entry in bfcl.load_entries(category, ids):
             reload_ms = reloader.reload() if reloader is not None else None
             started = perf_counter()
-            line = run_entry(bfcl, entry, category, recording, make_agent, run_tag)
+            line = run_entry(bfcl, entry, category, recording, make_agent, run_tag, carry_tool_traffic=carry_tool_traffic)
             lines_by_category[category].append(line)
             with path.open("a", encoding="utf-8") as handle:
                 handle.write(json.dumps(line, ensure_ascii=False, default=str) + "\n")
@@ -487,6 +508,9 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--env-file", type=Path, help="the .env Settings reads (default: this checkout's)")
     parser.add_argument("--gpu-shared", choices=("yes", "no"), help="declare whether another job uses the GPU during this run; recorded, never guessed")
     parser.add_argument("--unload-between-tasks", action="store_true", help="unload and reload the general model before every task (as in agent_eval); otherwise once, before the first")
+    parser.add_argument("--carry-tool-traffic", action="store_true", help="keep each turn's tool calls and results in the next turn's history, as BFCL's own runner does (default: text only, as Ún's chat path)")
+    parser.add_argument("--max-steps", type=int, help="tool rounds per turn for this run only (default: agent.max_steps of the config)")
+    parser.add_argument("--lookup-check", action="store_true", help="the agent's lookup check (harness-fix round); a no-op here, since no BFCL registry holds a lookup tool")
     return parser.parse_args(argv)
 
 
@@ -545,7 +569,7 @@ def main(argv: list[str] | None = None) -> int:
     agent_section = config.get("agent", {})
     # The same reads and defaults as agent_eval.main (and main.py), so the harness is the shipped one.
     agent_config = {
-        "max_steps": int(agent_section.get("max_steps", 3)),
+        "max_steps": args.max_steps if args.max_steps else int(agent_section.get("max_steps", 3)),
         "tool_result_max_chars": int(agent_section.get("tool_result_max_chars", 1200)),
         "turn_budget_seconds": float(agent_section.get("turn_budget_seconds", TURN_BUDGET_SECONDS)),
         "final_reserve_seconds": float(agent_section.get("final_reserve_seconds", FINAL_RESERVE_SECONDS)),
@@ -554,7 +578,7 @@ def main(argv: list[str] | None = None) -> int:
     recording = UsageRecordingRouter(router)
 
     def make_agent(registry: ToolRegistry) -> AgentService:
-        return AgentService(recording, None, None, defense=defense, registry=registry, **agent_config)
+        return AgentService(recording, None, None, defense=defense, registry=registry, lookup_check=args.lookup_check, **agent_config)
 
     run_id = args.run_id or default_run_id()
     out_dir = args.out / run_id
@@ -583,7 +607,9 @@ def main(argv: list[str] | None = None) -> int:
         "agent_config": agent_config,
         "agent_guide_sha256": hashlib.sha256(AGENT_GUIDE.encode("utf-8")).hexdigest(),
         "persona_prompt": None,
-        "history_between_turns": "user and answer text only",
+        "history_between_turns": "user, tool calls and results, and answer" if args.carry_tool_traffic else "user and answer text only",
+        "carry_tool_traffic": args.carry_tool_traffic,
+        "lookup_check": args.lookup_check,
         "single_turn_scored_calls": "first model round only",
         "unload_between_tasks": args.unload_between_tasks,
         "started_at": datetime.now(UTC).isoformat(),
@@ -595,7 +621,7 @@ def main(argv: list[str] | None = None) -> int:
         reloader.reload()
     summary = run_all(
         bfcl, selection, recording, make_agent, out_dir,
-        run_tag=RUN_TAG, reloader=reloader if args.unload_between_tasks else None,
+        run_tag=RUN_TAG, reloader=reloader if args.unload_between_tasks else None, carry_tool_traffic=args.carry_tool_traffic,
     )
     manifest["finished_at"] = datetime.now(UTC).isoformat()
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")

@@ -205,6 +205,24 @@ UNSUPPORTED_FIGURES = "UNSUPPORTED_FIGURES"
 IMAGE_NOTE = "\n\n[Ảnh đính kèm"
 # What a watching client is told while a turn runs (ticket 20 #4). A tool brings its own
 # label (AgentTool.label); TOOL_LABEL stands in for one without, or a name never declared.
+# The lookup check (harness-fix round, 02/11): a turn that called nothing, with a lookup tool
+# offered, whose answer says it has no information or needs to search, is sent back once to
+# look. doc-25 of Agent Eval v0.8 wrote "tôi cần tìm kiếm trong các tài liệu" and searched none.
+# Off unless the caller asks (agent.lookup_check); the rejected attempt is a LOOKUP_CHECK_STEP
+# that keeps no text.
+LOOKUP_CHECK_STEP = "lookup_check"
+LOOKUP_CHECK_LABEL = "Đang tra trước khi trả lời…"
+LOOKUP_TOOLS = ("search_documents", "search_history")
+LOOKUP_GAVE_UP = re.compile(
+    r"(?:không|chưa) có (?:thông tin|dữ liệu)|(?:không|chưa) (?:tìm thấy|tìm được|tra được)|cần (?:tìm kiếm|tra cứu|kiểm tra)|(?:không|chưa) (?:biết|rõ)",
+    re.IGNORECASE,
+)
+LOOKUP_RETRY = (
+    "Bạn chưa gọi công cụ tra nào mà đã nói không có thông tin hoặc cần tìm. Nếu câu hỏi có thể nằm trong tài liệu "
+    "đã tải lên hoặc tin nhắn của server thì gọi công cụ tra ngay; tra rồi mà không thấy thì nói rõ là không tìm "
+    "thấy. Câu hỏi không cần dữ liệu nội bộ thì trả lời thẳng. Rồi viết câu trả lời như khi trả lời lần đầu: "
+    "không xin lỗi, không nhắc tới việc kiểm tra này."
+)
 THINKING_LABEL = "Đang suy nghĩ…"
 REVIEWING_LABEL = "Đang xem lại những gì đã tra…"
 TOOL_LABEL = "Đang dùng công cụ…"
@@ -323,6 +341,7 @@ class AgentService:
         inline_max_tokens: int = INLINE_MAX_TOKENS,
         context_budget: ContextBudget | None = None,
         long_input: bool = False,
+        lookup_check: bool = False,
     ) -> None:
         self.defense = defense or InjectionDefense(enabled=False)
         self.router = router
@@ -344,6 +363,8 @@ class AgentService:
         self.context_budget = context_budget
         # Ticket 45: a last-message paste past N1's ceiling is read in parts by the code (long_input.py).
         self.long_input = bool(long_input)
+        # Harness-fix round: off by default; the lookup check above.
+        self.lookup_check = bool(lookup_check)
         self.turn_budget_seconds = max(1.0, float(turn_budget_seconds))
         self.final_reserve_seconds = min(max(0.0, float(final_reserve_seconds)), self.turn_budget_seconds)
         self.clock = clock
@@ -358,7 +379,7 @@ class AgentService:
         on_step: Callable[[dict[str, object]], None] | None = None,
     ) -> tuple[str, str, list[dict[str, object]]]:
         """The loop below, with its model calls counted against agent_call_cap (ticket 43)."""
-        with turn_call_budget("agent", agent_call_cap(self.max_steps)):
+        with turn_call_budget("agent", agent_call_cap(self.max_steps, self.lookup_check)):
             return self._run(messages, tool_context, on_step)
 
     def _run(
@@ -433,6 +454,8 @@ class AgentService:
         checked_out: set[int] = set()
         # A tool call Ollama could not parse (ticket 27) has a retry of its own, apart from #2's.
         call_retried = False
+        # And the lookup check's: one retry, for a turn that has called no tool at all.
+        lookup_retried = False
         while round_index < rounds:
             round_index += 1
             left = self.turn_budget_seconds - (self.clock() - turn_started)
@@ -474,6 +497,23 @@ class AgentService:
             calls = result["tool_calls"]
             if not calls:
                 answer = result["content"]
+                if (
+                    self.lookup_check and not lookup_retried and self._offers_lookup()
+                    and not any(step["kind"] == "tool_call" for step in steps) and LOOKUP_GAVE_UP.search(answer)
+                    and self.turn_budget_seconds - (self.clock() - turn_started) >= self.final_reserve_seconds
+                ):
+                    # Gave up before looking: the rejected attempt reached no one, so the trace keeps that it
+                    # happened, not its text, and it never vouches for a figure (it is a checked-out message).
+                    steps.append({
+                        "kind": LOOKUP_CHECK_STEP, "tool_name": None, "arguments": None, "content": None,
+                        "latency_ms": round_latency, **last,
+                    })
+                    checked_out.update((len(working), len(working) + 1))
+                    working.append({"role": "assistant", "content": answer})
+                    working.append({"role": "system", "content": LOOKUP_RETRY})
+                    lookup_retried, rounds = True, rounds + 1
+                    emit(LOOKUP_CHECK_STEP, label=LOOKUP_CHECK_LABEL)
+                    continue
                 check = self._check_answer(answer, working, checked_out)
                 left = self.turn_budget_seconds - (self.clock() - turn_started)
                 if check["unsupported"] and not retried and left >= self.final_reserve_seconds:
@@ -619,6 +659,10 @@ class AgentService:
 
     def _error(self, code: str, message: str, error_type: str | None = None) -> tuple[str, str, str | None]:
         return self._dump({"error": message, "code": code}), code, error_type
+
+    def _offers_lookup(self) -> bool:
+        """Whether the registry holds a tool to look something up with (BFCL's holds only the task's own functions)."""
+        return any(self.registry.get(name) is not None for name in LOOKUP_TOOLS)
 
     def _offered_schemas(self) -> list[dict[str, Any]]:
         """What the model is shown: every tool, except one that requires approval while nothing can approve it."""
