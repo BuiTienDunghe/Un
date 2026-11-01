@@ -11,6 +11,9 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
 
 ## [Unreleased]
 
+### Added
+- **Công cụ chờ người duyệt** (ticket 46, phần xin duyệt). Tắt mặc định: `DISCORD_APPROVALS_ENABLED=true` ở backend, migration `20261102_38`, chỉ ở server trong `DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST`. Một công cụ khai báo `requires_approval` thì vòng agent không tự chạy: lượt dừng, trả câu duyệt do code viết, lưu lệnh gọi vào bảng `discord_approvals`. Chỉ người nhờ (lấy từ lượt hội thoại, không từ model) duyệt hoặc từ chối được qua `/api/discord/approvals`; quá 10 phút thì huỷ và không chạy. **Chưa có công cụ thật nào mang cờ này** (`remember` giữ nguyên), chưa có nút trên Discord, chưa có công cụ hỏi lại; tỉ lệ hỏi thừa chưa đo.
+
 ### Fixed
 - **Tài liệu không còn kẹt khi khởi động lại** (ticket 40). Lần lập chỉ mục bị cắt ngang tự chạy tiếp, giữ nguyên các trang đã đọc. Không đổi được model trong lúc đang đọc hoặc lập chỉ mục tài liệu.
 - **OCR không chép lại trang đã có sẵn chữ** (ticket 40). 13 trang của một bài báo từng tốn 5 phút GPU; giờ chỉ trang là ảnh mới dùng model, và có ô để ép đọc mọi trang khi cần thử chất lượng.

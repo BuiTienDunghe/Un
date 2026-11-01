@@ -95,6 +95,32 @@ offered (the default tool list is unchanged) and the bot's sender started. Table
 - Delivery is at-least-once. After a send the bot keeps the receipt in memory and offers it to the backend on every tick for up to an hour, and a reminder the backend hands out again while the bot holds its receipt is not sent a second time, so a backend that restarts or is down for a while does not cause a second ping. A reminder can still arrive twice if the bot itself stops (crash, restart) between sending and the backend taking the receipt; the backend then re-issues it after 10 minutes.
 - Forgetting: `scripts/forget_member.py` deletes every reminder the member asked for (step 6b, counted in `planned` and `remaining`); the row also holds a foreign key to the turn it was made in (`ON DELETE CASCADE`), so a deleted conversation takes its reminders, and no display name is stored. After either, nothing is left to mention the member.
 
+## Tools that wait for a person (ticket 46)
+
+Off unless `DISCORD_APPROVALS_ENABLED=true` on the backend. A tool declared `requires_approval=True` (`AgentTool`) is
+never run by the agent loop. Off, it is neither offered to the model nor run (the tool list and every message the
+model reads are unchanged; no real tool carries the flag yet, `remember` included). On, the loop hands the call to
+`AgentService.approvals` (`app/services/approvals.py` is the shared vocabulary; `app/discord/approvals.py` the rules),
+which keeps it in `discord_approvals` (migration `20261102_38`, additive) and ends the turn with a reply written by code
+(`stop_reason` `awaiting_approval`; the tool has not run).
+
+- Who: the member is read from the turn the call was made in, never from the model. Only that member, in that guild,
+  can approve or deny, through `/api/discord/approvals` (`GET` list, `POST {id}/approve`, `POST {id}/deny`; body `guild_id`,
+  `actor_id`); the API key says the bot may relay their click, the service checks it is theirs.
+- What: the call is kept as the JSON the model wrote and shown whole (over 1 500 characters it is refused, not truncated);
+  what runs after a yes is that same JSON. `@` in the shown text is defused.
+- When: `DISCORD_APPROVAL_TTL_SECONDS` (default 600). The database refuses a yes after the deadline whether or not anything
+  swept; a missed one is `expired` and never runs. Deny, expiry or a server removed from the allowlist: the tool does not run.
+- Once: a yes moves `pending -> running` in one conditional update, so two clicks run the tool at most once. A process that
+  dies after that leaves `running`; after 10 minutes it is marked `failed` (`interrupted`) and is never run again, because the
+  tool may or may not have run.
+- After the yes the tool's own result goes back to the caller (the bot); the model is not called again. Turn-local context
+  (`readable_documents`, pastes) does not survive the pause: a gated tool must not depend on it.
+- Limits: 5 waiting per member; the same call in a turn the worker retries asks once.
+- Forgetting: `scripts/forget_member.py` deletes every approval asked of the member (step 6c, counted in `planned` and
+  `remaining`); the row also follows its turn (`ON DELETE CASCADE`).
+- Not built: the Discord buttons or command, a tool asking the user for a missing fact, measuring the rate of needless asks.
+
 ## Agent (tool mode)
 
 A web turn goes through `AgentService` only when the request sets `use_tools` (default

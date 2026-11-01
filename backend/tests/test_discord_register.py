@@ -45,7 +45,7 @@ def test_register_routes_mounts_its_routers_behind_the_admin_guard():
     discord.register_routes(app, admin_guard=[])
     prefixes = {path.split("/")[2] if not path.startswith("/api/discord") else "/".join(path.split("/")[2:4])
                 for path in app.openapi()["paths"]}
-    assert prefixes == {"bot", "condensations", "memory-review", "message-labels", "discord/sessions", "discord/history", "discord/reminders"}
+    assert prefixes == {"bot", "condensations", "memory-review", "message-labels", "discord/sessions", "discord/history", "discord/reminders", "discord/approvals"}
 
 
 def test_main_builds_the_discord_services_after_the_agent_and_includes_the_routes_once():

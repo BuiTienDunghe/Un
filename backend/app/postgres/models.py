@@ -468,6 +468,33 @@ class DiscordReminder(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
+class DiscordApproval(Base):
+    """A tool call kept for its requester to approve (ticket 46). `arguments` is the JSON the model
+    wrote, kept as text: exactly what the person was shown is exactly what runs."""
+
+    __tablename__ = "discord_approvals"
+    __table_args__ = (
+        CheckConstraint("status IN ('pending','running','done','failed','denied','expired')", name="ck_discord_approvals_status"),
+        Index("ix_discord_approvals_status_expires", "status", "expires_at"),
+        Index("ix_discord_approvals_requester", "guild_id", "requester_id", "status"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    guild_id: Mapped[str] = mapped_column(Text, nullable=False)
+    channel_id: Mapped[str] = mapped_column(Text, nullable=False)
+    thread_id: Mapped[str | None] = mapped_column(Text)
+    requester_id: Mapped[str] = mapped_column(Text, nullable=False)
+    tool_name: Mapped[str] = mapped_column(Text, nullable=False)
+    arguments: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="pending", server_default="pending")
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    result_code: Mapped[str | None] = mapped_column(Text)
+    # Deleting the turn deletes the approval asked in it: a deleted conversation, forget_member.
+    source_turn_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), ForeignKey("discord_session_turns.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
 class DiscordChannelMessage(Base):
     """Sổ gốc (tier 1, memory_design.md §5.2): one row per Discord message the
     bot passively hears in a listened channel — bot rows included, tagged
