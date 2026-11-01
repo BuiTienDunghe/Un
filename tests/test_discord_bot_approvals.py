@@ -69,6 +69,7 @@ class Response:
         self.sent.append((text, ephemeral))
 
     async def edit_message(self, **kwargs):
+        assert kwargs["allowed_mentions"].everyone is False  # restated on every edit, as progress_message.py does
         self.edited.append(kwargs.get("view"))
 
     async def defer(self, thinking=False, ephemeral=False):
@@ -225,7 +226,9 @@ def test_the_buttons_live_as_long_as_the_call_does_and_switch_off_with_it() -> N
 
     timeout, view = run(scenario())
     assert timeout == 600
-    assert all(item.disabled for item in view.children) and view.message.edits == [{"view": view}]
+    assert all(item.disabled for item in view.children)
+    (edit,) = view.message.edits
+    assert edit["view"] is view and edit["allowed_mentions"].everyone is False
 
 
 def test_a_button_pressed_before_the_timeout_is_not_edited_again_by_it() -> None:

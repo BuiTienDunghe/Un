@@ -113,7 +113,7 @@ class ApprovalView(discord.ui.View):
         self._pressed = True
         self._switch_off()
         # Acknowledge inside Discord's three seconds; a tool can take longer than that to answer.
-        await interaction.response.edit_message(view=self)
+        await interaction.response.edit_message(view=self, allowed_mentions=NO_MENTIONS)
         try:
             decision = await self.api_client.decide_approval(
                 self.approval.approval_id, self.approval.guild_id, str(interaction.user.id), approve=approve,
@@ -131,7 +131,7 @@ class ApprovalView(discord.ui.View):
             return
         self._switch_off()
         try:
-            await self.message.edit(view=self)
+            await self.message.edit(view=self, allowed_mentions=NO_MENTIONS)
         except Exception:
             logger.debug("approval buttons could not be switched off", exc_info=True)
 
