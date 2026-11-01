@@ -1,0 +1,40 @@
+{
+  "multi_turn_base": {
+    "accuracy": 0.6,
+    "correct": 3,
+    "total": 5,
+    "failed_ids": [
+      "multi_turn_base_77",
+      "multi_turn_base_113"
+    ]
+  },
+  "multi_turn_miss_func": {
+    "accuracy": 0.3333333333333333,
+    "correct": 1,
+    "total": 3,
+    "failed_ids": [
+      "multi_turn_miss_func_143",
+      "multi_turn_miss_func_174"
+    ]
+  },
+  "irrelevance": {
+    "accuracy": 1.0,
+    "correct": 7,
+    "total": 7,
+    "failed_ids": []
+  },
+  "multiple": {
+    "accuracy": 0.875,
+    "correct": 7,
+    "total": 8,
+    "failed_ids": [
+      "multiple_51"
+    ]
+  },
+  "simple_python": {
+    "accuracy": 1.0,
+    "correct": 10,
+    "total": 10,
+    "failed_ids": []
+  }
+}

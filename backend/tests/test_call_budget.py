@@ -137,6 +137,22 @@ def test_a_rag_follow_up_makes_the_rewrite_and_the_answer_and_no_more():
 
 
 @pytest.mark.parametrize("max_steps", [1, 3])
+def test_the_agent_with_the_lookup_check_on_reaches_its_one_larger_cap_exactly(max_steps):
+    # Harness-fix round: the lookup check is one more retry, off by default. Every retry at once:
+    # a call that will not parse, an answer that gave up before any lookup, one with invented
+    # figures, then tool rounds until the allowance runs out and the forced answer.
+    gave_up = final("Tôi không có thông tin về việc này, tôi cần tìm kiếm trong tài liệu.")
+    client = ScriptedOllama(rounds=[PARSE, gave_up, final(INVENTED), *[search(QUESTION)] * max_steps], replies=["hết lượt"])
+    agent = AgentService(router_over(client), Retrieval(), None, max_steps=max_steps, lookup_check=True)
+
+    answer, _, steps = agent.run([{"role": "system", "content": "Bạn là Ún."}, {"role": "user", "content": QUESTION}])
+
+    assert answer == "hết lượt" and "lookup_check" in [step["kind"] for step in steps]
+    assert client.calls == agent_call_cap(max_steps, lookup_check=True) == agent_call_cap(max_steps) + 1
+    assert not OVERRUNS
+
+
+@pytest.mark.parametrize("max_steps", [1, 3])
 def test_the_agent_at_its_worst_reaches_the_cap_exactly(max_steps):
     # A call that will not parse, an answer with figures the turn never saw, then tool rounds
     # until the allowance runs out and the forced answer: every exception used at once.

@@ -80,7 +80,10 @@ the experiments that were run and rejected.
    parts, one call per part, at most `ceil(100 000 / part size)` parts (3 with the 16k window)
    and never more than 8. Those calls are counted in a budget of their own, equal to the
    number of parts, nested inside the agent's, so the agent's cap is unchanged; the parts
-   stop at the turn's time budget and the answer says which were not read. The router counts
+   stop at the turn's time budget and the answer says which were not read. A fifth exception
+   exists in code, off, and is not to be switched on before the owner amends this rule
+   (`agent.lookup_check`): a turn that called no tool and answered "I have no information" is
+   sent back once to look, one extra call (`max_steps + 4` with it on). The router counts
    every generation call a turn makes (`services/call_budget.py`): a cap of 1 for plain
    chat, 2 for RAG, and `max_steps + 3` for the agent. A turn past its cap is logged and
    recorded, never blocked, and `tests/test_call_budget.py` fails when a path goes over or a

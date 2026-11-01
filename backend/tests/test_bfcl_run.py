@@ -108,12 +108,12 @@ def oracle_single_turn(category: str, entry_id: str) -> list[Any]:
     return [calls, "xong"]
 
 
-def run_one(category: str, entry_id: str, rounds: list[Any], tag: str = bfcl_run.RUN_TAG) -> tuple[dict[str, Any], Scripted]:
+def run_one(category: str, entry_id: str, rounds: list[Any], tag: str = bfcl_run.RUN_TAG, **options: Any) -> tuple[dict[str, Any], Scripted]:
     bfcl = bfcl_run.Bfcl(CLONE)
     model = Scripted(rounds)
     recording = UsageRecordingRouter(model)
     entry = bfcl.load_entries(category, [entry_id])[0]
-    return bfcl_run.run_entry(bfcl, entry, category, recording, agent_factory(recording), tag), model
+    return bfcl_run.run_entry(bfcl, entry, category, recording, agent_factory(recording), tag, **options), model
 
 
 # ── pure: no clone ───────────────────────────────────────────────────────
@@ -241,6 +241,41 @@ def test_a_multi_turn_task_is_recorded_by_turn_and_round_and_leaves_no_instance_
     # The earlier turns reach the model as text only, as the chat path hands history to the agent.
     last_turn_messages = model.messages_seen[-2]
     assert [m["role"] for m in last_turn_messages if m["role"] in ("assistant", "tool")] == ["assistant"] * (len(truth) - 1)
+
+
+@needs_clone
+def test_with_the_option_on_the_earlier_turns_tool_results_reach_the_model_in_the_next_turn():
+    # multi_turn_base_77 turn 2 retweets the tweet turn 1 posted; its id is only in post_tweet's result.
+    entry_id = "multi_turn_base_77"
+    rounds = oracle_multi_turn(entry_id)
+    _, off = run_one("multi_turn_base", entry_id, list(rounds))
+    _, on = run_one("multi_turn_base", entry_id, list(rounds), carry_tool_traffic=True)
+
+    def tool_texts(model: Scripted) -> list[str]:
+        return [m["content"] for m in model.messages_seen[-2] if m["role"] == "tool"]
+
+    assert tool_texts(off) == [], "text only, as the chat path"
+    assert any("94016" in text for text in tool_texts(on)), "the zip code turn 0 looked up"
+    carried = [m for m in on.messages_seen[-2] if m["role"] == "assistant" and m.get("tool_calls")]
+    assert carried and carried[0]["tool_calls"][0]["function"]["name"] == "get_zipcode_based_on_city"
+
+
+def test_tool_traffic_is_one_assistant_call_and_its_tool_message_per_call_in_order():
+    steps = [
+        {"kind": "tool_call", "tool_name": "a", "arguments": {"x": 1}},
+        {"kind": "tool_result", "tool_name": "a", "content": "<<<r1>>>"},
+        {"kind": "tool_call", "tool_name": "b", "arguments": None},
+        {"kind": "tool_result", "tool_name": "b", "content": None},
+        {"kind": "answer_check"},
+        {"kind": "final", "content": "xong"},
+    ]
+    assert bfcl_run.tool_traffic(steps) == [
+        {"role": "assistant", "content": "", "tool_calls": [{"function": {"name": "a", "arguments": {"x": 1}}}]},
+        {"role": "tool", "tool_name": "a", "content": "<<<r1>>>"},
+        {"role": "assistant", "content": "", "tool_calls": [{"function": {"name": "b", "arguments": {}}}]},
+        {"role": "tool", "tool_name": "b", "content": ""},
+    ]
+    assert bfcl_run.tool_traffic([{"kind": "final", "content": "chào"}]) == []
 
 
 @needs_clone
