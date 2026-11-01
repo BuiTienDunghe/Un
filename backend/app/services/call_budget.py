@@ -11,7 +11,8 @@ path to its worst case and fails when OVERRUNS is not empty, or when a cap is lo
 
 A ContextVar for deadline.py's reason: the router is reached through wrappers and test
 doubles that would all have to grow a parameter to carry one number. With no budget open
-(indexing, the Discord pre-turn condensation, the eval) the router counts nothing.
+(indexing, the Discord pre-turn condensation) the router counts nothing. The agent eval
+calls AgentService.run, so its turns are counted like any other.
 
 Only generation calls count. Embeddings, OCR and vision are not part of the rule, and a
 client's own transport retry of one request is below the router.
