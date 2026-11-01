@@ -243,6 +243,7 @@ async def lifespan(app: FastAPI):
         inline_max_tokens=inline_ceiling(router.models.get("general")),
         # Ticket 44: off unless agent.context_budget.enabled is true.
         context_budget=context_budget_from_config(agent_config.get("context_budget"), router.models.get("general")),
+        long_input=settings.agent_long_input_enabled,
     )
     # ChatService is built before the retrieval stack the agent needs, so the
     # agent is handed over here instead of through the constructor.

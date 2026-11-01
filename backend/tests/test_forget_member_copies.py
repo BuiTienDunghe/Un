@@ -147,6 +147,23 @@ def test_the_rewritten_steps_lose_their_summary_hash(factory, world):
     assert after == {0: None, 1: None, 2: None}
 
 
+def test_a_note_on_a_long_paste_that_quoted_a_is_rewritten_too(factory, world):
+    # Ticket 45: the reading pass keeps each part's note as a trace step of its own kind.
+    store = PostgresAuxiliaryStore(factory)
+    answered = store.add_message(world["conversation"], "assistant", "Đã đọc xong văn bản dán.")
+    store.add_agent_traces(world["conversation"], answered, [
+        {"kind": "long_input_part", "content": f"Ghi chú: Lan nói «{A_SAYS}», Minh nói: {B_SAYS}", "latency_ms": 5,
+         "arguments_shape": {"part": 1, "parts": 1, "chars": 90}},
+    ], source="discord")
+
+    report = forget(world["guild"], world["a"], apply=True)
+    _, traces = stored(factory, world["conversation"])
+
+    note = next(trace for trace in traces if trace.kind == "long_input_part")
+    assert A_SAYS not in note.content and B_SAYS in note.content and PLACEHOLDER in note.content
+    assert report["copies_rewritten"]["agent_trace_steps"] == 4 and not any(report["remaining"].values()), report["remaining"]
+
+
 def test_forgetting_b_instead_leaves_a_alone(factory, world):
     forget(world["guild"], world["b"], apply=True)
     messages, traces = stored(factory, world["conversation"])

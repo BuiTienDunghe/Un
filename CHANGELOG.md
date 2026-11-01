@@ -31,6 +31,11 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
   "không có chữ" của model không còn bị nạp thành nội dung trang.
 
 ### Added
+- **Đọc hết văn bản dán rất dài theo từng phần** (ticket 45, mặc định tắt, `AGENT_LONG_INPUT_ENABLED=true`). Văn bản dán quá ~36 nghìn ký tự trước đây chỉ đến model
+  dưới dạng phiếu (hai đầu) và model đọc thêm tối đa 9 đoạn. Khi bật, code tự chia văn bản thành các phần vừa cửa sổ, mỗi phần một lần gọi model để ghi chú, rồi
+  model trả lời từ các ghi chú. Tối đa 3 phần với cửa sổ 16k (không bao giờ quá 8), tính vào ngân sách riêng (README.en luật 5, ngoại lệ thứ tư). Hết 90 giây của
+  lượt thì dừng và câu trả lời tự ghi phần nào chưa đọc. **Chưa đo** mỗi phần mất bao lâu trên GPU và chưa đo độ đúng với bài có đáp án ở cuối văn bản; mới chạy
+  với model giả.
 - **Cắm công cụ ngoài qua MCP** (ticket 47, mặc định tắt, `AGENT_MCP_ENABLED=true` và khai server ở `agent.mcp.servers` trong `models.yaml`, danh sách mặc định rỗng).
   Mỗi server là một chương trình Ún tự chạy; chỉ công cụ nào được ghi tên trong `allowed_tools` mới tới tay model, kết quả bị cắt theo trần của server và đi qua
   cùng lớp đánh dấu "dữ liệu, không phải lệnh" như công cụ khác. Server không chạy được, treo hay chết thì mất công cụ của nó, lượt vẫn trả lời. Chỉ thử với server giả

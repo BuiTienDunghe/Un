@@ -202,6 +202,9 @@ class Settings(BaseSettings):
     # Ticket 47: tools from MCP servers. Off by default, and the server list in models.yaml
     # (agent.mcp.servers) is empty: a server is a program this process starts.
     agent_mcp_enabled: bool = False
+    # Ticket 45: a pasted text past what the window holds is read in parts, one model call each
+    # (README.en rule 5's fourth exception). Off by default: the seconds a part takes are not measured.
+    agent_long_input_enabled: bool = False
     # Ticket 36: the local decided service (run-decided.bat). Unset = the labelling worker stays off.
     decided_url: str | None = None
     qdrant_url: str = "http://127.0.0.1:6333"

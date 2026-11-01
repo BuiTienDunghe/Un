@@ -323,6 +323,7 @@ def test_an_input_the_api_would_reject_fails_without_a_model_call(tmp_path):
     assert manifest["input_max_chars"] == INPUT_MAX_CHARS
     # N1's constants (ticket 20's arbitration round), and the tools it leaves as they were.
     assert manifest["paste_inline"] == {"max_tokens": 12_288, "fixed_tokens": 1_253, "chars_per_token": 3.3}
+    assert manifest["long_input"] is False, "ticket 45: off unless the run says so, and the manifest records it"
     assert manifest["tools_sha256"] == "93410c4659cd9b129cb08c2c459aac6dc8b7c309b05ddd870186a42a437903fd"
 
 

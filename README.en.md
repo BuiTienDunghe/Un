@@ -75,10 +75,16 @@ the experiments that were run and rejected.
    path, with three exceptions of at most one extra call per turn each: rewriting a
    follow-up question before retrieval, one retry when an answer states figures the turn
    never saw, and one retry when the model writes a tool call that cannot be parsed. Both
-   retries stay inside the turn's time budget. The router counts every generation call a
-   turn makes (`services/call_budget.py`): a cap of 1 for plain chat, 2 for RAG, and
-   `max_steps + 3` for the agent. A turn past its cap is logged and recorded, never blocked,
-   and `tests/test_call_budget.py` fails when a path goes over or a cap has room to spare.
+   retries stay inside the turn's time budget. A fourth exception ships off
+   (`AGENT_LONG_INPUT_ENABLED`): a pasted text too long for the model's window is read in
+   parts, one call per part, at most `ceil(100 000 / part size)` parts (3 with the 16k window)
+   and never more than 8. Those calls are counted in a budget of their own, equal to the
+   number of parts, nested inside the agent's, so the agent's cap is unchanged; the parts
+   stop at the turn's time budget and the answer says which were not read. The router counts
+   every generation call a turn makes (`services/call_budget.py`): a cap of 1 for plain
+   chat, 2 for RAG, and `max_steps + 3` for the agent. A turn past its cap is logged and
+   recorded, never blocked, and `tests/test_call_budget.py` fails when a path goes over or a
+   cap has room to spare.
 6. Every autonomous action is auditable and revocable.
 7. Measure before changing a schema, on real data, before the migration is written.
 
