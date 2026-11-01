@@ -1,0 +1,76 @@
+"""How many times one turn may call the generation model (ticket 43, README.en rule 5).
+
+The rule promises a fixed inference budget: the default answer path makes one call, and
+three exceptions add at most one each. Until now nothing held it; a fourth call added to
+rag_service or agent_service would have shipped silently. The entry point of a turn opens
+a budget with its cap, ModelRouter counts every chat / chat_tools / stream_chat made while
+it is open, and a turn that goes past its cap is logged and kept in OVERRUNS. Nothing is
+blocked: the caps are worked out by hand, so a miscount must show up as a red test and a
+warning, not as a user's turn that stops half way. The test (test_call_budget) drives each
+path to its worst case and fails when OVERRUNS is not empty, or when a cap is loose.
+
+A ContextVar for deadline.py's reason: the router is reached through wrappers and test
+doubles that would all have to grow a parameter to carry one number. With no budget open
+(indexing, the Discord pre-turn condensation) the router counts nothing. The agent eval
+calls AgentService.run, so its turns are counted like any other.
+
+Only generation calls count. Embeddings, OCR and vision are not part of the rule, and a
+client's own transport retry of one request is below the router.
+"""
+from __future__ import annotations
+
+import logging
+from collections import deque
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
+from dataclasses import dataclass
+
+_LOG = logging.getLogger(__name__)
+
+# Plain chat: the answer. A RAG turn: the follow-up rewrite, then the answer.
+CHAT_CALL_CAP = 1
+RAG_CALL_CAP = 2
+
+
+def agent_call_cap(max_steps: int) -> int:
+    """`max_steps` tool rounds, plus one round for each of the two retries (figures the turn
+    never saw; a tool call that would not parse), plus the forced answer when the rounds run out."""
+    return max_steps + 3
+
+
+@dataclass
+class TurnCalls:
+    turn: str
+    cap: int
+    used: int = 0
+
+
+_CURRENT: ContextVar[TurnCalls | None] = ContextVar("llm_turn_calls", default=None)
+
+# (turn, cap, calls made so far) of every turn that went past its cap, newest last. Bounded:
+# it is read by the test and by someone looking, not a log of record.
+OVERRUNS: deque[tuple[str, int, int]] = deque(maxlen=50)
+
+
+@contextmanager
+def turn_call_budget(turn: str, cap: int) -> Iterator[TurnCalls]:
+    """Count the generation calls made inside this block against `cap`. A budget opened
+    inside another takes the calls made inside it, so each entry point answers for its own."""
+    calls = TurnCalls(turn, cap)
+    token = _CURRENT.set(calls)
+    try:
+        yield calls
+    finally:
+        _CURRENT.reset(token)
+
+
+def count_generation_call() -> None:
+    """Called by ModelRouter before every generation call. Does nothing outside a budget."""
+    calls = _CURRENT.get()
+    if calls is None:
+        return
+    calls.used += 1
+    if calls.used > calls.cap:
+        OVERRUNS.append((calls.turn, calls.cap, calls.used))
+        _LOG.warning("%s turn made generation call %d, over its cap of %d", calls.turn, calls.used, calls.cap)

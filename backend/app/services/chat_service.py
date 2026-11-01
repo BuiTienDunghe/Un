@@ -8,6 +8,7 @@ from collections.abc import Callable, Iterator
 
 from app.llm_clients.usage import consume_usage
 from app.services.agent_service import STOP_TURN_BUDGET_EXHAUSTED, clock_note
+from app.services.call_budget import CHAT_CALL_CAP, turn_call_budget
 from app.services.logging_service import LoggingService
 from app.services.model_router import ModelRouter
 from app.services.memory_service import MemoryService
@@ -143,13 +144,15 @@ class ChatService:
             )
             started = perf_counter()
             agent_steps: list[dict[str, object]] | None = None
-            if agent_mode:
-                # on_step: the agent's progress, for a caller that shows it (ticket 20 #4).
-                answer, model_used, agent_steps = self.agent_service.run(
-                    messages, tool_context=tool_context, on_step=on_step
-                )
-            else:
-                answer, model_used = self.router.chat("general", messages)
+            # In agent mode the agent counts its own calls; this turn adds none (ticket 43).
+            with turn_call_budget("chat", 0 if agent_mode else CHAT_CALL_CAP):
+                if agent_mode:
+                    # on_step: the agent's progress, for a caller that shows it (ticket 20 #4).
+                    answer, model_used, agent_steps = self.agent_service.run(
+                        messages, tool_context=tool_context, on_step=on_step
+                    )
+                else:
+                    answer, model_used = self.router.chat("general", messages)
         except Exception:
             # The turn produced nothing durable; a failed model call must not
             # leave an empty conversation shell in the sidebar. Mirrors the
@@ -199,7 +202,8 @@ class ChatService:
                 messages.append({"role": "system", "content": f"{self.memory_prompt}\n\nRelevant memories:\n{context}"})
         messages.extend([*history, clock_note(), {"role": "user", "content": message}])
         started = perf_counter()
-        tokens, model_used = self.router.stream_chat("general", messages)
+        with turn_call_budget("chat", CHAT_CALL_CAP):
+            tokens, model_used = self.router.stream_chat("general", messages)
         prompt_hash = sha256(str(messages[0]["content"]).encode("utf-8")).hexdigest()
 
         def generate() -> Iterator[str]:
