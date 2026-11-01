@@ -406,10 +406,10 @@ class AgentService:
         if self.long_input and messages and is_paste(messages[-1]) and working[-1] is not messages[-1]:
             reading = read_long_input(
                 self.router, str(messages[-1]["content"]), [m for m in working[:-1] if m is not guide], self.inline_max_tokens,
-                lambda: self.turn_budget_seconds - (self.clock() - turn_started), self.final_reserve_seconds, emit, steps,
+                lambda: self.turn_budget_seconds - (self.clock() - turn_started), self.final_reserve_seconds, emit, steps, self.defense,
             )
             if reading is not None and reading.read:
-                working[-1] = {**working[-1], "content": reading.message()}
+                working[-1] = {**working[-1], "content": reading.message(self.defense.wrap_tool_result if self.defense.enabled else None)}
         closing = reading.closing() if reading is not None else ""
         # The answer check (ticket 20 #2) may grant one more round, for its single retry;
         # `checked_out` are the messages it added, which never count as something seen.

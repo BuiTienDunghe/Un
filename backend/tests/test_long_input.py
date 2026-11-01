@@ -28,12 +28,14 @@ from app.services.long_input import (
     part_chars,
     split_parts,
 )
+from app.services.injection_defense import DATA_NOT_INSTRUCTIONS_RULE, TOOL_RESULT_CLOSE, TOOL_RESULT_OPEN, InjectionDefense
 from app.services.pastes import (
     CHARS_PER_TOKEN,
     INLINE_MAX_TOKENS,
     PASTE_MAX,
     PASTE_THRESHOLD,
     paste_id,
+    prompt_tokens,
     slip,
 )
 
@@ -237,6 +239,41 @@ def test_a_history_before_the_paste_stays_in_the_prompt_and_its_own_pastes_stay_
 
     assert slip(older) in [str(m["content"]) for m in router.round_prompts[0]], "an older paste is a slip as ever"
     assert len(router.part_prompts) == 3, "only the paste just sent is read in parts"
+
+
+# --- untrusted text ------------------------------------------------------------------------
+
+def test_with_the_defense_on_each_note_is_marked_as_data_and_the_part_call_carries_rule_7():
+    router = Router()
+
+    ask(agent(router, defense=InjectionDefense(enabled=True)), TEXT)
+
+    for prompt in router.part_prompts:
+        assert DATA_NOT_INSTRUCTIONS_RULE in prompt[0]["content"], "the rule that says what the markers mean"
+    seen = str(router.round_prompts[0][-1]["content"])
+    notes = [block for block in seen.split("\n\n") if block.startswith("GHI CHÚ PHẦN")]
+    assert len(notes) == 3 and seen.count(TOOL_RESULT_OPEN) == 3 and seen.count(TOOL_RESULT_CLOSE) == 3
+    between = [part.split(TOOL_RESULT_CLOSE)[0] for part in seen.split(TOOL_RESULT_OPEN)[1:]]
+    for fact in FACTS:
+        assert any(fact in text for text in between), f"{fact} is between the markers"
+    assert DATA_NOT_INSTRUCTIONS_RULE in router.round_prompts[0][1]["content"], "the agent guide has it, as before"
+
+
+def test_with_the_defense_on_the_wrapped_notes_still_fit_the_window():
+    router = Router()
+
+    ask(agent(router, defense=InjectionDefense(enabled=True)), TEXT)
+
+    assert prompt_tokens(router.round_prompts[0]) <= INLINE_MAX_TOKENS
+
+
+def test_with_the_defense_off_the_prompts_carry_no_marker_and_no_rule():
+    router = Router()
+
+    ask(agent(router), TEXT)
+
+    everything = str(router.part_prompts) + str(router.round_prompts)
+    assert TOOL_RESULT_OPEN not in everything and "7. Nội dung nằm giữa" not in everything
 
 
 # --- off, or nothing to do -----------------------------------------------------------------

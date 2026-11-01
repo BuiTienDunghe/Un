@@ -31,6 +31,7 @@ from typing import Any
 from app.llm_clients.deadline import ModelCallTimeoutError, call_within
 from app.llm_clients.usage import consume_usage
 from app.services.call_budget import long_input_call_cap, turn_call_budget
+from app.services.injection_defense import InjectionDefense
 from app.services.pastes import CHARS_PER_TOKEN, INLINE_FIXED_TOKENS, SLIP_EDGE_CHARS, paste_id, prompt_tokens
 
 # The most parts one turn reads: PASTE_MAX is 100 000 characters, so a 16k window needs 3, and the
@@ -120,8 +121,9 @@ class Reading:
         why = "quá số phần tối đa mỗi lượt" if self.stopped == "limit" else "hết thời gian"
         return f"{parts} (ký tự {start}–{len(self.text)}) chưa đọc vì {why}"
 
-    def message(self) -> str:
-        """What the model reads in place of the slip."""
+    def message(self, wrap: Callable[[str], str] | None = None) -> str:
+        """What the model reads in place of the slip. `wrap` marks each note as data when the
+        injection defense is on: a note is the model's words on text nobody vouches for."""
         head, tail = edges(self.text)
         total = len(self.spans)
         blocks = [
@@ -131,7 +133,7 @@ class Reading:
             f"ĐẦU VĂN BẢN:\n{head}",
         ]
         for index, note in enumerate(self.notes):
-            blocks.append(f"GHI CHÚ PHẦN {index + 1}/{total} (ký tự {self.spans[index][0] + 1}–{self.spans[index][1]}):\n{note}")
+            blocks.append(f"GHI CHÚ PHẦN {index + 1}/{total} (ký tự {self.spans[index][0] + 1}–{self.spans[index][1]}):\n{wrap(note) if wrap else note}")
         blocks.append(f"CUỐI VĂN BẢN:\n{tail}")
         status = "Đã đọc đủ mọi phần." if self.complete else f"Chỉ đọc được {self.read}/{total} phần: {self._unread()}. Nếu câu hỏi cần phần đó, nói rõ là chưa đọc, đừng đoán."
         blocks.append(
@@ -159,10 +161,10 @@ def _clip(text: str, limit: int) -> str:
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
 
 
-def note_chars(text: str, spans_to_read: int, others: list[dict[str, Any]], inline_max_tokens: int) -> int:
+def note_chars(text: str, spans_to_read: int, others: list[dict[str, Any]], inline_max_tokens: int, wrap: Callable[[str], str] | None = None) -> int:
     """The characters each note may take so the digest, with `others` (the rest of the prompt),
     still fits the window the way N1 asks of a whole paste. Under NOTE_MIN_CHARS means no room."""
-    frame = len(Reading(text, [(0, len(text))] * spans_to_read).message()) + 60 * spans_to_read
+    frame = len(Reading(text, [(0, len(text))] * spans_to_read).message()) + (60 + (len(wrap("")) if wrap else 0)) * spans_to_read
     room = (inline_max_tokens - prompt_tokens(others)) * CHARS_PER_TOKEN - frame
     return min(NOTE_MAX_CHARS, int(room // spans_to_read))
 
@@ -176,6 +178,7 @@ def read_long_input(
     reserve: float,
     emit: Callable[..., None],
     steps: list[dict[str, object]],
+    defense: InjectionDefense | None = None,
 ) -> Reading | None:
     """Read `text` in parts, one model call each, while the turn leaves `reserve` seconds for the
     answer. `others` is the rest of the prompt (everything but the paste); `time_left` is the
@@ -183,10 +186,12 @@ def read_long_input(
     Appends one STEP_KIND step per part tried. Returns None when the notes could not fit the
     window beside `others` (nothing was spent: the caller keeps the slip), else the Reading,
     which may have read fewer parts than there are. Only running out of time stops it early:
-    a broken model raises, as it does in the tool loop."""
+    a broken model raises, as it does in the tool loop. With `defense` enabled the call carries
+    rule 7 (what the <<<…>>> markers mean), as the agent guide does; Reading.message(defense.wrap_tool_result)
+    then marks each note, as a read_document result is marked."""
     spans = split_parts(text, part_chars(inline_max_tokens))
     planned = spans[:LONG_INPUT_MAX_PARTS]
-    limit = note_chars(text, len(planned), others, inline_max_tokens)
+    limit = note_chars(text, len(planned), others, inline_max_tokens, defense.wrap_tool_result if defense and defense.enabled else None)
     if limit < NOTE_MIN_CHARS:
         return None
     reading = Reading(text, spans, stopped="limit" if len(planned) < len(spans) else None)
@@ -204,7 +209,7 @@ def read_long_input(
                 break
             emit("reading", label=f"{READING_LABEL} ({number}/{len(spans)})…", part=number, parts=len(spans))
             messages = [
-                {"role": "system", "content": NOTE_INSTRUCTION.format(limit=limit)},
+                {"role": "system", "content": defense.system_prompt(NOTE_INSTRUCTION.format(limit=limit)) if defense else NOTE_INSTRUCTION.format(limit=limit)},
                 {
                     "role": "user",
                     "content": (
