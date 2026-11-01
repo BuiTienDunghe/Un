@@ -97,8 +97,38 @@ def test_a_model_that_cannot_start_is_a_503_and_leaves_nothing(tmp_path: Path, s
     assert list(spool.iterdir()) == []
 
 
-def test_the_model_not_chosen_yet_is_a_503_not_a_crash(spool: Path, serve) -> None:
-    """The real child, whose loader says no model is chosen. The door stays up and answers."""
+def test_a_recording_too_long_by_the_file_is_a_413(tmp_path: Path, spool: Path, serve) -> None:
+    door = serve(fake_model(tmp_path, 'import sys\nfor line in sys.stdin:\n    print(\'{"error": "RecordingTooLong"}\', flush=True)\n'))
+    assert post(door, b"abc")[0] == 413
+    assert list(spool.iterdir()) == []
+
+
+def _opus(path: Path, seconds: int) -> None:
+    av = pytest.importorskip("av")
+    numpy = pytest.importorskip("numpy")
+    with av.open(str(path), "w", format="ogg") as container:
+        stream = container.add_stream("libopus", rate=48000, layout="mono")
+        silence = numpy.zeros((1, 960), dtype=numpy.float32)
+        for index in range(seconds * 50):
+            frame = av.AudioFrame.from_ndarray(silence, format="flt", layout="mono")
+            frame.sample_rate, frame.pts = 48000, index * 960
+            for packet in stream.encode(frame):
+                container.mux(packet)
+        for packet in stream.encode():
+            container.mux(packet)
+
+
+def test_the_length_is_measured_from_the_file_itself(tmp_path: Path) -> None:
+    clip = tmp_path / "clip.ogg"
+    _opus(clip, 3)
+    assert voice_server._decode(str(clip)).size == pytest.approx(3 * voice_server.SAMPLE_RATE, abs=voice_server.SAMPLE_RATE // 10)
+    with pytest.raises(voice_server.RecordingTooLong):
+        voice_server._decode(str(clip), max_seconds=2)
+
+
+def test_weights_that_are_not_there_are_a_503_not_a_crash(tmp_path: Path, spool: Path, serve, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The real child with no weights: it never reaches for the network, and the door stays up and answers."""
+    monkeypatch.setenv("VOICE_MODEL_DIR", str(tmp_path / "absent"))
     model = ModelProcess([sys.executable, "-u", str(Path(voice_server.__file__)), "--model-process"], name="voice")
     door = serve(model)
     assert post(door, b"abc")[0] == 503

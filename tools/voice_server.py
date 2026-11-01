@@ -8,9 +8,9 @@ Audio is megabytes, so the door writes it to a temporary file and tells the chil
 is deleted when the answer, or the failure, comes back. Nothing about a recording or its text is kept
 or logged. Binds to loopback only.
 
-The speech model is not chosen yet (.scratch/future-plan/voice-survey.md): _load below is the one place
-that changes when it is. VOICE_MODEL_PYTHON names the interpreter the child runs in, for a model that
-needs libraries this one does not have.
+The speech model is PhoWhisper-small (owner's pick, .scratch/future-plan/voice-survey.md), read through
+transformers with PyAV decoding the recording. VOICE_MODEL_PYTHON names the interpreter the child runs
+in, for a model that needs libraries this one does not have.
 """
 from __future__ import annotations
 
@@ -33,15 +33,63 @@ MAX_AUDIO_BYTES = 8 * 1024 * 1024
 REPLY_TIMEOUT_SECONDS = 150.0
 # How long a client may stall mid-request. One slow upload must not hold the door shut.
 CLIENT_TIMEOUT_SECONDS = 30.0
+# PhoWhisper-small, pinned at a86b604 of vinai/PhoWhisper-small; data/ is not in the repo, the survey says how to fetch it.
+MODEL_DIR = Path(os.environ.get("VOICE_MODEL_DIR") or Path(__file__).resolve().parent.parent / "data" / "models" / "phowhisper-small")
+SAMPLE_RATE = 16_000
+MAX_RECORDING_SECONDS = 180.0
 
 
 # ── the child: holds the model, and everything it holds goes when it exits ──
+class RecordingTooLong(Exception):
+    """Longer than MAX_RECORDING_SECONDS by the file itself: what the sender's client declares proves nothing."""
+
+
+def _decode(path: str, *, max_seconds: float = MAX_RECORDING_SECONDS) -> "numpy.ndarray":
+    """The recording as 16 kHz mono floats, measured while decoding, so a long file stops here and never reaches the card."""
+    import av
+    import numpy
+
+    limit = int(max_seconds * SAMPLE_RATE)
+    pieces, total = [], 0
+    with av.open(path) as container:
+        resampler = av.AudioResampler(format="flt", layout="mono", rate=SAMPLE_RATE)
+        for frame in container.decode(audio=0):
+            for piece in resampler.resample(frame):
+                samples = piece.to_ndarray().reshape(-1)
+                total += samples.size
+                if total > limit:
+                    raise RecordingTooLong
+                pieces.append(samples)
+    return numpy.concatenate(pieces) if pieces else numpy.zeros(0, dtype=numpy.float32)
+
+
 def _load() -> dict:
-    raise NotImplementedError("no speech model is chosen yet (ticket 49): see .scratch/future-plan/voice-survey.md")
+    if not MODEL_DIR.is_dir():  # Named as a repository, a missing folder would go and fetch a gigabyte.
+        raise FileNotFoundError(MODEL_DIR)
+    import torch
+    from transformers import pipeline
+
+    gpu = torch.cuda.is_available()
+    return {
+        "hear": pipeline(
+            "automatic-speech-recognition",
+            model=str(MODEL_DIR),
+            chunk_length_s=30,
+            device=0 if gpu else -1,
+            dtype=torch.float16 if gpu else torch.float32,
+        )
+    }
 
 
 def _transcribe(state: dict, path: str) -> dict:
-    raise NotImplementedError
+    audio = _decode(path)
+    if audio.size == 0:
+        return {"text": ""}
+    heard = state["hear"](
+        {"raw": audio, "sampling_rate": SAMPLE_RATE},
+        generate_kwargs={"language": "vietnamese", "task": "transcribe"},
+    )
+    return {"text": heard["text"].strip()}
 
 
 def model_process() -> int:
@@ -129,6 +177,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         except (OSError, ValueError) as error:  # No room for the temporary file, or a reply that is not JSON.
             self._send(500, {"error": type(error).__name__})
+            return
+        if isinstance(reply, dict) and reply.get("error") == RecordingTooLong.__name__:
+            self._send(413, {"error": "recording too long"})
             return
         if not isinstance(reply, dict) or "error" in reply or not isinstance(reply.get("text"), str):
             self._send(500, {"error": reply.get("error", "bad reply") if isinstance(reply, dict) else "bad reply"})

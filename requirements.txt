@@ -26,6 +26,7 @@ pyvi==0.1.1
 loguru>=0.7,<1.0
 # sentence-transformers (keo theo PyTorch ~0.65-2.5GB) da chuyen sang optional
 # extra cho reranker (P4-3, BAT mac dinh tu 21/08): pip install -e .[rerank] - may khong cai thi launcher tu ghim RAG_RERANKER_ENABLED=false (docs/DEVELOPMENT_PLAN.md)
+# Nghe tin thoai (ticket 49, chi can khi dat VOICE_URL): pip install av==18.1.0, cung torch va transformers o tren.
 psutil>=6.0,<8.0
 SQLAlchemy>=2.0,<3.0
 alembic>=1.14,<2.0
