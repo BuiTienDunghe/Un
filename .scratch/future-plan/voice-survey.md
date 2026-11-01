@@ -43,6 +43,8 @@ Không dùng được, ghi để khỏi tra lại: [Parakeet-tdt-0.6b-v3](https:
 | [whisper.cpp](https://github.com/ggml-org/whisper.cpp) | MIT | Có CPU, Vulkan, CUDA trên Windows; `whisper-cli` chỉ nhận WAV 16 bit, tức phải có ffmpeg đổi ogg sang wav | Có ffmpeg trên máy không; bản dựng sẵn cho Windows |
 | transformers (cho PhoWhisper, Qwen3-ASR) | Apache-2.0 | Môi trường `Fine-tune` (chạy decided) đã có torch 2.11+cu128 và transformers 5.19. **Không thấy** `av`, `soundfile`, `librosa` trong đó, nên đọc ogg/opus cần ffmpeg hoặc cài thêm một gói nhỏ | Qwen3-ASR có chạy bằng transformers thường hay cần gói riêng của Qwen: **chưa kiểm** |
 
+Lưu ý về môi trường `Fine-tune`: đó là venv Linux (`python3.12`), decided chỉ vào được qua `run-decided.bat` và WSL. Chọn B hoặc C dựa vào nó nghĩa là hoặc chạy cả cửa `voice_server.py` trong WSL như decided (khi đó đường tệp tạm phải đổi bằng `wslpath` trước khi model con mở được; chưa làm), hoặc dựng venv Windows mới có torch (hàng GB). Dòng `voice` trong `tools/supervisor.py` hiện chạy bằng Python của dự án trên Windows, và `VOICE_MODEL_PYTHON` chỉ đổi được trình thông dịch của model con; chưa đủ cho trường hợp WSL.
+
 Rủi ro chung của họ Whisper: khi im lặng hoặc nhiễu, nó có thể "bịa" ra câu không ai nói, và dễ lặp ([thẻ large-v3](https://huggingface.co/openai/whisper-large-v3) tự nhận, nặng hơn với ngôn ngữ ít dữ liệu). Cần bộ lọc im lặng ở phía model và kiểm đầu ra rỗng; phần code đã có đường cho "không nghe ra lời nào".
 
 ## Các cách đi
