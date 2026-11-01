@@ -4,8 +4,8 @@ The rule promises a fixed inference budget: the default answer path makes one ca
 three exceptions add at most one each. Until now nothing held it; a fourth call added to
 rag_service or agent_service would have shipped silently. A fourth exception exists, off by
 default (ticket 45): a pasted text too long for the window is read in parts, one call each,
-under a budget of its own (long_input_call_cap) so the agent's cap stays what it was. A fifth, off by default and
-awaiting the owner's decision on rule 5 (agent.lookup_check, harness-fix round): a turn that called no tool and gave
+under a budget of its own (long_input_call_cap) so the agent's cap stays what it was. A fifth, off in code and on
+in models.yaml by the owner's decision on rule 5 (agent.lookup_check, harness-fix round): a turn that called no tool and gave
 up ("tôi không có thông tin") is sent back once to look, which adds one call to the agent's cap (agent_call_cap). The entry point of a turn opens
 a budget with its cap, ModelRouter counts every chat / chat_tools / stream_chat made while
 it is open, and a turn that goes past its cap is logged and kept in OVERRUNS. Nothing is

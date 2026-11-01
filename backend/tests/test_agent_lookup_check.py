@@ -74,6 +74,13 @@ def test_it_is_off_by_default():
     assert answer == GAVE_UP and [s["kind"] for s in steps] == ["final"] and len(router.prompts) == 1
 
 
+def test_a_true_answer_about_a_pasted_text_is_left_alone():
+    paste = "Nội dung văn bản dán. " * 800 + "\n\nCâu hỏi: có nói gì về lương không?"
+    answer = "Tôi không tìm thấy thông tin về lương trong văn bản bạn gửi."
+    returned, steps, router = run([final(answer)], user=paste)
+    assert returned == answer and [s["kind"] for s in steps] == ["final"] and len(router.prompts) == 1
+
+
 def test_giving_up_before_any_lookup_gets_one_retry_and_the_rejected_text_is_kept_nowhere():
     answer, steps, router = run([final(GAVE_UP), call("search_documents", {"query": "xoá tài liệu gốc"}), final(FOUND)])
 

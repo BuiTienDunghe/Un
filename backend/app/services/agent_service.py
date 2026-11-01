@@ -501,6 +501,8 @@ class AgentService:
                 answer = result["content"]
                 if (
                     self.lookup_check and not lookup_retried and self._offers_lookup()
+                    # "Not in the text you sent" is a true answer about a paste, not a lookup skipped.
+                    and not (messages and is_paste(messages[-1]))
                     and not any(step["kind"] == "tool_call" for step in steps) and LOOKUP_GAVE_UP.search(answer)
                     and self.turn_budget_seconds - (self.clock() - turn_started) >= self.final_reserve_seconds
                 ):
