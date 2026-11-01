@@ -17,7 +17,7 @@ from app.llm_clients.gemini_client import GeminiClient
 from app.llm_clients.deepseek_client import DeepSeekClient
 from app.llm_clients.anthropic_client import AnthropicClient
 from app import discord
-from app.routers import agent, auth, chat, conversations, dashboard, documents, health, memory, models, ocr, rag, research, vision
+from app.routers import agent, auth, chat, conversations, dashboard, documents, health, memory, models, ocr, rag, research, vision, voice
 from app.security.api_key import require_api_key_for_read
 from app.security.auth import require_admin
 from app.services.auth_service import AuthService
@@ -305,6 +305,7 @@ app.include_router(memory.router, dependencies=read_guard)
 app.include_router(conversations.router, dependencies=read_guard)
 app.include_router(dashboard.router, dependencies=admin_guard)
 app.include_router(vision.router, dependencies=read_guard)
+app.include_router(voice.router, dependencies=read_guard)
 discord.register_routes(app, admin_guard=admin_guard)
 app.mount("/ui", UiFiles(directory=str(Path(__file__).parent / "frontend"), html=True), name="ui")
 

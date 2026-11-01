@@ -76,6 +76,8 @@ def services(python: str = sys.executable) -> list[Service]:
         worker("condenser", "scripts.condensation_worker", "--loop", needs=("DISCORD_CONDENSATION_ENABLED", "true")),
         Service("decided", ("cmd", "/c", str(ROOT / "run-decided.bat")), ROOT, ("DECIDED_URL", "")),
         worker("decided-worker", "scripts.decided_worker", needs=("DECIDED_URL", "")),
+        # Ticket 49: the door only; the speech model starts in a child on the first recording and leaves when idle.
+        Service("voice", (python, "-u", str(ROOT / "tools" / "voice_server.py")), ROOT, ("VOICE_URL", "")),
     ]
 
 

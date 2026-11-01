@@ -31,6 +31,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
   "không có chữ" của model không còn bị nạp thành nội dung trang.
 
 ### Added
+- **Nghe tin nhắn thoại Discord** (ticket 49). Tắt mặc định, và **chưa chọn model nghe nên chưa chạy được thật**: khung và bản giả để test đã có, khảo sát model ở `.scratch/future-plan/voice-survey.md`. Bật cần `VOICE_URL` ở backend (dịch vụ `tools/voice_server.py`, model nằm ở tiến trình con và thoát sau 5 phút rảnh như decided) và `DISCORD_VOICE_GUILD_ALLOWLIST` ở bot. Chỉ nghe tin thoại *trả lời một tin của Ún* trong server được phép. Chữ nghe được vào lượt như tin gõ thường; ghi âm không được lưu. Quá 8 MB hoặc 180 giây, lỗi, hay chưa bật thì Ún đáp một câu lịch sự, không tạo lượt. Chưa thử trên Discord thật.
 - **Cắm công cụ ngoài qua MCP** (ticket 47, mặc định tắt, `AGENT_MCP_ENABLED=true` và khai server ở `agent.mcp.servers` trong `models.yaml`, danh sách mặc định rỗng).
   Mỗi server là một chương trình Ún tự chạy; chỉ công cụ nào được ghi tên trong `allowed_tools` mới tới tay model, kết quả bị cắt theo trần của server và đi qua
   cùng lớp đánh dấu "dữ liệu, không phải lệnh" như công cụ khác. Server không chạy được, treo hay chết thì mất công cụ của nó, lượt vẫn trả lời. Chỉ thử với server giả

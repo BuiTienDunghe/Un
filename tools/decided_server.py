@@ -102,8 +102,9 @@ class ModelUnavailable(Exception):
 
 
 class ModelProcess:
-    def __init__(self, command: list[str], idle_seconds: float = IDLE_SECONDS, reply_timeout: float = REPLY_TIMEOUT_SECONDS) -> None:
+    def __init__(self, command: list[str], idle_seconds: float = IDLE_SECONDS, reply_timeout: float = REPLY_TIMEOUT_SECONDS, name: str = "decided") -> None:
         self.command = command
+        self.name = name
         self.idle_seconds = idle_seconds
         self.reply_timeout = reply_timeout
         self._lock = threading.Lock()
@@ -139,6 +140,11 @@ class ModelProcess:
             child.wait()
 
     def classify(self, text: str) -> dict:
+        return self.ask({"text": text})
+
+    def ask(self, request: dict) -> dict:
+        """One line out, one line back. The line stays small whatever the job (the voice door sends a
+        path, never audio), since a write to a child that is not reading would block with the lock held."""
         with self._lock:
             if not self.loaded:
                 self._stop()
@@ -146,7 +152,7 @@ class ModelProcess:
             # Before the work, so a failure just after a slow load does not unload at once.
             self._last_used = time.monotonic()
             try:
-                self._child.stdin.write(json.dumps({"text": text}) + "\n")
+                self._child.stdin.write(json.dumps(request) + "\n")
                 self._child.stdin.flush()
                 reply = self._replies.get(timeout=self.reply_timeout)
             except queue.Empty as error:
@@ -173,7 +179,7 @@ class ModelProcess:
         while True:
             time.sleep(every_seconds)
             if self.stop_if_idle():
-                print("decided: model process exited after idle", flush=True)
+                print(f"{self.name}: model process exited after idle", flush=True)
 
 
 MODEL = ModelProcess([sys.executable, "-u", str(Path(__file__).resolve()), "--model-process"])
