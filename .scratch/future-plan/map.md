@@ -33,6 +33,8 @@ hoạch, chưa làm. Mỗi mục n là ticket số 40+n. Hiện trạng đã ki�
 - Mỗi việc một worktree và nhánh riêng. Nhân viên không gộp main, không push, không bật/tắt container.
 - Không tải trên 200 MB, không đọc `.env`, không đưa dữ liệu train lên repo.
 - Mọi tính năng mới mặc định tắt cho tới khi có số đo. Thay đổi hành vi agent phải đo cô lập so với mốc 41.
+- Ollama tự cập nhật (log 31/10 21:03). Cùng commit, cùng cấu hình mà 29/10 ra 58, 02/11 ra 55. So hai nhánh phải chạy cùng
+  phiên bản Ollama và cùng ngày, chạy lại đối chứng; không so với số của ngày khác.
 - Chỉ opus gộp, sau khi một người khác duyệt. Bộ test có cơ sở dữ liệu chỉ opus chạy, vì hai phiên dùng chung DB
   test sẽ tự khoá lẫn nhau.
 
