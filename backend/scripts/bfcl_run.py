@@ -27,7 +27,15 @@ What the loop is NOT given, and why it is stated here: between turns the model g
 turns' user and answer text only, as Ún's chat path hands history to the agent, not the earlier
 tool calls (BFCL's loop would carry them). AGENT_GUIDE is unchanged, so it still names
 search_documents, search_history and the others, which are absent in these turns. No persona
-prompt. A single-turn task's tool answers "ok": BFCL does not execute those.
+prompt. A single-turn task's tool answers "ok": BFCL does not execute those. For that reason a
+single-turn task's result holds the calls of the FIRST model round only, as BFCL's own result
+holds the first response: a model that calls again after the made-up "ok" (to fetch a value that
+does not exist) is not failed by it. The later rounds' calls still run and stay in
+inference_log and in the line's `later_round_calls`.
+
+One caution: a parameter name the model writes goes into the call string that BFCL `eval`s, in
+this process, exactly as BFCL's own scorer does when it replays it. The model is local, so the
+risk is the scorer's own.
 """
 from __future__ import annotations
 
@@ -78,6 +86,19 @@ SINGLE_TURN = ("simple_python", "multiple", "irrelevance")
 MULTI_TURN = ("multi_turn_base", "multi_turn_miss_func")
 HINT = " Note that the provided function is in Python 3 syntax."
 SINGLE_TURN_OK = json.dumps({"result": "ok"})
+# What BFCL joins with the task id into the name of a backend instance and then `eval`s as a
+# variable: it must stay a valid identifier, which a run id (it starts with a date) is not. Fixed,
+# never the run id.
+RUN_TAG = "unrun"
+
+
+def default_run_id() -> str:
+    return f"{datetime.now().strftime('%Y%m%d-%H%M%S')}-t{TEMPERATURE:g}-seed{SEED}"
+
+
+def instance_prefix(run_tag: str, entry_id: str) -> str:
+    """The start of BFCL's instance names for a task, as it spells them (multi_turn_utils.py)."""
+    return re.sub(r"[-./:]", "_", f"{run_tag}_{entry_id}_")
 
 
 # ── the BFCL clone (read only) ───────────────────────────────────────────
@@ -256,7 +277,7 @@ def drop_instances(bfcl: Bfcl, model_name: str, entry_id: str) -> None:
     """BFCL keeps each task's backend instances in its module's globals under a name made of the
     model and the task: a second run of the same task in this process would continue from the
     first one's state."""
-    prefix = re.sub(r"[-./:]", "_", f"{model_name}_{entry_id}_")
+    prefix = instance_prefix(model_name, entry_id)
     scope = vars(bfcl.utils)
     for key in [key for key in scope if key.startswith(prefix)]:
         del scope[key]
@@ -276,6 +297,10 @@ def run_entry(
     """Every turn of one task through AgentService.run(); returns the line for the result file.
     `make_agent(registry)` builds the service, so a test hands in a scripted model."""
     multi = category in MULTI_TURN
+    if multi and not (instance_prefix(run_tag, entry["id"]) + "GorillaFileSystem_instance").isidentifier():
+        # Otherwise every call fails at BFCL's eval with a SyntaxError that reaches the model as a
+        # plain error string, and the scorer, replaying under its own valid name, still scores it.
+        raise ValueError(f"run_tag {run_tag!r} does not make a valid BFCL instance name")
     log = TurnLog(recording)
     execute = (
         {
@@ -302,6 +327,7 @@ def run_entry(
     error: str | None = None
     answers: list[str] = []
     all_calls: list[dict[str, str]] = []
+    first_round_calls: list[dict[str, str]] = []
     try:
         for turn_index, turn_messages in enumerate(entry["question"]):
             if str(turn_index) in held_out:
@@ -317,6 +343,8 @@ def run_entry(
             rounds, by_round = recording.take(), log.take()
             ordered = [by_round[index] for index in sorted(by_round)]
             turns.append([*ordered, answer] if answer else ordered)
+            if turn_index == 0 and ordered and 0 in by_round:
+                first_round_calls = list(by_round[0])
             all_calls.extend(call for calls in ordered for call in calls)
             answers.append(answer)
             history += [*turn_messages, {"role": "assistant", "content": answer}]
@@ -341,7 +369,8 @@ def run_entry(
         line.update(result=turns, input_token_count=tokens_in, output_token_count=tokens_out, latency=latency)
     else:
         line.update(
-            result=all_calls if all_calls else (answers[0] if answers else ""),
+            result=first_round_calls if first_round_calls else (answers[0] if answers else ""),
+            later_round_calls=len(all_calls) - len(first_round_calls),
             input_token_count=sum(sum(turn) for turn in tokens_in),
             output_token_count=sum(sum(turn) for turn in tokens_out),
             latency=sum(sum(turn) for turn in latency),
@@ -526,7 +555,7 @@ def main(argv: list[str] | None = None) -> int:
     def make_agent(registry: ToolRegistry) -> AgentService:
         return AgentService(recording, None, None, defense=defense, registry=registry, **agent_config)
 
-    run_id = args.run_id or f"{datetime.now().strftime('%Y%m%d-%H%M%S')}-t{TEMPERATURE:g}-seed{SEED}"
+    run_id = args.run_id or default_run_id()
     out_dir = args.out / run_id
     out_dir.mkdir(parents=True, exist_ok=True)
     manifest = {
@@ -554,6 +583,7 @@ def main(argv: list[str] | None = None) -> int:
         "agent_guide_sha256": hashlib.sha256(AGENT_GUIDE.encode("utf-8")).hexdigest(),
         "persona_prompt": None,
         "history_between_turns": "user and answer text only",
+        "single_turn_scored_calls": "first model round only",
         "unload_between_tasks": args.unload_between_tasks,
         "started_at": datetime.now(UTC).isoformat(),
         "argv": sys.argv[1:] if argv is None else argv,
@@ -564,7 +594,7 @@ def main(argv: list[str] | None = None) -> int:
         reloader.reload()
     summary = run_all(
         bfcl, selection, recording, make_agent, out_dir,
-        run_tag=run_id, reloader=reloader if args.unload_between_tasks else None,
+        run_tag=RUN_TAG, reloader=reloader if args.unload_between_tasks else None,
     )
     manifest["finished_at"] = datetime.now(UTC).isoformat()
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")

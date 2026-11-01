@@ -108,7 +108,7 @@ def oracle_single_turn(category: str, entry_id: str) -> list[Any]:
     return [calls, "xong"]
 
 
-def run_one(category: str, entry_id: str, rounds: list[Any], tag: str = "test-run") -> tuple[dict[str, Any], Scripted]:
+def run_one(category: str, entry_id: str, rounds: list[Any], tag: str = bfcl_run.RUN_TAG) -> tuple[dict[str, Any], Scripted]:
     bfcl = bfcl_run.Bfcl(CLONE)
     model = Scripted(rounds)
     recording = UsageRecordingRouter(model)
@@ -175,6 +175,30 @@ def test_a_function_doc_becomes_the_openai_style_tool_bfcl_sends():
 
 
 @needs_clone
+def test_a_run_id_starting_with_a_date_is_no_tag_for_bfcls_instances_and_the_runner_uses_a_fixed_one():
+    run_id = bfcl_run.default_run_id()
+    assert run_id[0].isdigit(), "the default run id is a date: not a Python name"
+    assert bfcl_run.RUN_TAG.isidentifier()
+    with pytest.raises(ValueError, match="valid BFCL instance name"):
+        run_one("multi_turn_base", "multi_turn_base_77", ["xong"], tag=run_id)
+    # The same task under the fixed tag runs its calls for real.
+    line, _ = run_one("multi_turn_base", "multi_turn_base_77", oracle_multi_turn("multi_turn_base_77"))
+    results = [step["content"] for turn in line["inference_log"] for step in turn["steps"] if step["kind"] == "tool_result"]
+    assert any("94016" in text for text in results)
+
+
+@needs_clone
+def test_a_single_turn_task_is_scored_on_its_first_round_and_the_later_calls_are_only_counted():
+    name, arguments = oracle_single_turn("simple_python", "simple_python_6")[0][0]
+    again = [(name, arguments)]
+    line, _ = run_one("simple_python", "simple_python_6", [again, again, "xong"])
+    assert [list(c) for c in line["result"]] == [[name]], "one call, as BFCL's own result holds one response"
+    assert line["later_round_calls"] == 1
+    kinds = [step["kind"] for step in line["inference_log"][0]["steps"]]
+    assert kinds.count("tool_call") == 2, "the second call still ran and stays in the log"
+
+
+@needs_clone
 def test_a_task_that_runs_nothing_keeps_the_answer_text_and_a_task_that_calls_keeps_the_calls():
     line, model = run_one("irrelevance", "irrelevance_0", ["Không có hàm nào dùng được."])
     assert line["result"] == "Không có hàm nào dùng được."
@@ -208,7 +232,11 @@ def test_a_multi_turn_task_is_recorded_by_turn_and_round_and_leaves_no_instance_
     assert all(len(line[key]) == len(truth) for key in ("input_token_count", "output_token_count", "latency"))
     errors = [step["error_code"] for turn in line["inference_log"] for step in turn["steps"] if step.get("error_code")]
     assert errors == []
-    leftover = [key for key in vars(bfcl_run.Bfcl(CLONE).utils) if key.endswith("_instance") and "test_run" in key]
+    # BFCL reports a call it could not run as a plain string, not a coded error: read the results.
+    results = [step["content"] for turn in line["inference_log"] for step in turn["steps"] if step["kind"] == "tool_result"]
+    assert results and not [text for text in results if "Error during execution" in text], results
+    assert any("94016" in text for text in results), "the zip code lookup really ran"
+    leftover = [key for key in vars(bfcl_run.Bfcl(CLONE).utils) if key.endswith("_instance") and bfcl_run.RUN_TAG in key]
     assert leftover == []
     # The earlier turns reach the model as text only, as the chat path hands history to the agent.
     last_turn_messages = model.messages_seen[-2]
@@ -223,7 +251,7 @@ def test_the_held_out_function_appears_at_its_turn_with_the_fixed_user_sentence(
     assert entry["question"][turn_of_holdout] == [], "the data's own turn is empty"
     model = Scripted(["xong"] * len(entry["question"]))
     recording = UsageRecordingRouter(model)
-    line = bfcl_run.run_entry(bfcl, entry, "multi_turn_miss_func", recording, agent_factory(recording), "test-run")
+    line = bfcl_run.run_entry(bfcl, entry, "multi_turn_miss_func", recording, agent_factory(recording), bfcl_run.RUN_TAG)
 
     assert [name in tools for tools in model.tools_seen] == [index >= turn_of_holdout for index in range(len(entry["question"]))]
     sentence = [m["content"] for m in model.messages_seen[turn_of_holdout] if m["role"] == "user"][-1]
@@ -240,7 +268,7 @@ def test_a_broken_turn_ends_the_task_with_too_few_turns_and_says_why():
     bfcl = bfcl_run.Bfcl(CLONE)
     recording = UsageRecordingRouter(Broken([]))
     entry = bfcl.load_entries("multi_turn_base", ["multi_turn_base_77"])[0]
-    line = bfcl_run.run_entry(bfcl, entry, "multi_turn_base", recording, agent_factory(recording), "test-run")
+    line = bfcl_run.run_entry(bfcl, entry, "multi_turn_base", recording, agent_factory(recording), bfcl_run.RUN_TAG)
     assert line["result"] == [] and line["error"] == "RuntimeError: model down"
 
 
@@ -252,7 +280,7 @@ def test_the_summary_counts_why_turns_ended_and_the_coded_errors(tmp_path):
     model = Scripted(rounds + ["xong"] * 10)
     recording = UsageRecordingRouter(model)
     summary = bfcl_run.run_all(
-        bfcl, {"multi_turn_base": ["multi_turn_base_77"]}, recording, agent_factory(recording), tmp_path, run_tag="test-run", progress=lambda text: None,
+        bfcl, {"multi_turn_base": ["multi_turn_base_77"]}, recording, agent_factory(recording), tmp_path, run_tag=bfcl_run.RUN_TAG, progress=lambda text: None,
     )
     assert summary["turn_stop_reasons"].get("max_steps", 0) >= 1
     # cd is not among this task's functions (a vehicle and a posting API): the loop's own coded error.
@@ -287,7 +315,7 @@ def test_a_run_that_makes_the_ground_truths_calls_scores_full_marks_through_bfcl
                 rounds += oracle_single_turn(category, entry_id)
     model = Scripted(rounds)
     recording = UsageRecordingRouter(model)
-    bfcl_run.run_all(bfcl, plan, recording, agent_factory(recording), tmp_path, run_tag="e2e-run", progress=lambda text: None)
+    bfcl_run.run_all(bfcl, plan, recording, agent_factory(recording), tmp_path, run_tag=bfcl_run.RUN_TAG, progress=lambda text: None)
 
     done = subprocess.run([str(BFCL_PYTHON), "-X", "utf8", str(SCORER), str(tmp_path)], capture_output=True, text=True, timeout=600)
     assert done.returncode == 0, done.stdout[-2000:] + done.stderr[-2000:]
@@ -308,7 +336,7 @@ def test_a_run_that_does_nothing_fails_a_multi_turn_task_and_an_irrelevance_task
     rounds += [[(entry["function"][0]["name"].replace(".", "_"), {})], "xong"]
     model = Scripted(rounds)
     recording = UsageRecordingRouter(model)
-    bfcl_run.run_all(bfcl, plan, recording, agent_factory(recording), tmp_path, run_tag="e2e-fail", progress=lambda text: None)
+    bfcl_run.run_all(bfcl, plan, recording, agent_factory(recording), tmp_path, run_tag=bfcl_run.RUN_TAG, progress=lambda text: None)
     done = subprocess.run([str(BFCL_PYTHON), "-X", "utf8", str(SCORER), str(tmp_path)], capture_output=True, text=True, timeout=600)
     assert done.returncode == 0, done.stdout[-2000:] + done.stderr[-2000:]
     scores = json.loads((tmp_path / "scores.json").read_text(encoding="utf-8"))
