@@ -36,6 +36,7 @@ from discord_bot.passive_listener import (
     resolve_listened_channel,
 )
 from discord_bot.progress_message import ProgressMessage
+from discord_bot.reminders import POLL_SECONDS_DEFAULT, ReminderSender, format_reminder_list
 from discord_bot.session_location import (
     UnsupportedDiscordLocationError,
     canonical_discord_location,
@@ -60,6 +61,9 @@ class DiscordSettings:
     listen_channel_ids: frozenset[str] = frozenset()
     # Ticket 30: the guilds where /docs may reach the document store. None = every guild.
     docs_guild_allowlist: frozenset[str] | None = frozenset()
+    # Ticket 48: reminders members asked for. Off unless switched on; the backend has its own switch.
+    reminders_enabled: bool = False
+    reminders_poll_seconds: float = POLL_SECONDS_DEFAULT
 
     @classmethod
     def from_env(cls) -> "DiscordSettings":
@@ -101,6 +105,8 @@ class DiscordSettings:
             docs_guild_allowlist=parse_docs_guild_allowlist(
                 os.environ.get("DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST", "")
             ),
+            reminders_enabled=os.environ.get("DISCORD_REMINDERS_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"},
+            reminders_poll_seconds=float(os.environ.get("DISCORD_REMINDERS_POLL_SECONDS", str(POLL_SECONDS_DEFAULT))),
         )
 
 
@@ -504,8 +510,11 @@ def create_bot(
     persistent_sessions_enabled: bool = False,
     listener: PassiveListener | None = None,
     docs_guild_allowlist: frozenset[str] | None = frozenset(),
+    reminders_enabled: bool = False,
+    reminders_poll_seconds: float = POLL_SECONDS_DEFAULT,
 ) -> LocalAgentDiscordBot:
     bot = LocalAgentDiscordBot()
+    bot.reminder_task = None
     listener = listener or PassiveListener(DEFAULT_COUNTS_PATH, frozenset())
     gateway = DiscordConversationGateway(
         api_client,
@@ -524,6 +533,12 @@ def create_bot(
                 ",".join(sorted(listener.listened_channel_ids)),
                 listener.counts_path,
             )
+        # on_ready fires again after every reconnect: one sender, however often.
+        if reminders_enabled and (bot.reminder_task is None or bot.reminder_task.done()):
+            sender = ReminderSender(
+                bot, api_client, lambda guild_id: docs_allowed(guild_id, docs_guild_allowlist), poll_seconds=reminders_poll_seconds,
+            )
+            bot.reminder_task = asyncio.create_task(sender.run_forever())
         if docs_guild_allowlist is None:
             logger.info("/docs is on in every server")
         elif docs_guild_allowlist:
@@ -695,6 +710,40 @@ def create_bot(
             return
         await interaction.followup.send(format_health(payload), ephemeral=True)
 
+    if reminders_enabled:
+        reminders_group = app_commands.Group(name="reminders", description="Lời nhắc bạn đã nhờ Ún hẹn.")
+
+        @reminders_group.command(name="list", description="Lời nhắc của bạn chưa tới giờ (chỉ bạn thấy).")
+        async def reminders_list(interaction):
+            if not docs_allowed(interaction.guild_id, docs_guild_allowlist):
+                refusal = "Lệnh này chỉ dùng trong server." if interaction.guild_id is None else "Lệnh này chưa bật ở server này."
+                await interaction.response.send_message(refusal, ephemeral=True)
+                return
+            await interaction.response.defer(thinking=True, ephemeral=True)
+            try:
+                reminders = await api_client.list_reminders(str(interaction.guild_id), str(interaction.user.id))
+            except BackendClientError as error:
+                await interaction.followup.send(str(error), ephemeral=True)
+                return
+            await interaction.followup.send(format_reminder_list(reminders), ephemeral=True)
+
+        @reminders_group.command(name="cancel", description="Huỷ một lời nhắc do chính bạn đặt.")
+        @app_commands.describe(code="Mã ở đầu dòng trong /reminders list")
+        async def reminders_cancel(interaction, code: str):
+            if not docs_allowed(interaction.guild_id, docs_guild_allowlist):
+                refusal = "Lệnh này chỉ dùng trong server." if interaction.guild_id is None else "Lệnh này chưa bật ở server này."
+                await interaction.response.send_message(refusal, ephemeral=True)
+                return
+            await interaction.response.defer(thinking=True, ephemeral=True)
+            try:
+                reminder = await api_client.cancel_reminder(code.strip(), str(interaction.guild_id), str(interaction.user.id))
+            except BackendClientError as error:
+                await interaction.followup.send(str(error), ephemeral=True)
+                return
+            await interaction.followup.send(f"Đã huỷ lời nhắc `{reminder.short_id}`.", ephemeral=True)
+
+        bot.tree.add_command(reminders_group)
+
     # Fire-and-forget tasks need a strong reference until they finish, or
     # asyncio may garbage-collect them mid-flight (review finding 28/08).
     _ledger_tasks: set[asyncio.Task] = set()
@@ -849,6 +898,8 @@ async def run() -> None:
         settings.persistent_sessions_enabled,
         listener=PassiveListener(DEFAULT_COUNTS_PATH, settings.listen_channel_ids),
         docs_guild_allowlist=settings.docs_guild_allowlist,
+        reminders_enabled=settings.reminders_enabled,
+        reminders_poll_seconds=settings.reminders_poll_seconds,
     )
     try:
         # Never log settings.token or any password.

@@ -439,6 +439,35 @@ class DiscordMessageLabel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
+class DiscordReminder(Base):
+    """A reminder a member asked for (ticket 48): sent once, to the channel it was asked in."""
+
+    __tablename__ = "discord_reminders"
+    __table_args__ = (
+        CheckConstraint("status IN ('pending','sending','sent','failed','missed','cancelled')", name="ck_discord_reminders_status"),
+        Index("ix_discord_reminders_status_due", "status", "due_at"),
+        Index("ix_discord_reminders_creator", "guild_id", "creator_id", "status"),
+    )
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    guild_id: Mapped[str] = mapped_column(Text, nullable=False)
+    channel_id: Mapped[str] = mapped_column(Text, nullable=False)
+    thread_id: Mapped[str | None] = mapped_column(Text)
+    creator_id: Mapped[str] = mapped_column(Text, nullable=False)
+    creator_display_name: Mapped[str | None] = mapped_column(Text)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="pending", server_default="pending")
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    discord_message_id: Mapped[str | None] = mapped_column(Text)
+    error: Mapped[str | None] = mapped_column(Text)
+    source_turn_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
 class DiscordChannelMessage(Base):
     """Sổ gốc (tier 1, memory_design.md §5.2): one row per Discord message the
     bot passively hears in a listened channel — bot rows included, tagged

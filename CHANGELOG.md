@@ -31,6 +31,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
   "không có chữ" của model không còn bị nạp thành nội dung trang.
 
 ### Added
+- **Nhắc việc, Ún tự nhắn trước** (ticket 48). Tắt mặc định: cần `DISCORD_REMINDERS_ENABLED=true` ở cả backend và bot, migration `20261101_37`, và chỉ chạy ở server trong `DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST`. Người dùng dặn "nhắc tôi 3 giờ chiều mai gọi mẹ" thì công cụ `remind` hẹn giờ; tới giờ bot nhắn lại trong đúng kênh (hoặc thread) đó, chỉ nhắc đúng người đặt, không `@everyone`, `@here` hay vai trò. `/reminders list` và `/reminders cancel` (chỉ người đặt huỷ được). Ún chỉ gửi điều người dùng đã hẹn. Máy tắt lúc tới giờ: bật lại trong 24 giờ thì gửi kèm ghi chú trễ, quá 24 giờ thì bỏ và ghi `missed`. Gửi hỏng thì thử lại tối đa 3 lần; kênh đã xoá hoặc mất quyền thì bỏ ngay. Chưa thử trên Discord thật.
 - **Thử model decided phân loại tin nhắn** (ticket 36, 30/10). `DECIDED_URL` bật việc phân loại; màn hình duyệt và `search_jokes` luôn có. Mỗi tin của người trong kênh đang nghe được decided 2b đề xuất một ngăn: sự thật,
   quyết định, câu đùa, bỏ qua. Mọi đề xuất chờ người duyệt ở màn hình Duyệt phân loại, trừ câu bỏ qua mà decided chắc từ 0,8; không có gì tự vào trí nhớ. Điều đã duyệt vào khối
   trí nhớ của lượt Discord; câu đùa nằm kho riêng, Ún chỉ đọc qua công cụ `search_jokes`. Chạy trên máy, tự trả GPU sau 5 phút rảnh.

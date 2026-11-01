@@ -79,6 +79,21 @@ Web memory and Discord memory meet at one contract. The `memories` table and the
 projected into them under a `mem_dc_<uuid>` id through `upsert_with_id` / `remove_with_id`,
 and the core infers nothing from that prefix.
 
+## Reminders (ticket 48)
+
+Off unless `DISCORD_REMINDERS_ENABLED=true` on both the backend and the bot; only then is the `remind` tool
+offered (the default tool list is unchanged) and the bot's sender started. Table `discord_reminders`
+(migration `20261101_37`, additive). The bot talks to the backend over HTTP only (`/api/discord/reminders`:
+`claim`, `{id}/sent`, `{id}/failed`, list, `{ref}/cancel`); `app/discord/reminders.py` holds every rule, the bot only delivers.
+
+- Created only by the agent's `remind` tool, and only when the speaker's own words in that turn ask to be reminded, name a time, and the reminder text is made of their words (the `remember` rule). Channel, thread and creator come from the turn, never from the model.
+- A guild outside `DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST` is refused at creation, at listing and cancelling, when the bot sends, and when a due reminder is claimed (it is then marked `failed`).
+- Sent to the channel it was asked in, mentioning only its creator (`allowed_mentions` with no everyone, no roles, one user). Only the creator cancels; the check is in the backend.
+- Limits: 500 characters, 20 waiting per member per server, at most 3 per message, 30 seconds to 90 days ahead.
+- Machine or bot off at the hour: the bot polls every 30 s, so on return the backend hands out what is due. Up to 5 minutes late is sent as it is; 5 minutes to 24 hours late is sent with a "Trễ" note giving the original hour; 24 hours or more late is marked `missed`, not sent, and `/reminders list` shows it for one more day.
+- A send that fails is retried 1 minute apart, 3 tries in all, when Discord or the network is at fault; a deleted or forbidden channel, a channel in another server, or a server removed from the allowlist is final (`failed`).
+- Delivery is at-least-once: a claim the bot never finished (it died after sending, before the receipt) is handed out again after 10 minutes, so in that one window a reminder can arrive twice. A lost receipt is retried; the message itself is never re-sent by the bot.
+
 ## Agent (tool mode)
 
 A web turn goes through `AgentService` only when the request sets `use_tools` (default

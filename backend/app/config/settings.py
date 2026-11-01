@@ -105,6 +105,9 @@ class Settings(BaseSettings):
     # agent loop; empty (the default) fails CLOSED — no guild gets tools
     # until the operator decides. The rest degrade to plain chat.
     discord_agent_tools_guild_allowlist: str = ""
+    # Ticket 48: reminders a member asked for, sent by the bot at the hour. OFF by default; it
+    # obeys the guild allowlist above. The bot has its own DISCORD_REMINDERS_ENABLED.
+    discord_reminders_enabled: bool = False
     # Tier 3 condensation (memory_design.md §7). OFF by default: it is the one
     # tier that sends member text to a third party, so it starts only when the
     # operator sets both this flag and GEMINI_API_KEY. The floor replaces the

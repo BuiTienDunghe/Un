@@ -79,6 +79,7 @@ Runtime chỉ truy vấn Qdrant point có đầy đủ `version_id` và `chunk_i
 - `/ping` kiểm tra bot có phản hồi.
 - `/ask` gửi câu hỏi tới backend Local AI Core.
 - `/docs` hỏi đáp theo tài liệu đã index (RAG): chọn tài liệu bằng autocomplete hoặc bỏ trống để tìm trong tất cả; câu trả lời kèm nguồn theo tên tệp và số trang. Lệnh chỉ chạy ở server có trong `DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST`; server khác và tin nhắn riêng bị từ chối, không thấy cả tên tệp. Khi khởi động, log của bot ghi `/docs` đang bật ở mấy server.
+- Nhắc việc (tắt mặc định, `DISCORD_REMINDERS_ENABLED=true` ở backend và bot): nhắn "@Ún nhắc tôi 3 giờ chiều mai gọi mẹ", tới giờ Ún nhắn lại đúng kênh đó và chỉ nhắc người đặt. `/reminders list` xem, `/reminders cancel` huỷ (chỉ người đặt). Chỉ ở server trong `DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST`. Máy tắt lúc tới giờ: bật lại trong 24 giờ thì gửi kèm ghi chú trễ, quá 24 giờ thì bỏ.
 - `/memory` cho riêng người gọi xem agent đang nhớ gì về họ trong server; `/status` cho riêng người gọi xem sức khỏe hệ thống.
 - Mention `@Ún` trong kênh rồi đặt câu hỏi để chat tự nhiên. Lượt Discord chỉ chạy chế độ công cụ ở server có trong `DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST` (mặc định rỗng: không server nào, mọi lượt là chat thường).
 - Tính cách bot được cấu hình riêng trong `discord_bot/system_prompt.md`.
