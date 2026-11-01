@@ -20,7 +20,7 @@ from typing import Any
 
 
 def register_routes(app: Any, *, admin_guard: list[Any]) -> None:
-    """The five Discord routers, all behind the admin guard. Their prefixes
+    """The Discord routers, all behind the admin guard. Their prefixes
     (/api/bot, /api/condensations, /api/memory-review, /api/discord/...) overlap no
     core route, so where they are included does not change which route answers."""
     from app.discord.routers import bot, condensations, history, memory_review, message_labels, reminders, sessions

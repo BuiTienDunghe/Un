@@ -6,9 +6,9 @@ Rules the service keeps, whatever store sits under it:
   while its guild still is: one removed in between is marked failed, not sent.
 - Only the member who created a reminder can cancel it.
 - A reminder goes to the channel (or thread) it was asked in and mentions only its creator.
-- Late: the bot polls, so a reminder claimed a little after its hour is sent as it is. Claimed
-  LATE_NOTE_SECONDS or more after the hour (the machine was off) it is sent with a note saying
-  how late. Claimed MISSED_AFTER or more after, it is marked `missed` and NOT sent: a "take your
+- Late: the bot polls, so a reminder claimed a little after its hour is sent as it is. The claim
+  carries how many seconds late it is, and the bot words a note from 5 minutes on (the machine
+  was off). Claimed MISSED_AFTER or more after, it is marked `missed` and NOT sent: a "take your
   medicine at 8" arriving the next day is noise. `/reminders list` still shows it for a day.
 - A send that fails is retried (RETRY_DELAY apart, MAX_ATTEMPTS in all) when Discord or the
   network was at fault, and gives up at once when the channel is gone or forbidden. A bot that
@@ -31,7 +31,6 @@ TEXT_MAX_CHARS = 500
 MAX_PENDING_PER_MEMBER = 20
 MAX_HORIZON = timedelta(days=90)
 MIN_LEAD = timedelta(seconds=30)
-LATE_NOTE_SECONDS = 300
 MISSED_AFTER = timedelta(hours=24)
 MISSED_LISTED_FOR = timedelta(hours=24)
 MAX_ATTEMPTS = 3
