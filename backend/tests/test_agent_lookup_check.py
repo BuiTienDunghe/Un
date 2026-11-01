@@ -133,6 +133,7 @@ def test_the_retry_does_not_let_the_rejected_answers_figures_vouch_for_themselve
     "Tôi không tìm thấy quy định đó.",
     "Để chắc chắn, tôi cần tra cứu tài liệu.",
     "Mình không biết ai phụ trách.",
+    "Xin lỗi, tôi không có thông tin cụ thể về chính sách này.",
 ])
 def test_the_phrases_that_count_as_giving_up(text):
     assert LOOKUP_GAVE_UP.search(text)
@@ -142,6 +143,8 @@ def test_the_phrases_that_count_as_giving_up(text):
     "Chỉ quản trị viên được xoá.",
     "Xin chào, mình là Ún.",
     "Hai cộng hai bằng bốn.",
+    "Bạn cần kiểm tra lại quy định cụ thể tại quy_che_nghi_phep_2026.pdf.",
+    "Giả định bạn đáp ứng vì không có thông tin ngược lại.",
 ])
 def test_the_phrases_that_do_not(text):
     assert not LOOKUP_GAVE_UP.search(text)

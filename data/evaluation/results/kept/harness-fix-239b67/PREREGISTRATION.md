@@ -85,3 +85,17 @@ Giữ một thay đổi chỉ khi:
 - Một bài "đổi" của Agent Eval khi đổi byte lời nhắc có thể do độ nhạy của model, không do cơ chế. H3 chỉ bắn ở bài chưa gọi công cụ nên các bài khác không đổi byte; bài đã bắn thì có.
 - Ollama tự cập nhật (31/10): so cùng ngày, không so với số ngày khác.
 - Mẫu "không có thông tin" là regex tiếng Việt, bắt sót những cách nói khác.
+
+## Phụ lục H3b (viết sau khi thấy kết quả H3; 02/11/2026)
+
+H1, H2, H3 đã chạy trước khi viết phần này. H3 bắn ở `doc-17`, `doc-25`, `doc-46`; trong đó `doc-17` ("Bạn cần kiểm tra lại quy định…", bài cấm mọi công cụ) và `doc-46` ("…vì không có thông tin ngược lại") là bắn nhầm: mẫu quá rộng. Bắn nhầm tốn một vòng model và, ở bài cấm công cụ, nếu lần thử lại gọi công cụ thì bài hỏng.
+
+H3b: cùng cơ chế, mẫu hẹp lại, chỉ ngôi thứ nhất ("tôi/mình không có thông tin|dữ liệu", "tôi/mình không tìm thấy|tìm được|tra được|biết|rõ", "tôi/mình cần tìm kiếm|tra cứu"). Đây là sửa **sau khi thấy kết quả** trên chính bộ bài này, nên bằng chứng yếu hơn một dự đoán đặt trước: chỉ chứng minh mẫu mới không bắn nhầm ở 66 bài này, không chứng minh nó tổng quát.
+
+| Dự đoán H3b | Lý do |
+|---|---|
+| Chỉ `doc-25` bắn trong 66 bài; 65 bài còn lại giống hệt đối chứng từng chữ | câu trả lời đối chứng của `doc-17`, `doc-46` không khớp mẫu mới; nhiệt độ 0 xác định |
+| `doc-25` giống hệt lần H3 (đạt, gọi `search_documents`) | lần thử lại nhận cùng đầu vào |
+
+Luật quyết định cho H3b: như H3 (không bài nào đạt ở C mà hỏng), thêm: **không bắn nhầm ở bài nào đạt** — hai điều kiện đủ thì giữ H3b và bỏ H3 rộng; nếu H3b bắn ở bài khác `doc-25`, báo từng bài.
+

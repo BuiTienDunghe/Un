@@ -213,8 +213,10 @@ IMAGE_NOTE = "\n\n[Ảnh đính kèm"
 LOOKUP_CHECK_STEP = "lookup_check"
 LOOKUP_CHECK_LABEL = "Đang tra trước khi trả lời…"
 LOOKUP_TOOLS = ("search_documents", "search_history")
+# First person only (H3b): the wider pattern also fired on "Bạn cần kiểm tra lại…" and on "…vì không có
+# thông tin ngược lại", answers that were fine and, in doc-17, a task that forbids every tool.
 LOOKUP_GAVE_UP = re.compile(
-    r"(?:không|chưa) có (?:thông tin|dữ liệu)|(?:không|chưa) (?:tìm thấy|tìm được|tra được)|cần (?:tìm kiếm|tra cứu|kiểm tra)|(?:không|chưa) (?:biết|rõ)",
+    r"\b(?:tôi|mình)\s+(?:(?:không|chưa)\s+(?:có\s+(?:thông tin|dữ liệu)|tìm thấy|tìm được|tra được|biết|rõ)|cần\s+(?:tìm kiếm|tra cứu))",
     re.IGNORECASE,
 )
 LOOKUP_RETRY = (
