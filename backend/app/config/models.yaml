@@ -92,6 +92,16 @@ agent:
   # slower: raise both here.
   turn_budget_seconds: 90
   final_reserve_seconds: 20
+  # Ticket 47: tools from MCP servers, read only when AGENT_MCP_ENABLED=true. Each entry:
+  #   - name: notes                      # 1-24 letters, digits, - or _
+  #     command: ["python", "server.py"] # started with a bare environment (PATH and the like) plus `env`
+  #     allowed_tools: ["search_notes"]  # only these reach the model; none listed = server unused
+  #     env: {}                          # extra variables for it, e.g. its own key
+  #     result_max_chars: 3000           # 200-6000
+  #     call_timeout_seconds: 15
+  # A server is a program running with this process's rights: list only ones you trust.
+  mcp:
+    servers: []
 
 storage:
   # Original source files are retained by default. Only documents explicitly marked

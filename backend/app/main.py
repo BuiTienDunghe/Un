@@ -258,10 +258,16 @@ async def lifespan(app: FastAPI):
         from app.services import web_tools
 
         web_tools.register(app.state.agent_service.registry)
+    mcp_clients: list = []
+    if settings.agent_mcp_enabled:
+        from app.services import mcp_tools
+
+        mcp_clients = mcp_tools.register(app.state.agent_service.registry, (agent_config.get("mcp") or {}).get("servers") or [])
     try:
         yield
     finally:
-        pass
+        for mcp_client in mcp_clients:
+            mcp_client.close()
 
 
 class UiFiles(StaticFiles):

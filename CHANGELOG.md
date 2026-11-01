@@ -31,6 +31,13 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
   "không có chữ" của model không còn bị nạp thành nội dung trang.
 
 ### Added
+- **Cắm công cụ ngoài qua MCP** (ticket 47, mặc định tắt, `AGENT_MCP_ENABLED=true` và khai server ở `agent.mcp.servers` trong `models.yaml`, danh sách mặc định rỗng).
+  Mỗi server là một chương trình Ún tự chạy; chỉ công cụ nào được ghi tên trong `allowed_tools` mới tới tay model, kết quả bị cắt theo trần của server và đi qua
+  cùng lớp đánh dấu "dữ liệu, không phải lệnh" như công cụ khác. Server không chạy được, treo hay chết thì mất công cụ của nó, lượt vẫn trả lời. Chỉ thử với server giả
+  trong test. **Rủi ro:** server chạy với quyền của backend nên chỉ khai server tin được; nó nhận môi trường trống (không có khoá API của backend) cộng `env` khai riêng;
+  lớp chống chèn lệnh là lời dặn cho model chứ không phải rào chắn. **Chưa đo:** mỗi công cụ thêm vào làm model có thể chọn sai, cần đo cô lập so với mốc khi có GPU.
+  Giao thức viết tay (stdio, ba lệnh `initialize`, `tools/list`, `tools/call`), không thêm thư viện `mcp`; chưa hỗ trợ resources, prompts hay HTTP.
+
 - **Thử model decided phân loại tin nhắn** (ticket 36, 30/10). `DECIDED_URL` bật việc phân loại; màn hình duyệt và `search_jokes` luôn có. Mỗi tin của người trong kênh đang nghe được decided 2b đề xuất một ngăn: sự thật,
   quyết định, câu đùa, bỏ qua. Mọi đề xuất chờ người duyệt ở màn hình Duyệt phân loại, trừ câu bỏ qua mà decided chắc từ 0,8; không có gì tự vào trí nhớ. Điều đã duyệt vào khối
   trí nhớ của lượt Discord; câu đùa nằm kho riêng, Ún chỉ đọc qua công cụ `search_jokes`. Chạy trên máy, tự trả GPU sau 5 phút rảnh.
