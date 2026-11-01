@@ -12,6 +12,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
 ## [Unreleased]
 
 ### Added
+- **Tra trước khi nói không có** (`agent.lookup_check`, bật theo quyết định của chủ dự án 02/11). Lượt chưa gọi công cụ nào mà trả lời không có thông tin hoặc cần tìm thì bị đẩy lại một lần để tra, tốn thêm một lần gọi model: ngoại lệ thứ năm của luật 5. Câu trả lời về văn bản dán không bị đẩy lại. Agent Eval 54 → 55/66 trên cùng ngày (doc-25); bộ đo đã thấy trước khi chỉnh mẫu, nên chưa chứng minh ngoài 66 bài này.
 - **Công cụ chờ người duyệt** (ticket 46, phần xin duyệt). Tắt mặc định: `DISCORD_APPROVALS_ENABLED=true` ở backend, migration `20261102_38`, chỉ ở server trong `DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST`. Một công cụ khai báo `requires_approval` thì vòng agent không tự chạy: lượt dừng, trả câu duyệt do code viết, lưu lệnh gọi vào bảng `discord_approvals`. Chỉ người nhờ (lấy từ lượt hội thoại, không từ model) duyệt hoặc từ chối được qua `/api/discord/approvals`; quá 10 phút thì huỷ và không chạy. **Chưa có công cụ thật nào mang cờ này** (`remember` giữ nguyên), chưa có nút trên Discord, chưa có công cụ hỏi lại; tỉ lệ hỏi thừa chưa đo.
 
 ### Fixed
