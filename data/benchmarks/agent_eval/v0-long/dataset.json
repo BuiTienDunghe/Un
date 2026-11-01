@@ -1,0 +1,31 @@
+{
+  "version": "agent-eval-v0-long.1",
+  "created": "2026-11-02",
+  "note": "Bộ bài dài cho ticket 44 (chạm trần ngữ cảnh) và 45 (đáp án ở cuối văn bản rất dài); không có bài nào của v0. Dữ liệu hoàn toàn bịa, sinh bằng backend/scripts/agent_eval_build_long.py.",
+  "guild": {
+    "guild_id": "900000000000000001",
+    "now": "2026-10-20T12:00:00+07:00",
+    "messages": [
+      {
+        "id": "7001",
+        "channel_id": "50",
+        "author_id": "1001",
+        "author_display_name": "Lan",
+        "is_bot": false,
+        "content": "Chào mọi người.",
+        "sent_at": "2026-10-12T09:00:00+07:00"
+      }
+    ]
+  },
+  "status_snapshots": {
+    "healthy": {
+      "status": "ok",
+      "service": "local-ai-core",
+      "ollama": "ok",
+      "qdrant": "ok",
+      "postgres": "ok",
+      "redis": "ok",
+      "checked_at": "2026-10-20T05:00:00+00:00"
+    }
+  }
+}
