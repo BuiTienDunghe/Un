@@ -1,6 +1,6 @@
 # 41 — Chấm lại Agent Eval trên main
 
-Status: opus làm
+Status: xong 01/11 — 54/66 cô lập trên `bd27676`, báo cáo ở `data/evaluation/results/kept/agent-eval-v0.8-baseline-41/REPORT.md`; so với 58/66 cũ, chưa rõ thay đổi nào gây tụt
 Type: task
 Blocked by: —
 
