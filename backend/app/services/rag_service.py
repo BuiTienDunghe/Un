@@ -6,6 +6,7 @@ from time import perf_counter
 from uuid import uuid4
 from collections.abc import Iterator
 
+from app.services.call_budget import RAG_CALL_CAP, turn_call_budget
 from app.services.chat_service import ConversationNotFoundError, derive_conversation_title
 from app.services.injection_defense import InjectionDefense
 from app.llm_clients.usage import consume_usage
@@ -178,15 +179,16 @@ class RagService:
         # On follow-up turns the standalone rewrite feeds BOTH retrieval and the
         # Question: line — the answer model sees no history, so an unresolved
         # pronoun there would spoil the answer even with perfect retrieval.
-        retrieval_question = self._condense_question(question, conversation_id, created)
-        effective_question = retrieval_question or question
-        try:
-            sources, context = self._retrieve_context(effective_question, top_k, document_id)
-            answer, model_used = self.router.chat("general", [{"role": "system", "content": self.system_prompt}, {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {effective_question}"}])
-        except Exception:
-            if created and self.store is not None:
-                self.store.delete_conversation(conversation_id)
-            raise
+        with turn_call_budget("rag", RAG_CALL_CAP):
+            retrieval_question = self._condense_question(question, conversation_id, created)
+            effective_question = retrieval_question or question
+            try:
+                sources, context = self._retrieve_context(effective_question, top_k, document_id)
+                answer, model_used = self.router.chat("general", [{"role": "system", "content": self.system_prompt}, {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {effective_question}"}])
+            except Exception:
+                if created and self.store is not None:
+                    self.store.delete_conversation(conversation_id)
+                raise
         usage = consume_usage()
         latency_ms = int((perf_counter() - started) * 1000)
         # The transcript keeps what the user actually typed.
@@ -200,15 +202,16 @@ class RagService:
         # retrieval is a different quantity wearing the same name.
         started = perf_counter()
         conversation_id, created = self._resolve_conversation(question, conversation_id, user_id)
-        retrieval_question = self._condense_question(question, conversation_id, created)
-        effective_question = retrieval_question or question
-        try:
-            sources, context = self._retrieve_context(effective_question, top_k, document_id)
-            tokens, model_used = self.router.stream_chat("general", [{"role": "system", "content": self.system_prompt}, {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {effective_question}"}])
-        except Exception:
-            if created and self.store is not None:
-                self.store.delete_conversation(conversation_id)
-            raise
+        with turn_call_budget("rag", RAG_CALL_CAP):
+            retrieval_question = self._condense_question(question, conversation_id, created)
+            effective_question = retrieval_question or question
+            try:
+                sources, context = self._retrieve_context(effective_question, top_k, document_id)
+                tokens, model_used = self.router.stream_chat("general", [{"role": "system", "content": self.system_prompt}, {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {effective_question}"}])
+            except Exception:
+                if created and self.store is not None:
+                    self.store.delete_conversation(conversation_id)
+                raise
 
         def generate() -> Iterator[str]:
             answer_parts: list[str] = []

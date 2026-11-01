@@ -24,6 +24,7 @@ from app.llm_clients.deadline import ModelCallTimeoutError, call_within
 from app.llm_clients.ollama_client import OllamaToolCallParseError
 from app.llm_clients.usage import consume_usage, record_usage
 from app.services.calculator import CalculationError, calculate
+from app.services.call_budget import agent_call_cap, turn_call_budget
 from app.services.answer_figures import grounding_summary, retry_instruction, turn_texts, unsupported_figures
 from app.services.pastes import INLINE_MAX_TOKENS, read_paste, take_pastes
 from app.services.injection_defense import InjectionDefense
@@ -333,6 +334,16 @@ class AgentService:
         return f"Mình chưa trả lời kịp trong {round(self.turn_budget_seconds)} giây. Bạn hỏi lại, hoặc hỏi hẹp hơn nhé."
 
     def run(
+        self,
+        messages: list[dict[str, Any]],
+        tool_context: dict[str, Any] | None = None,
+        on_step: Callable[[dict[str, object]], None] | None = None,
+    ) -> tuple[str, str, list[dict[str, object]]]:
+        """The loop below, with its model calls counted against agent_call_cap (ticket 43)."""
+        with turn_call_budget("agent", agent_call_cap(self.max_steps)):
+            return self._run(messages, tool_context, on_step)
+
+    def _run(
         self,
         messages: list[dict[str, Any]],
         tool_context: dict[str, Any] | None = None,

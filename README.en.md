@@ -75,7 +75,10 @@ the experiments that were run and rejected.
    path, with three exceptions of at most one extra call per turn each: rewriting a
    follow-up question before retrieval, one retry when an answer states figures the turn
    never saw, and one retry when the model writes a tool call that cannot be parsed. Both
-   retries stay inside the turn's time budget, and tool rounds have a fixed cap.
+   retries stay inside the turn's time budget. The router counts every generation call a
+   turn makes (`services/call_budget.py`): a cap of 1 for plain chat, 2 for RAG, and
+   `max_steps + 3` for the agent. A turn past its cap is logged and recorded, never blocked,
+   and `tests/test_call_budget.py` fails when a path goes over or a cap has room to spare.
 6. Every autonomous action is auditable and revocable.
 7. Measure before changing a schema, on real data, before the migration is written.
 
