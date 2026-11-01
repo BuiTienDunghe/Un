@@ -325,3 +325,57 @@ def test_a_bad_setting_leaves_the_budget_off_and_says_so_instead_of_stopping_sta
         ):
             assert context_budget_from_config(section) is None, section
     assert len(caplog.records) == 8 and all("stays off" in record.getMessage() for record in caplog.records)
+
+
+# ── review of d148f26 ────────────────────────────────────────────────────
+
+
+def test_a_low_reading_after_a_high_one_does_not_undo_the_correction():
+    # A prefix served from Ollama's cache reads low on round 2 after reading full on round 1:
+    # the correction must stay, or round 3 would show again what round 2 had cleared.
+    messages = [
+        {"role": "assistant", "content": "", "tool_calls": [{"function": {"name": "search_documents", "arguments": {"query": "a"}}}]},
+        {"role": "tool", "tool_name": "search_documents", "content": "a" * 3000},
+        {"role": "assistant", "content": "", "tool_calls": [{"function": {"name": "search_documents", "arguments": {"query": "b"}}}]},
+        {"role": "tool", "tool_name": "search_documents", "content": "b" * 3000},
+    ]
+    estimated = estimate_tokens(messages)
+    window = ContextWindow(ContextBudget(ceiling_tokens=int(estimated) + 10, keep_recent=1), 0)
+    window.view(messages)
+    window.observe(int(estimated * 1.5))
+    assert window.view(messages) is not messages
+    window.observe(100)
+    window.observe(None)
+    sent = window.view(messages)
+    assert sent is not messages and MARK in sent[1]["content"]
+    window.observe(10_000_000)
+    assert window._scale == 2.0
+
+
+def anthropic_round(blocks, results):
+    """An assistant message as the Anthropic client's raw_tool_calls leaves it (the whole response
+    content: thinking and text blocks among the tool_use ones) and the results that answer it."""
+    return [{"role": "assistant", "content": "", "tool_calls": blocks}] + [{"role": "tool", "tool_name": name, "content": text} for name, text in results]
+
+
+def test_the_note_carries_the_arguments_of_an_anthropic_tool_use_block():
+    blocks = [
+        {"type": "thinking", "thinking": "đọc tiếp", "signature": "s"},
+        {"type": "text", "text": "Để mình đọc."},
+        {"type": "tool_use", "id": "toolu_1", "name": "read_document", "input": {"document_id": "doc-0", "from_chunk": 2}},
+        {"type": "tool_use", "id": "toolu_2", "name": "calculate", "input": {"expression": "1+1"}},
+    ]
+    messages = anthropic_round(blocks, [("read_document", "r" * 3000), ("calculate", "c" * 3000)]) + [{"role": "tool", "tool_name": "x", "content": "n" * 3000}]
+    view, cleared = clear_old_results(messages, ContextBudget(keep_recent=1), ceiling=1)
+    assert cleared == 2
+    assert view[1]["content"] == cleared_note("read_document", {"document_id": "doc-0", "from_chunk": 2})
+    assert view[2]["content"] == cleared_note("calculate", {"expression": "1+1"})
+    assert '"document_id": "doc-0"' in view[1]["content"]
+
+
+def test_thinking_and_text_blocks_are_not_calls_waiting_for_a_result():
+    blocks = [{"type": "thinking", "thinking": "…", "signature": "s"}, {"type": "text", "text": "Mình tra."},
+              {"type": "tool_use", "id": "toolu_1", "name": "calculate", "input": {"expression": "2*3"}}]
+    messages = anthropic_round(blocks, [("calculate", "6")])
+    assert calls_have_results(messages)
+    assert not calls_have_results(messages[:1]), "a tool_use with no result is still caught"

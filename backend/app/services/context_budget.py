@@ -78,6 +78,23 @@ def estimate_tokens(messages: list[dict[str, Any]]) -> float:
     return INLINE_FIXED_TOKENS + chars / CHARS_PER_TOKEN
 
 
+def _calls_of(message: dict[str, Any]) -> list[tuple[str, object]]:
+    """The (name, arguments) of each call an assistant message makes, whichever provider wrote
+    it: Ollama's {"function": {"name", "arguments"}}, or the tool_use blocks of Anthropic's
+    raw_tool_calls ({"type": "tool_use", "name", "input"}), which come among thinking and text
+    blocks that are not calls and wait for no result."""
+    found: list[tuple[str, object]] = []
+    for call in message.get("tool_calls") or []:
+        if not isinstance(call, dict):
+            continue
+        function = call.get("function")
+        if isinstance(function, dict):
+            found.append((str(function.get("name") or ""), function.get("arguments")))
+        elif call.get("type") == "tool_use":
+            found.append((str(call.get("name") or ""), call.get("input")))
+    return found
+
+
 def _calls_by_result(messages: list[dict[str, Any]]) -> dict[int, tuple[str, object]]:
     """Position of each tool message -> the (name, arguments) of the call it answers: the
     n-th tool message after an assistant message answers its n-th call."""
@@ -87,12 +104,8 @@ def _calls_by_result(messages: list[dict[str, Any]]) -> dict[int, tuple[str, obj
     for index, message in enumerate(messages):
         role = message.get("role")
         if role == "assistant":
-            pending = []
+            pending = _calls_of(message)
             answered = 0
-            for call in message.get("tool_calls") or []:
-                function = call.get("function") if isinstance(call, dict) else None
-                if isinstance(function, dict):
-                    pending.append((str(function.get("name") or ""), function.get("arguments")))
         elif role == "tool":
             if answered < len(pending):
                 found[index] = pending[answered]
@@ -117,8 +130,8 @@ def calls_have_results(messages: list[dict[str, Any]]) -> bool:
     index = 0
     while index < len(messages):
         message = messages[index]
-        if message.get("role") == "assistant" and message.get("tool_calls"):
-            wanted = len(message["tool_calls"])
+        if message.get("role") == "assistant" and _calls_of(message):
+            wanted = len(_calls_of(message))
             following = 0
             while index + 1 + following < len(messages) and messages[index + 1 + following].get("role") == "tool":
                 following += 1
@@ -175,7 +188,8 @@ class ContextWindow:
 
     def observe(self, tokens_in: int | None) -> None:
         """What the model said it read for the view just sent. Only a reading above the
-        estimate counts (see MAX_SCALE)."""
+        estimate counts (see MAX_SCALE), and the largest correction of the turn is kept: a
+        low reading after a high one (a cached prefix) must not show again what was cleared."""
         if self.budget is None or not tokens_in or not self._estimated:
             return
-        self._scale = min(MAX_SCALE, max(1.0, tokens_in / self._estimated))
+        self._scale = min(MAX_SCALE, max(self._scale, tokens_in / self._estimated))
