@@ -25,6 +25,7 @@ from app.llm_clients.ollama_client import OllamaToolCallParseError
 from app.llm_clients.usage import consume_usage, record_usage
 from app.services.calculator import CalculationError, calculate
 from app.services.call_budget import agent_call_cap, turn_call_budget
+from app.services.context_budget import ContextBudget, ContextWindow
 from app.services.answer_figures import grounding_summary, retry_instruction, turn_texts, unsupported_figures
 from app.services.pastes import INLINE_MAX_TOKENS, read_paste, take_pastes
 from app.services.injection_defense import InjectionDefense
@@ -312,6 +313,7 @@ class AgentService:
         read_result_max_chars: int = READ_RESULT_MAX_CHARS,
         registry: ToolRegistry | None = None,
         inline_max_tokens: int = INLINE_MAX_TOKENS,
+        context_budget: ContextBudget | None = None,
     ) -> None:
         self.defense = defense or InjectionDefense(enabled=False)
         self.router = router
@@ -326,6 +328,8 @@ class AgentService:
         self.read_result_max_chars = max(200, read_result_max_chars)
         # N1's ceiling, from the caller: pastes.inline_ceiling of general's config (ticket 28 #4).
         self.inline_max_tokens = int(inline_max_tokens)
+        # Ticket 44: None (the default) sends the conversation exactly as the loop holds it.
+        self.context_budget = context_budget
         self.turn_budget_seconds = max(1.0, float(turn_budget_seconds))
         self.final_reserve_seconds = min(max(0.0, float(final_reserve_seconds)), self.turn_budget_seconds)
         self.clock = clock
@@ -397,6 +401,8 @@ class AgentService:
         # caller's request log keeps reading the last call as it always has (ticket 16, k2).
         consume_usage()
         last: dict[str, int | None] = {"tokens_in": None, "tokens_out": None}
+        # What the model is sent each call: `working` itself, or with old tool results cleared (ticket 44).
+        window = ContextWindow(self.context_budget, self.inline_max_tokens)
         # The answer check (ticket 20 #2) may grant one more round, for its single retry;
         # `checked_out` are the messages it added, which never count as something seen.
         rounds, retried = self.max_steps, False
@@ -415,7 +421,7 @@ class AgentService:
             started = perf_counter()
             try:
                 with call_within(left - self.final_reserve_seconds):
-                    result, model_used = self.router.chat_tools("general", working, self.registry.schemas())
+                    result, model_used = self.router.chat_tools("general", window.view(working), self.registry.schemas())
             except ModelCallTimeoutError:
                 # The round ran into the reserve's edge: answer from what is gathered.
                 consume_usage()
@@ -440,6 +446,7 @@ class AgentService:
                 continue
             round_latency = int((perf_counter() - started) * 1000)
             last = consume_usage()
+            window.observe(last["tokens_in"])
             calls = result["tool_calls"]
             if not calls:
                 answer = result["content"]
@@ -466,7 +473,7 @@ class AgentService:
                 steps.append({
                     "kind": "final", "tool_name": None, "arguments": None,
                     "content": _clip(answer, 4000), "latency_ms": round_latency,
-                    "stop_reason": STOP_FINAL, **check["trace"], **last,
+                    "stop_reason": STOP_FINAL, **check["trace"], **last, **({"context_cleared": window.cleared} if window.cleared else {}),
                 })
                 record_usage(last["tokens_in"], last["tokens_out"])
                 emit("final", stop_reason=STOP_FINAL)
@@ -522,7 +529,7 @@ class AgentService:
             if left <= 0:
                 raise ModelCallTimeoutError("no time left for the final answer")
             with call_within(left):
-                answer, model_used = self.router.chat("general", working)
+                answer, model_used = self.router.chat("general", window.view(working))
             usage = last = consume_usage()
         except ModelCallTimeoutError:
             # Only running out of time ends here: an unreachable or broken model still
@@ -535,7 +542,7 @@ class AgentService:
         steps.append({
             "kind": "final", "tool_name": None, "arguments": None,
             "content": _clip(answer, 4000), "latency_ms": int((perf_counter() - started) * 1000),
-            "stop_reason": stop_reason, **check["trace"], **usage,
+            "stop_reason": stop_reason, **check["trace"], **usage, **({"context_cleared": window.cleared} if window.cleared else {}),
         })
         record_usage(last["tokens_in"], last["tokens_out"])
         emit("final", stop_reason=stop_reason)
