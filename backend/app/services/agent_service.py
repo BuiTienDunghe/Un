@@ -180,11 +180,14 @@ FINAL_RESERVE_SECONDS = 20.0
 # "tool_call_error" (a tool call Ollama could not parse, again after the retry or with no
 # time for one: answered from what was gathered). "awaiting_approval" (approvals.py, ticket 46)
 # ends a turn on a call kept for a person: the tool has not run, the reply is the gate's.
+# "asked_user" (ask_user.py, ticket 46) ends a turn on the one question the model asked for a
+# missing fact: the reply is that question.
 STOP_FINAL = "final"
 STOP_MAX_STEPS = "max_steps"
 STOP_TURN_BUDGET = "turn_budget"
 STOP_TURN_BUDGET_EXHAUSTED = "turn_budget_exhausted"
 STOP_TOOL_CALL_ERROR = "tool_call_error"
+STOP_ASKED_USER = "asked_user"
 # A tool call the model wrote and Ollama could not parse (ticket 27): one retry with a note,
 # in a round of its own, while the final reserve is still free; then the answer without
 # tools. Each failed round is a TOOL_CALL_ERROR_STEP that keeps no text.
@@ -228,6 +231,9 @@ class AgentTool:
     # Ticket 46: the loop never runs this tool itself; it hands the call to AgentService.approvals,
     # which runs it only after the person it belongs to approves (app/services/approvals.py).
     requires_approval: bool = False
+    # Ticket 46: a successful call ends the turn, and the text it returns is the whole reply (ask_user).
+    # The turn therefore holds at most one such call; one written after it in the same round is dropped.
+    ends_turn: bool = False
 
     @property
     def name(self) -> str:
@@ -541,6 +547,19 @@ class AgentService:
                     text, error_code, error_type = held
                 else:
                     text, error_code, error_type = self._run_tool(call["name"], call["arguments"], tool_context)
+                    if tool is not None and tool.ends_turn and error_code is None:
+                        steps.append({
+                            "kind": "tool_result", "tool_name": call["name"], "tool_declared": True, "arguments": None,
+                            "content": None, "latency_ms": int((perf_counter() - tool_started) * 1000),
+                            "error_code": None, "error_type": None,
+                        })
+                        steps.append({
+                            "kind": "final", "tool_name": None, "arguments": None, "content": _clip(text, 4000),
+                            "latency_ms": 0, "stop_reason": STOP_ASKED_USER, "tokens_in": None, "tokens_out": None,
+                        })
+                        record_usage(last["tokens_in"], last["tokens_out"])
+                        emit("final", stop_reason=STOP_ASKED_USER)
+                        return text, model_used, steps
                 # D5: tool output is untrusted data (document chunks, memory
                 # text); the defense marks it so before the model reads it.
                 output = self.defense.wrap_tool_result(text)

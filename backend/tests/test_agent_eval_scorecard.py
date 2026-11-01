@@ -113,6 +113,16 @@ def test_efficiency_leaves_out_the_refused_turn_and_prices_calls_per_solved_task
     assert (e["latency_p50_ms"], e["latency_p95_ms"], e["latency_max_ms"]) == (1500, 3000, 3000)
 
 
+def test_a_turn_that_ended_asking_shows_in_the_stop_reasons_and_otherwise_the_columns_do_not_change(tmp_path):
+    events = turn("doc-1", after_16=True)
+    asked = [e | {"stop_reason": "asked_user"} if e["kind"] == "final" else e for e in events]
+    waiting = [e | {"stop_reason": "awaiting_approval"} if e["kind"] == "final" else e for e in turn("doc-2", after_16=True)]
+    run = write_run(tmp_path / "asking", [result("doc-1", True), result("doc-2", True)], asked + waiting)
+    assert scorecard(run)["robustness"]["stop_reasons"] == {
+        "final": 0, "max_steps": 0, "turn_budget": 0, "turn_budget_exhausted": 0, "tool_call_error": 0, "asked_user": 1, "awaiting_approval": 1,
+    }
+
+
 def test_robustness_reads_codes_after_ticket_16_and_counts_uncoded_errors_before(tmp_path):
     r = scorecard(after_16_run(tmp_path))["robustness"]
     assert r["stop_reasons"] == {"final": 3, "max_steps": 0, "turn_budget": 0, "turn_budget_exhausted": 0, "tool_call_error": 0}

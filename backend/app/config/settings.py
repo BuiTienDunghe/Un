@@ -203,6 +203,9 @@ class Settings(BaseSettings):
     # Ticket 35: web_search and read_webpage. Off by default: the query leaves the machine, and
     # the evals must keep grading the same tool list.
     agent_web_tools_enabled: bool = False
+    # Ticket 46: ask_user, one question back to the person when a needed fact is missing. Off by default: it
+    # adds a tool to the list the model reads, and how often it asks needlessly is not measured yet.
+    agent_ask_user_enabled: bool = False
     # Ticket 47: tools from MCP servers. Off by default, and the server list in models.yaml
     # (agent.mcp.servers) is empty: a server is a program this process starts.
     agent_mcp_enabled: bool = False

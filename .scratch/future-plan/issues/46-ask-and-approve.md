@@ -28,9 +28,20 @@ Quyết định đã chọn, đổi được:
 - Tắt: công cụ cần duyệt không được đưa cho model và không chạy; danh sách công cụ và tin gửi model giữ nguyên.
 - `forget_member` bước 6c xoá theo người được hỏi; hàng còn theo lượt (CASCADE).
 
-Chưa làm: nút/lệnh duyệt trên Discord (bot chưa gọi các cổng trên); công cụ `ask_user` (hỏi lại khi thiếu dữ kiện); đo tỉ lệ hỏi thừa
-(chưa đo); đo cô lập so với mốc 41 (không đổi gì trong prompt hay danh sách công cụ khi tắt nên chưa cần, nhưng chưa chạy Agent Eval).
+## Đã làm thêm (nhánh 46-finish) — nút Discord và `ask_user`
 
-Lưu ý cho sau: `scripts/agent_eval.py` băm `registry.schemas()` còn model thật được đưa `AgentService._offered_schemas()`. Hôm nay hai
-danh sách giống hệt (chưa công cụ nào mang cờ). Ngày một công cụ như `remember` bị gắn cờ, `tools_sha256` của Agent Eval sẽ chứa một công cụ
-mà model thật (khi tắt duyệt) không thấy, nên so với mốc 41 phải đổi eval dùng `_offered_schemas()`.
+- Bot: `discord_bot/approvals.py`, `ApprovalView` (Duyệt / Từ chối) gắn vào câu trả lời xin duyệt, và `/approvals`. Tắt mặc định bằng
+  `DISCORD_APPROVALS_ENABLED` (cùng biến với backend, compose chuyển cho bot). Tắt thì không đăng ký lệnh, không gọi cổng nào. Bật thì chỉ
+  câu trả lời mang chữ `Mã duyệt:` mới tốn một lượt `GET`; nút tìm phiếu theo `source_turn_id` (cổng danh sách giờ trả thêm trường này).
+- Chỉ người được hỏi bấm được; người khác được báo riêng, không gọi cổng. Bấm lần đầu tắt cả hai nút (bấm thứ hai không gọi gì); hết hạn thì
+  nút tắt; lệnh gọi hiện nguyên văn trong khối mã, mọi tin của phần này gửi với `AllowedMentions.none()`.
+- `ask_user` (`app/services/ask_user.py`, cờ `AGENT_ASK_USER_ENABLED`, tắt mặc định): gọi thành công là lượt kết thúc bằng đúng câu hỏi
+  (`AgentTool.ends_turn`, `stop_reason` `asked_user`), nên tối đa một lần mỗi lượt. Chưa gắn cờ duyệt cho công cụ thật nào; `remember` giữ nguyên.
+- Ghi chú thấp của bản duyệt: (1) `_run` giờ ghi log khi không đóng được hàng; (3) chữ "xoá hội thoại" sửa; (4) bảng điểm hiện
+  `awaiting_approval`/`asked_user` khi có; (5) câu xin duyệt chỉ chỗ bấm; `agent_eval.py` băm `_offered_schemas()`. Ghi chú (2) cần DB thật,
+  chưa kiểm ở nhánh này.
+
+Chưa làm: đo tỉ lệ hỏi thừa của `ask_user` (chưa đo, chưa chạy Agent Eval); đo cô lập so với mốc 41 (khi tắt không đổi gì trong prompt hay
+danh sách công cụ — `tools_sha256` giữ nguyên trong test — nhưng chưa chạy Agent Eval). Chỉ kiểm được trên Discord thật: nút hiện đúng trên
+tin thật, người khác bấm vào nút của người khác, nút tắt khi hết hạn, `/approvals` hiển thị, nút sau khi bot khởi động lại (nút nằm trong
+bộ nhớ bot nên hết tác dụng; `/approvals` đưa phiếu về).

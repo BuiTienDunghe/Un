@@ -29,6 +29,7 @@ from discord_bot.client import (
     format_rag_sources,
     split_for_discord,
 )
+from discord_bot.approvals import ApprovalView, NO_MENTIONS, format_approval, offer_buttons, seconds_left
 from discord_bot.passive_listener import (
     DEFAULT_COUNTS_PATH,
     PassiveListener,
@@ -64,6 +65,9 @@ class DiscordSettings:
     # Ticket 48: reminders members asked for. Off unless switched on; the backend has its own switch.
     reminders_enabled: bool = False
     reminders_poll_seconds: float = POLL_SECONDS_DEFAULT
+    # Ticket 46: Duyệt / Từ chối buttons and /approvals. Off unless switched on; the backend has its own switch
+    # (the same variable, so one line in .env turns both on).
+    approvals_enabled: bool = False
     # Ticket 49: the guilds where a voice message replying to the bot is heard. Empty = off everywhere.
     voice_guild_allowlist: frozenset[str] | None = frozenset()
 
@@ -109,6 +113,7 @@ class DiscordSettings:
             ),
             reminders_enabled=os.environ.get("DISCORD_REMINDERS_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"},
             reminders_poll_seconds=float(os.environ.get("DISCORD_REMINDERS_POLL_SECONDS", str(POLL_SECONDS_DEFAULT))),
+            approvals_enabled=os.environ.get("DISCORD_APPROVALS_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"},
             voice_guild_allowlist=parse_docs_guild_allowlist(os.environ.get("DISCORD_VOICE_GUILD_ALLOWLIST", "")),
         )
 
@@ -281,8 +286,10 @@ class DiscordConversationGateway:
         member_context_limit: int,
         persistent_sessions_enabled: bool,
         poll_budget_seconds: float | None = None,
+        approvals_enabled: bool = False,
     ) -> None:
         self.api_client = api_client
+        self.approvals_enabled = approvals_enabled
         self.system_prompt = system_prompt
         self.member_context_limit = member_context_limit
         self.persistent_sessions_enabled = persistent_sessions_enabled
@@ -471,6 +478,22 @@ class DiscordConversationGateway:
                         raise
                     await asyncio.sleep(0.1 * (attempt + 1))
 
+    async def offer_approvals(
+        self,
+        prepared: PreparedDiscordAnswer,
+        sent_messages: list[discord.Message],
+        guild: discord.Guild | None,
+        author_id: int,
+    ) -> None:
+        """Ticket 46: Duyệt / Từ chối on an answer that asks for a yes. Nothing is asked of the backend when
+        approvals are off, in a direct message, or for an answer that does not carry the backend's notice."""
+        if not self.approvals_enabled or guild is None or not sent_messages:
+            return
+        await offer_buttons(
+            self.api_client, sent_messages[-1], guild_id=str(guild.id), author_id=str(author_id),
+            turn_id=prepared.turn_id, answer=prepared.answer,
+        )
+
     async def delivery_failed(
         self,
         prepared: PreparedDiscordAnswer,
@@ -542,6 +565,7 @@ async def answer_mention(
             retryable=True,
         )
         raise
+    await gateway.offer_approvals(prepared, sent_messages, message.guild, message.author.id)
     await gateway.delivered(
         prepared,
         [str(sent_message.id) for sent_message in sent_messages],
@@ -558,6 +582,7 @@ def create_bot(
     reminders_enabled: bool = False,
     reminders_poll_seconds: float = POLL_SECONDS_DEFAULT,
     voice_guild_allowlist: frozenset[str] | None = frozenset(),
+    approvals_enabled: bool = False,
 ) -> LocalAgentDiscordBot:
     bot = LocalAgentDiscordBot()
     bot.reminder_task = None
@@ -567,6 +592,7 @@ def create_bot(
         system_prompt,
         member_context_limit,
         persistent_sessions_enabled,
+        approvals_enabled=approvals_enabled,
     )
 
     @bot.event
@@ -639,6 +665,7 @@ def create_bot(
                 retryable=True,
             )
             raise
+        await gateway.offer_approvals(prepared, sent_messages, interaction.guild, interaction.user.id)
         await gateway.delivered(
             prepared,
             [str(message.id) for message in sent_messages],
@@ -789,6 +816,26 @@ def create_bot(
             await interaction.followup.send(f"Đã huỷ lời nhắc `{reminder.short_id}`.", ephemeral=True)
 
         bot.tree.add_command(reminders_group)
+
+    if approvals_enabled:
+        @bot.tree.command(name="approvals", description="Việc đang chờ bạn duyệt, kèm nút Duyệt / Từ chối (chỉ bạn thấy).")
+        async def approvals(interaction):
+            if not docs_allowed(interaction.guild_id, docs_guild_allowlist):
+                refusal = "Lệnh này chỉ dùng trong server." if interaction.guild_id is None else "Lệnh này chưa bật ở server này."
+                await interaction.response.send_message(refusal, ephemeral=True)
+                return
+            await interaction.response.defer(thinking=True, ephemeral=True)
+            try:
+                waiting = await api_client.list_approvals(str(interaction.guild_id), str(interaction.user.id))
+            except BackendClientError as error:
+                await interaction.followup.send(str(error), ephemeral=True)
+                return
+            if not waiting:
+                await interaction.followup.send("Bạn không có việc nào đang chờ duyệt.", ephemeral=True)
+                return
+            for item in waiting:
+                view = ApprovalView(api_client, item, timeout=seconds_left(item))
+                view.message = await interaction.followup.send(format_approval(item), view=view, ephemeral=True, allowed_mentions=NO_MENTIONS)
 
     # Fire-and-forget tasks need a strong reference until they finish, or
     # asyncio may garbage-collect them mid-flight (review finding 28/08).
@@ -954,6 +1001,7 @@ async def run() -> None:
         reminders_enabled=settings.reminders_enabled,
         reminders_poll_seconds=settings.reminders_poll_seconds,
         voice_guild_allowlist=settings.voice_guild_allowlist,
+        approvals_enabled=settings.approvals_enabled,
     )
     try:
         # Never log settings.token or any password.

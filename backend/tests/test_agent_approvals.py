@@ -312,7 +312,8 @@ def test_it_waits_ten_minutes_and_then_is_cancelled_without_running() -> None:
     world = World()
     first, second = world.ask("một"), world.ask("hai")
     world.clock.now = NOW + timedelta(minutes=9, seconds=59)
-    assert [a.id for a in world.service.list_for(GUILD, ME)] == [first, second]
+    # SQLite stamps created_at to the second, so two asks inside one second tie: the order is not what this test checks.
+    assert sorted(a.id for a in world.service.list_for(GUILD, ME)) == sorted([first, second])
     world.clock.now = NOW + timedelta(minutes=10, seconds=1)
     assert code_of(lambda: world.decide(first)) == "APPROVAL_EXPIRED"
     assert code_of(lambda: world.decide(second, approve=False)) == "APPROVAL_EXPIRED"
@@ -407,6 +408,34 @@ def test_a_failure_to_close_the_row_still_hands_back_the_result_once() -> None:
     assert decision.status == "done" and len(world.gated.ran) == 1
     assert world.rows()[0].status == "running"  # swept to failed later, never run again
     assert code_of(lambda: world.decide(approval_id)) == "APPROVAL_NOT_PENDING"
+
+
+def test_a_tool_that_outlives_its_lease_still_returns_what_it_returned_and_is_not_run_again() -> None:
+    """expire_due marked the row failed (interrupted) while the tool ran: the row cannot be closed, the member
+    still gets the result, and a second yes finds nothing pending."""
+    world = World()
+    approval_id = world.ask()
+    real = world.service.store.move
+
+    def move(approval_id, from_status, to_status, *args, **kwargs):
+        if from_status == "running":
+            real(approval_id, "running", "failed", NOW, result_code="interrupted", stamp=False)  # the sweep got there first
+        return real(approval_id, from_status, to_status, *args, **kwargs)
+
+    world.service.store.move = move
+    decision = world.decide(approval_id)
+    assert decision.status == "done" and json.loads(decision.text) == {"sent": "Họp lúc 9h"}
+    assert world.rows()[0].status == "failed" and world.rows()[0].result_code == "interrupted"
+    assert code_of(lambda: world.decide(approval_id)) == "APPROVAL_NOT_PENDING"
+    assert len(world.gated.ran) == 1
+
+
+def test_the_reply_points_at_the_buttons_and_the_listing_names_the_turn_the_call_came_from() -> None:
+    world = World()
+    (reply, _, steps), _ = world.turn_with(calls("send_note", {"text": "Họp lúc 9h"}))
+    assert steps[-1]["stop_reason"] == STOP_AWAITING_APPROVAL and "/approvals" in reply and "Mã duyệt:" in reply
+    (item,) = api(world).get("/api/discord/approvals", params={"guild_id": GUILD, "author_id": ME}).json()
+    assert item["source_turn_id"] == TURN and item["id"] != item["short_id"] and item["id"].startswith(item["short_id"])
 
 
 # ---- the HTTP surface ----

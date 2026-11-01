@@ -438,7 +438,8 @@ def run_eval(
         "agent_guide_sha256": _sha256(defense.agent_guide(AGENT_GUIDE)),
         "system_prompt_sha256": _sha256(system_prompt),
         "discord_context_sha256": _sha256(DISCORD_SPEAKER_SYSTEM_INSTRUCTION),
-        "tools_sha256": _sha256(json.dumps(registry.schemas(), ensure_ascii=False, sort_keys=True)),
+        # What the model is shown, not what is registered: a tool that waits for approval is not shown while nothing can approve it.
+        "tools_sha256": _sha256(json.dumps(AgentService(router, None, None, registry=registry)._offered_schemas(), ensure_ascii=False, sort_keys=True)),
         "dataset": {
             "version": dataset.version,
             "sha256": dataset.sha256,

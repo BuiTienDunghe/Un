@@ -254,7 +254,7 @@ class ApprovalService:
             f"Công cụ: {approval.tool_name}\n"
             f"Nội dung: {shown}\n"
             f"Mã duyệt: {approval.short_id}\n"
-            f"Chỉ bạn duyệt hoặc từ chối được. Sau {minutes} phút không ai duyệt thì việc này bị huỷ và không chạy."
+            f"Chỉ bạn duyệt hoặc từ chối được: bấm nút bên dưới, hoặc dùng /approvals. Sau {minutes} phút không ai duyệt thì việc này bị huỷ và không chạy."
         ))
 
     # ---- the member's side: approve or deny ----
@@ -310,7 +310,10 @@ class ApprovalService:
             text, code = None, TOOL_FAILED
         status = "done" if code is None else "failed"
         try:
-            self.store.move(row.id, "running", status, self.clock(), result_code=code, stamp=False)
+            if not self.store.move(row.id, "running", status, self.clock(), result_code=code, stamp=False):
+                # The tool outlived RUNNING_LEASE and expire_due already wrote `failed` (interrupted). The
+                # member still gets what came back; the row cannot say more than that it was cut off.
+                logger.warning("approval {} finished as {} but its row was no longer running", row.short_id, status)
         except Exception as error:
             # The tool already ran and must not run again; the row stays `running` and is marked
             # `failed` (interrupted) after RUNNING_LEASE. The member still gets what came back.
@@ -323,5 +326,5 @@ def approval_payload(approval: Approval) -> dict[str, object]:
         "id": approval.id, "short_id": approval.short_id, "guild_id": approval.guild_id,
         "channel_id": approval.thread_id or approval.channel_id, "requester_id": approval.requester_id,
         "tool_name": approval.tool_name, "arguments": approval.arguments,
-        "expires_at": approval.expires_at.isoformat(), "status": approval.status,
+        "expires_at": approval.expires_at.isoformat(), "status": approval.status, "source_turn_id": approval.source_turn_id,
     }

@@ -33,7 +33,7 @@ def upgrade() -> None:
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("decided_at", sa.DateTime(timezone=True)),
         sa.Column("result_code", sa.Text()),
-        # Deleting the turn (a deleted conversation, forget_member) deletes the approval asked in it.
+        # Deleting the turn deletes the approval asked in it (nothing in app/ deletes a turn; forget_member clears by member).
         sa.Column("source_turn_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("discord_session_turns.id", ondelete="CASCADE")),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.CheckConstraint(

@@ -490,7 +490,8 @@ class DiscordApproval(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     result_code: Mapped[str | None] = mapped_column(Text)
-    # Deleting the turn deletes the approval asked in it: a deleted conversation, forget_member.
+    # Deleting the turn deletes the approval asked in it. Nothing in app/ deletes a turn (deleting a web
+    # conversation does not: discord_conversation_sessions has no foreign key to it); forget_member clears by member.
     source_turn_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), ForeignKey("discord_session_turns.id", ondelete="CASCADE"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 

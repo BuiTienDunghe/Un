@@ -262,6 +262,10 @@ async def lifespan(app: FastAPI):
         from app.services import web_tools
 
         web_tools.register(app.state.agent_service.registry)
+    if settings.agent_ask_user_enabled:
+        from app.services import ask_user
+
+        ask_user.register(app.state.agent_service.registry)
     mcp_clients: list = []
     if settings.agent_mcp_enabled:
         from app.services import mcp_tools

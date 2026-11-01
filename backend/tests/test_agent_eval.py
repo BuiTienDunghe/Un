@@ -327,6 +327,24 @@ def test_an_input_the_api_would_reject_fails_without_a_model_call(tmp_path):
     assert manifest["tools_sha256"] == "93410c4659cd9b129cb08c2c459aac6dc8b7c309b05ddd870186a42a437903fd"
 
 
+def test_the_manifest_hashes_what_the_model_is_shown_not_what_is_registered(tmp_path, monkeypatch):
+    """Ticket 46: a tool that waits for approval is registered but not offered while nothing can approve it, so it
+    must not move the hash a run is compared by."""
+    import scripts.agent_eval as module
+    from app.services.agent_service import AgentTool
+
+    def with_gated_tool():
+        registry = core_tools()
+        schema = {"type": "function", "function": {"name": "send_note", "description": "x", "parameters": {"type": "object", "properties": {}}}}
+        registry.register(AgentTool(schema, lambda *a: ("", None, None), requires_approval=True), 60)
+        return registry
+
+    monkeypatch.setattr(module, "core_tools", with_gated_tool)
+    out_dir, _ = _run(tmp_path, [DOC_TASK], [DOC_FIXTURE], ScriptedRouter([call("search_documents", {"query": "phép"}), final("12 ngày")]))
+    manifest = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["tools_sha256"] == "93410c4659cd9b129cb08c2c459aac6dc8b7c309b05ddd870186a42a437903fd"
+
+
 def test_doc_50_the_longest_paste_task_reaches_the_model_whole(tmp_path):
     # N1: with the system prompt the eval runs with, doc-50's 31 681 characters estimate
     # under the ceiling, and the runner hands them to the model as they are.

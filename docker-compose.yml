@@ -150,6 +150,8 @@ services:
       # Ticket 48: reminders. Off unless true; the backend needs DISCORD_REMINDERS_ENABLED=true too.
       DISCORD_REMINDERS_ENABLED:
       DISCORD_REMINDERS_POLL_SECONDS:
+      # Ticket 46: Duyệt / Từ chối buttons and /approvals. Off unless true; the backend reads the same variable.
+      DISCORD_APPROVALS_ENABLED:
       # Ticket 49: guilds where a voice message replying to the bot is heard. Empty = off; the backend needs VOICE_URL too.
       DISCORD_VOICE_GUILD_ALLOWLIST:
     extra_hosts:
