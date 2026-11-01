@@ -108,6 +108,10 @@ class Settings(BaseSettings):
     # Ticket 48: reminders a member asked for, sent by the bot at the hour. OFF by default; it
     # obeys the guild allowlist above. The bot has its own DISCORD_REMINDERS_ENABLED.
     discord_reminders_enabled: bool = False
+    # Ticket 46: a tool declared requires_approval waits for its member's yes before it runs. OFF by
+    # default, and no real tool is declared so yet; it obeys the guild allowlist above.
+    discord_approvals_enabled: bool = False
+    discord_approval_ttl_seconds: int = 600
     # Tier 3 condensation (memory_design.md §7). OFF by default: it is the one
     # tier that sends member text to a third party, so it starts only when the
     # operator sets both this flag and GEMINI_API_KEY. The floor replaces the

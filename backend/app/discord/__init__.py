@@ -23,16 +23,19 @@ def register_routes(app: Any, *, admin_guard: list[Any]) -> None:
     """The Discord routers, all behind the admin guard. Their prefixes
     (/api/bot, /api/condensations, /api/memory-review, /api/discord/...) overlap no
     core route, so where they are included does not change which route answers."""
-    from app.discord.routers import bot, condensations, history, memory_review, message_labels, reminders, sessions
+    from app.discord.routers import approvals, bot, condensations, history, memory_review, message_labels, reminders, sessions
 
-    for module in (bot, memory_review, message_labels, condensations, sessions, history, reminders):
+    for module in (bot, memory_review, message_labels, condensations, sessions, history, reminders, approvals):
         app.include_router(module.router, dependencies=admin_guard)
 
 
 def register_services(app: Any, settings: Any, postgres_sessions: Any, *, project_root: Any) -> None:
     """Build the Discord services onto app.state. Needs app.state.memory_service,
     chat_service and agent_service, so main.py calls it last in the lifespan."""
+    from datetime import timedelta
+
     from app.discord import agent_tools
+    from app.discord.approvals import ApprovalService, SqlApprovalStore, load_turn_identity
     from app.discord.bot_control_service import BotControlService
     from app.discord.condensation_service import DiscordCondensationService
     from app.discord.history_service import DiscordHistoryService
@@ -113,5 +116,18 @@ def register_services(app: Any, settings: Any, postgres_sessions: Any, *, projec
     )
     if settings.discord_reminders_enabled:
         remind_tool.register(state.agent_service.registry, state.reminder_service, postgres_sessions)
+    # Ticket 46: approvals. The service always exists, so the routes answer APPROVALS_DISABLED instead of
+    # failing; the agent is given the gate only when switched on, so by default a tool that requires
+    # approval is neither offered nor run (and none is declared so yet).
+    state.approval_service = ApprovalService(
+        SqlApprovalStore(postgres_sessions),
+        enabled=settings.discord_approvals_enabled,
+        guild_allowed=lambda guild_id: allowlist is None or guild_id in allowlist,
+        load_turn=load_turn_identity(postgres_sessions),
+        run_approved=lambda name, arguments, context: state.agent_service.run_approved(name, arguments, context),
+        ttl=timedelta(seconds=max(30, settings.discord_approval_ttl_seconds)),
+    )
+    if settings.discord_approvals_enabled:
+        state.agent_service.approvals = state.approval_service
     # P3-2: dashboard start/stop for the compose-managed Discord bot.
     state.bot_control_service = BotControlService(project_root)

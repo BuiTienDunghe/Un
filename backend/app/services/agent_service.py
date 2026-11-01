@@ -23,6 +23,9 @@ from typing import Any, Protocol
 from app.llm_clients.deadline import ModelCallTimeoutError, call_within
 from app.llm_clients.ollama_client import OllamaToolCallParseError
 from app.llm_clients.usage import consume_usage, record_usage
+from app.services.approvals import (
+    APPROVAL_PENDING, APPROVAL_REQUIRED, APPROVAL_UNAVAILABLE, STOP_AWAITING_APPROVAL, ApprovalError, ApprovalGate, ApprovalNotice,
+)
 from app.services.calculator import CalculationError, calculate
 from app.services.call_budget import agent_call_cap, turn_call_budget
 from app.services.context_budget import ContextBudget, ContextWindow
@@ -175,7 +178,8 @@ FINAL_RESERVE_SECONDS = 20.0
 # rounds used up), "turn_budget" (time ran short, answered from what was gathered),
 # "turn_budget_exhausted" (even the final answer did not fit: the fixed reply below),
 # "tool_call_error" (a tool call Ollama could not parse, again after the retry or with no
-# time for one: answered from what was gathered).
+# time for one: answered from what was gathered). "awaiting_approval" (approvals.py, ticket 46)
+# ends a turn on a call kept for a person: the tool has not run, the reply is the gate's.
 STOP_FINAL = "final"
 STOP_MAX_STEPS = "max_steps"
 STOP_TURN_BUDGET = "turn_budget"
@@ -221,6 +225,9 @@ class AgentTool:
     schema: dict[str, Any]
     run: Callable[["AgentService", dict[str, Any], dict[str, Any] | None], ToolOutput]
     label: str | None = None
+    # Ticket 46: the loop never runs this tool itself; it hands the call to AgentService.approvals,
+    # which runs it only after the person it belongs to approves (app/services/approvals.py).
+    requires_approval: bool = False
 
     @property
     def name(self) -> str:
@@ -324,6 +331,9 @@ class AgentService:
         # Its own registry unless one is handed in: a tool registered into one agent (a
         # test's, the eval's) never shows up in another.
         self.registry = registry if registry is not None else core_tools()
+        # Ticket 46: who keeps a call that requires approval. Set by the composition root only when
+        # that is switched on; None offers no such tool to the model and runs none.
+        self.approvals: ApprovalGate | None = None
         self.document_reader = document_reader
         self.max_steps = max(1, max_steps)
         self.tool_result_max_chars = max(200, tool_result_max_chars)
@@ -435,7 +445,7 @@ class AgentService:
             started = perf_counter()
             try:
                 with call_within(left - self.final_reserve_seconds):
-                    result, model_used = self.router.chat_tools("general", window.view(working), self.registry.schemas())
+                    result, model_used = self.router.chat_tools("general", window.view(working), self._offered_schemas())
             except ModelCallTimeoutError:
                 # The round ran into the reserve's edge: answer from what is gathered.
                 consume_usage()
@@ -512,7 +522,25 @@ class AgentService:
                 # only when it is a declared one, like the trace.
                 emit("tool_call", tool=call["name"] if declared else None, label=(tool.label if tool and tool.label else TOOL_LABEL))
                 tool_started = perf_counter()
-                text, error_code, error_type = self._run_tool(call["name"], call["arguments"], tool_context)
+                if tool is not None and tool.requires_approval:
+                    # Ticket 46: kept for a person, not run. Kept: the turn ends here with the gate's reply.
+                    held = self._hold_for_approval(call["name"], call["arguments"], tool_context)
+                    if isinstance(held, ApprovalNotice):
+                        steps.append({
+                            "kind": "tool_result", "tool_name": call["name"], "tool_declared": True, "arguments": None,
+                            "content": None, "latency_ms": int((perf_counter() - tool_started) * 1000),
+                            "error_code": APPROVAL_PENDING, "error_type": None,
+                        })
+                        steps.append({
+                            "kind": "final", "tool_name": None, "arguments": None, "content": _clip(held.reply, 4000),
+                            "latency_ms": 0, "stop_reason": STOP_AWAITING_APPROVAL, "tokens_in": None, "tokens_out": None,
+                        })
+                        record_usage(last["tokens_in"], last["tokens_out"])
+                        emit("final", stop_reason=STOP_AWAITING_APPROVAL)
+                        return held.reply, model_used, steps
+                    text, error_code, error_type = held
+                else:
+                    text, error_code, error_type = self._run_tool(call["name"], call["arguments"], tool_context)
                 # D5: tool output is untrusted data (document chunks, memory
                 # text); the defense marks it so before the model reads it.
                 output = self.defense.wrap_tool_result(text)
@@ -592,11 +620,38 @@ class AgentService:
     def _error(self, code: str, message: str, error_type: str | None = None) -> tuple[str, str, str | None]:
         return self._dump({"error": message, "code": code}), code, error_type
 
+    def _offered_schemas(self) -> list[dict[str, Any]]:
+        """What the model is shown: every tool, except one that requires approval while nothing can approve it."""
+        return [tool.schema for tool in self.registry.tools() if self.approvals is not None or not tool.requires_approval]
+
+    def _hold_for_approval(self, name: str, arguments: dict[str, Any], tool_context: dict[str, Any] | None) -> ApprovalNotice | ToolOutput:
+        """The gate keeps the call (ApprovalNotice), or the reason it could not is a tool error for the model."""
+        if self.approvals is None:
+            return self._error(APPROVAL_UNAVAILABLE, f"{name} cần người dùng duyệt nhưng ở đây chưa duyệt được nên chưa làm. Nói thật với người dùng là chưa làm được.")
+        try:
+            return self.approvals.request(name, arguments, tool_context)
+        except ApprovalError as error:
+            return self._error(error.code, error.message)
+        except Exception as error:
+            return self._error(
+                TOOL_FAILED, f"{name} đang lỗi nên chưa gửi đi xin duyệt được. Đừng gọi lại trong lượt này; nói với người dùng là chưa làm.", type(error).__name__,
+            )
+
+    def run_approved(self, name: str, arguments: dict[str, Any], tool_context: dict[str, Any] | None = None) -> ToolOutput:
+        """Run a call a person approved (ticket 46): the only way a tool that requires approval runs. Called
+        by the gate, never by the loop; a tool that no longer exists or no longer requires approval is not run."""
+        tool = self.registry.get(name)
+        if tool is None or not tool.requires_approval:
+            return self._error(UNKNOWN_TOOL, f"{name} không còn là công cụ cần duyệt nên không chạy.")
+        return self._run_tool(name, arguments, tool_context, approved=True)
+
     def _run_tool(
         self,
         name: str,
         arguments: dict[str, Any],
         tool_context: dict[str, Any] | None = None,
+        *,
+        approved: bool = False,
     ) -> ToolOutput:
         """Dispatch one call -> (text for the model, error code, exception type).
 
@@ -607,6 +662,9 @@ class AgentService:
             tool = self.registry.get(name)
             if tool is None:
                 return self._error(UNKNOWN_TOOL, f"Không có công cụ {name}. Chỉ có {', '.join(self.registry.names())}.")
+            if tool.requires_approval and not approved:
+                # Whatever calls this, a tool that waits for a person does not run without one (ticket 46).
+                return self._error(APPROVAL_REQUIRED, f"{name} cần người dùng duyệt trước nên chưa chạy.")
             return tool.run(self, arguments, tool_context)
         except Exception as error:
             return self._error(

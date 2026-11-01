@@ -18,6 +18,9 @@ half-deleting:
   6b. discord_reminders they asked for (ticket 48): their words and their id, and the bot
      would still mention them at the hour. Deleted by creator; the foreign key from the
      turn also removes one made in a turn that step 6 or a deleted conversation takes.
+  6c. discord_approvals they were asked to approve (ticket 46): the arguments of a tool call are
+     their words, and a pending one could still be run by their click. Deleted by requester, in any
+     state; the foreign key from the turn also removes one made in a turn that step 6 takes.
   7. discord_channel_messages they wrote — a plain DELETE, because the FTS
      index is per row.
   8. the bot's COPIES of their words, which are filed under nobody (ticket 17):
@@ -51,6 +54,7 @@ from app.postgres.database import (
 from app.postgres.models import (
     AgentTrace,
     AgentTraceSummary,
+    DiscordApproval,
     DiscordChannelMessage,
     DiscordCondensationProposition,
     DiscordConversationSession,
@@ -107,6 +111,7 @@ def _member_guilds(database, author_id: str) -> list[str]:
         select(DiscordMemory.guild_id).where(DiscordMemory.subject_id == author_id),
         select(DiscordCondensationProposition.guild_id).where(DiscordCondensationProposition.speaker_id == author_id),
         select(DiscordReminder.guild_id).where(DiscordReminder.creator_id == author_id),
+        select(DiscordApproval.guild_id).where(DiscordApproval.requester_id == author_id),
     ]
     return sorted({guild for query in queries for guild in database.scalars(query.distinct())})
 
@@ -115,6 +120,13 @@ def _forget_reminders(database, author_id: str, guild_id: str | None) -> int:
     """Every reminder the member asked for, in any state: a pending one would still ping them."""
     return database.execute(
         delete(DiscordReminder).where(DiscordReminder.creator_id == author_id, *_scope(DiscordReminder, guild_id))
+    ).rowcount
+
+
+def _forget_approvals(database, author_id: str, guild_id: str | None) -> int:
+    """Every approval asked of the member, in any state: its arguments are their words."""
+    return database.execute(
+        delete(DiscordApproval).where(DiscordApproval.requester_id == author_id, *_scope(DiscordApproval, guild_id))
     ).rowcount
 
 
@@ -234,6 +246,7 @@ def _counts(database, guild_id: str | None, author_id: str) -> dict[str, int]:
             DiscordCondensationProposition.speaker_id == author_id,
         ),
         "reminders": count(DiscordReminder, DiscordReminder.creator_id == author_id),
+        "approvals": count(DiscordApproval, DiscordApproval.requester_id == author_id),
     }
 
 
@@ -383,6 +396,9 @@ def forget(guild_id: str, author_id: str, *, apply: bool, all_guilds: bool = Fal
 
         # 6b. reminders they asked for, whatever their state: a pending one would still ping them
         _forget_reminders(database, author_id, scope)
+
+        # 6c. approvals asked of them, whatever their state: the arguments are their words
+        _forget_approvals(database, author_id, scope)
 
         # 7. their raw messages
         database.execute(
