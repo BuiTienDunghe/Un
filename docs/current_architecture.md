@@ -118,15 +118,35 @@ which keeps it in `discord_approvals` (migration `20261102_38`, additive) and en
   (`readable_documents`, pastes) does not survive the pause: a gated tool must not depend on it.
 - Limits: 5 waiting per member; the same call in a turn the worker retries asks once.
 - Forgetting: `scripts/forget_member.py` deletes every approval asked of the member (step 6c, counted in `planned` and
-  `remaining`); the row also follows its turn (`ON DELETE CASCADE`).
-- Not built: the Discord buttons or command, a tool asking the user for a missing fact, measuring the rate of needless asks.
+  `remaining`); the row also follows its turn (`ON DELETE CASCADE`, which only matters if something deletes a turn: nothing in
+  `app/` does, and deleting a web conversation does not).
+- The bot (`discord_bot/approvals.py`): off unless `DISCORD_APPROVALS_ENABLED=true` in the bot's environment too (the same
+  variable, so one line in `.env` turns both on; the compose file passes it to the bot). Then an answer that carries the
+  backend's notice (`Mã duyệt:`) gets **Duyệt** / **Từ chối** buttons, found by asking `GET /api/discord/approvals` for the
+  call whose `source_turn_id` is that turn's; an ordinary answer costs no request. `/approvals` lists what is waiting for the
+  asker, privately, each with the same buttons. Only the member the call belongs to can press (anyone else is told so privately
+  and nothing is sent); the first press switches both buttons off and a second does nothing; the buttons go quiet at the call's
+  deadline. The call is shown whole in a code block longer than any backtick run inside it, and every message the bot sends here
+  has `AllowedMentions.none()`. A press the backend refuses (late, already decided) is shown privately with the backend's words.
+  Buttons live in the bot's memory: after a bot restart they stop answering, and `/approvals` brings the call back.
+- Not built: measuring the rate of needless asks (below), any real tool carrying `requires_approval`.
+
+## Asking back for a missing fact (ticket 46)
+
+Off unless `AGENT_ASK_USER_ENABLED=true` (backend; default false). Then `ask_user` (`app/services/ask_user.py`) joins the tool
+list after `calculate` and before the web tools. Its one argument `question` (1 to 500 characters) is the whole reply: a
+successful call ends the turn (`AgentTool.ends_turn`, `stop_reason` `asked_user`) and the model is not called again, so a
+turn asks at most once; a second `ask_user` in the same round, or any call written after it, is dropped, while calls before it
+have run. An empty or overlong question is a tool error and the model may answer instead. `@` in the question is defused.
+The tool says to look first (documents, time, the speaker's own words) and to ask only for what no tool can find. Off, the
+tool list and every message the model reads are unchanged. Not measured: how often it asks when it had everything.
 
 ## Agent (tool mode)
 
 A web turn goes through `AgentService` only when the request sets `use_tools` (default
 false, `chat_schema.py`); a Discord turn does when `DISCORD_AGENT_TOOLS_ENABLED` (default
 true) and its guild is in `DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST` (default empty = no guild,
-`*` = every guild). Every other turn is plain chat. Beyond documents and history, the tools are `system_status`, `current_time`, `calculate`, `remember` (Discord only), and `web_search` / `read_webpage` when `AGENT_WEB_TOOLS_ENABLED=true`, and the allowed tools of the MCP servers in `models.yaml` `agent.mcp.servers` when `AGENT_MCP_ENABLED=true` (`app/services/mcp_tools.py`). The bot's `/docs` command reads the same
+`*` = every guild). Every other turn is plain chat. Beyond documents and history, the tools are `system_status`, `current_time`, `calculate`, `remember` (Discord only), `ask_user` when `AGENT_ASK_USER_ENABLED=true` (see "Asking back for a missing fact"), `web_search` / `read_webpage` when `AGENT_WEB_TOOLS_ENABLED=true`, and the allowed tools of the MCP servers in `models.yaml` `agent.mcp.servers` when `AGENT_MCP_ENABLED=true` (`app/services/mcp_tools.py`). The bot's `/docs` command reads the same
 variable itself and refuses a guild outside it, and any DM, before calling `/rag/chat`; the
 backend does not check, so `/rag/chat` stays open to any holder of the API key. The tools sit in one `ToolRegistry`:
 the core registers `search_documents`, `read_document` and `system_status`; the Discord

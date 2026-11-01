@@ -165,7 +165,12 @@ def robustness(results: list[dict[str, Any]], events: list[dict[str, Any]] | Non
     codes = Counter(e["error_code"] for e in tool_results if e.get("error_code")) if coded else None
     return {
         **base,
-        "stop_reasons": {reason: stop.get(reason, 0) for reason in STOP_REASONS} if stop is not None else None,
+        # Any other reason a turn ended on (awaiting_approval, asked_user: ticket 46) shows only when it happened, so a
+        # run that never ends that way keeps the columns it always had.
+        "stop_reasons": (
+            {reason: stop.get(reason, 0) for reason in STOP_REASONS} | {str(reason): count for reason, count in sorted(stop.items(), key=str) if reason not in STOP_REASONS}
+            if stop is not None else None
+        ),
         "stop_reasons_unavailable": None if stop is not None else "bước final không có stop_reason (trước ticket 16)",
         # Both count the turns that ran out of tool rounds; a mismatch is a definition error.
         "max_steps_matches_budget_exhausted": (stop.get("max_steps", 0) == base["budget_exhausted"]) if stop is not None else None,

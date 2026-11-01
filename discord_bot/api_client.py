@@ -102,6 +102,32 @@ class BackendReminder:
 
 
 @dataclass(frozen=True)
+class BackendApproval:
+    """A tool call waiting for the member it belongs to (ticket 46). `arguments` is the JSON the model wrote,
+    whole; `expires_at` is ISO 8601."""
+
+    approval_id: str
+    short_id: str
+    guild_id: str
+    channel_id: str
+    requester_id: str
+    tool_name: str
+    arguments: str
+    expires_at: str
+    source_turn_id: str | None = None
+
+
+@dataclass(frozen=True)
+class BackendApprovalDecision:
+    """What came of a yes or a no: done | failed | denied. `text` is what the tool returned, None when it did not run."""
+
+    status: str
+    tool_name: str
+    text: str | None = None
+    code: str | None = None
+
+
+@dataclass(frozen=True)
 class BackendDiscordSession:
     session_id: str
     backend_conversation_id: str
@@ -537,6 +563,68 @@ class LocalAgentClient:
         if reminder is None:
             raise BackendResponseError("Backend returned an invalid reminder.")
         return reminder
+
+    async def list_approvals(self, guild_id: str, author_id: str) -> list[BackendApproval]:
+        """What the member has waiting for their yes or no, in this guild."""
+
+        async def send() -> httpx.Response:
+            try:
+                return await self._http.get(
+                    "/api/discord/approvals", params={"guild_id": guild_id, "author_id": author_id}, headers=self._headers(),
+                )
+            except httpx.TimeoutException as error:
+                raise BackendTimeoutError("Backend request timed out. Please try again later.") from error
+            except httpx.HTTPError as error:
+                raise BackendUnavailableError("Backend is unavailable. Please try again later.") from error
+
+        response = await send()
+        if response.status_code == 401:
+            self._jwt = None
+            await self._refresh_jwt()
+            response = await send()
+        if response.status_code == 401:
+            raise BackendAuthenticationError("Backend authentication was rejected.")
+        if response.status_code >= 500:
+            raise BackendUnavailableError("Backend is unavailable. Please try again later.")
+        if response.status_code >= 400:
+            raise BackendResponseError(self._error_message(response))
+        try:
+            payload = response.json()
+        except ValueError as error:
+            raise BackendResponseError("Backend returned an invalid response for approvals.") from error
+        if not isinstance(payload, list):
+            raise BackendResponseError("Backend returned an invalid response for approvals.")
+        return [approval for item in payload if (approval := self._approval(item)) is not None]
+
+    async def decide_approval(self, approval_id: str, guild_id: str, actor_id: str, *, approve: bool) -> BackendApprovalDecision:
+        """The member's yes or no. The backend runs the tool at most once, and only for the member it belongs to."""
+        response = await self._authorized_post(
+            f"/api/discord/approvals/{approval_id}/{'approve' if approve else 'deny'}",
+            {"guild_id": guild_id, "actor_id": actor_id},
+            "Approval decision",
+            timeout=self.settings.turn_execute_timeout_seconds,
+        )
+        body = self._json_object(response, "approval decision")
+        status, tool_name, text, code = body.get("status"), body.get("tool_name"), body.get("text"), body.get("code")
+        if (
+            not isinstance(status, str)
+            or not isinstance(tool_name, str)
+            or (text is not None and not isinstance(text, str))
+            or (code is not None and not isinstance(code, str))
+        ):
+            raise BackendResponseError("Backend returned an invalid approval decision.")
+        return BackendApprovalDecision(status, tool_name, text, code)
+
+    @staticmethod
+    def _approval(item: object) -> BackendApproval | None:
+        """A malformed row is dropped: it gets no button, and the others still do."""
+        if not isinstance(item, dict):
+            return None
+        fields = [item.get(key) for key in ("id", "short_id", "guild_id", "channel_id", "requester_id", "tool_name", "arguments", "expires_at")]
+        if not all(isinstance(value, str) and value for value in fields):
+            return None
+        turn = item.get("source_turn_id")
+        return BackendApproval(*fields, source_turn_id=turn if isinstance(turn, str) and turn else None)
 
     @classmethod
     def _reminders(cls, response: httpx.Response) -> list[BackendReminder]:
