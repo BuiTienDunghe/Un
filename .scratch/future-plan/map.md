@@ -28,7 +28,7 @@ hoạch, chưa làm. Mỗi mục n là ticket số 40+n. Hiện trạng đã ki�
 
 ## Luật làm việc
 
-- Dừng khi hạn mức tuần đạt 60 % hoặc GPU trên 85 °C. Hạn mức reset 04/11 10:00 giờ máy.
+- Dừng khi hạn mức tuần đạt 100 % (chủ dự án nâng 02/11) hoặc GPU trên 85 °C. Hạn mức reset 04/11 10:00 giờ máy.
 - Không dùng GPU khi chủ dự án đang chơi game hoặc phiên Quản lý xin GPU.
 - Mỗi việc một worktree và nhánh riêng. Nhân viên không gộp main, không push, không bật/tắt container.
 - Không tải trên 200 MB, không đọc `.env`, không đưa dữ liệu train lên repo.
