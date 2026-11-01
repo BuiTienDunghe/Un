@@ -1,0 +1,47 @@
+{
+  "per_category": {
+    "simple_python": {
+      "tasks": 10,
+      "turns": 10,
+      "errors": 0
+    },
+    "multiple": {
+      "tasks": 8,
+      "turns": 8,
+      "errors": 0
+    },
+    "irrelevance": {
+      "tasks": 7,
+      "turns": 7,
+      "errors": 0
+    },
+    "multi_turn_base": {
+      "tasks": 5,
+      "turns": 20,
+      "errors": 0
+    },
+    "multi_turn_miss_func": {
+      "tasks": 3,
+      "turns": 15,
+      "errors": 0
+    }
+  },
+  "turn_stop_reasons": {
+    "final": 57,
+    "max_steps": 3
+  },
+  "step_kinds": {
+    "tool_call": 56,
+    "tool_result": 56,
+    "answer_check": 14,
+    "final": 60
+  },
+  "error_codes": {
+    "UNSUPPORTED_FIGURES": 25,
+    "UNKNOWN_TOOL": 1
+  },
+  "turn_wall_seconds": {
+    "mean": 5.87,
+    "max": 21.66
+  }
+}
