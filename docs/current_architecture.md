@@ -122,6 +122,15 @@ the model whole while the whole prompt, estimated as 1 253 + characters / 3.3 to
 (the first and last 600 characters and a `paste_<hash>` id) and opens the rest with
 `read_document`.
 
+With `AGENT_LONG_INPUT_ENABLED=true` (off by default, `services/long_input.py`) the paste the user
+just sent is not left to `read_document`: the code cuts it into parts of the size that would still
+be read whole (36 415 characters at 16 384 − 4 096 tokens, so 3 parts at most for 100 000), asks
+the general model for notes on each in turn, and the model answers from the notes in its usual
+loop. Time is the turn's 90 seconds: a part starts only while the final answer's reserve is free,
+and what was not read is said in the digest and in a line the code adds to the answer. Its calls
+are README.en rule 5's fourth exception, counted apart from the agent's cap. Seconds per part
+are not measured.
+
 ## Model versions
 
 `backend/app/config/model_versions.yaml` lists every model role (general, condenser,

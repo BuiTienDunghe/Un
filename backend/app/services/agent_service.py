@@ -26,7 +26,8 @@ from app.llm_clients.usage import consume_usage, record_usage
 from app.services.calculator import CalculationError, calculate
 from app.services.call_budget import agent_call_cap, turn_call_budget
 from app.services.answer_figures import grounding_summary, retry_instruction, turn_texts, unsupported_figures
-from app.services.pastes import INLINE_MAX_TOKENS, read_paste, take_pastes
+from app.services.long_input import read_long_input
+from app.services.pastes import INLINE_MAX_TOKENS, is_paste, read_paste, take_pastes
 from app.services.injection_defense import InjectionDefense
 from app.services.model_router import ModelRouter
 
@@ -312,6 +313,7 @@ class AgentService:
         read_result_max_chars: int = READ_RESULT_MAX_CHARS,
         registry: ToolRegistry | None = None,
         inline_max_tokens: int = INLINE_MAX_TOKENS,
+        long_input: bool = False,
     ) -> None:
         self.defense = defense or InjectionDefense(enabled=False)
         self.router = router
@@ -326,6 +328,8 @@ class AgentService:
         self.read_result_max_chars = max(200, read_result_max_chars)
         # N1's ceiling, from the caller: pastes.inline_ceiling of general's config (ticket 28 #4).
         self.inline_max_tokens = int(inline_max_tokens)
+        # Ticket 45: a last-message paste past N1's ceiling is read in parts by the code (long_input.py).
+        self.long_input = bool(long_input)
         self.turn_budget_seconds = max(1.0, float(turn_budget_seconds))
         self.final_reserve_seconds = min(max(0.0, float(final_reserve_seconds)), self.turn_budget_seconds)
         self.clock = clock
@@ -397,6 +401,16 @@ class AgentService:
         # caller's request log keeps reading the last call as it always has (ticket 16, k2).
         consume_usage()
         last: dict[str, int | None] = {"tokens_in": None, "tokens_out": None}
+        # Ticket 45: read the long paste in parts before the first round, under the turn's own clock.
+        reading = None
+        if self.long_input and messages and is_paste(messages[-1]) and working[-1] is not messages[-1]:
+            reading = read_long_input(
+                self.router, str(messages[-1]["content"]), [m for m in working[:-1] if m is not guide], self.inline_max_tokens,
+                lambda: self.turn_budget_seconds - (self.clock() - turn_started), self.final_reserve_seconds, emit, steps,
+            )
+            if reading is not None and reading.read:
+                working[-1] = {**working[-1], "content": reading.message()}
+        closing = reading.closing() if reading is not None else ""
         # The answer check (ticket 20 #2) may grant one more round, for its single retry;
         # `checked_out` are the messages it added, which never count as something seen.
         rounds, retried = self.max_steps, False
@@ -463,6 +477,8 @@ class AgentService:
                     retried, rounds = True, rounds + 1
                     emit("answer_check", label=ANSWER_CHECK_LABEL)
                     continue
+                # Ticket 45: what the reading pass could not read is told to the user by the code, not left to the model.
+                answer += closing
                 steps.append({
                     "kind": "final", "tool_name": None, "arguments": None,
                     "content": _clip(answer, 4000), "latency_ms": round_latency,
@@ -532,6 +548,7 @@ class AgentService:
         # Out of rounds or time, there is no retry left: the check only marks the trace.
         # The fixed out-of-time reply is ours, not the model's, and is not checked.
         check = self._check_answer(answer, working, checked_out) if stop_reason != STOP_TURN_BUDGET_EXHAUSTED else {"trace": {}}
+        answer += closing
         steps.append({
             "kind": "final", "tool_name": None, "arguments": None,
             "content": _clip(answer, 4000), "latency_ms": int((perf_counter() - started) * 1000),
