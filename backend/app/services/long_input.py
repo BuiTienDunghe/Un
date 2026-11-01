@@ -187,8 +187,9 @@ def read_long_input(
     window beside `others` (nothing was spent: the caller keeps the slip), else the Reading,
     which may have read fewer parts than there are. Only running out of time stops it early:
     a broken model raises, as it does in the tool loop. With `defense` enabled the call carries
-    rule 7 (what the <<<…>>> markers mean), as the agent guide does; Reading.message(defense.wrap_tool_result)
-    then marks each note, as a read_document result is marked."""
+    rule 7 (what the <<<…>>> markers mean), as the agent guide does, and marks the paste's part and
+    edges in it as data; Reading.message(defense.wrap_tool_result) then marks each note, as a
+    read_document result is marked."""
     spans = split_parts(text, part_chars(inline_max_tokens))
     planned = spans[:LONG_INPUT_MAX_PARTS]
     limit = note_chars(text, len(planned), others, inline_max_tokens, defense.wrap_tool_result if defense and defense.enabled else None)
@@ -196,6 +197,9 @@ def read_long_input(
         return None
     reading = Reading(text, spans, stopped="limit" if len(planned) < len(spans) else None)
     head, tail = edges(text)
+    # The paste is text nobody vouches for, in this call as in a read_document result: with the defense on,
+    # its part and its two edges wear the same markers, which the rule in the system message explains.
+    mark = defense.wrap_tool_result if defense else str
     slowest = 0.0
     # Its own budget, nested in the agent's: the parts' calls are rule 5's fourth exception and
     # must not use up the agent's cap (call_budget.py).
@@ -213,8 +217,8 @@ def read_long_input(
                 {
                     "role": "user",
                     "content": (
-                        f"Tin nhắn của người dùng mở đầu bằng:\n{head}\n\n…và kết thúc bằng:\n{tail}\n\n"
-                        f"(Câu hỏi nằm ở đầu hoặc cuối.)\n\nPHẦN {number}/{len(spans)} của văn bản (ký tự {start + 1}–{end}):\n{text[start:end]}"
+                        f"Tin nhắn của người dùng mở đầu bằng:\n{mark(head)}\n\n…và kết thúc bằng:\n{mark(tail)}\n\n"
+                        f"(Câu hỏi nằm ở đầu hoặc cuối.)\n\nPHẦN {number}/{len(spans)} của văn bản (ký tự {start + 1}–{end}):\n{mark(text[start:end])}"
                     ),
                 },
             ]
