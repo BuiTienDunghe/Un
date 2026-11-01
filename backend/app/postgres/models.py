@@ -454,7 +454,6 @@ class DiscordReminder(Base):
     channel_id: Mapped[str] = mapped_column(Text, nullable=False)
     thread_id: Mapped[str | None] = mapped_column(Text)
     creator_id: Mapped[str] = mapped_column(Text, nullable=False)
-    creator_display_name: Mapped[str | None] = mapped_column(Text)
     text: Mapped[str] = mapped_column(Text, nullable=False)
     due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="pending", server_default="pending")
@@ -464,7 +463,8 @@ class DiscordReminder(Base):
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     discord_message_id: Mapped[str | None] = mapped_column(Text)
     error: Mapped[str | None] = mapped_column(Text)
-    source_turn_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True))
+    # Deleting the turn deletes the reminder made in it: a deleted conversation, forget_member.
+    source_turn_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), ForeignKey("discord_session_turns.id", ondelete="CASCADE"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 

@@ -1,6 +1,7 @@
 """Reminders a member asked Ún to send later, in the channel they asked in.
 
-Additive only: one new table. Nothing reads it while DISCORD_REMINDERS_ENABLED is off.
+Additive only: one new table. A reminder holds the member's own words and id, so it goes with the turn it was
+made in (FK cascade) and with forget_member (scripts/forget_member.py). Nothing reads it while DISCORD_REMINDERS_ENABLED is off.
 
 Revision ID: 20261101_37
 Revises: 20261030_36
@@ -25,7 +26,6 @@ def upgrade() -> None:
         sa.Column("channel_id", sa.Text(), nullable=False),
         sa.Column("thread_id", sa.Text()),
         sa.Column("creator_id", sa.Text(), nullable=False),
-        sa.Column("creator_display_name", sa.Text()),
         sa.Column("text", sa.Text(), nullable=False),
         sa.Column("due_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("status", sa.Text(), nullable=False, server_default="pending"),
@@ -35,7 +35,8 @@ def upgrade() -> None:
         sa.Column("sent_at", sa.DateTime(timezone=True)),
         sa.Column("discord_message_id", sa.Text()),
         sa.Column("error", sa.Text()),
-        sa.Column("source_turn_id", postgresql.UUID(as_uuid=True)),
+        # Deleting the turn (a deleted conversation, forget_member) deletes the reminder made in it.
+        sa.Column("source_turn_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("discord_session_turns.id", ondelete="CASCADE")),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
         sa.CheckConstraint(
             "status IN ('pending','sending','sent','failed','missed','cancelled')",

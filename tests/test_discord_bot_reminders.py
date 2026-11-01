@@ -154,15 +154,41 @@ def test_a_deleted_channel_is_final_and_a_network_error_is_worth_another_try() -
     assert api.sent == []
 
 
-def test_a_lost_receipt_is_retried_but_the_message_is_never_sent_twice() -> None:
+def test_a_receipt_the_backend_would_not_take_is_offered_on_later_ticks_without_sending_again() -> None:
     channel, api = FakeChannel(), FakeApi([reminder()])
-    api.ack_fails = 5  # every try fails
-    run(make_sender(channel, api).tick())
-    assert len(channel.sent) == 1 and api.sent == [] and api.failed == []
+    sender = make_sender(channel, api)
+    api.ack_fails = 4  # the three tries of the first tick, then the first offer on the second
+    run(sender.tick())
+    api.due = []
+    assert len(channel.sent) == 1 and api.sent == []
+    run(sender.tick())
+    assert api.sent == []
+    run(sender.tick())
+    assert api.sent == [("00000000-0000-0000-0000-000000000001", "777")] and len(channel.sent) == 1
+    run(sender.tick())
+    assert len(api.sent) == 1  # taken: nothing more is offered
+
+
+def test_a_reminder_the_backend_hands_out_again_after_its_lease_is_not_sent_twice() -> None:
     channel, api = FakeChannel(), FakeApi([reminder()])
-    api.ack_fails = 1  # the second try gets through
-    run(make_sender(channel, api).tick())
+    sender = make_sender(channel, api)
+    api.ack_fails = 4  # the whole first tick, and the offer at the start of the second
+    run(sender.tick())
+    assert len(channel.sent) == 1 and api.sent == []
+    run(sender.tick())  # the same reminder comes back from claim
     assert len(channel.sent) == 1 and len(api.sent) == 1
+
+
+def test_a_receipt_nobody_takes_is_dropped_after_an_hour(monkeypatch) -> None:
+    channel, api = FakeChannel(), FakeApi()
+    sender = make_sender(channel, api)
+    api.due, api.ack_fails = [reminder()], 10_000
+    run(sender.tick())
+    api.due = []
+    clock = [sender_module.monotonic() + sender_module.RECEIPT_KEPT_SECONDS + 1]
+    monkeypatch.setattr(sender_module, "monotonic", lambda: clock[0])
+    run(sender.tick())
+    assert sender._unacknowledged == {}
 
 
 def test_the_loop_survives_a_backend_that_is_down(monkeypatch) -> None:

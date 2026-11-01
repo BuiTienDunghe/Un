@@ -13,7 +13,9 @@ Rules the service keeps, whatever store sits under it:
 - A send that fails is retried (RETRY_DELAY apart, MAX_ATTEMPTS in all) when Discord or the
   network was at fault, and gives up at once when the channel is gone or forbidden. A bot that
   died after claiming leaves the row `sending`; after LEASE it is claimed again, so a reminder
-  is delivered at least once, and in that one crash window possibly twice.
+  is delivered at least once; the bot keeps an unconfirmed receipt and offers it again, so the
+  repeat is only possible when the bot itself stops between sending and the receipt.
+- A reminder holds the member's words and id: the FK to its turn (CASCADE) and forget_member remove it.
 """
 from __future__ import annotations
 
@@ -56,7 +58,6 @@ class Reminder:
     channel_id: str
     thread_id: str | None
     creator_id: str
-    creator_display_name: str | None
     text: str
     due_at: datetime
     status: str
@@ -99,7 +100,7 @@ def _utc(moment: datetime) -> datetime:
 def _row(row: DiscordReminder) -> Reminder:
     return Reminder(
         id=str(row.id), guild_id=row.guild_id, channel_id=row.channel_id, thread_id=row.thread_id,
-        creator_id=row.creator_id, creator_display_name=row.creator_display_name, text=row.text,
+        creator_id=row.creator_id, text=row.text,
         due_at=_utc(row.due_at), status=row.status, attempts=row.attempts,
         source_turn_id=str(row.source_turn_id) if row.source_turn_id else None,
     )
@@ -113,7 +114,7 @@ class SqlReminderStore:
         with self.sessions.begin() as database:
             database.add(DiscordReminder(
                 id=UUID(reminder.id), guild_id=reminder.guild_id, channel_id=reminder.channel_id, thread_id=reminder.thread_id,
-                creator_id=reminder.creator_id, creator_display_name=reminder.creator_display_name, text=reminder.text,
+                creator_id=reminder.creator_id, text=reminder.text,
                 due_at=reminder.due_at, status="pending",
                 source_turn_id=UUID(reminder.source_turn_id) if reminder.source_turn_id else None,
             ))
@@ -215,7 +216,6 @@ class ReminderService:
         channel_id: str,
         thread_id: str | None,
         creator_id: str,
-        creator_display_name: str | None,
         text: str,
         due_at: datetime,
         source_turn_id: str | None = None,
@@ -243,7 +243,7 @@ class ReminderService:
             raise ReminderError("TOO_MANY", f"Người này đang có {MAX_PENDING_PER_MEMBER} lời nhắc chưa tới giờ. Huỷ bớt trước khi hẹn thêm.")
         reminder = Reminder(
             id=str(uuid4()), guild_id=guild_id, channel_id=channel_id, thread_id=thread_id, creator_id=creator_id,
-            creator_display_name=creator_display_name, text=text, due_at=due_at, status="pending", source_turn_id=source_turn_id,
+            text=text, due_at=due_at, status="pending", source_turn_id=source_turn_id,
         )
         self.store.add(reminder)
         return reminder

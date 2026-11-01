@@ -15,6 +15,9 @@ half-deleting:
      self-FK is RESTRICT).
   5. discord_memory_candidates from or about them.
   6. discord_session_turns they wrote (deliveries cascade).
+  6b. discord_reminders they asked for (ticket 48): their words and their id, and the bot
+     would still mention them at the hour. Deleted by creator; the foreign key from the
+     turn also removes one made in a turn that step 6 or a deleted conversation takes.
   7. discord_channel_messages they wrote — a plain DELETE, because the FTS
      index is per row.
   8. the bot's COPIES of their words, which are filed under nobody (ticket 17):
@@ -54,6 +57,7 @@ from app.postgres.models import (
     DiscordMemory,
     DiscordMemoryCandidate,
     DiscordMemorySource,
+    DiscordReminder,
     DiscordSessionTurn,
     Message,
 )
@@ -102,8 +106,16 @@ def _member_guilds(database, author_id: str) -> list[str]:
         ),
         select(DiscordMemory.guild_id).where(DiscordMemory.subject_id == author_id),
         select(DiscordCondensationProposition.guild_id).where(DiscordCondensationProposition.speaker_id == author_id),
+        select(DiscordReminder.guild_id).where(DiscordReminder.creator_id == author_id),
     ]
     return sorted({guild for query in queries for guild in database.scalars(query.distinct())})
+
+
+def _forget_reminders(database, author_id: str, guild_id: str | None) -> int:
+    """Every reminder the member asked for, in any state: a pending one would still ping them."""
+    return database.execute(
+        delete(DiscordReminder).where(DiscordReminder.creator_id == author_id, *_scope(DiscordReminder, guild_id))
+    ).rowcount
 
 
 def _member_words(database, guild_id: str, author_id: str) -> tuple[QuoteIndex, dict[str, set[str]]]:
@@ -220,6 +232,7 @@ def _counts(database, guild_id: str | None, author_id: str) -> dict[str, int]:
             DiscordCondensationProposition,
             DiscordCondensationProposition.speaker_id == author_id,
         ),
+        "reminders": count(DiscordReminder, DiscordReminder.creator_id == author_id),
     }
 
 
@@ -366,6 +379,9 @@ def forget(guild_id: str, author_id: str, *, apply: bool, all_guilds: bool = Fal
                 *_scope(DiscordSessionTurn, scope),
             )
         )
+
+        # 6b. reminders they asked for, whatever their state: a pending one would still ping them
+        _forget_reminders(database, author_id, scope)
 
         # 7. their raw messages
         database.execute(

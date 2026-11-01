@@ -18,6 +18,7 @@ from typing import Any, Callable
 from uuid import UUID
 
 from loguru import logger
+from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 from app.discord.remember_tool import fact_is_their_own
@@ -34,8 +35,10 @@ _ASKED = re.compile(
     re.IGNORECASE,
 )
 _REFUSED = re.compile(r"(?:đừng|không|chớ|khỏi)\s+(?:cần\s+)?(?:phải\s+)?(?:nhắc|hẹn|báo)", re.IGNORECASE)
-# "Bạn có nhắc tôi ... không?" asks whether Ún does it; it does not ask for one.
+# "Bạn có nhắc tôi ... không?" asks whether Ún does it; it does not ask for one. A polite request
+# ("Ún có thể nhắc tôi ... không?", "Ún nhắc tôi ... được không?", "... giúp") is a request.
 _QUESTION = re.compile(r"\bcó\b.*\bkhông\s*[?？]?\s*$", re.IGNORECASE)
+_POLITE = re.compile(r"\bcó\s+thể\b|\bđược\s+không\b|\bcó\s+được\b|\bgiúp\b|\bhộ\b|\bdùm\b|\bgiùm\b|\blàm\s+ơn\b|\bnhé\b|\bnha\b", re.IGNORECASE)
 _TIME_CUE = re.compile(
     r"\d|\b(?:mai|mốt|nữa|sau|sáng|trưa|chiều|tối|đêm|khuya|nay|tuần|tháng|ngày|giờ|phút|giây|rưỡi|thứ|chủ\s+nhật)\b",
     re.IGNORECASE,
@@ -67,11 +70,28 @@ REMIND_SCHEMA: dict[str, Any] = {
 
 def asked_for_reminder(own_text: str) -> bool:
     text = unicodedata.normalize("NFC", own_text).strip()
-    return bool(_ASKED.search(text)) and not _REFUSED.search(text) and not _QUESTION.search(text)
+    if not _ASKED.search(text) or _REFUSED.search(text):
+        return False
+    return not _QUESTION.search(text) or bool(_POLITE.search(text))
 
 
 def names_a_time(own_text: str) -> bool:
     return bool(_TIME_CUE.search(unicodedata.normalize("NFC", own_text)))
+
+
+# A time given in answer to Ún's "lúc mấy giờ?" belongs to the request made just before it.
+FOLLOW_UP_WINDOW = timedelta(minutes=15)
+
+
+def words_behind_the_turn(current: str, previous: str | None) -> str:
+    """What the speaker said that the gate may read: this message, or, when this message only
+    answers a question about the time, the same speaker's request just before it. The answer itself
+    must name the time, so a request made earlier cannot be completed by a message that says nothing of it."""
+    if asked_for_reminder(current) or previous is None:
+        return current
+    if asked_for_reminder(previous) and names_a_time(current):
+        return f"{previous}\n{current}"
+    return current
 
 
 @dataclass(frozen=True)
@@ -82,7 +102,6 @@ class TurnFacts:
     channel_id: str
     thread_id: str | None
     author_id: str
-    author_display_name: str | None
     own_text: str
 
 
@@ -93,10 +112,21 @@ def load_turn_facts(sessions: sessionmaker) -> Callable[[str], TurnFacts | None]
             session = database.get(DiscordConversationSession, turn.session_id) if turn is not None else None
             if turn is None or session is None or not turn.author_id:
                 return None
+            # The same speaker's turn just before this one in the channel, if it was recent.
+            previous = database.scalar(
+                select(DiscordSessionTurn.request_text)
+                .where(
+                    DiscordSessionTurn.session_id == turn.session_id, DiscordSessionTurn.author_id == turn.author_id,
+                    DiscordSessionTurn.sequence_number < turn.sequence_number,
+                    DiscordSessionTurn.available_at >= turn.available_at - FOLLOW_UP_WINDOW,
+                )
+                .order_by(DiscordSessionTurn.sequence_number.desc()).limit(1)
+            )
             return TurnFacts(
-                guild_id=session.guild_id, channel_id=session.channel_id, thread_id=session.thread_id,
-                author_id=turn.author_id, author_display_name=turn.author_display_name,
-                own_text=turn.request_text.split(IMAGE_NOTE, 1)[0],
+                guild_id=session.guild_id, channel_id=session.channel_id, thread_id=session.thread_id, author_id=turn.author_id,
+                own_text=words_behind_the_turn(
+                    turn.request_text.split(IMAGE_NOTE, 1)[0], previous.split(IMAGE_NOTE, 1)[0] if previous else None,
+                ),
             )
 
     return load
@@ -151,7 +181,7 @@ class Remind:
         try:
             reminder = self.service.create(
                 guild_id=facts.guild_id, channel_id=facts.channel_id, thread_id=facts.thread_id, creator_id=facts.author_id,
-                creator_display_name=facts.author_display_name, text=text, due_at=due_at, source_turn_id=str(turn_id),
+                text=text, due_at=due_at, source_turn_id=str(turn_id),
             )
         except ReminderError as error:
             return agent._error(BAD_ARGUMENTS if error.code != "REMINDERS_DISABLED" else TOOL_UNAVAILABLE_HERE, error.message)

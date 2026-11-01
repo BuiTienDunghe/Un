@@ -18,7 +18,7 @@ from fastapi.testclient import TestClient
 from app import discord
 from app.config.settings import PROJECT_ROOT, Settings
 from app.discord import reminders as policy
-from app.discord.remind_tool import Remind, TurnFacts, asked_for_reminder, names_a_time
+from app.discord.remind_tool import Remind, TurnFacts, asked_for_reminder, names_a_time, words_behind_the_turn
 from app.discord.reminders import Reminder, ReminderError, ReminderService
 from app.discord.routers import reminders as reminder_routes
 from app.postgres.database import create_postgres_engine, create_session_factory
@@ -101,7 +101,7 @@ def build(enabled: bool = True, allowed: frozenset[str] | None = frozenset({GUIL
 
 def make(service: ReminderService, *, creator: str = ME, text: str = "Họp nhóm", minutes: int = 60, guild: str = GUILD, turn: str | None = None) -> Reminder:
     return service.create(
-        guild_id=guild, channel_id="chan", thread_id=None, creator_id=creator, creator_display_name="Dũng", text=text,
+        guild_id=guild, channel_id="chan", thread_id=None, creator_id=creator, text=text,
         due_at=NOW + timedelta(minutes=minutes), source_turn_id=turn,
     )
 
@@ -202,7 +202,7 @@ def test_a_reminder_being_sent_cannot_be_cancelled_and_one_in_another_server_is_
 def test_a_reminder_is_kept_in_the_channel_it_was_asked_in() -> None:
     service, _, _ = build()
     reminder = service.create(
-        guild_id=GUILD, channel_id="chan", thread_id="thread", creator_id=ME, creator_display_name="Dũng", text="  Gọi   mẹ ", due_at=NOW + timedelta(hours=1),
+        guild_id=GUILD, channel_id="chan", thread_id="thread", creator_id=ME, text="  Gọi   mẹ ", due_at=NOW + timedelta(hours=1),
     )
     assert reminder.target_channel_id == "thread" and reminder.text == "Gọi mẹ" and reminder.creator_id == ME
 
@@ -350,7 +350,7 @@ def agent() -> AgentService:
 
 def tool_for(own_text: str, *, service: ReminderService | None = None, facts: bool = True):
     service = service or build()[0]
-    turn = TurnFacts(GUILD, "chan", None, ME, "Dũng", own_text) if facts else None
+    turn = TurnFacts(GUILD, "chan", None, ME, own_text) if facts else None
     return Remind(service, lambda turn_id: turn), service
 
 
@@ -359,7 +359,7 @@ def call(tool: Remind, **arguments):
     return json.loads(output), code
 
 
-@pytest.mark.parametrize("text", ["Nhắc tôi 3 giờ chiều mai gọi mẹ", "nhắc mình uống thuốc sau 30 phút nữa", "Đặt nhắc họp lúc 9h", "hẹn giờ 8h nấu cơm", "remind me at 5pm"])
+@pytest.mark.parametrize("text", ["Nhắc tôi 3 giờ chiều mai gọi mẹ", "nhắc mình uống thuốc sau 30 phút nữa", "Đặt nhắc họp lúc 9h", "hẹn giờ 8h nấu cơm", "remind me at 5pm", "Ún có thể nhắc tôi 3 giờ chiều mai gọi mẹ không?", "Nhắc tôi 3 giờ chiều mai gọi mẹ có được không?", "Ún nhắc tôi 9h mai họp được không?"])
 def test_a_request_to_be_reminded_is_heard(text) -> None:
     assert asked_for_reminder(text)
 
@@ -367,6 +367,24 @@ def test_a_request_to_be_reminded_is_heard(text) -> None:
 @pytest.mark.parametrize("text", ["Bạn có nhắc tôi chuyện hôm qua không?", "Họ đã nhắc đến dự án", "Đừng nhắc tôi nữa", "không cần nhắc tôi đâu", "Mấy giờ rồi?"])
 def test_anything_else_is_not_a_request(text) -> None:
     assert not asked_for_reminder(text)
+
+
+def test_the_hour_given_in_answer_to_uns_question_belongs_to_the_request_before_it() -> None:
+    request = "nhắc tôi gọi mẹ"
+    both = words_behind_the_turn("3 giờ chiều mai", request)
+    assert asked_for_reminder(both) and names_a_time(both)
+    tool, service = tool_for(both)
+    answer, code = call(tool, text="Gọi mẹ", at="2026-11-02T15:00")
+    assert code is None and answer["at"].startswith("15:00 02/11/2026")
+
+
+def test_a_message_that_says_nothing_of_the_hour_does_not_finish_an_earlier_request() -> None:
+    assert words_behind_the_turn("Hôm qua trời đẹp quá", "nhắc tôi gọi mẹ") == "Hôm qua trời đẹp quá"
+    assert words_behind_the_turn("ừ", "nhắc tôi gọi mẹ") == "ừ"
+    # the earlier message must itself have been a request, and no earlier message means the current one alone
+    assert words_behind_the_turn("3 giờ chiều mai", "Hôm nay ăn gì?") == "3 giờ chiều mai"
+    assert words_behind_the_turn("3 giờ chiều mai", None) == "3 giờ chiều mai"
+    assert not asked_for_reminder(words_behind_the_turn("3 giờ chiều mai", "Bạn có nhắc tôi chuyện hôm qua không?"))
 
 
 def test_a_reminder_needs_the_speaker_to_name_a_time() -> None:

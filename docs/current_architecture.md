@@ -86,13 +86,14 @@ offered (the default tool list is unchanged) and the bot's sender started. Table
 (migration `20261101_37`, additive). The bot talks to the backend over HTTP only (`/api/discord/reminders`:
 `claim`, `{id}/sent`, `{id}/failed`, list, `{ref}/cancel`); `app/discord/reminders.py` holds every rule, the bot only delivers.
 
-- Created only by the agent's `remind` tool, and only when the speaker's own words in that turn ask to be reminded, name a time, and the reminder text is made of their words (the `remember` rule). Channel, thread and creator come from the turn, never from the model.
+- Created only by the agent's `remind` tool, and only when the speaker's own words ask to be reminded, name a time, and the reminder text is made of their words (the `remember` rule). A polite request ("Ún có thể nhắc tôi … không?", "… được không?") counts; "Bạn có nhắc tôi … không?" is a question and does not. When Ún asks "lúc mấy giờ?", the answer (which must itself name a time) is read together with that speaker's request in the previous turn of the channel, if made within 15 minutes. Channel, thread and creator come from the turn, never from the model.
 - A guild outside `DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST` is refused at creation, at listing and cancelling, when the bot sends, and when a due reminder is claimed (it is then marked `failed`).
 - Sent to the channel it was asked in, mentioning only its creator (`allowed_mentions` with no everyone, no roles, one user). Only the creator cancels; the check is in the backend.
 - Limits: 500 characters, 20 waiting per member per server, at most 3 per message, 30 seconds to 90 days ahead.
 - Machine or bot off at the hour: the bot polls every 30 s, so on return the backend hands out what is due. Up to 5 minutes late is sent as it is; 5 minutes to 24 hours late is sent with a "Trễ" note giving the original hour; 24 hours or more late is marked `missed`, not sent, and `/reminders list` shows it for one more day.
 - A send that fails is retried 1 minute apart, 3 tries in all, when Discord or the network is at fault; a deleted or forbidden channel, a channel in another server, or a server removed from the allowlist is final (`failed`).
-- Delivery is at-least-once: a claim the bot never finished (it died after sending, before the receipt) is handed out again after 10 minutes, so in that one window a reminder can arrive twice. A lost receipt is retried; the message itself is never re-sent by the bot.
+- Delivery is at-least-once. After a send the bot keeps the receipt in memory and offers it to the backend on every tick for up to an hour, and a reminder the backend hands out again while the bot holds its receipt is not sent a second time, so a backend that restarts or is down for a while does not cause a second ping. A reminder can still arrive twice if the bot itself stops (crash, restart) between sending and the backend taking the receipt; the backend then re-issues it after 10 minutes.
+- Forgetting: `scripts/forget_member.py` deletes every reminder the member asked for (step 6b, counted in `planned` and `remaining`); the row also holds a foreign key to the turn it was made in (`ON DELETE CASCADE`), so a deleted conversation takes its reminders, and no display name is stored. After either, nothing is left to mention the member.
 
 ## Agent (tool mode)
 

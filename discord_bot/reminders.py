@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from time import monotonic
 from datetime import datetime, timedelta, timezone
 
 import discord
@@ -21,6 +22,9 @@ logger = logging.getLogger(__name__)
 POLL_SECONDS_DEFAULT = 30.0
 LATE_NOTE_SECONDS = 300
 ACK_ATTEMPTS = 3
+# A receipt the backend would not take is offered again on every tick for this long: well past the
+# backend's lease, so a backend that restarts or is down for a while still gets it before it re-issues the reminder.
+RECEIPT_KEPT_SECONDS = 3600.0
 VIETNAM_TIME = timezone(timedelta(hours=7))
 _ZERO_WIDTH_SPACE = "​"
 
@@ -85,6 +89,8 @@ class ReminderSender:
         self.api_client = api_client
         self.guild_allowed = guild_allowed
         self.poll_seconds = max(5.0, poll_seconds)
+        # reminder id -> (Discord message id, when it was sent): sent, receipt not yet taken by the backend.
+        self._unacknowledged: dict[str, tuple[str, float]] = {}
 
     async def run_forever(self) -> None:
         logger.info("Reminders are on: asking the backend every %.0f s", self.poll_seconds)
@@ -100,7 +106,12 @@ class ReminderSender:
 
     async def tick(self) -> int:
         sent = 0
+        await self._retry_receipts()
         for reminder in await self.api_client.claim_reminders():
+            if reminder.reminder_id in self._unacknowledged:
+                # Handed out again because its receipt never arrived. It was sent; only the receipt is owed.
+                await self._acknowledge(reminder.reminder_id)
+                continue
             if await self.deliver(reminder):
                 sent += 1
         return sent
@@ -125,18 +136,32 @@ class ReminderSender:
         except Exception as error:
             await self._report(reminder, f"send_failed_{type(error).__name__}", retryable=True)
             return False
-        # Discord has the message. A lost receipt is retried, never the message: if every try
-        # fails the backend's lease expires and it hands the reminder out again.
-        for attempt in range(ACK_ATTEMPTS):
-            try:
-                await self.api_client.reminder_sent(reminder.reminder_id, str(message.id))
-                break
-            except BackendClientError:
-                if attempt == ACK_ATTEMPTS - 1:
-                    logger.warning("reminder %s was sent but the receipt was not recorded", reminder.short_id)
-                    break
-                await asyncio.sleep(0.1 * (attempt + 1))
+        # Discord has the message. From here the bot never sends it again: a receipt the backend does not
+        # take is kept and offered on later ticks, and a re-issued reminder with a kept receipt is not sent.
+        self._unacknowledged[reminder.reminder_id] = (str(message.id), monotonic())
+        await self._acknowledge(reminder.reminder_id)
         return True
+
+    async def _acknowledge(self, reminder_id: str, attempts: int = ACK_ATTEMPTS) -> None:
+        message_id, _ = self._unacknowledged[reminder_id]
+        for attempt in range(attempts):
+            try:
+                await self.api_client.reminder_sent(reminder_id, message_id)
+            except BackendClientError:
+                if attempt < attempts - 1:
+                    await asyncio.sleep(0.1 * (attempt + 1))
+                continue
+            del self._unacknowledged[reminder_id]
+            return
+        logger.warning("reminder %s was sent but the receipt was not recorded; will offer it again", reminder_id[:8])
+
+    async def _retry_receipts(self) -> None:
+        for reminder_id, (_, sent_at) in list(self._unacknowledged.items()):
+            if monotonic() - sent_at > RECEIPT_KEPT_SECONDS:
+                del self._unacknowledged[reminder_id]
+                logger.warning("reminder %s: gave up offering the receipt", reminder_id[:8])
+            else:
+                await self._acknowledge(reminder_id, attempts=1)
 
     async def _report(self, reminder: BackendReminder, error: str, *, retryable: bool) -> None:
         logger.warning("reminder %s not delivered: %s (retryable=%s)", reminder.short_id, error, retryable)
