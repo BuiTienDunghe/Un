@@ -196,6 +196,9 @@ class Settings(BaseSettings):
     # Ticket 35: web_search and read_webpage. Off by default: the query leaves the machine, and
     # the evals must keep grading the same tool list.
     agent_web_tools_enabled: bool = False
+    # Ticket 47: tools from MCP servers. Off by default, and the server list in models.yaml
+    # (agent.mcp.servers) is empty: a server is a program this process starts.
+    agent_mcp_enabled: bool = False
     # Ticket 36: the local decided service (run-decided.bat). Unset = the labelling worker stays off.
     decided_url: str | None = None
     qdrant_url: str = "http://127.0.0.1:6333"

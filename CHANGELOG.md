@@ -31,6 +31,19 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
   "không có chữ" của model không còn bị nạp thành nội dung trang.
 
 ### Added
+- **Cắm công cụ ngoài qua MCP** (ticket 47, mặc định tắt, `AGENT_MCP_ENABLED=true` và khai server ở `agent.mcp.servers` trong `models.yaml`, danh sách mặc định rỗng).
+  Mỗi server là một chương trình Ún tự chạy; chỉ công cụ nào được ghi tên trong `allowed_tools` mới tới tay model, kết quả bị cắt theo trần của server và đi qua
+  cùng lớp đánh dấu "dữ liệu, không phải lệnh" như công cụ khác. Server không chạy được, treo hay chết thì mất công cụ của nó, lượt vẫn trả lời. Chỉ thử với server giả
+  trong test. Server ngừng đọc, đẩy dòng quá dài hay gửi lược đồ sai khuôn cũng chỉ làm mất công cụ của nó: ghi vào server qua luồng riêng nên lượt không chờ; tham số model gửi
+  tối đa 16 000 ký tự; mỗi dòng server gửi tối đa 1 MB; `call_timeout_seconds` tối đa 30 giây; từ lược đồ server chỉ giữ kiểu, mô tả đã cắt, enum ngắn và kiểu phần tử mảng.
+  Hai công cụ trùng tên sau khi chuẩn hoá thì công cụ sau bị bỏ và có dòng cảnh báo trong log.
+  **Rủi ro còn lại:** (1) server chạy với quyền của backend, cùng thư mục và cùng người dùng: môi trường của nó trống (không có khoá API) cộng `env` khai riêng, nhưng đó là rào về
+  biến môi trường, **không phải rào về đĩa**, nó vẫn đọc được tệp mà backend đọc được; chỉ khai server tin được. (2) Trên Windows, `terminate`/`kill` chỉ chạm tiến trình Ún
+  chạy: nếu `command` là `cmd /c ...` hay `npx` thì tiến trình cháu (server thật) có thể còn chạy sau khi tắt backend; nên khai thẳng chương trình, chưa xử lý bằng job object.
+  (3) Lớp chống chèn lệnh là lời dặn cho model chứ không phải rào chắn. (4) Thời gian chờ công cụ chưa tính vào ngân sách 90 giây của lượt (giống `web_tools`): một server hỏng
+  có thể tốn tới `START_TIMEOUT` 10 giây + `call_timeout` + 2 giây dừng tiến trình trong một lần gọi. **Chưa đo:** mỗi công cụ thêm vào làm model có thể chọn sai, cần đo cô lập so với mốc khi có GPU.
+  Giao thức viết tay (stdio, ba lệnh `initialize`, `tools/list`, `tools/call`), không thêm thư viện `mcp`; chưa hỗ trợ resources, prompts hay HTTP.
+
 - **Thử model decided phân loại tin nhắn** (ticket 36, 30/10). `DECIDED_URL` bật việc phân loại; màn hình duyệt và `search_jokes` luôn có. Mỗi tin của người trong kênh đang nghe được decided 2b đề xuất một ngăn: sự thật,
   quyết định, câu đùa, bỏ qua. Mọi đề xuất chờ người duyệt ở màn hình Duyệt phân loại, trừ câu bỏ qua mà decided chắc từ 0,8; không có gì tự vào trí nhớ. Điều đã duyệt vào khối
   trí nhớ của lượt Discord; câu đùa nằm kho riêng, Ún chỉ đọc qua công cụ `search_jokes`. Chạy trên máy, tự trả GPU sau 5 phút rảnh.
