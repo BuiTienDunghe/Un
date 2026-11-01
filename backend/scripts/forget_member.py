@@ -174,7 +174,8 @@ def _copies(database, guild_id: str, author_id: str, index: QuoteIndex, requests
             # answer_check keeps the figures a rejected answer was flagged for (ticket 28 #1).
             redacted, changed = redact_arguments(row.arguments, author_id, index)
             field = "arguments"
-        elif row.kind == "final":
+        elif row.kind in ("final", "long_input_part"):
+            # A long_input_part's note (ticket 45) is the model's notes on a paste, which can quote the member.
             redacted, changed = redact_quotes(row.content, index)
             field = "content"
         else:

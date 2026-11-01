@@ -410,6 +410,7 @@ def run_eval(
     turn_budget_seconds = float(agent_config.get("turn_budget_seconds", TURN_BUDGET_SECONDS))
     final_reserve_seconds = float(agent_config.get("final_reserve_seconds", FINAL_RESERVE_SECONDS))
     inline_max_tokens = int(agent_config.get("inline_max_tokens", INLINE_MAX_TOKENS))
+    long_input = bool(agent_config.get("long_input", False))
     history = FixtureHistory(dataset.guild)
     # The tools as the API offers them: the core's, plus app.discord's search_history
     # plugged in with the fixture guild (ticket 22, C4). The manifest's hash and the
@@ -424,6 +425,8 @@ def run_eval(
         "input_max_chars": INPUT_MAX_CHARS,
         # N1 (ticket 20's arbitration round): a last-message paste under this estimate reaches the model whole.
         "paste_inline": {"max_tokens": inline_max_tokens, "fixed_tokens": INLINE_FIXED_TOKENS, "chars_per_token": CHARS_PER_TOKEN},
+        # Ticket 45: a last-message paste past that estimate read in parts by the code; runs only compare when this agrees.
+        "long_input": long_input,
         "turn_budget_seconds": turn_budget_seconds,
         "final_reserve_seconds": final_reserve_seconds,
         "injection_defense": defense.enabled,
@@ -466,6 +469,7 @@ def run_eval(
             read_result_max_chars=read_result_max_chars,
             registry=registry,
             inline_max_tokens=inline_max_tokens,
+            long_input=long_input,
         )
         tool_context = {"guild_id": history.guild_id} if task.get("surface") == "discord" else None
         answer: str | None = None
@@ -736,6 +740,8 @@ def main(argv: list[str] | None = None) -> int:
         "final_reserve_seconds": float(agent_section.get("final_reserve_seconds", FINAL_RESERVE_SECONDS)),
         # N1's ceiling from the general config this run serves, as main.py reads it (ticket 28 #4).
         "inline_max_tokens": inline_ceiling(general),
+        # Ticket 45, off unless AGENT_LONG_INPUT_ENABLED says so, as in the API; the manifest records it.
+        "long_input": settings.agent_long_input_enabled,
     }
     defense = InjectionDefense.from_config(config.get("rag", {}), enabled_override=settings.rag_injection_defense_enabled)
 
