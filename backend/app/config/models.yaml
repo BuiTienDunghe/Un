@@ -92,6 +92,13 @@ agent:
   # slower: raise both here.
   turn_budget_seconds: 90
   final_reserve_seconds: 20
+  # Ticket 44: when the prompt nears the window (general's `context` less a reserve for the
+  # answer), the OLDEST tool results are replaced by a note saying which call to repeat to
+  # read them again; the newest `keep_recent` are never touched. Off until measured
+  # (.scratch/future-plan/issues/44-context-budget.md). `ceiling_tokens` overrides the ceiling.
+  context_budget:
+    enabled: false
+    keep_recent: 2
   # Ticket 47: tools from MCP servers, read only when AGENT_MCP_ENABLED=true. Each entry:
   #   - name: notes                      # 1-24 letters, digits, - or _
   #     command: ["python", "server.py"] # started with a bare environment (PATH and the like) plus `env`

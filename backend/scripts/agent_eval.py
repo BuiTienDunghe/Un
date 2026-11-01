@@ -51,6 +51,7 @@ from app.services.agent_service import AGENT_GUIDE, FINAL_RESERVE_SECONDS, READ_
 from app.discord.history_service import _SAFE_LEXEME, DiscordHistoryHit
 from app.discord.speaker_context import DISCORD_SPEAKER_SYSTEM_INSTRUCTION, attributed_user_content
 from app.services.injection_defense import InjectionDefense
+from app.services.context_budget import context_budget_from_config
 from app.services.pastes import CHARS_PER_TOKEN, INLINE_FIXED_TOKENS, INLINE_MAX_TOKENS, inline_ceiling
 from app.utils.vi_tokenizer import tokenize_vietnamese
 from scripts.agent_eval_grader import GRADER_VERSION, grade, summarize, tool_calls
@@ -410,6 +411,7 @@ def run_eval(
     turn_budget_seconds = float(agent_config.get("turn_budget_seconds", TURN_BUDGET_SECONDS))
     final_reserve_seconds = float(agent_config.get("final_reserve_seconds", FINAL_RESERVE_SECONDS))
     inline_max_tokens = int(agent_config.get("inline_max_tokens", INLINE_MAX_TOKENS))
+    context_budget = agent_config.get("context_budget")
     history = FixtureHistory(dataset.guild)
     # The tools as the API offers them: the core's, plus app.discord's search_history
     # plugged in with the fixture guild (ticket 22, C4). The manifest's hash and the
@@ -424,6 +426,8 @@ def run_eval(
         "input_max_chars": INPUT_MAX_CHARS,
         # N1 (ticket 20's arbitration round): a last-message paste under this estimate reaches the model whole.
         "paste_inline": {"max_tokens": inline_max_tokens, "fixed_tokens": INLINE_FIXED_TOKENS, "chars_per_token": CHARS_PER_TOKEN},
+        # Ticket 44: null = off, the conversation goes to the model as the loop holds it.
+        "context_budget": None if context_budget is None else {"ceiling_tokens": context_budget.ceiling_tokens or inline_max_tokens, "keep_recent": context_budget.keep_recent},
         "turn_budget_seconds": turn_budget_seconds,
         "final_reserve_seconds": final_reserve_seconds,
         "injection_defense": defense.enabled,
@@ -466,6 +470,7 @@ def run_eval(
             read_result_max_chars=read_result_max_chars,
             registry=registry,
             inline_max_tokens=inline_max_tokens,
+            context_budget=context_budget,
         )
         tool_context = {"guild_id": history.guild_id} if task.get("surface") == "discord" else None
         answer: str | None = None
@@ -558,6 +563,14 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         help="unload the general model from Ollama and load it again before every task, so each task runs as if alone; "
         "compare two arms task by task only with this on (ticket 20 #3-D)",
     )
+    parser.add_argument(
+        "--context-budget", action="store_true",
+        help="clear the oldest tool results when the prompt nears the window (ticket 44); default: agent.context_budget in models.yaml, off",
+    )
+    parser.add_argument(
+        "--context-ceiling", type=int,
+        help="with the budget on, the ceiling in tokens instead of the window's (a low one makes a short task reach it); implies --context-budget",
+    )
     return parser.parse_args(argv)
 
 
@@ -587,6 +600,28 @@ def probe_database(settings: Any) -> str:
     from sqlalchemy.engine import make_url
 
     return f"{make_url(str(settings.database_url)).database} (read-only: 2 COUNTs)"
+
+
+def ollama_version(base_url: str) -> str | None:
+    """The Ollama server's version (/api/version), for the manifest: a run on another build is
+    not one to compare with. None when Ollama does not answer or says something else."""
+    import httpx
+
+    try:
+        version = httpx.get(f"{base_url.rstrip('/')}/api/version", timeout=5.0).json().get("version")
+    except (httpx.HTTPError, ValueError, AttributeError):
+        return None
+    return version if isinstance(version, str) and version else None
+
+
+def context_section(agent_section: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
+    """agent.context_budget with the command line over it (ticket 44)."""
+    section = dict(agent_section.get("context_budget") or {})
+    if args.context_budget or args.context_ceiling:
+        section["enabled"] = True
+    if args.context_ceiling:
+        section["ceiling_tokens"] = args.context_ceiling
+    return section
 
 
 def ollama_loaded(base_url: str) -> list[str] | None:
@@ -736,6 +771,7 @@ def main(argv: list[str] | None = None) -> int:
         "final_reserve_seconds": float(agent_section.get("final_reserve_seconds", FINAL_RESERVE_SECONDS)),
         # N1's ceiling from the general config this run serves, as main.py reads it (ticket 28 #4).
         "inline_max_tokens": inline_ceiling(general),
+        "context_budget": context_budget_from_config(context_section(agent_section, args), general),
     }
     defense = InjectionDefense.from_config(config.get("rag", {}), enabled_override=settings.rag_injection_defense_enabled)
 
@@ -754,6 +790,8 @@ def main(argv: list[str] | None = None) -> int:
         },
         "probed": args.probe,
         "ollama_loaded_at_start": loaded_at_start,
+        # Ollama updates itself, and the same commit then scored 58 and 55: two runs compare only on one version.
+        "ollama_version": ollama_version(settings.ollama_base_url),
         # Another job on the same card moves latency, so the scorecard does not
         # compare latency across runs that differ here (coordination, 28/10).
         "gpu_shared": {"yes": True, "no": False}.get(args.gpu_shared),

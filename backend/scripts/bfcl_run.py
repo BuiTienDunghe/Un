@@ -63,6 +63,7 @@ from scripts.agent_eval import (
     build_settings,
     gpu_snapshot,
     ollama_loaded,
+    ollama_version,
     override_general,
     probe_refusal,
     resolve_registry,
@@ -464,11 +465,11 @@ def ollama_facts(base_url: str, model: str) -> dict[str, Any]:
     or build gives numbers that do not compare. None where Ollama does not answer."""
     import httpx
 
-    facts: dict[str, Any] = {"digest": None, "ollama_version": None}
+    # The version is asked on its own (agent_eval.ollama_version), so a failed /api/tags no longer hides it.
+    facts: dict[str, Any] = {"digest": None, "ollama_version": ollama_version(base_url)}
     try:
         tags = httpx.get(f"{base_url.rstrip('/')}/api/tags", timeout=5.0).json().get("models", [])
         facts["digest"] = next((m.get("digest") for m in tags if model in (m.get("name"), m.get("model"))), None)
-        facts["ollama_version"] = httpx.get(f"{base_url.rstrip('/')}/api/version", timeout=5.0).json().get("version")
     except (httpx.HTTPError, ValueError, AttributeError):
         pass
     return facts
