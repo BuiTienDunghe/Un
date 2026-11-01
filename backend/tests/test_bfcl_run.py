@@ -255,6 +255,8 @@ def test_the_summary_counts_why_turns_ended_and_the_coded_errors(tmp_path):
         bfcl, {"multi_turn_base": ["multi_turn_base_77"]}, recording, agent_factory(recording), tmp_path, run_tag="test-run", progress=lambda text: None,
     )
     assert summary["turn_stop_reasons"].get("max_steps", 0) >= 1
+    # cd is not among this task's functions (a vehicle and a posting API): the loop's own coded error.
+    assert summary["error_codes"]["UNKNOWN_TOOL"] >= 3
     assert summary["per_category"]["multi_turn_base"]["tasks"] == 1
     assert bfcl_run.result_path(tmp_path, "multi_turn_base").is_file()
 
@@ -267,7 +269,10 @@ def test_the_summary_counts_why_turns_ended_and_the_coded_errors(tmp_path):
 def test_a_run_that_makes_the_ground_truths_calls_scores_full_marks_through_bfcls_own_checker(tmp_path):
     bfcl = bfcl_run.Bfcl(CLONE)
     plan = {
-        "simple_python": ["simple_python_6"],
+        # simple_python_90 and multiple_10 name their functions with a dot (employee.fetch_data):
+        # the loop sends employee_fetch_data and the scorer's underscore_to_dot maps it back.
+        "simple_python": ["simple_python_6", "simple_python_90"],
+        "multiple": ["multiple_10"],
         "irrelevance": ["irrelevance_0"],
         "multi_turn_base": ["multi_turn_base_77", "multi_turn_base_113"],
     }
@@ -288,7 +293,7 @@ def test_a_run_that_makes_the_ground_truths_calls_scores_full_marks_through_bfcl
     assert done.returncode == 0, done.stdout[-2000:] + done.stderr[-2000:]
     scores = json.loads((tmp_path / "scores.json").read_text(encoding="utf-8"))
     assert {category: (s["correct"], s["total"]) for category, s in scores.items()} == {
-        "simple_python": (1, 1), "irrelevance": (1, 1), "multi_turn_base": (2, 2),
+        "simple_python": (2, 2), "multiple": (1, 1), "irrelevance": (1, 1), "multi_turn_base": (2, 2),
     }, scores
 
 
