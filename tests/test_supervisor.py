@@ -43,6 +43,8 @@ def test_flags_decide_what_starts_like_the_launcher_did() -> None:
     assert {"outbox", "memory"} <= set(names({"DISCORD_MEMORY_INGESTION_ENABLED": "true"}))
     assert {"decided", "decided-worker"} <= set(names({"DECIDED_URL": "http://127.0.0.1:8377"}))
     assert "decided" not in names({"DECIDED_URL": ""})
+    assert "voice" in names({"VOICE_URL": "http://127.0.0.1:8378"})
+    assert "voice" not in names({"VOICE_URL": ""}) and "voice" not in names({})
 
 
 def test_env_file_reader_skips_comments_and_quotes(tmp_path: Path) -> None:

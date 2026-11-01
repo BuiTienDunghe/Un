@@ -431,6 +431,16 @@ class LocalAgentClient:
             raise BackendResponseError("Backend returned an empty image reading.")
         return answer.strip()
 
+    async def transcribe_voice(self, audio_base64: str) -> str:
+        """What the backend's speech service heard in one recording. Empty when it heard no words."""
+        response = await self._authorized_post(
+            "/voice/transcribe", {"audio_base64": audio_base64}, "Voice transcription", timeout=180.0,
+        )
+        text = response.json().get("text")
+        if not isinstance(text, str):
+            raise BackendResponseError("Backend returned an invalid voice transcription.")
+        return text.strip()
+
     async def record_history_message(self, payload: dict) -> None:
         """Job 1 (sổ gốc): one write per heard message in a listened channel.
         Callers fire-and-forget and swallow failures — the answering path
