@@ -1,0 +1,65 @@
+{
+  "run_id": "v1-base-r2",
+  "runner": "bfcl-run-v1",
+  "commit": "836e4298a4a3dedd30b9cb021c29c443e79fa33d",
+  "worktree_dirty": false,
+  "bfcl_commit": "6ea57973c7a6097fd7c5915698c54c17c5b1b6c8",
+  "bfcl_expected": "6ea5797",
+  "ids_file": "data\\benchmarks\\bfcl\\ids_v1.json",
+  "ids_sha256": "b50539a1376288d264cff4c077b6fb84242fd5c273871dfdeb648309ceb76eaa",
+  "tasks": {
+    "simple_python": 10,
+    "multiple": 8,
+    "irrelevance": 7,
+    "multi_turn_base": 5,
+    "multi_turn_miss_func": 3
+  },
+  "model": "qwen3.5:9b",
+  "digest": "6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7",
+  "ollama_version": "0.40.13",
+  "general_version": {
+    "requested_id": "general-v0",
+    "loaded_id": "general-v0",
+    "status": "active",
+    "verified": true
+  },
+  "probed": true,
+  "ollama_loaded_at_start": [],
+  "gpu_shared": false,
+  "gpu_at_start": {
+    "utilization_percent": 0,
+    "memory_used_mib": 650,
+    "processes": [
+      "python.exe"
+    ]
+  },
+  "temperature": 0.0,
+  "seed": 42,
+  "think": false,
+  "num_ctx": 16384,
+  "agent_config": {
+    "max_steps": 3,
+    "tool_result_max_chars": 2400,
+    "turn_budget_seconds": 90.0,
+    "final_reserve_seconds": 20.0
+  },
+  "agent_guide_sha256": "e7fec3a305a9467e461323ec9073e6bd3818ed388801f3b7019a0a1f66d9a537",
+  "persona_prompt": null,
+  "history_between_turns": "user and answer text only",
+  "single_turn_scored_calls": "first model round only",
+  "unload_between_tasks": true,
+  "started_at": "2026-11-01T16:02:56.928245+00:00",
+  "argv": [
+    "--probe",
+    "--env-file",
+    "C:/Users/dungbt06/local-ai-core/.env",
+    "--run-id",
+    "v1-base-r2",
+    "--gpu-shared",
+    "no",
+    "--unload-between-tasks",
+    "--out",
+    "C:\\Users\\dungbt06\\tools\\bfcl-runs"
+  ],
+  "finished_at": "2026-11-01T16:08:27.952220+00:00"
+}
