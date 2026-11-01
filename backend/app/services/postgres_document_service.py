@@ -423,6 +423,8 @@ class PostgresDocumentService:
             if not row: raise DocumentNotFoundError(document_id)
             if row.status == "deleted": return
             row.status, row.deleted_requested_at = "deleting", datetime.now(UTC)
+            # uq_documents_content_hash_active holds a deleting row too; the same file may come back before cleanup.
+            row.content_hash, row.display_filename_normalized = None, None
             PostgresDocumentRepository(session).create_document_delete_job(document_id, self.job_max_attempts)
         self._notify_corpus_change()
 

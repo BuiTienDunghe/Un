@@ -24,6 +24,19 @@ def test_upload_deduplicates_identical_content(client):
     assert len(first["content_hash"]) == 64
 
 
+def test_a_file_deleted_a_moment_ago_uploads_as_a_new_document(client):
+    """The row stays 'deleting' until the daily cleanup; it no longer owns its bytes or its name."""
+    first = client.post("/documents/upload", files={"file": ("a.txt", b"deleted then back", "text/plain")}).json()
+    assert client.delete(f"/documents/{first['document_id']}").status_code == 204
+
+    again = client.post("/documents/upload", files={"file": ("a.txt", b"deleted then back", "text/plain")})
+
+    assert again.status_code == 201, again.text
+    assert again.json()["duplicate"] is False
+    assert again.json()["document_id"] != first["document_id"]
+    assert client.get(f"/documents/{again.json()['document_id']}/status").json()["status"] == "uploaded"
+
+
 def test_replace_source_creates_a_new_ingestion_version(client, mock_ollama, monkeypatch):
     monkeypatch.setattr("app.stores.qdrant_store.QdrantStore.upsert_chunks", lambda *args, **kwargs: None)
     upload = client.post("/documents/upload", files={"file": ("a.txt", b"first source", "text/plain")}).json()

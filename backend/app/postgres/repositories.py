@@ -28,6 +28,10 @@ class InvalidStateTransition(ValueError):
     pass
 
 
+# A row being removed no longer owns its bytes or its name: cleanup may be a day away.
+GONE = ("deleted", "deleting")
+
+
 class PostgresDocumentRepository:
     """Short PostgreSQL transactions for the versioned document pipeline."""
 
@@ -38,13 +42,13 @@ class PostgresDocumentRepository:
         return self.session.get(Document, document_id)
 
     def find_document_by_hash(self, content_hash: str) -> Document | None:
-        return self.session.scalar(select(Document).where(Document.content_hash == content_hash, Document.status != "deleted"))
+        return self.session.scalar(select(Document).where(Document.content_hash == content_hash, Document.status.not_in(GONE)))
 
     def find_document_by_display_filename(self, normalized_filename: str) -> Document | None:
-        result = self.session.scalar(select(Document).where(Document.display_filename_normalized == normalized_filename, Document.status != "deleted"))
+        result = self.session.scalar(select(Document).where(Document.display_filename_normalized == normalized_filename, Document.status.not_in(GONE)))
         # Pre-identity rows from migrations before 20260719_10 may not have a
         # normalized key.  The fallback keeps them visible until renamed.
-        return result or self.session.scalar(select(Document).where(func.lower(func.trim(Document.original_filename)) == normalized_filename, Document.status != "deleted"))
+        return result or self.session.scalar(select(Document).where(func.lower(func.trim(Document.original_filename)) == normalized_filename, Document.status.not_in(GONE)))
 
     def create_upload(self, document_id: str, filename: str, stored_filename: str, mime_type: str | None, file_size: int, content_hash: str, normalized_filename: str | None = None) -> tuple[Document, DocumentVersion, IngestionRun]:
         document = Document(id=document_id, original_filename=filename, display_filename_normalized=normalized_filename, stored_filename=stored_filename, mime_type=mime_type, file_size=file_size, content_hash=content_hash, status="uploaded")
