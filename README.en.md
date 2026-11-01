@@ -72,7 +72,10 @@ the experiments that were run and rejected.
 4. A retrieval change becomes the default only after the eval gate passes. No exceptions
    for "it looks better".
 5. A fixed inference budget: no feature may add a generation call to the default answer
-   path.
+   path, with three exceptions of at most one extra call per turn each: rewriting a
+   follow-up question before retrieval, one retry when an answer states figures the turn
+   never saw, and one retry when the model writes a tool call that cannot be parsed. Both
+   retries stay inside the turn's time budget, and tool rounds have a fixed cap.
 6. Every autonomous action is auditable and revocable.
 7. Measure before changing a schema, on real data, before the migration is written.
 
