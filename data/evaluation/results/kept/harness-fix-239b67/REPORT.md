@@ -46,7 +46,7 @@ Kết luận: giữ nguyên bộ kiểm tra. Một lần bắt nhầm (tên thá
 | Đối chứng `hf-c-*` (`91562ce`) | BFCL | 26/33 | — | 3 lượt dừng vì `max_steps` |
 | | Agent Eval | 54/66 | — | |
 | **H1** lịch sử giữ kết quả công cụ | BFCL | **27/33** | 128 hỏng→đạt; không bài nào đạt→hỏng | `retweet(10)` ở 77 lượt 2 như dự đoán, 77 vẫn hỏng vì lượt 0; tăng 12 % token vào (đỉnh một vòng 7 515, dưới 16 384) |
-| **H2** trần 4 vòng | BFCL | **27/33** | 180 hỏng→đạt; không bài nào đạt→hỏng | `max_steps` 3→1 lượt. **Dự đoán sai**: tôi dự đoán không đổi điểm. Câu trả lời lượt 0 đổi sang tiếng Anh nên chưa chắc do trần |
+| **H2** trần 4 vòng | BFCL | **27/33** | 180 hỏng→đạt; không bài nào đạt→hỏng | `max_steps` 3→1 lượt. **Dự đoán sai**: tôi dự đoán không đổi điểm. Ở 180 lượt 0 kết thúc bằng vòng `chat_tools` tự nhiên thay vì câu kết ép buộc (lời nhắc "Đã dùng tối đa…"), và câu trả lời sang tiếng Anh. Lợi vì thêm một vòng hay vì tránh lời nhắc ép buộc thì chưa tách được |
 | **H1+H2** | BFCL | **28/33** | 128, 180 hỏng→đạt; không bài nào đạt→hỏng | 174 đi xa hơn (gọi `SFO→CIA`, đặt vé ở lượt 2) nhưng vẫn hỏng vì lượt 1 không gọi `book_flight` |
 | **H3** (mẫu rộng) | Agent Eval | **55/66** | doc-25 hỏng→đạt; không bài nào đạt→hỏng | bắn ở doc-17, doc-25, doc-46: **hai lần bắn nhầm** (doc-17 cấm mọi công cụ; may mà lần thử lại không gọi) |
 | **H3b** (mẫu hẹp, đăng ký sau khi thấy H3) | Agent Eval | **55/66** | doc-25 hỏng→đạt; 65/66 trùng đối chứng | chỉ doc-25 bắn, đúng dự đoán; doc-25 gọi `search_documents` và trả đúng "quản trị", "hai bước" |
@@ -68,8 +68,9 @@ Thời gian trung vị Agent Eval 4,5 s (đối chứng) so 5,5 s (H3b, nhưng c
 ## Chưa làm / giới hạn
 
 - Một lần chạy mỗi bên, một seed (42). Không biết lợi H1, H2 có giữ khi đổi seed; bộ chạy BFCL ghim seed, muốn thử phải thêm cờ.
-- Chưa bật cờ nào trong đường chạy thật; `models.yaml` không đổi. Chưa chạy bộ test có DB (theo luật). Chạy chọn lọc 67 test (`test_agent_lookup_check`, `test_agent_answer_check`, `test_call_budget`, `test_bfcl_run` kể cả bộ chấm thật), qua; 255 test agent không DB khác qua trước khi sửa H3b.
+- Chưa bật cờ nào trong đường chạy thật; `models.yaml` không đổi. Chưa chạy bộ test có DB (theo luật). Chạy chọn lọc không DB: `test_agent_lookup_check`, `test_agent_answer_check`, `test_call_budget` (có thêm ca xấu nhất với H3 bật, chạm trần `max_steps + 4` đúng), `test_bfcl_run` kể cả bộ chấm thật: 52 qua ở lần cuối; 255 test agent không DB khác (eval, turn_budget, tool_call_error, progress, context_budget, pastes, scorecard) qua trước khi thu hẹp mẫu H3b, chưa chạy lại sau đó.
 - Không sửa: "báo đã làm mà không gọi công cụ" (174 lượt 5), và câu kết ép buộc ở `max_steps` còn khẳng định điều chưa kiểm. Hai chỗ này là lỗi harness thật, ngoài ba thay đổi đã đăng ký.
+- Luật 5 ở `README.en.md` và docstring `call_budget.py` đã ghi ngoại lệ thứ năm (tắt, chưa được bật khi chủ dự án chưa sửa luật); `README.md` tiếng Việt không có bản của luật này.
 - Mẫu H3b đo trên đúng bộ 66 bài đã thấy H3 bắn nhầm: chỉ chứng minh không bắn nhầm ở đó.
 - `worktree_dirty: true` trong manifest chỉ vì thư mục kết quả chưa commit lúc chạy; mã nguồn đã commit (`a2bc2c8`, H3b `b0a0887`).
 - Thư mục `C:\tb1`… của nhân viên trước không đụng tới.
