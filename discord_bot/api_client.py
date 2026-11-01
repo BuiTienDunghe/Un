@@ -87,6 +87,21 @@ class BackendAgentMemory:
 
 
 @dataclass(frozen=True)
+class BackendReminder:
+    """A reminder as the backend hands it over (ticket 48). `late_seconds` is set on a claim only."""
+
+    reminder_id: str
+    short_id: str
+    guild_id: str
+    channel_id: str
+    creator_id: str
+    text: str
+    due_at: str
+    status: str
+    late_seconds: int = 0
+
+
+@dataclass(frozen=True)
 class BackendDiscordSession:
     session_id: str
     backend_conversation_id: str
@@ -461,6 +476,78 @@ class LocalAgentClient:
             payload,
             "Discord history delete",
         )
+
+    async def claim_reminders(self) -> list[BackendReminder]:
+        """Reminders whose hour has come; the backend counts each as being sent from now on."""
+        response = await self._authorized_post("/api/discord/reminders/claim", {}, "Reminder claim")
+        return self._reminders(response)
+
+    async def reminder_sent(self, reminder_id: str, discord_message_id: str | None) -> None:
+        await self._authorized_post(
+            f"/api/discord/reminders/{reminder_id}/sent", {"discord_message_id": discord_message_id}, "Reminder delivery receipt",
+        )
+
+    async def reminder_failed(self, reminder_id: str, error: str, *, retryable: bool) -> None:
+        await self._authorized_post(
+            f"/api/discord/reminders/{reminder_id}/failed", {"error": error[:2_000], "retryable": retryable}, "Reminder failure report",
+        )
+
+    async def list_reminders(self, guild_id: str, author_id: str) -> list[BackendReminder]:
+        """The member's reminders that have not gone out yet, plus the ones missed in the last day."""
+
+        async def send() -> httpx.Response:
+            try:
+                return await self._http.get(
+                    "/api/discord/reminders", params={"guild_id": guild_id, "author_id": author_id}, headers=self._headers(),
+                )
+            except httpx.TimeoutException as error:
+                raise BackendTimeoutError("Backend request timed out. Please try again later.") from error
+            except httpx.HTTPError as error:
+                raise BackendUnavailableError("Backend is unavailable. Please try again later.") from error
+
+        response = await send()
+        if response.status_code == 401:
+            self._jwt = None
+            await self._refresh_jwt()
+            response = await send()
+        if response.status_code == 401:
+            raise BackendAuthenticationError("Backend authentication was rejected.")
+        if response.status_code >= 500:
+            raise BackendUnavailableError("Backend is unavailable. Please try again later.")
+        if response.status_code >= 400:
+            raise BackendResponseError(self._error_message(response))
+        return self._reminders(response)
+
+    async def cancel_reminder(self, reference: str, guild_id: str, requester_id: str) -> BackendReminder:
+        """The backend lets only the member who created a reminder cancel it."""
+        response = await self._authorized_post(
+            f"/api/discord/reminders/{reference}/cancel", {"guild_id": guild_id, "requester_id": requester_id}, "Reminder cancel",
+        )
+        reminder = self._reminder(self._json_object(response, "reminder cancel"))
+        if reminder is None:
+            raise BackendResponseError("Backend returned an invalid reminder.")
+        return reminder
+
+    @classmethod
+    def _reminders(cls, response: httpx.Response) -> list[BackendReminder]:
+        try:
+            payload = response.json()
+        except ValueError as error:
+            raise BackendResponseError("Backend returned an invalid response for reminders.") from error
+        if not isinstance(payload, list):
+            raise BackendResponseError("Backend returned an invalid response for reminders.")
+        return [reminder for item in payload if (reminder := cls._reminder(item)) is not None]
+
+    @staticmethod
+    def _reminder(item: object) -> BackendReminder | None:
+        """A malformed row is dropped: one bad row must not stop the others being delivered."""
+        if not isinstance(item, dict):
+            return None
+        fields = [item.get(key) for key in ("id", "short_id", "guild_id", "channel_id", "creator_id", "text", "due_at", "status")]
+        if not all(isinstance(value, str) and value for value in fields):
+            return None
+        late = item.get("late_seconds")
+        return BackendReminder(*fields, late_seconds=late if isinstance(late, int) and late > 0 else 0)
 
     async def execute_discord_turn(self, turn_id: str) -> BackendDiscordTurnExecution:
         response = await self._authorized_post(

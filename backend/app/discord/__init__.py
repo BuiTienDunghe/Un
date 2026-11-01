@@ -20,12 +20,12 @@ from typing import Any
 
 
 def register_routes(app: Any, *, admin_guard: list[Any]) -> None:
-    """The five Discord routers, all behind the admin guard. Their prefixes
+    """The Discord routers, all behind the admin guard. Their prefixes
     (/api/bot, /api/condensations, /api/memory-review, /api/discord/...) overlap no
     core route, so where they are included does not change which route answers."""
-    from app.discord.routers import bot, condensations, history, memory_review, message_labels, sessions
+    from app.discord.routers import bot, condensations, history, memory_review, message_labels, reminders, sessions
 
-    for module in (bot, memory_review, message_labels, condensations, sessions, history):
+    for module in (bot, memory_review, message_labels, condensations, sessions, history, reminders):
         app.include_router(module.router, dependencies=admin_guard)
 
 
@@ -37,7 +37,8 @@ def register_services(app: Any, settings: Any, postgres_sessions: Any, *, projec
     from app.discord.condensation_service import DiscordCondensationService
     from app.discord.history_service import DiscordHistoryService
     from app.discord.memory_completion_service import DiscordMemoryCompletionService
-    from app.discord import remember_tool
+    from app.discord import remember_tool, remind_tool
+    from app.discord.reminders import ReminderService, SqlReminderStore
     from app.discord.message_labels import MessageLabelService
     from app.discord.memory_review_service import DiscordMemoryReviewService
     from app.discord.session_service import DiscordSessionService
@@ -102,5 +103,15 @@ def register_services(app: Any, settings: Any, postgres_sessions: Any, *, projec
     state.message_label_service = MessageLabelService(postgres_sessions)
     agent_tools.register_jokes(state.agent_service.registry, state.message_label_service)
     state.discord_turn_service.message_labels = state.message_label_service
+    # Ticket 48: reminders. The service always exists, so the routes answer REMINDERS_DISABLED instead
+    # of failing; the tool is offered only when switched on, so the default tool list is unchanged.
+    allowlist = state.discord_turn_service.agent_tools_guild_allowlist
+    state.reminder_service = ReminderService(
+        SqlReminderStore(postgres_sessions),
+        enabled=settings.discord_reminders_enabled,
+        guild_allowed=lambda guild_id: allowlist is None or guild_id in allowlist,
+    )
+    if settings.discord_reminders_enabled:
+        remind_tool.register(state.agent_service.registry, state.reminder_service, postgres_sessions)
     # P3-2: dashboard start/stop for the compose-managed Discord bot.
     state.bot_control_service = BotControlService(project_root)
