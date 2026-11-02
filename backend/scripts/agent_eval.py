@@ -584,6 +584,10 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         "--context-ceiling", type=int,
         help="with the budget on, the ceiling in tokens instead of the window's (a low one makes a short task reach it); implies --context-budget",
     )
+    parser.add_argument(
+        "--max-steps", type=int,
+        help="tool rounds per turn instead of agent.max_steps: what the context budget needs on tasks that read many times",
+    )
     return parser.parse_args(argv)
 
 
