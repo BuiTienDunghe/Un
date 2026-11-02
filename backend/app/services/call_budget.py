@@ -37,18 +37,25 @@ CHAT_CALL_CAP = 1
 RAG_CALL_CAP = 2
 
 
-def agent_call_cap(max_steps: int, lookup_check: bool = False, read_on_check: bool = False) -> int:
+def agent_call_cap(max_steps: int, lookup_check: bool = False, read_on_check: bool = False, read_rest: bool = False) -> int:
     """`max_steps` tool rounds, plus one round for each of the two retries (figures the turn
     never saw; a tool call that would not parse), plus the forced answer when the rounds run out.
     The lookup check (off by default, harness-fix round) is one more retry, so one more call;
-    so is the read-on check (off by default, 02/11)."""
-    return max_steps + 3 + (1 if lookup_check else 0) + (1 if read_on_check else 0)
+    so is the read-on check (off by default, 02/11), and the round that answers from what the
+    code read (off by default, 03/11)."""
+    return max_steps + 3 + (1 if lookup_check else 0) + (1 if read_on_check else 0) + (1 if read_rest else 0)
 
 
 def long_input_call_cap(parts: int) -> int:
     """Reading a paste in parts (ticket 45, README.en rule 5's fourth exception): one call per
     part read, and `parts` is bounded by long_input.LONG_INPUT_MAX_PARTS. Its calls are counted
     in a budget nested inside the agent's, so they never eat into agent_call_cap."""
+    return parts
+
+
+def read_rest_call_cap(parts: int) -> int:
+    """The code reading the rest of a document (README.en rule 5's sixth exception): one call per
+    part, `parts` bounded by document_reading.READ_REST_MAX_PARTS, nested like long_input's."""
     return parts
 
 

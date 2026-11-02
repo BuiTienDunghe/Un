@@ -2,8 +2,6 @@
 there goes back once to read on. Off by default. No model, no GPU."""
 from __future__ import annotations
 
-import json
-
 import pytest
 
 from app.services.agent_service import (
@@ -11,9 +9,10 @@ from app.services.agent_service import (
     READ_ON_GAVE_UP,
     READ_ON_RETRY,
     AgentService,
-    _documents_left_unread,
 )
 from app.services.call_budget import agent_call_cap
+from app.services.document_reading import documents_left_unread
+from app.services.injection_defense import InjectionDefense
 
 GAVE_UP = "Trong các đoạn trích tôi chưa thấy số tiền. Bạn có muốn tôi đọc toàn văn không?"
 FOUND = "Hội phí do ban chấp hành quyết định."
@@ -132,12 +131,21 @@ def test_what_does_not(text):
     assert not READ_ON_GAVE_UP.search(text)
 
 
-def test_only_the_latest_read_of_a_document_counts():
-    read = lambda following: {"role": "tool", "content": json.dumps({"document_id": "d", "next_from_chunk": following})}
-    assert _documents_left_unread([read(None), read(3)], {"d"}) is True
-    assert _documents_left_unread([read(3), read(None)], {"d"}) is False
-    assert _documents_left_unread([{"role": "tool", "content": "không phải JSON"}], {"d"}) is True
-    assert _documents_left_unread([], set()) is False
+def test_what_is_left_unread_comes_from_the_turns_own_record():
+    assert documents_left_unread({"d": {"seen": {0}, "total": 2}}) == ["d"]
+    assert documents_left_unread({"d": {"seen": {0, 1}, "total": 2}}) == []
+    assert documents_left_unread({"d": {"seen": set(), "total": None}}) == ["d"]
+    assert documents_left_unread({}) == []
+
+
+def test_a_document_read_to_its_end_counts_with_the_defense_on():
+    # The defense wraps every tool result in markers; reading the state back out of the wrapped
+    # text saw no JSON, so a document read to its end still counted as unread.
+    router = Router([SEARCH, call("read_document", {"document_id": "doc-1", "from_chunk": 0, "n": 2}), final(GAVE_UP)])
+    agent = AgentService(router, Retrieval(), None, document_reader=Reader(), read_on_check=True, defense=InjectionDefense(enabled=True))
+    answer, _, steps = agent.run([{"role": "system", "content": "Bạn là Ún."}, {"role": "user", "content": "Hội phí bao nhiêu?"}])
+    assert answer == GAVE_UP and len(router.prompts) == 3
+    assert READ_ON_CHECK_STEP not in [s["kind"] for s in steps]
 
 
 def test_the_cap_grows_by_one():

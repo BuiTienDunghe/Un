@@ -30,6 +30,7 @@ from app.services.calculator import CalculationError, calculate
 from app.services.call_budget import agent_call_cap, turn_call_budget
 from app.services.context_budget import ContextBudget, ContextWindow
 from app.services.answer_figures import grounding_summary, retry_instruction, turn_texts, unsupported_figures
+from app.services.document_reading import READ_REST_STEP, documents_left_unread, note_read, read_rest
 from app.services.long_input import read_long_input
 from app.services.pastes import INLINE_MAX_TOKENS, is_paste, read_paste, take_pastes
 from app.services.injection_defense import InjectionDefense
@@ -248,20 +249,12 @@ READ_ON_RETRY = (
 DOCUMENT_TOOLS = ("search_documents", "read_document")
 
 
-def _documents_left_unread(working: list[dict[str, Any]], readable: Any) -> bool:
-    """Whether a document this turn may open has not been read to its end: a read result's
-    next_from_chunk is null at the end, and only the latest read of a document counts."""
-    finished: set[str] = set()
-    for message in working:
-        if message.get("role") != "tool":
-            continue
-        try:
-            result = json.loads(str(message.get("content") or ""))
-        except ValueError:
-            continue
-        if isinstance(result, dict) and "next_from_chunk" in result:
-            (finished.add if result["next_from_chunk"] is None else finished.discard)(str(result.get("document_id")))
-    return bool(set(readable) - finished)
+def _last_user_text(messages: list[dict[str, Any]]) -> str:
+    """What the speaker asked this turn, without the note an attached image adds."""
+    for message in reversed(messages):
+        if message.get("role") == "user":
+            return str(message.get("content") or "").split(IMAGE_NOTE, 1)[0].strip()
+    return ""
 
 
 THINKING_LABEL = "Đang suy nghĩ…"
@@ -387,6 +380,7 @@ class AgentService:
         long_input: bool = False,
         lookup_check: bool = False,
         read_on_check: bool = False,
+        read_rest: bool = False,
     ) -> None:
         self.defense = defense or InjectionDefense(enabled=False)
         self.router = router
@@ -411,6 +405,8 @@ class AgentService:
         # Harness-fix round: off by default; the lookup check above.
         self.lookup_check = bool(lookup_check)
         self.read_on_check = bool(read_on_check)
+        # The code reads what the model gave up on (document_reading.py). Needs a store to read from.
+        self.read_rest = bool(read_rest) and document_reader is not None
         self.turn_budget_seconds = max(1.0, float(turn_budget_seconds))
         self.final_reserve_seconds = min(max(0.0, float(final_reserve_seconds)), self.turn_budget_seconds)
         self.clock = clock
@@ -425,7 +421,7 @@ class AgentService:
         on_step: Callable[[dict[str, object]], None] | None = None,
     ) -> tuple[str, str, list[dict[str, object]]]:
         """The loop below, with its model calls counted against agent_call_cap (ticket 43)."""
-        with turn_call_budget("agent", agent_call_cap(self.max_steps, self.lookup_check, self.read_on_check)):
+        with turn_call_budget("agent", agent_call_cap(self.max_steps, self.lookup_check, self.read_on_check, self.read_rest)):
             return self._run(messages, tool_context, on_step)
 
     def _run(
@@ -471,6 +467,9 @@ class AgentService:
             # What read_webpage may open: a URL the speaker wrote, and what web_search adds.
             "web_urls": {url.rstrip(".,;:!?)]}") for message in working[-1:] if message.get("role") == "user" for url in re.findall(r"https?://\S+", str(message.get("content") or "").split(IMAGE_NOTE, 1)[0])},
             "pastes": pastes,
+            # Which chunks of which document this turn has shown the model, and each one's name.
+            "read_state": {},
+            "document_names": {},
         }
 
         steps: list[dict[str, object]] = []
@@ -503,6 +502,7 @@ class AgentService:
         # And the lookup check's: one retry, for a turn that has called no tool at all.
         lookup_retried = False
         read_on_retried = False
+        read_rest_tried = False
         while round_index < rounds:
             round_index += 1
             left = self.turn_budget_seconds - (self.clock() - turn_started)
@@ -563,14 +563,32 @@ class AgentService:
                     lookup_retried, rounds = True, rounds + 1
                     emit(LOOKUP_CHECK_STEP, label=LOOKUP_CHECK_LABEL)
                     continue
-                if (
-                    self.read_on_check and not read_on_retried
-                    and not (messages and is_paste(messages[-1]))
+                gave_up_on_documents = (
+                    not (messages and is_paste(messages[-1]))
                     and any(step["kind"] == "tool_call" and step["tool_name"] in DOCUMENT_TOOLS for step in steps)
                     and READ_ON_GAVE_UP.search(answer)
-                    and _documents_left_unread(working, tool_context["readable_documents"])
+                    and documents_left_unread(tool_context["read_state"])
                     and self.turn_budget_seconds - (self.clock() - turn_started) >= self.final_reserve_seconds
-                ):
+                )
+                if self.read_rest and not read_rest_tried and gave_up_on_documents:
+                    read_rest_tried = True
+                    reading_rest = read_rest(
+                        self.router, self.document_reader, _last_user_text(messages), tool_context["read_state"], tool_context["document_names"],
+                        window.view(working), self.inline_max_tokens, lambda: self.turn_budget_seconds - (self.clock() - turn_started),
+                        self.final_reserve_seconds, emit, steps, self.defense,
+                        lambda name, arguments: arguments_shape(name, arguments, self.registry.declared()),
+                    )
+                    if reading_rest is not None:
+                        # The rejected attempt reached no one and is not kept: the model answers from the notes, not against itself.
+                        steps.append({
+                            "kind": READ_REST_STEP, "tool_name": None, "arguments": None, "content": None,
+                            "latency_ms": round_latency, **last,
+                        })
+                        working.append({"role": "user", "content": reading_rest.message(self.defense.wrap_tool_result if self.defense.enabled else None)})
+                        closing += reading_rest.closing()
+                        read_on_retried, rounds = True, rounds + 1
+                        continue
+                if self.read_on_check and not read_on_retried and gave_up_on_documents:
                     # As the lookup check: the rejected attempt reached no one and vouches for nothing.
                     steps.append({
                         "kind": READ_ON_CHECK_STEP, "tool_name": None, "arguments": None, "content": None,
@@ -825,6 +843,9 @@ class AgentService:
                 item["chunk_index"] = chunk.get("chunk_index")
                 if isinstance(readable, set):
                     readable.add(item["document_id"])
+                if tool_context and "read_state" in tool_context:
+                    tool_context["read_state"].setdefault(item["document_id"], {"seen": set(), "total": None})
+                    tool_context["document_names"].setdefault(item["document_id"], str(chunk.get("filename") or item["document_id"]))
             item["excerpt"] = _clip(content, SEARCH_EXCERPT_CHARS)
             # How long the whole chunk is, so the model knows the excerpt stopped short.
             item["chars"] = len(content)
@@ -864,7 +885,10 @@ class AgentService:
                     "total_chunks": total,
                 }), None, None
             return self._dump({"result": "đã hết tài liệu", "total_chunks": total}), None, None
-        return self._fit_chunks(found, total), None, None
+        fitted = self._fit_chunks(found, total)
+        if document_id not in pastes and tool_context and "read_state" in tool_context:
+            note_read(tool_context["read_state"], document_id, [chunk["chunk_index"] for chunk in json.loads(fitted)["chunks"]], total)
+        return fitted, None, None
 
     def _fit_chunks(self, found: dict[str, object], total: int) -> str:
         """As many whole chunks as fit read_result_max_chars, with next_from_chunk at the
