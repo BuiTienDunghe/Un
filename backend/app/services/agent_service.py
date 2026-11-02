@@ -503,6 +503,36 @@ class AgentService:
         lookup_retried = False
         read_on_retried = False
         read_rest_tried = False
+
+        def gave_up(answer: str) -> bool:
+            """Found documents, left some unread, and said the fact is not there, with time left to do something about it."""
+            return bool(
+                not (messages and is_paste(messages[-1]))
+                and any(step["kind"] == "tool_call" and step["tool_name"] in DOCUMENT_TOOLS for step in steps)
+                and READ_ON_GAVE_UP.search(answer)
+                and documents_left_unread(tool_context["read_state"])
+                and self.turn_budget_seconds - (self.clock() - turn_started) >= self.final_reserve_seconds
+            )
+
+        def read_the_rest(latency_ms: int) -> str | None:
+            """The code reads what is left and puts the notes in `working`; returns the line for the
+            answer, None when nothing could be read. The rejected attempt reached no one and is not
+            kept: the model answers from the notes, not against itself."""
+            reading_rest = read_rest(
+                self.router, self.document_reader, _last_user_text(messages), tool_context["read_state"], tool_context["document_names"],
+                window.view(working), self.inline_max_tokens, lambda: self.turn_budget_seconds - (self.clock() - turn_started),
+                self.final_reserve_seconds, emit, steps, self.defense,
+                lambda name, arguments: arguments_shape(name, arguments, self.registry.declared()),
+            )
+            if reading_rest is None:
+                return None
+            steps.append({
+                "kind": READ_REST_STEP, "tool_name": None, "arguments": None, "content": None,
+                "latency_ms": latency_ms, **last,
+            })
+            working.append({"role": "user", "content": reading_rest.message(self.defense.wrap_tool_result if self.defense.enabled else None)})
+            return reading_rest.closing()
+
         while round_index < rounds:
             round_index += 1
             left = self.turn_budget_seconds - (self.clock() - turn_started)
@@ -563,29 +593,12 @@ class AgentService:
                     lookup_retried, rounds = True, rounds + 1
                     emit(LOOKUP_CHECK_STEP, label=LOOKUP_CHECK_LABEL)
                     continue
-                gave_up_on_documents = (
-                    not (messages and is_paste(messages[-1]))
-                    and any(step["kind"] == "tool_call" and step["tool_name"] in DOCUMENT_TOOLS for step in steps)
-                    and READ_ON_GAVE_UP.search(answer)
-                    and documents_left_unread(tool_context["read_state"])
-                    and self.turn_budget_seconds - (self.clock() - turn_started) >= self.final_reserve_seconds
-                )
+                gave_up_on_documents = gave_up(answer)
                 if self.read_rest and not read_rest_tried and gave_up_on_documents:
                     read_rest_tried = True
-                    reading_rest = read_rest(
-                        self.router, self.document_reader, _last_user_text(messages), tool_context["read_state"], tool_context["document_names"],
-                        window.view(working), self.inline_max_tokens, lambda: self.turn_budget_seconds - (self.clock() - turn_started),
-                        self.final_reserve_seconds, emit, steps, self.defense,
-                        lambda name, arguments: arguments_shape(name, arguments, self.registry.declared()),
-                    )
-                    if reading_rest is not None:
-                        # The rejected attempt reached no one and is not kept: the model answers from the notes, not against itself.
-                        steps.append({
-                            "kind": READ_REST_STEP, "tool_name": None, "arguments": None, "content": None,
-                            "latency_ms": round_latency, **last,
-                        })
-                        working.append({"role": "user", "content": reading_rest.message(self.defense.wrap_tool_result if self.defense.enabled else None)})
-                        closing += reading_rest.closing()
+                    told = read_the_rest(round_latency)
+                    if told is not None:
+                        closing += told
                         read_on_retried, rounds = True, rounds + 1
                         continue
                 if self.read_on_check and not read_on_retried and gave_up_on_documents:
@@ -719,6 +732,20 @@ class AgentService:
             # raises as before, because "not in time" would then be a false reply.
             consume_usage()
             answer, stop_reason = self._out_of_time_reply(), STOP_TURN_BUDGET_EXHAUSTED
+        # Out of rounds with documents half read is the same giving up: ctx-05..07 spent their
+        # rounds on two reads and were told to answer from them. If the second answer runs out of
+        # time, the first still stands.
+        if self.read_rest and not read_rest_tried and stop_reason == STOP_MAX_STEPS and gave_up(answer):
+            read_rest_tried = True
+            told = read_the_rest(int((perf_counter() - started) * 1000))
+            if told is not None:
+                try:
+                    with call_within(self.turn_budget_seconds - (self.clock() - turn_started)):
+                        answer, model_used = self.router.chat("general", window.view(working))
+                    usage = last = consume_usage()
+                    closing += told
+                except ModelCallTimeoutError:
+                    consume_usage()
         # Out of rounds or time, there is no retry left: the check only marks the trace.
         # The fixed out-of-time reply is ours, not the model's, and is not checked.
         check = self._check_answer(answer, working, checked_out) if stop_reason != STOP_TURN_BUDGET_EXHAUSTED else {"trace": {}}

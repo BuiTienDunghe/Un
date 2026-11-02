@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.llm_clients.deadline import ModelCallTimeoutError
 from app.services.agent_service import AgentService
 from app.services.call_budget import OVERRUNS, agent_call_cap
 from app.services.document_reading import DOCUMENT_PART_STEP, READ_REST_STEP
@@ -30,8 +31,9 @@ def call(name: str, arguments: dict) -> dict:
 class Router:
     """`rounds` for the loop's calls; a note call (router.chat with options) answers `note`."""
 
-    def __init__(self, rounds, note=NOTE, on_note=None):
+    def __init__(self, rounds, note=NOTE, on_note=None, forced=()):
         self.rounds = list(rounds)
+        self.forced = list(forced)
         self.note = note
         self.on_note = on_note
         self.prompts: list[list[dict]] = []
@@ -44,7 +46,8 @@ class Router:
     def chat(self, role, messages, options=None):
         if options is None:
             self.prompts.append([dict(message) for message in messages])
-            return "hết lượt", "fake"
+            reply = self.forced.pop(0) if self.forced else "hết lượt"
+            return (reply() if callable(reply) else reply), "fake"
         self.note_prompts.append([dict(message) for message in messages])
         if self.on_note:
             self.on_note()
@@ -84,6 +87,7 @@ class Reader:
 
 
 SEARCH = call("search_documents", {"query": "hội phí"})
+READ_FIRST = call("read_document", {"document_id": "doc-1", "from_chunk": 0, "n": 2})
 QUESTION = "Hội phí bao nhiêu?"
 
 
@@ -137,6 +141,30 @@ def test_the_grader_counts_the_codes_read_but_does_not_mark_its_arguments():
     steps = [{"kind": "tool_call", "tool_name": "read_document", "by_code": True, "arguments": {"n": 12}}, {"kind": "final"}]
     checks = {check["check"]: check["passed"] for check in grade({"tools_required": ["read_document"]}, steps, "x", schemas)["checks"]}
     assert checks["tools_required"] is True and checks["args_valid"] is True
+
+
+def test_out_of_rounds_with_documents_half_read_the_code_reads_the_rest():
+    router = Router([SEARCH, READ_FIRST, READ_FIRST], forced=[GAVE_UP, FOUND])
+    answer, steps, _ = run([], reader=Reader(sizes={"doc-1": 6}), router=router)
+    assert answer == FOUND
+    assert len(router.note_prompts) == 1 and "[doc-1 đoạn 3]" in router.note_prompts[0][-1]["content"]
+    assert READ_REST_STEP in kinds(steps)
+    assert GAVE_UP not in [message.get("content") for message in router.prompts[-1]]
+
+
+def test_a_forced_answer_that_found_it_is_left_alone():
+    router = Router([SEARCH, READ_FIRST, READ_FIRST], forced=["Hội phí do ban chấp hành quyết định."])
+    answer, steps, _ = run([], reader=Reader(sizes={"doc-1": 6}), router=router)
+    assert answer == "Hội phí do ban chấp hành quyết định." and not router.note_prompts
+    assert READ_REST_STEP not in kinds(steps)
+
+
+def test_when_the_second_forced_answer_runs_out_of_time_the_first_stands():
+    def timed_out():
+        raise ModelCallTimeoutError("late")
+    router = Router([SEARCH, READ_FIRST, READ_FIRST], forced=[GAVE_UP, timed_out])
+    answer, _, _ = run([], reader=Reader(sizes={"doc-1": 6}), router=router)
+    assert answer == GAVE_UP
 
 
 def test_it_happens_once():
