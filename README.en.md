@@ -35,7 +35,7 @@ Every number below resolves to a JSON file in this repository. The chain of evid
 | Prompt-injection attack success | **0.000** (from 0.143), benign pass 1.000 | 12-case red-team suite |
 | Memory extraction, end to end | P **0.94** · R **0.80** · 0 forged facts | 21-case pipeline eval |
 | Memory poison rate after guard | **21.6%** (from 36.2%) at 96.7% coverage | 150-case extractor benchmark |
-| Tests | **2,177** collected (03/11/2026), on real PostgreSQL/Redis/Qdrant | 4 CI jobs |
+| Tests | **2,181** collected (03/11/2026), on real PostgreSQL/Redis/Qdrant | 4 CI jobs |
 | Schema migrations | **35**, each with a downgrade | `alembic check` gated in CI |
 
 ## How it is built
