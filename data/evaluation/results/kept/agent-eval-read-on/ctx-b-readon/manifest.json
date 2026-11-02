@@ -1,0 +1,101 @@
+{
+  "run_id": "ctx-b-readon",
+  "commit": "9bae3fa012dcfd92c4632df0f1425fe74731ccc1",
+  "worktree_dirty": false,
+  "general_version": {
+    "requested_id": "general-v0",
+    "loaded_id": "general-v0",
+    "source": "registry",
+    "status": "active",
+    "verified": true
+  },
+  "probed": true,
+  "ollama_loaded_at_start": [
+    "qwen3-embedding:0.6b",
+    "qwen3.5:9b"
+  ],
+  "ollama_version": "0.40.13",
+  "gpu_shared": false,
+  "gpu_at_start": {
+    "utilization_percent": 0,
+    "memory_used_mib": 8731,
+    "processes": [
+      "llama-server.exe",
+      "llama-server.exe"
+    ]
+  },
+  "probe_read_database": "local_ai_core (read-only: 2 COUNTs)",
+  "registry_fallback": "ok",
+  "env_file": "C:\\Users\\dungbt06\\local-ai-core\\.env",
+  "model": "qwen3.5:9b",
+  "provider": "ollama",
+  "temperature": 0.0,
+  "top_p": 0.9,
+  "seed": 42,
+  "think": false,
+  "num_ctx": 16384,
+  "overrides": {
+    "temperature": 0.0,
+    "seed": 42
+  },
+  "argv": [
+    "--probe",
+    "--env-file",
+    "C:/Users/dungbt06/local-ai-core/.env",
+    "--temperature",
+    "0",
+    "--seed",
+    "42",
+    "--run-id",
+    "ctx-b-readon",
+    "--gpu-shared",
+    "no",
+    "--unload-between-tasks",
+    "--out",
+    "C:\\Users\\dungbt06\\local-ai-core\\data\\evaluation\\results\\kept\\agent-eval-read-on",
+    "--dataset",
+    "C:\\Users\\dungbt06\\local-ai-core-wt\\read-on\\data\\benchmarks\\agent_eval\\v0-long",
+    "--tasks",
+    "ctx-05,ctx-06,ctx-07",
+    "--max-steps",
+    "8",
+    "--read-on-check"
+  ],
+  "max_steps": 8,
+  "tool_result_max_chars": 2400,
+  "read_result_max_chars": 6000,
+  "input_max_chars": {
+    "web": 100000,
+    "discord": 10000
+  },
+  "paste_inline": {
+    "max_tokens": 12288,
+    "fixed_tokens": 1253,
+    "chars_per_token": 3.3
+  },
+  "context_budget": null,
+  "long_input": false,
+  "lookup_check": true,
+  "read_on_check": true,
+  "turn_budget_seconds": 90.0,
+  "final_reserve_seconds": 20.0,
+  "injection_defense": true,
+  "agent_guide_sha256": "c1bbda21fdda5f7c3113a24a2798ecc5ebb8ff3f01e4892c20d46aaa24f4bace",
+  "system_prompt_sha256": "385cb475e59e26ccd0b67b48d9dfc9100906e4bf5996a1d3832f2f8f32f79207",
+  "discord_context_sha256": "6a479de5abfd8e1a584e56bbfa635888862bc8c52134d982cea000646bf6ba4b",
+  "tools_sha256": "93410c4659cd9b129cb08c2c459aac6dc8b7c309b05ddd870186a42a437903fd",
+  "dataset": {
+    "version": "agent-eval-v0-long.2",
+    "sha256": "20aed05370f7568145b613149c41cb5bd7341b49d08586ef34097d9d71e157c2",
+    "path": "C:\\Users\\dungbt06\\local-ai-core-wt\\read-on\\data\\benchmarks\\agent_eval\\v0-long",
+    "tasks_run": [
+      "ctx-05",
+      "ctx-06",
+      "ctx-07"
+    ]
+  },
+  "grader_version": "agent-eval-grader-v0.4",
+  "unload_between_tasks": true,
+  "started_at": "2026-11-02T16:35:06.979560+00:00",
+  "finished_at": "2026-11-02T16:36:17.459917+00:00"
+}
