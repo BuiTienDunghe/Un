@@ -35,7 +35,7 @@ Every number below resolves to a JSON file in this repository. The chain of evid
 | Prompt-injection attack success | **0.000** (from 0.143), benign pass 1.000 | 12-case red-team suite |
 | Memory extraction, end to end | P **0.94** · R **0.80** · 0 forged facts | 21-case pipeline eval |
 | Memory poison rate after guard | **21.6%** (from 36.2%) at 96.7% coverage | 150-case extractor benchmark |
-| Tests | **1,492** collected across 139 files (30/10/2026), on real PostgreSQL/Redis/Qdrant | 4 CI jobs |
+| Tests | **2,177** collected (03/11/2026), on real PostgreSQL/Redis/Qdrant | 4 CI jobs |
 | Schema migrations | **35**, each with a downgrade | `alembic check` gated in CI |
 
 ## How it is built
@@ -83,7 +83,11 @@ the experiments that were run and rejected.
    stop at the turn's time budget and the answer says which were not read. A fifth exception,
    on by the owner's decision (`agent.lookup_check`): a turn that called no tool and answered
    "I have no information", about anything but a text pasted into it, is sent back once to
-   look, one extra call (`max_steps + 4`). The router counts
+   look, one extra call (`max_steps + 4`). A sixth ships off (`agent.read_rest`): a turn that
+   found a document, left part of it unread and said the fact is not there has the code read
+   the rest, one call per part, at most 8, in a budget of its own, plus one call for the
+   answer; the parts stop at the turn's time budget and the answer says what was not read.
+   The router counts
    every generation call a turn makes (`services/call_budget.py`): a cap of 1 for plain
    chat, 2 for RAG, and `max_steps + 4` for the agent. A turn past its cap is logged and
    recorded, never blocked, and `tests/test_call_budget.py` fails when a path goes over or a

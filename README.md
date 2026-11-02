@@ -104,7 +104,7 @@ Ngoài ra còn hai công tắc: màn **Bot Discord** trên web bật/tắt cùng
 - Thay thế tài liệu không ghi đè version đang hoạt động trước khi version mới hoàn tất.
 - SQLite archive lịch sử chỉ dành cho migration/audit read-only, không được đưa lại vào runtime path.
 
-Alembic head hiện tại là `20261027_35` (`20261027_35_agent_trace_summaries.py`).
+Alembic head hiện tại là `20261102_38` (`20261102_38_discord_approvals.py`).
 
 ## Model mặc định
 

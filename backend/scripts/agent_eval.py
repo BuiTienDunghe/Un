@@ -424,6 +424,8 @@ def run_eval(
     agent_tools.register(registry, history)
     manifest = {
         **run_meta,
+        # "running" until the last line of this function: a run that died says so, on disk, by itself.
+        "status": "running",
         "max_steps": max_steps,
         "tool_result_max_chars": tool_result_max_chars,
         "read_result_max_chars": read_result_max_chars,
@@ -538,6 +540,7 @@ def run_eval(
 
     summary = {**summarize(results), **_aggregates(results)}
     (out_dir / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    manifest["status"] = "completed"
     manifest["finished_at"] = datetime.now(UTC).isoformat()
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     return summary
@@ -757,6 +760,10 @@ def main(argv: list[str] | None = None) -> int:
     from app.llm_clients.ollama_client import OllamaClient
     from app.services.model_router import ModelRouter
 
+    # A Windows console is cp1252: the first Vietnamese progress line would end the run.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     args = parse_args(argv)
     dataset = load_dataset(args.dataset)
     settings = build_settings(args.env_file, probe=args.probe)

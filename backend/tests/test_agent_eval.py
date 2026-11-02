@@ -101,7 +101,7 @@ DOC_FIXTURE = {
 }
 
 
-def _run(tmp_path, tasks, retrieval, router, *, run_meta=None, reloader=None, agent_config=None):
+def _run(tmp_path, tasks, retrieval, router, *, run_meta=None, reloader=None, agent_config=None, progress=lambda line: None):
     dataset = load_dataset(write_dataset(tmp_path / "ds", tasks, retrieval))
     out_dir = tmp_path / "run"
     summary = run_eval(
@@ -112,7 +112,7 @@ def _run(tmp_path, tasks, retrieval, router, *, run_meta=None, reloader=None, ag
         defense=InjectionDefense(enabled=True),
         system_prompt="Bạn là trợ lý.",
         run_meta=run_meta or {"run_id": "t", "seed": NO_SEED, "temperature": 0.4},
-        progress=lambda line: None,
+        progress=progress,
         reloader=reloader,
     )
     return out_dir, summary
@@ -325,6 +325,20 @@ def test_an_input_the_api_would_reject_fails_without_a_model_call(tmp_path):
     assert manifest["paste_inline"] == {"max_tokens": 12_288, "fixed_tokens": 1_253, "chars_per_token": 3.3}
     assert manifest["long_input"] is False, "ticket 45: off unless the run says so, and the manifest records it"
     assert manifest["tools_sha256"] == "93410c4659cd9b129cb08c2c459aac6dc8b7c309b05ddd870186a42a437903fd"
+
+
+def test_a_finished_run_says_completed_and_one_that_died_says_running(tmp_path):
+    out_dir, _ = _run(tmp_path / "ok", [DOC_TASK], [DOC_FIXTURE], ScriptedRouter([call("search_documents", {"query": "phép"}), final("12 ngày")]))
+    assert json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))["status"] == "completed"
+
+    def dies(_line):
+        raise UnicodeEncodeError("charmap", "ạ", 0, 1, "cp1252")
+
+    with pytest.raises(UnicodeEncodeError):
+        _run(tmp_path / "died", [DOC_TASK], [DOC_FIXTURE], ScriptedRouter([call("search_documents", {"query": "phép"}), final("12 ngày")]), progress=dies)
+    manifest = next((tmp_path / "died").rglob("manifest.json"))
+    assert json.loads(manifest.read_text(encoding="utf-8"))["status"] == "running"
+    assert not (manifest.parent / "summary.json").exists()
 
 
 def test_the_manifest_hashes_what_the_model_is_shown_not_what_is_registered(tmp_path, monkeypatch):

@@ -233,7 +233,8 @@ the query side. Adding one — documents untouched, so no re-indexing — moves 
 The system does not send one today. This is the cheapest change on the table: one
 prefix on the query path, no re-index, no new model. Whether it survives the full
 pipeline (BM25, fusion, reranker) is a separate question with its own threshold in the
-roadmap, but the embedding layer clearly wants it.
+roadmap, but the embedding layer clearly wants it. (It did not survive: on the full
+pipeline the candidate `embedding-v0-qi` lost found questions, further down this page.)
 
 *How this was nearly reported backwards.* The first attempt at this ablation returned a
 delta of 0.0002 and the conclusion "instructions do nothing" was one sentence away. The
@@ -527,10 +528,10 @@ unloads the model before every run; the seed has no effect at temperature 0.
 
 | | |
 | --- | ---: |
-| Tests | **1,492** collected on 30/10/2026 (1,417 in `backend/tests`, 75 in `tests`; 1,040 test functions, expanded by parametrisation) across 139 files, against real PostgreSQL, Redis and Qdrant |
+| Tests | **2,177** collected on 03/11/2026 (1,936 in `backend/tests`, 241 in `tests`), against real PostgreSQL, Redis and Qdrant |
 | CI jobs | 4: static checks, backend tests, retrieval-eval gate, bot/tools tests |
-| Schema migrations | 35, each with a downgrade (four exercised by tests), `alembic check` gated |
-| Alembic head | `20261027_35` |
+| Schema migrations | 38, each with a downgrade (four exercised by tests), `alembic check` gated |
+| Alembic head | `20261102_38` |
 | Backups | automatic, with a quarterly restore rehearsal |
 
 ## Per-question gating
