@@ -17,6 +17,6 @@ Commit `9bae3fa`, Ollama 0.40.13, Qwen 9B, nhiệt độ 0, seed 42, gỡ model 
 
 66 bài v0, cùng ngày: đối chứng 55, đọc tiếp 55, không bài nào lên hay xuống. Bước này chạy đúng một lần (doc-24, câu trả lời vẫn đúng, 4,5 s thành 9,4 s, và câu trả lời mở đầu bằng "Tôi đã đọc thêm", trái lời dặn không nhắc tới việc kiểm tra). Trung vị 4,40 s và 4,43 s.
 
-- Đọc tiếp: có ích trên ctx-01..04, không ích gì trên ctx-05..07 (đọc lại vòng đầu không tìm được gì mới, số lần đọc không đổi). Mẫu nhận biết "đã bỏ cuộc" viết từ chính các câu trả lời của bộ này.
+- Đọc tiếp: có ích trên ctx-01..04, không ích gì trên ctx-05..07 (bị gửi lại nhưng model không đọc thêm lần nào, số lần đọc giữ nguyên 10). Mẫu nhận biết "đã bỏ cuộc" viết từ chính các câu trả lời của bộ này.
 - Thêm vòng: không tự làm model đọc nhiều hơn; không có bước đọc tiếp thì 8 vòng vẫn 0 lần đọc.
 - Dọn ngữ cảnh (ticket 44): chạy thật 2-3 lần mỗi cấu hình, chưa có lợi ích nào; ở 8 vòng dữ kiện từ 5 xuống 3. Mẫu quá nhỏ để kết luận là có hại.
