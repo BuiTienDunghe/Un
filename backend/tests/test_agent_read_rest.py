@@ -8,6 +8,7 @@ from app.services.agent_service import AgentService
 from app.services.call_budget import OVERRUNS, agent_call_cap
 from app.services.document_reading import DOCUMENT_PART_STEP, READ_REST_STEP
 from app.services.injection_defense import InjectionDefense
+from scripts.agent_eval_grader import grade
 
 GAVE_UP = "Trong các đoạn trích tôi chưa thấy số tiền. Bạn có muốn tôi đọc toàn văn không?"
 FOUND = "Hội phí là 340.000 đồng."
@@ -129,6 +130,13 @@ def test_the_read_is_in_the_trace_as_a_read_and_says_the_code_made_it():
     reads = [step for step in steps if step["kind"] == "tool_call" and step["tool_name"] == "read_document"]
     assert len(reads) == 1
     assert reads[0]["by_code"] is True and reads[0]["arguments"]["document_id"] == "doc-1"
+
+
+def test_the_grader_counts_the_codes_read_but_does_not_mark_its_arguments():
+    schemas = {"read_document": {"properties": {"n": {"type": "integer", "minimum": 1, "maximum": 3}}}}
+    steps = [{"kind": "tool_call", "tool_name": "read_document", "by_code": True, "arguments": {"n": 12}}, {"kind": "final"}]
+    checks = {check["check"]: check["passed"] for check in grade({"tools_required": ["read_document"]}, steps, "x", schemas)["checks"]}
+    assert checks["tools_required"] is True and checks["args_valid"] is True
 
 
 def test_it_happens_once():

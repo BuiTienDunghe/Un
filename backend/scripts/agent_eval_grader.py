@@ -138,7 +138,7 @@ def _fold(text: object) -> str:
 
 def tool_calls(steps: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [
-        {"name": step.get("tool_name"), "arguments": step.get("arguments")}
+        {"name": step.get("tool_name"), "arguments": step.get("arguments"), **({"by_code": True} if step.get("by_code") else {})}
         for step in steps
         if step.get("kind") == "tool_call"
     ]
@@ -225,7 +225,8 @@ def grade(
         add("tools_forbidden", not hit, f"đã gọi: {', '.join(dict.fromkeys(hit))}" if hit else "")
 
     if calls:
-        problems = [problem for call in calls for problem in argument_problems(call["name"], call["arguments"], schemas)]
+        # A read the code made (document_reading.py) counts as a read, but its arguments are not the model's to get wrong.
+        problems = [problem for call in calls if not call.get("by_code") for problem in argument_problems(call["name"], call["arguments"], schemas)]
         add("args_valid", not problems, "; ".join(problems))
 
     for tool, constraints in (expect.get("args") or {}).items():
