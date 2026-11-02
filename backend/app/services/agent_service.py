@@ -228,6 +228,42 @@ LOOKUP_RETRY = (
     "thấy. Câu hỏi không cần dữ liệu nội bộ thì trả lời thẳng. Rồi viết câu trả lời như khi trả lời lần đầu: "
     "không xin lỗi, không nhắc tới việc kiểm tra này."
 )
+# The read-on check (02/11, Agent Eval v0-long.2): a turn that found the right document, saw only
+# excerpts or a first few chunks, and answered that the fact is not there or asked whether to read
+# on. ctx-03 wrote "Bạn có muốn tôi đọc toàn văn" with the answer two chunks away. Sent back once
+# while a document it could open is unread to its end. Off unless the caller asks (agent.read_on_check).
+READ_ON_CHECK_STEP = "read_on_check"
+READ_ON_CHECK_LABEL = "Đang đọc tiếp tài liệu…"
+READ_ON_GAVE_UP = re.compile(
+    r"\b(?:chưa|không)\s+(?:thấy|tìm thấy|tìm được|nêu|ghi|chứa|đề cập|nhắc|có\s+(?:thông tin|số liệu|dữ liệu))"
+    r"|\b(?:muốn|cần)\s+(?:tôi|mình)\s+đọc|\bcần\s+đọc\s+thêm",
+    re.IGNORECASE,
+)
+READ_ON_RETRY = (
+    "Bạn mới xem trích đoạn hoặc đọc một phần tài liệu mà đã nói chưa thấy. Trích đoạn chỉ là phần đầu của mỗi đoạn. "
+    "Gọi read_document đọc tiếp các đoạn chưa đọc của những tài liệu liên quan, đừng hỏi người dùng có cần đọc không. "
+    "Đọc hết rồi mà không thấy thì nói rõ là tài liệu không có. Rồi viết câu trả lời như khi trả lời lần đầu: "
+    "không xin lỗi, không nhắc tới việc kiểm tra này."
+)
+DOCUMENT_TOOLS = ("search_documents", "read_document")
+
+
+def _documents_left_unread(working: list[dict[str, Any]], readable: Any) -> bool:
+    """Whether a document this turn may open has not been read to its end: a read result's
+    next_from_chunk is null at the end, and only the latest read of a document counts."""
+    finished: set[str] = set()
+    for message in working:
+        if message.get("role") != "tool":
+            continue
+        try:
+            result = json.loads(str(message.get("content") or ""))
+        except ValueError:
+            continue
+        if isinstance(result, dict) and "next_from_chunk" in result:
+            (finished.add if result["next_from_chunk"] is None else finished.discard)(str(result.get("document_id")))
+    return bool(set(readable) - finished)
+
+
 THINKING_LABEL = "Đang suy nghĩ…"
 REVIEWING_LABEL = "Đang xem lại những gì đã tra…"
 TOOL_LABEL = "Đang dùng công cụ…"
@@ -350,6 +386,7 @@ class AgentService:
         context_budget: ContextBudget | None = None,
         long_input: bool = False,
         lookup_check: bool = False,
+        read_on_check: bool = False,
     ) -> None:
         self.defense = defense or InjectionDefense(enabled=False)
         self.router = router
@@ -373,6 +410,7 @@ class AgentService:
         self.long_input = bool(long_input)
         # Harness-fix round: off by default; the lookup check above.
         self.lookup_check = bool(lookup_check)
+        self.read_on_check = bool(read_on_check)
         self.turn_budget_seconds = max(1.0, float(turn_budget_seconds))
         self.final_reserve_seconds = min(max(0.0, float(final_reserve_seconds)), self.turn_budget_seconds)
         self.clock = clock
@@ -387,7 +425,7 @@ class AgentService:
         on_step: Callable[[dict[str, object]], None] | None = None,
     ) -> tuple[str, str, list[dict[str, object]]]:
         """The loop below, with its model calls counted against agent_call_cap (ticket 43)."""
-        with turn_call_budget("agent", agent_call_cap(self.max_steps, self.lookup_check)):
+        with turn_call_budget("agent", agent_call_cap(self.max_steps, self.lookup_check, self.read_on_check)):
             return self._run(messages, tool_context, on_step)
 
     def _run(
@@ -464,6 +502,7 @@ class AgentService:
         call_retried = False
         # And the lookup check's: one retry, for a turn that has called no tool at all.
         lookup_retried = False
+        read_on_retried = False
         while round_index < rounds:
             round_index += 1
             left = self.turn_budget_seconds - (self.clock() - turn_started)
@@ -523,6 +562,25 @@ class AgentService:
                     working.append({"role": "system", "content": LOOKUP_RETRY})
                     lookup_retried, rounds = True, rounds + 1
                     emit(LOOKUP_CHECK_STEP, label=LOOKUP_CHECK_LABEL)
+                    continue
+                if (
+                    self.read_on_check and not read_on_retried
+                    and not (messages and is_paste(messages[-1]))
+                    and any(step["kind"] == "tool_call" and step["tool_name"] in DOCUMENT_TOOLS for step in steps)
+                    and READ_ON_GAVE_UP.search(answer)
+                    and _documents_left_unread(working, tool_context["readable_documents"])
+                    and self.turn_budget_seconds - (self.clock() - turn_started) >= self.final_reserve_seconds
+                ):
+                    # As the lookup check: the rejected attempt reached no one and vouches for nothing.
+                    steps.append({
+                        "kind": READ_ON_CHECK_STEP, "tool_name": None, "arguments": None, "content": None,
+                        "latency_ms": round_latency, **last,
+                    })
+                    checked_out.update((len(working), len(working) + 1))
+                    working.append({"role": "assistant", "content": answer})
+                    working.append({"role": "system", "content": READ_ON_RETRY})
+                    read_on_retried, rounds = True, rounds + 1
+                    emit(READ_ON_CHECK_STEP, label=READ_ON_CHECK_LABEL)
                     continue
                 check = self._check_answer(answer, working, checked_out)
                 left = self.turn_budget_seconds - (self.clock() - turn_started)

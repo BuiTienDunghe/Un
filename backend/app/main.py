@@ -246,6 +246,8 @@ async def lifespan(app: FastAPI):
         long_input=settings.agent_long_input_enabled,
         # Off unless agent.lookup_check is true (harness-fix round).
         lookup_check=bool(agent_config.get("lookup_check", False)),
+        # Off unless agent.read_on_check is true.
+        read_on_check=bool(agent_config.get("read_on_check", False)),
     )
     # ChatService is built before the retrieval stack the agent needs, so the
     # agent is handed over here instead of through the constructor.

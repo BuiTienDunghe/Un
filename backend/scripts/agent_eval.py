@@ -414,6 +414,7 @@ def run_eval(
     context_budget = agent_config.get("context_budget")
     long_input = bool(agent_config.get("long_input", False))
     lookup_check = bool(agent_config.get("lookup_check", False))
+    read_on_check = bool(agent_config.get("read_on_check", False))
     history = FixtureHistory(dataset.guild)
     # The tools as the API offers them: the core's, plus app.discord's search_history
     # plugged in with the fixture guild (ticket 22, C4). The manifest's hash and the
@@ -434,6 +435,7 @@ def run_eval(
         "long_input": long_input,
         # Harness-fix round: a turn that gave up before any lookup is sent back once; runs only compare when this agrees.
         "lookup_check": lookup_check,
+        "read_on_check": read_on_check,
         "turn_budget_seconds": turn_budget_seconds,
         "final_reserve_seconds": final_reserve_seconds,
         "injection_defense": defense.enabled,
@@ -480,6 +482,7 @@ def run_eval(
             context_budget=context_budget,
             long_input=long_input,
             lookup_check=lookup_check,
+            read_on_check=read_on_check,
         )
         tool_context = {"guild_id": history.guild_id} if task.get("surface") == "discord" else None
         answer: str | None = None
@@ -583,6 +586,10 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--context-ceiling", type=int,
         help="with the budget on, the ceiling in tokens instead of the window's (a low one makes a short task reach it); implies --context-budget",
+    )
+    parser.add_argument(
+        "--read-on-check", action="store_true",
+        help="send a turn that stopped at excerpts and said the fact is not there back once to read on; default: agent.read_on_check in models.yaml, off",
     )
     parser.add_argument(
         "--max-steps", type=int,
@@ -792,6 +799,7 @@ def main(argv: list[str] | None = None) -> int:
         # Ticket 45, off unless AGENT_LONG_INPUT_ENABLED says so, as in the API; the manifest records it.
         "long_input": settings.agent_long_input_enabled,
         "lookup_check": bool(args.lookup_check or agent_section.get("lookup_check", False)),
+        "read_on_check": bool(args.read_on_check or agent_section.get("read_on_check", False)),
     }
     defense = InjectionDefense.from_config(config.get("rag", {}), enabled_override=settings.rag_injection_defense_enabled)
 
