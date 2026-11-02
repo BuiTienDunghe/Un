@@ -777,7 +777,7 @@ def main(argv: list[str] | None = None) -> int:
     agent_section = config.get("agent", {})
     # The same reads and defaults as main.py, so the eval runs what the API runs.
     agent_config = {
-        "max_steps": int(agent_section.get("max_steps", 3)),
+        "max_steps": args.max_steps or int(agent_section.get("max_steps", 3)),
         "tool_result_max_chars": int(agent_section.get("tool_result_max_chars", 1200)),
         "read_result_max_chars": int(agent_section.get("read_result_max_chars", READ_RESULT_MAX_CHARS)),
         "turn_budget_seconds": float(agent_section.get("turn_budget_seconds", TURN_BUDGET_SECONDS)),

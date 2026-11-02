@@ -1,5 +1,5 @@
 {
-  "version": "agent-eval-v0-long.1",
+  "version": "agent-eval-v0-long.2",
   "created": "2026-11-02",
   "note": "Bộ bài dài cho ticket 44 (chạm trần ngữ cảnh) và 45 (đáp án ở cuối văn bản rất dài); không có bài nào của v0. Dữ liệu hoàn toàn bịa, sinh bằng backend/scripts/agent_eval_build_long.py.",
   "guild": {

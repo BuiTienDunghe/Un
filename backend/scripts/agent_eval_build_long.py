@@ -30,7 +30,7 @@ from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = PROJECT_ROOT / "data" / "benchmarks" / "agent_eval" / "v0-long"
-VERSION = "agent-eval-v0-long.1"
+VERSION = "agent-eval-v0-long.2"
 
 DAYS = (2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 15, 20, 21, 25)
 MONEY = ("20.000", "50.000", "80.000", "100.000", "120.000", "150.000", "200.000", "250.000", "300.000", "500.000")
@@ -306,26 +306,67 @@ def paste_text(spec: dict[str, Any]) -> str:
 
 # ── the long conversations and the documents (ticket 44) ──────────────────
 
+# Everyday talk, on purpose: a history of rules and contracts read to the model as documents it
+# already had, and the first run's ctx-01..04 answered from it without a single lookup.
+CHAT: dict[str, dict[str, list[str]]] = {
+    "nau_an": {
+        "titles": ["canh chua", "cá kho", "bánh xèo", "phở bò", "gà rang gừng", "rau xào"],
+        "subjects": ["Bạn", "Nhà mình", "Mẹ mình", "Nhiều người", "Mình"],
+        "rules": [
+            "thường phi thơm hành tỏi rồi mới cho nguyên liệu vào chảo",
+            "hay nêm nhạt lúc đầu, gần chín mới nếm lại cho vừa miệng",
+            "nên ướp thịt khoảng {d} phút để gia vị kịp ngấm",
+            "có thể thay nước lọc bằng nước dùng xương cho ngọt hơn",
+            "thích ăn kèm rau thơm và một ít ớt tươi",
+            "để lửa nhỏ liu riu vì lửa to làm món ăn khô rất nhanh",
+        ],
+        "tails": ["nhất là vào những ngày mưa", "ăn với cơm nóng là hợp nhất", "tùy khẩu vị cả nhà", "làm vài lần là quen tay"],
+    },
+    "the_thao": {
+        "titles": ["chạy bộ", "bơi", "cầu lông", "đạp xe", "tập gym", "leo núi"],
+        "subjects": ["Bạn", "Mình", "Anh bạn mình", "Người mới tập", "Nhiều người"],
+        "rules": [
+            "nên khởi động kỹ trước khi vào bài chính cho đỡ đau cơ",
+            "hay tập khoảng {d} phút mỗi buổi rồi tăng dần",
+            "thấy buổi sáng mát trời nên dễ giữ nhịp hơn",
+            "đừng cố quá sức trong tuần đầu, cơ thể cần thời gian làm quen",
+            "uống nước từng ngụm nhỏ thay vì uống một hơi thật nhiều",
+            "ngủ đủ giấc thì hôm sau tập khỏe hơn hẳn",
+        ],
+        "tails": ["cứ đều đặn là thấy khác", "rủ thêm bạn thì đỡ nản", "miễn là thấy vui", "nghe cơ thể mình là chính"],
+    },
+    "cay_canh": {
+        "titles": ["cây lưỡi hổ", "hoa hồng", "cây trầu bà", "rau sân thượng", "xương rồng", "cây sen đá"],
+        "subjects": ["Bạn", "Bà mình", "Hàng xóm mình", "Mình", "Nhiều người"],
+        "rules": [
+            "nên để chậu ở chỗ có nắng nhẹ buổi sáng",
+            "chỉ tưới khi đất đã khô mặt, tưới nhiều dễ thối rễ",
+            "thay đất khoảng {d} tháng một lần để cây đỡ cằn",
+            "hay bón thêm một ít phân hữu cơ vào đầu mùa mưa",
+            "cắt bớt lá úa cho cây tập trung ra lá mới",
+            "xoay chậu thỉnh thoảng để cây không mọc lệch về một phía",
+        ],
+        "tails": ["nhìn xanh mát cả ban công", "chăm một thời gian là quen", "không cần cầu kỳ lắm", "nhất là mùa nóng"],
+    },
+}
+
 ASKS = [
-    "Cho mình hỏi quy định chung về {x} nói gì?",
-    "Tóm tắt giúp mình phần {x} trong tài liệu hôm trước được không?",
-    "Mình cần nhớ gì về {x} khi làm việc ở đây?",
-    "Có điểm nào về {x} mà người mới hay bỏ sót không?",
-    "Nhờ bạn liệt kê các việc cần làm liên quan đến {x}.",
-    "Ngoài {x} thì còn mục nào mình nên đọc kỹ?",
-    "Phần {x} có thay đổi so với năm trước không?",
-    "Bạn giải thích thêm về {x} giúp mình nhé.",
-    "Mình nên chuẩn bị gì trước khi bàn về {x}?",
+    "Hôm nay rảnh, kể mình nghe về {x} đi.",
+    "Cuối tuần mình muốn thử {x}, có mẹo gì không?",
+    "Bạn nghĩ {x} có khó với người mới không?",
+    "Nói chuyện chơi thôi, {x} thì bạn thích kiểu nào?",
+    "Có gì hay ho về {x} không?",
+    "Mình đang chán, gợi ý gì liên quan đến {x} đi.",
 ]
 
 
 def history(rng: random.Random, chars: int, genres: list[str]) -> list[dict[str, str]]:
-    """A chat of earlier turns about other things: each user line is short, each answer a few paragraphs."""
+    """A chat of earlier turns about everyday things: each user line is short, each answer a few paragraphs."""
     messages: list[dict[str, str]] = []
     size, turn = 0, 0
     while size < chars:
-        genre = GENRES[genres[turn % len(genres)]]
-        topic = genre["titles"][(turn * 5 + 1) % len(genre["titles"])].lower()
+        genre = CHAT[genres[turn % len(genres)]]
+        topic = genre["titles"][(turn * 5 + 1) % len(genre["titles"])]
         ask = ASKS[turn % len(ASKS)].format(x=topic)
         answer = "\n\n".join(_paragraph(rng, genre) for _ in range(rng.randint(3, 4)))
         messages += [{"role": "user", "content": ask}, {"role": "assistant", "content": answer}]
@@ -375,7 +416,7 @@ def document(document_id: str, filename: str, genre: str, chunks: int, plants: d
 SINGLES: list[dict[str, Any]] = [
     {
         "id": "ctx-01", "genre": "cau_lac_bo", "filename": "dieu_le_hoi_cuu_sinh_vien_khoa_co_khi.txt", "chunks": 12, "history_chars": 24_000,
-        "history_genres": ["thi", "chung_cu", "an_toan"],
+        "history_genres": ["nau_an", "the_thao", "cay_canh"],
         "plants": {1: "ĐIỀU 12. Hội phí thường niên của hội viên là 340.000 đồng, nộp một lần trong quý đầu năm.", 5: "ĐIỀU 31. Đại hội toàn thể họp vào ngày 18 tháng 3 hằng năm, tại hội trường tầng 4 nhà E.", 10: "ĐIỀU 58. Ban kiểm tra do bà Phan Ngọc Trâm làm trưởng ban."},
         "question": "Cho mình hỏi trong điều lệ của Hội Cựu sinh viên Khoa Cơ khí: hội phí hằng năm bao nhiêu, đại hội họp ngày nào, và ai làm trưởng ban kiểm tra?",
         "must": [r"(?<![\d.,])340\.000", r"18\s*(tháng\s*3|/\s*0?3)", r"Phan Ngọc Trâm"],
@@ -385,7 +426,7 @@ SINGLES: list[dict[str, Any]] = [
     },
     {
         "id": "ctx-02", "genre": "thi", "filename": "quy_che_thuc_tap_khoa_dien_tu.txt", "chunks": 12, "history_chars": 23_000,
-        "history_genres": ["bao_hanh", "du_lich", "cau_lac_bo"],
+        "history_genres": ["nau_an", "the_thao", "cay_canh"],
         "plants": {2: "ĐIỀU 14. Thời gian thực tập tối thiểu của sinh viên là 11 tuần liên tục tại doanh nghiệp được khoa chấp thuận.", 6: "ĐIỀU 33. Sinh viên nộp báo cáo thực tập cho cô Trịnh Mỹ Dung, phòng Đào tạo, trước ngày 27/05.", 11: "ĐIỀU 61. Điểm thực tập tối thiểu để được công nhận học phần là 5,5 trên thang mười."},
         "question": "Về quy chế thực tập của Khoa Điện tử: tối thiểu thực tập bao lâu, nộp báo cáo cho ai và trước ngày nào, và điểm tối thiểu để được công nhận là bao nhiêu?",
         "must": [r"(?<!\d)11\s*tuần", r"Trịnh Mỹ Dung", r"27\s*/\s*0?5|27 tháng 5", r"5[,.]5"],
@@ -395,7 +436,7 @@ SINGLES: list[dict[str, Any]] = [
     },
     {
         "id": "ctx-03", "genre": "an_toan", "filename": "so_tay_an_toan_xuong_son.txt", "chunks": 12, "history_chars": 22_000,
-        "history_genres": ["chung_cu", "thue_kho", "thi"],
+        "history_genres": ["nau_an", "the_thao", "cay_canh"],
         "plants": {1: "MỤC 9. Bình chữa cháy trong xưởng sơn được kiểm tra định kỳ mỗi 9 tháng, do cán bộ an toàn ký xác nhận.", 5: "MỤC 24. Số điện thoại khẩn cấp nội bộ của xưởng sơn là 7788, trực suốt 24 giờ.", 9: "MỤC 40. Khi có báo động, mọi người tập hợp tại bãi xe phía sau nhà kho số 6."},
         "question": "Trong sổ tay an toàn xưởng sơn: bình chữa cháy kiểm tra bao lâu một lần, số điện thoại khẩn cấp nội bộ là gì và khi báo động thì tập hợp ở đâu?",
         "must": [r"(?<!\d)9\s*tháng", r"(?<!\d)7788(?!\d)", r"nhà kho số 6"],
@@ -405,7 +446,7 @@ SINGLES: list[dict[str, Any]] = [
     },
     {
         "id": "ctx-04", "genre": "thue_kho", "filename": "hop_dong_thue_van_phong_tang_5.txt", "chunks": 12, "history_chars": 24_500,
-        "history_genres": ["du_lich", "an_toan", "bao_hanh"],
+        "history_genres": ["nau_an", "the_thao", "cay_canh"],
         "plants": {1: "ĐIỀU 5. Tiền thuê văn phòng tầng 5 là 7.250.000 đồng mỗi tháng, đã gồm phí quản lý.", 6: "ĐIỀU 19. Bên thuê muốn gia hạn hợp đồng phải báo trước 50 ngày bằng văn bản.", 10: "ĐIỀU 27. Người nhận các thông báo của bên thuê là ông Cao Văn Thiện, trưởng phòng Hành chính của bên cho thuê."},
         "question": "Hợp đồng thuê văn phòng tầng 5: tiền thuê mỗi tháng bao nhiêu, muốn gia hạn thì báo trước bao lâu, và thông báo gửi cho ai?",
         "must": [r"(?<![\d.,])7\.250\.000|7,25\s*triệu", r"(?<!\d)50\s*ngày", r"Cao Văn Thiện"],
@@ -419,7 +460,7 @@ QUOTE_CHUNKS = 8
 QUOTES: list[dict[str, Any]] = [
     {
         "id": "ctx-05", "goods": "ghế văn phòng", "history_chars": 9_000,
-        "history_genres": ["chung_cu", "thi", "du_lich"],
+        "history_genres": ["nau_an", "the_thao", "cay_canh"],
         "suppliers": [
             ("Công ty Cổ phần Nội thất Tân Lộc", "bao_gia_tan_loc.txt", "1.265.000", "18"),
             ("Công ty TNHH Nội thất Bạch Dương", "bao_gia_bach_duong.txt", "1.090.000", "26"),
@@ -431,7 +472,7 @@ QUOTES: list[dict[str, Any]] = [
     },
     {
         "id": "ctx-06", "goods": "máy chiếu", "history_chars": 10_000,
-        "history_genres": ["thue_kho", "cau_lac_bo", "bao_hanh"],
+        "history_genres": ["nau_an", "the_thao", "cay_canh"],
         "suppliers": [
             ("Công ty TNHH Thiết bị Quang Minh", "bao_gia_quang_minh.txt", "9.820.000", "13"),
             ("Công ty Cổ phần Công nghệ Vĩnh Phát", "bao_gia_vinh_phat.txt", "10.450.000", "9"),
@@ -444,7 +485,7 @@ QUOTES: list[dict[str, Any]] = [
     },
     {
         "id": "ctx-07", "goods": "bảng tên in", "history_chars": 8_500,
-        "history_genres": ["an_toan", "du_lich", "thi"],
+        "history_genres": ["nau_an", "the_thao", "cay_canh"],
         "suppliers": [
             ("Xưởng in Hoàng Yến", "bao_gia_hoang_yen.txt", "47.500", "16"),
             ("Công ty In ấn Sao Mai", "bao_gia_sao_mai.txt", "52.300", "9"),

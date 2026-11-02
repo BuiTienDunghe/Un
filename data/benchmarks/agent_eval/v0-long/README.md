@@ -11,13 +11,14 @@ chạy lại cho đúng các tệp này (`python -m scripts.agent_eval_build_lon
 | Bài | Ticket | Dựng thế nào | Đo gì |
 |---|---|---|---|
 | end-01..07 | 45 | Đoạn dán 41 000–95 600 ký tự (quá ngưỡng ~36 400 mà N1 đọc nguyên), câu hỏi ở đầu hoặc cuối; mọi mẫu `must_mention` khớp đúng một lần, trong 14 % cuối văn bản (từ 86 %), cách cuối ít nhất 1 200 ký tự (ngoài 600 ký tự cuối của phiếu), và trong phần cuối khi code cắt phần | Lượt đọc từng phần (`agent.long_input`) có tới được cuối văn bản không. Đọc lần lượt từ đoạn 0 mỗi lần 3 đoạn không tới được (đáp án ở đoạn 27 trở đi, mà ba lượt chỉ tới đoạn 8) |
-| ctx-01..04 | 44 | Lịch sử 22 000–26 000 ký tự về chuyện khác, một tài liệu 12 đoạn có ba dữ kiện cách nhau từ 4 đoạn: cần ba lần đọc | Có tới trần không: lời nhắc cuối (sau tìm và ba lần đọc) ước 14 400–15 600 token, trần 12 288 |
-| ctx-05..07 | 44 | Ba báo giá (8 đoạn mỗi báo giá), đơn giá ở một đoạn và thời hạn giao ở đoạn cách ít nhất 3: sáu lần đọc, lịch sử ~10 000 ký tự | Như trên, nặng hơn (ước ~16 000 token trước khi dọn) |
+| ctx-01..04 | 44 | Lịch sử 22 000–26 000 ký tự chuyện phiếm (nấu ăn, thể thao, cây cảnh), một tài liệu 12 đoạn có ba dữ kiện cách nhau từ 4 đoạn: cần ba lần đọc | Có tới trần không: lời nhắc cuối (sau tìm và ba lần đọc) ước 14 400–15 600 token, trần 12 288 |
+| ctx-05..07 | 44 | Ba báo giá (8 đoạn mỗi báo giá), đơn giá ở một đoạn và thời hạn giao ở đoạn cách ít nhất 3: sáu lần đọc, lịch sử ~10 000 ký tự chuyện phiếm | Như trên, nặng hơn (ước ~16 000 token trước khi dọn) |
 
 ## Điều kiện đo
 
 - Bài end: bật `AGENT_LONG_INPUT_ENABLED=true` cho nhánh thử, tắt cho đối chứng. Hiệu ứng thấy được khi tắt thì
   trượt (phiếu không có đáp án), khi bật thì đạt nếu model ghi chú đúng phần cuối.
+- Bản .2 (02/11): lịch sử đổi từ quy định, hợp đồng sang chuyện phiếm, vì ở bản .1 model tưởng lịch sử là tài liệu đã có và không tra. Bài ctx-05..07 đo với `--max-steps 8`, vì ba vòng mặc định không đủ cho sáu lần đọc.
 - Bài ctx: `--context-budget` (hoặc `--context-ceiling N`) cho nhánh thử. Khi bật, kết quả đọc cũ bị thay bằng
   ghi chú; nếu model cần một dữ kiện nằm ở kết quả đã bị dọn mà không gọi lại thì sai. Đó là điều bài đo, không
   phải lỗi bài. Đo trên đường ngắn nhất (tìm, các lần đọc song song, trả lời) với ngân sách mặc định

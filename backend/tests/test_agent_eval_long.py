@@ -68,7 +68,7 @@ def test_the_files_on_disk_are_what_the_builder_writes():
 
 def test_it_is_a_dataset_of_its_own_and_v0_is_untouched():
     old = load_dataset(DATASET_DIR)
-    assert DATASET.version == "agent-eval-v0-long.1" != old.version
+    assert DATASET.version == "agent-eval-v0-long.2" != old.version
     assert len(DATASET.tasks) == 14 and set(TASKS) == set(CTX_IDS + PASTE_IDS)
     assert len(old.tasks) == 66 and not set(TASKS) & {task["id"] for task in old.tasks}
     assert DATASET.sha256 != old.sha256
