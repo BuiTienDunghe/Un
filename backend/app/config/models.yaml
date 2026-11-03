@@ -81,6 +81,10 @@ agent:
   # An answer that gives up before any lookup is sent back once to look: rule 5's fifth exception,
   # on by the owner's word (02/11). Agent Eval 54 -> 55/66, it fired on doc-25 alone.
   lookup_check: true
+  # An answer that found a document, left part of it unread and said the fact is not there has the
+  # code read the rest (document_reading.py): rule 5's sixth exception, on by the owner's word (03/11).
+  # Agent Eval v0-long ctx 0 -> 6/7, v0 55 -> 56/66, it fired on doc-24 and doc-36.
+  read_rest: true
   # 4 excerpt x ~400 ky tu + metadata JSON ~ 2000+ ky tu; tran thap hon se cat
   # giua chung JSON (model van doc duoc nhung mat doan cuoi).
   tool_result_max_chars: 2400

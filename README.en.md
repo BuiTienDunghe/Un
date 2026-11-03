@@ -83,13 +83,13 @@ the experiments that were run and rejected.
    stop at the turn's time budget and the answer says which were not read. A fifth exception,
    on by the owner's decision (`agent.lookup_check`): a turn that called no tool and answered
    "I have no information", about anything but a text pasted into it, is sent back once to
-   look, one extra call (`max_steps + 4`). A sixth ships off (`agent.read_rest`): a turn that
+   look, one extra call (`max_steps + 4`). A sixth, on by the owner's decision (`agent.read_rest`): a turn that
    found a document, left part of it unread and said the fact is not there has the code read
    the rest, one call per part, at most 8, in a budget of its own, plus one call for the
    answer; the parts stop at the turn's time budget and the answer says what was not read.
    The router counts
    every generation call a turn makes (`services/call_budget.py`): a cap of 1 for plain
-   chat, 2 for RAG, and `max_steps + 4` for the agent. A turn past its cap is logged and
+   chat, 2 for RAG, and `max_steps + 5` for the agent with both checks on. A turn past its cap is logged and
    recorded, never blocked, and `tests/test_call_budget.py` fails when a path goes over or a
    cap has room to spare.
 6. Every autonomous action is auditable and revocable.
