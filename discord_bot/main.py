@@ -163,6 +163,17 @@ VOICE_FAILED = "Mình chưa nghe được tin thoại này lúc này. Bạn th�
 VOICE_EMPTY = "Mình không nghe ra lời nào trong tin thoại này. Bạn thử lại hoặc gõ chữ giúp mình nhé."
 
 
+def voice_note(heard: str) -> str:
+    """How heard words enter the turn: marked as a machine's hearing, like an image's description. Given
+    them as if typed, Ún answered "a rua rua lồ" (said: "alo alo") as it stood and said it could not hear
+    voice (03/11). The words go on a line of their own, as typed words would: the reminder gate reads a
+    request ("nhắc tôi ...") only where it starts a line or follows a space or a stop, not after a quote."""
+    return (
+        "[Tin thoại, máy tự nghe lại nên có thể nghe sai. Nếu câu dưới đây lạ hoặc vô nghĩa, nhắc lại câu nghe "
+        "được rồi hỏi lại người nói, đừng đoán ý; nếu rõ thì trả lời như tin nhắn chữ.]\n" + heard
+    )
+
+
 def voice_attachment(message):
     """The recording of a voice message, or None. An audio file someone uploaded is not one."""
     for item in message.attachments:
@@ -923,7 +934,7 @@ def create_bot(
                 await message.reply(apology, mention_author=False)
                 return
             if heard:
-                question = "\n\n".join(part for part in (question, heard) if part)
+                question = "\n\n".join(part for part in (question, voice_note(heard)) if part)
         if not question:
             await message.reply("Hãy gắn kèm câu hỏi sau @Ún.", mention_author=False)
             return

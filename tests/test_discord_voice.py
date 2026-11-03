@@ -26,6 +26,7 @@ from discord_bot.main import (
     DiscordSettings,
     create_bot,
     hear_voice,
+    voice_note,
 )
 
 HOME, OTHER = 111, 222
@@ -172,10 +173,24 @@ def run_on_message(api, incoming, *, allowlist=ALLOWED, mentioned=True, monkeypa
     return asked
 
 
-def test_the_words_enter_the_turn_like_a_typed_message(monkeypatch) -> None:
+def test_the_words_enter_the_turn_marked_as_heard_by_a_machine(monkeypatch) -> None:
+    # 03/11 on Discord: "alo alo" was heard "a rua rua lồ", and Ún, given the words as if typed,
+    # answered them as they stood and even said it could not hear voice.
     api, incoming = FakeApi(), message([voice()])
-    assert run_on_message(api, incoming, monkeypatch=monkeypatch) == ["mai trời mưa không"]
+    assert run_on_message(api, incoming, monkeypatch=monkeypatch) == [voice_note("mai trời mưa không")]
     assert incoming.replies == []
+
+
+def test_the_note_carries_the_words_and_says_they_may_be_misheard() -> None:
+    note = voice_note("mai trời mưa không")
+    assert note.endswith("\nmai trời mưa không") and "có thể nghe sai" in note and "hỏi lại" in note
+
+
+def test_a_reminder_asked_by_voice_still_passes_the_reminder_gate() -> None:
+    from app.discord.remind_tool import asked_for_reminder, names_a_time
+
+    assert asked_for_reminder(voice_note("nhắc tôi 1 phút nữa đi vệ sinh")) and names_a_time(voice_note("nhắc tôi 1 phút nữa đi vệ sinh"))
+    assert not asked_for_reminder(voice_note("alo alo"))
 
 
 def test_off_by_default_the_voice_message_gets_a_reply_and_no_turn(monkeypatch) -> None:

@@ -8,7 +8,8 @@ Audio is megabytes, so the door writes it to a temporary file and tells the chil
 is deleted when the answer, or the failure, comes back. Nothing about a recording or its text is kept
 or logged. Binds to loopback only.
 
-The speech model is PhoWhisper-small (owner's pick, .scratch/future-plan/voice-survey.md), read through
+The speech model is PhoWhisper-medium (owner's pick 03/11, after small heard "alo alo" as "a rua rua lồ"
+and "đếm từ 1 đến 10" as "điểm thứ một đến mời" on Discord; .scratch/future-plan/voice-survey.md), read through
 transformers with PyAV decoding the recording. VOICE_MODEL_PYTHON names the interpreter the child runs
 in, for a model that needs libraries this one does not have.
 
@@ -38,8 +39,11 @@ MAX_AUDIO_BYTES = 8 * 1024 * 1024
 REPLY_TIMEOUT_SECONDS = 150.0
 # How long a client may stall mid-request. One slow upload must not hold the door shut.
 CLIENT_TIMEOUT_SECONDS = 30.0
-# PhoWhisper-small, pinned at a86b604 of vinai/PhoWhisper-small; data/ is not in the repo, the survey says how to fetch it.
-MODEL_DIR = Path(os.environ.get("VOICE_MODEL_DIR") or Path(__file__).resolve().parent.parent / "data" / "models" / "phowhisper-small")
+# PhoWhisper-medium, pinned at 55a7e3e of vinai/PhoWhisper-medium (3,06 GB fp32 on disk, 2,2 GB on the card in fp16,
+# 0,64 s for a 6 s clip warm; small was 0,8 GB and 0,32 s). Published WER, CMV-Vi / VIVOS: small 11,08 / 6,33, medium
+# 8,27 / 4,97 (read speech, not Discord voices). data/ is not in the repo; VOICE_MODEL_DIR=data/models/phowhisper-small
+# goes back to small, still on disk at a86b604.
+MODEL_DIR = Path(os.environ.get("VOICE_MODEL_DIR") or Path(__file__).resolve().parent.parent / "data" / "models" / "phowhisper-medium")
 SAMPLE_RATE = 16_000
 MAX_RECORDING_SECONDS = 180.0
 # What counts as a person talking (_speech_seconds). Set from synthetic sounds only, never tuned on a real

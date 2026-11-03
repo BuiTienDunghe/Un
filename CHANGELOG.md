@@ -21,6 +21,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
 
 ### Fixed (03/11, thử trên Discord thật)
 - **Ún nói đã hẹn nhắc mà không hẹn.** Người dùng dặn nhắc kèm giờ mà model trả lời không gọi `remind` thì code hỏi model thêm một lần, chỉ lấy đối số của `remind` theo khuôn JSON cố định (structured outputs của Ollama, kèm giờ hiện tại và lịch 8 ngày), rồi chạy `remind` qua đúng các bước kiểm của nó và để model trả lời từ kết quả. Model thật với lời dặn Discord, 11 câu dặn nhắc: hẹn thật 2/11 khi chỉ nhắc bằng lời → 11/11, đúng giờ cả 11. Không có structured output (provider khác) thì quay về nhắc bằng lời; vẫn không hẹn thì code thêm dòng "chưa thực hiện được".
+- **Tin thoại nghe sai và Ún không biết đó là tin thoại.** PhoWhisper-small nghe "alo alo" thành "a rua rua lồ", "đếm từ 1 đến 10" thành "điểm thứ một đến mời"; Ún nhận chữ như tin gõ nên trả lời theo chữ sai và nói mình không nghe được giọng. Giờ chữ nghe được đi kèm ghi chú "máy tự nghe lại, có thể sai; câu lạ thì nhắc lại và hỏi lại", và model nghe đổi sang PhoWhisper-medium (ghim `55a7e3e`, 3,06 GB, 2,2 GB trên card). Chưa đo trên giọng thật: cần clip có chữ đúng.
 
 ### Changed
 - **Postgres, Qdrant, Redis chỉ mở trên máy này** (`127.0.0.1`), và Qdrant ghim `v1.18.2` thay vì `latest`, ở cả compose và CI. Có hiệu lực từ lần `docker compose up` kế tiếp; dữ liệu giữ nguyên.
