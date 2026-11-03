@@ -1,11 +1,13 @@
 """The promise check (03/11): the speaker asked for something only a tool does ("nhắc tôi 5 phút nữa
 ...") and the model answered without calling it. On Discord it said "Ún sẽ nhắc lúc 13:53" and
-nothing was scheduled. The turn is sent back once to call the tool. No model, no GPU."""
+nothing was scheduled. The model is asked once more, for the tool's arguments alone in a structured
+output, and the tool runs; without structured output the turn is sent back in words. No model, no GPU."""
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 
-from app.discord.remind_tool import REMIND_RETRY, Remind, TurnFacts, register
+from app.discord.remind_tool import REMIND_FILL, REMIND_RETRY, Remind, TurnFacts, register
 from app.services.agent_service import PROMISE_CHECK_STEP, AgentService, AgentTool, core_tools
 from app.services.call_budget import OVERRUNS, agent_call_cap
 from tests.test_discord_reminders import GUILD, ME, build
@@ -38,14 +40,35 @@ class Router:
         return "hết lượt", "fake"
 
 
-def wired(rounds, own_text=ASKED):
-    """An agent with the real remind tool, its gate reading `own_text` as the speaker's words."""
+class StructuredRouter(Router):
+    """Also serves structured outputs: `filled` is the JSON text, or an exception to raise."""
+
+    def __init__(self, rounds, filled):
+        super().__init__(rounds)
+        self.filled = filled
+        self.schemas: list[dict] = []
+        self.structured_prompts: list[list[dict]] = []
+
+    def chat_structured(self, role, messages, schema):
+        self.schemas.append(schema)
+        self.structured_prompts.append([dict(message) for message in messages])
+        if isinstance(self.filled, Exception):
+            raise self.filled
+        return self.filled, "fake"
+
+
+def wired(rounds, own_text=ASKED, filled=None):
+    """An agent with the real remind tool, its gate reading `own_text` as the speaker's words. With
+    `filled`, the router serves structured outputs and the tool carries REMIND_FILL."""
     service = build()[0]
     registry = core_tools()
     tool = Remind(service, lambda turn_id: TurnFacts(GUILD, "chan", None, ME, own_text))
     from app.discord import remind_tool
-    registry.register(AgentTool(remind_tool.REMIND_SCHEMA, tool, "Đang hẹn giờ nhắc…", promised=remind_tool.promised_by(tool.load_turn), promise_retry=REMIND_RETRY), remind_tool.ORDER)
-    router = Router(rounds)
+    registry.register(AgentTool(
+        remind_tool.REMIND_SCHEMA, tool, "Đang hẹn giờ nhắc…", promised=remind_tool.promised_by(tool.load_turn), promise_retry=REMIND_RETRY,
+        promise_fill=REMIND_FILL if filled is not None else None,
+    ), remind_tool.ORDER)
+    router = StructuredRouter(rounds, filled) if filled is not None else Router(rounds)
     agent = AgentService(router, SimpleNamespace(), SimpleNamespace(), registry=registry)
     return agent, router, service
 
@@ -60,6 +83,54 @@ def kinds(steps):
 
 
 REMIND = call("remind", {"text": "uống nước", "in_minutes": 5})
+
+
+FILLED = json.dumps({"text": "uống nước", "in_minutes": 5, "at": None})
+
+
+def test_an_answer_that_claims_a_reminder_it_never_set_has_the_reminder_set_from_a_structured_call():
+    agent, router, service = wired([final(CLAIMED), final("Ún sẽ nhắc bạn uống nước lúc 10:05.")], filled=FILLED)
+    answer, steps = run(agent)
+    assert answer == "Ún sẽ nhắc bạn uống nước lúc 10:05."
+    assert len(service.list_for(GUILD, ME)) == 1 and service.list_for(GUILD, ME)[0].text == "uống nước"
+    call_step = next(s for s in steps if s["kind"] == "tool_call")
+    assert call_step["tool_name"] == "remind" and call_step["constrained"] is True and call_step["arguments"] == {"text": "uống nước", "in_minutes": 5}
+    # The model writes the answer having seen the tool's result, and never its own claim.
+    last = router.prompts[-1]
+    assert last[-1]["role"] == "tool" and "scheduled" in last[-1]["content"]
+    assert CLAIMED not in [message.get("content") for message in last]
+    assert kinds(steps) == [PROMISE_CHECK_STEP, "tool_call", "tool_result", "final"]
+
+
+def test_the_structured_call_holds_every_key_and_lets_the_optional_ones_be_null():
+    agent, router, _ = wired([final(CLAIMED), final("Ún sẽ nhắc bạn.")], filled=FILLED)
+    run(agent)
+    schema = router.schemas[0]
+    assert schema["required"] == ["text", "in_minutes", "at"]
+    assert schema["properties"]["text"]["type"] == "string" and schema["properties"]["in_minutes"]["type"] == ["integer", "null"]
+    asked = router.structured_prompts[0][-1]["content"]
+    assert REMIND_FILL in asked and "Lịch:" in asked and "(hôm nay)" in asked
+
+
+def test_arguments_the_tool_refuses_are_refused_as_the_models_own_would_be():
+    filled = json.dumps({"text": "đi ăn tối với sếp", "in_minutes": 5, "at": None})
+    agent, _, service = wired([final(CLAIMED), final("Mình chưa hẹn được.")], filled=filled)
+    _, steps = run(agent)
+    assert service.list_for(GUILD, ME) == []
+    assert next(s for s in steps if s["kind"] == "tool_result")["error_code"] == "BAD_ARGUMENTS"
+
+
+def test_a_structured_reply_that_is_not_an_object_falls_back_to_the_retry_in_words():
+    agent, router, service = wired([final(CLAIMED), REMIND, final("Ún sẽ nhắc bạn.")], filled="không phải JSON")
+    run(agent)
+    assert router.prompts[1][-1] == {"role": "system", "content": REMIND_RETRY}
+    assert len(service.list_for(GUILD, ME)) == 1
+
+
+def test_a_provider_without_structured_output_falls_back_to_the_retry_in_words():
+    agent, router, _ = wired([final(CLAIMED), REMIND, final("Ún sẽ nhắc bạn.")], filled=NotImplementedError("not ollama"))
+    run(agent)
+    assert router.prompts[1][-1] == {"role": "system", "content": REMIND_RETRY}
 
 
 def test_an_answer_that_claims_a_reminder_it_never_set_is_sent_back_and_the_reminder_is_set():
@@ -126,14 +197,16 @@ def test_register_wires_the_check_with_the_tool():
     registry = core_tools()
     register(registry, build()[0], sessions=None)
     tool = registry.get("remind")
-    assert tool.promised is not None and tool.promise_retry == REMIND_RETRY
+    assert tool.promised is not None and tool.promise_retry == REMIND_RETRY and tool.promise_fill == REMIND_FILL
 
 
-def test_the_cap_grows_by_one_only_when_a_tool_carries_a_promise():
+def test_the_cap_grows_by_two_only_when_a_tool_carries_a_promise():
     OVERRUNS.clear()
     agent, _, _ = wired([final(CLAIMED), REMIND, REMIND, REMIND, REMIND])
     run(agent)
+    agent, _, _ = wired([final(CLAIMED), REMIND, REMIND, REMIND], filled=FILLED)
+    run(agent)
     assert not OVERRUNS
-    assert agent_call_cap(3, promise_check=True) == agent_call_cap(3) + 1
+    assert agent_call_cap(3, promise_check=True) == agent_call_cap(3) + 2
     plain = AgentService(Router([final("x")]), SimpleNamespace(), SimpleNamespace())
     assert not any(tool.promised for tool in plain.registry.tools())

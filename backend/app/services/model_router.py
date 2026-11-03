@@ -155,6 +155,27 @@ class ModelRouter:
 
         return answer, model_name
 
+    def chat_structured(self, mode: str, messages: list[dict[str, str]], schema: dict[str, Any]) -> tuple[str, str]:
+        """A reply that matches the JSON schema `schema`, by Ollama's structured outputs. Only an
+        Ollama general serves it: any other provider raises NotImplementedError, and the caller
+        does without."""
+        if mode != "general":
+            raise ValueError(f"Unsupported model mode: {mode}")
+        config = self.models[mode]
+        client = self._get_client(config)
+        if not isinstance(client, OllamaClient):
+            raise NotImplementedError("structured output needs an Ollama general model")
+        count_generation_call()
+        answer = client.chat(
+            model=str(config["name"]),
+            messages=messages,
+            options={**self._ollama_options(config), "temperature": 0},
+            keep_alive=str(config.get("keep_alive", "5m")),
+            think=config.get("think") if isinstance(config.get("think"), bool) else None,
+            format=schema,
+        )
+        return answer, str(config["name"])
+
     def chat_tools(
         self,
         mode: str,

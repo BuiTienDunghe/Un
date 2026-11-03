@@ -109,7 +109,11 @@ class OllamaClient:
             return None
         return len(embeddings[0])
 
-    def chat(self, model: str, messages: list[dict[str, str]], options: dict[str, Any], keep_alive: str, think: bool | None = None) -> str:
+    def chat(
+        self, model: str, messages: list[dict[str, str]], options: dict[str, Any], keep_alive: str, think: bool | None = None,
+        format: dict[str, Any] | None = None,
+    ) -> str:
+        """`format`, a JSON schema, makes Ollama's output match it (structured outputs)."""
         payload = {
             "model": model,
             "messages": messages,
@@ -119,6 +123,8 @@ class OllamaClient:
         }
         if think is not None:
             payload["think"] = think
+        if format is not None:
+            payload["format"] = format
         for attempt in range(self.retry_count + 1):
             # Ticket 16: inside an agent turn, wait at most what the turn has left.
             timeout = request_timeout(self.chat_timeout)

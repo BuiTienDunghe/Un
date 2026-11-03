@@ -204,6 +204,18 @@ REMIND_RETRY = (
 )
 
 
+# What the structured call is told (agent_service._fill_owed adds the hour, a calendar and the schema).
+# Measured 03/11 on the Discord prompt: 11 of 11 requests set at the hour asked, "thứ sáu này 4h chiều"
+# included, once the calendar was given and `text` was told to drop the hour and the speaker's label.
+REMIND_FILL = (
+    "Người dùng vừa dặn Ún nhắc việc mà lượt trả lời chưa hẹn. Điền đối số cho công cụ remind. `text`: chỉ "
+    "việc cần làm, vài chữ lấy từ lời người dùng, không kèm giờ, không kèm \"nhắc mình\", không kèm tên hay nhãn "
+    "người nói (ví dụ \"đi vệ sinh\", \"gọi mẹ\"). Đúng một trong `in_minutes` (số phút kể từ bây giờ, khi họ nói "
+    "\"N phút/giờ nữa\") hoặc `at` (giờ Việt Nam dạng 2026-11-03T15:00, đọc ngày ở Lịch; \"4h chiều\" là 16:00); "
+    "cái còn lại là null."
+)
+
+
 def promised_by(load_turn: Callable[[str], TurnFacts | None]) -> Callable[[dict[str, Any]], bool]:
     """The promise check's gate: the speaker's own words this turn ask to be reminded and name a time,
     the same two tests the tool itself applies. No turn (not Discord) means nothing was asked of it."""
@@ -218,6 +230,6 @@ def promised_by(load_turn: Callable[[str], TurnFacts | None]) -> Callable[[dict[
 def register(registry: ToolRegistry, service: ReminderService, sessions: sessionmaker) -> None:
     load_turn = load_turn_facts(sessions)
     registry.register(
-        AgentTool(REMIND_SCHEMA, Remind(service, load_turn), "Đang hẹn giờ nhắc…", promised=promised_by(load_turn), promise_retry=REMIND_RETRY),
+        AgentTool(REMIND_SCHEMA, Remind(service, load_turn), "Đang hẹn giờ nhắc…", promised=promised_by(load_turn), promise_retry=REMIND_RETRY, promise_fill=REMIND_FILL),
         ORDER,
     )

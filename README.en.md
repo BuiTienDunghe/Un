@@ -89,7 +89,10 @@ the experiments that were run and rejected.
    answer; the parts stop at the turn's time budget and the answer says what was not read.
    A seventh, on wherever a tool carries it (today `remind`, so only with Discord reminders
    on): the speaker asked for what only that tool does and the answer never called it, so the
-   turn is sent back once, and a request still not carried out is said by the code.
+   model is asked once for the tool's arguments alone, in an Ollama structured output held to
+   the tool's schema, the tool runs through its own checks, and one more round answers from
+   the result (two calls); without structured output the turn is sent back in words, and a
+   request still not carried out is said by the code.
    The router counts
    every generation call a turn makes (`services/call_budget.py`): a cap of 1 for plain
    chat, 2 for RAG, and `max_steps + 5` for the agent with both checks on. A turn past its cap is logged and

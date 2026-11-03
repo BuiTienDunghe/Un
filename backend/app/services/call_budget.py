@@ -41,9 +41,11 @@ def agent_call_cap(max_steps: int, lookup_check: bool = False, read_on_check: bo
     """`max_steps` tool rounds, plus one round for each of the two retries (figures the turn
     never saw; a tool call that would not parse), plus the forced answer when the rounds run out.
     The lookup check (off by default, harness-fix round) is one more retry, so one more call;
-    so is the read-on check (off by default, 02/11), the round that answers from what the
-    code read (off by default, 03/11), and the promise check (wherever a tool carries one, 03/11)."""
-    return max_steps + 3 + sum(1 for check in (lookup_check, read_on_check, read_rest, promise_check) if check)
+    so is the read-on check (off by default, 02/11) and the round that answers from what the
+    code read (off by default, 03/11). The promise check (wherever a tool carries one, 03/11)
+    adds two: the structured call for the owed tool's arguments, and the round that answers
+    from its result (or, without structured output, the retry and nothing more)."""
+    return max_steps + 3 + sum(1 for check in (lookup_check, read_on_check, read_rest) if check) + (2 if promise_check else 0)
 
 
 def long_input_call_cap(parts: int) -> int:

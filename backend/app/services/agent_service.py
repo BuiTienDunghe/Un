@@ -289,9 +289,12 @@ class AgentTool:
     # The turn therefore holds at most one such call; one written after it in the same round is dropped.
     ends_turn: bool = False
     # The promise check (03/11): `promised(tool_context)` says the speaker's own words asked for what only
-    # this tool does. An answer that never called it is sent back once with `promise_retry`.
+    # this tool does. An answer that never called it gets one more try: with `promise_fill`, the model
+    # is asked for the arguments alone in a structured-output call and the tool runs; without it, or when
+    # that call cannot be made, the turn is sent back with `promise_retry`.
     promised: Callable[[dict[str, Any]], bool] | None = None
     promise_retry: str | None = None
+    promise_fill: str | None = None
 
     @property
     def name(self) -> str:
@@ -597,8 +600,33 @@ class AgentService:
                         "kind": PROMISE_CHECK_STEP, "tool_name": None, "arguments": None, "content": None,
                         "latency_ms": round_latency, **last,
                     })
-                    checked_out.add(len(working))
-                    working.append({"role": "system", "content": owed.promise_retry or f"Người dùng vừa nhờ việc cần gọi {owed.name} mà bạn chưa gọi. Gọi {owed.name} ngay; không được nói đã làm khi chưa gọi."})
+                    filled = self._fill_owed(owed, window.view(working), turn_started)
+                    if filled is not None:
+                        # Told again in words, the model on the Discord prompt still answered without the call
+                        # (2 of 11 set, 03/11). Asked for the arguments alone, in a JSON the decoder holds to
+                        # the tool's schema, it set 11 of 11. The tool runs as if the model had called it, through
+                        # its own checks, and the model writes the answer from the result in the next round.
+                        arguments, usage = filled
+                        working.append({"role": "assistant", "content": "", "tool_calls": [{"function": {"name": owed.name, "arguments": arguments}}]})
+                        steps.append({
+                            "kind": "tool_call", "tool_name": owed.name, "tool_declared": True, "constrained": True,
+                            "arguments": arguments, "content": None, "latency_ms": usage.pop("latency_ms"),
+                            "arguments_shape": arguments_shape(owed.name, arguments, self.registry.declared()), **usage,
+                        })
+                        emit("tool_call", tool=owed.name, label=owed.label or TOOL_LABEL)
+                        tool_started = perf_counter()
+                        text, error_code, error_type = self._run_tool(owed.name, arguments, tool_context)
+                        output = self.defense.wrap_tool_result(text)
+                        steps.append({
+                            "kind": "tool_result", "tool_name": owed.name, "tool_declared": True, "arguments": None,
+                            "content": output, "latency_ms": int((perf_counter() - tool_started) * 1000),
+                            "error_code": error_code, "error_type": error_type,
+                        })
+                        emit("tool_result", tool=owed.name, ok=error_code is None)
+                        working.append({"role": "tool", "tool_name": owed.name, "content": output})
+                    else:
+                        checked_out.add(len(working))
+                        working.append({"role": "system", "content": owed.promise_retry or f"Người dùng vừa nhờ việc cần gọi {owed.name} mà bạn chưa gọi. Gọi {owed.name} ngay; không được nói đã làm khi chưa gọi."})
                     rounds += 1
                     emit(PROMISE_CHECK_STEP, label=PROMISE_CHECK_LABEL)
                     continue
@@ -831,6 +859,47 @@ class AgentService:
             except Exception:
                 pass
         return None
+
+    def _fill_owed(self, tool: AgentTool, view: list[dict[str, Any]], turn_started: float) -> tuple[dict[str, Any], dict[str, Any]] | None:
+        """The owed tool's arguments from one structured-output call: (arguments, the step's usage
+        and latency), or None when the tool asks for none, the provider cannot (not Ollama), time is
+        short or the reply is not an object. None falls back to the retry in words."""
+        left = self.turn_budget_seconds - (self.clock() - turn_started) - self.final_reserve_seconds
+        if not tool.promise_fill or tool.requires_approval or tool.ends_turn or left <= 0 or not hasattr(self.router, "chat_structured"):
+            return None
+        parameters = tool.schema["function"]["parameters"]
+        properties = parameters.get("properties", {})
+        # Every key present and each optional one nullable: the decoder then cannot leave out a key the
+        # tool needs, and "not given" is a null the code drops, not a value the model had to invent.
+        schema = {
+            "type": "object",
+            "properties": {
+                key: spec if key in parameters.get("required", []) else {**spec, "type": [spec.get("type", "string"), "null"]}
+                for key, spec in properties.items()
+            },
+            "required": list(properties),
+        }
+        now = datetime.now(VIETNAM_TIME)
+        calendar = "; ".join(
+            f"{WEEKDAYS[day.weekday()]} {day:%d/%m/%Y}" + (" (hôm nay)" if offset == 0 else " (ngày mai)" if offset == 1 else "")
+            for offset in range(8) for day in [now + timedelta(days=offset)]
+        )
+        ask = {"role": "system", "content": (
+            f"{tool.promise_fill}\nBây giờ là {now:%H:%M} {WEEKDAYS[now.weekday()]} {now:%d/%m/%Y} (giờ Việt Nam). Lịch: {calendar}.\n"
+            f"Trả về đúng một JSON theo lược đồ: {json.dumps(schema, ensure_ascii=False)}"
+        )}
+        started = perf_counter()
+        try:
+            with call_within(left):
+                reply, _ = self.router.chat_structured("general", [*view, ask], schema)
+            usage = consume_usage()
+            arguments = json.loads(reply)
+        except Exception:
+            consume_usage()
+            return None
+        if not isinstance(arguments, dict):
+            return None
+        return {key: value for key, value in arguments.items() if value is not None}, {**usage, "latency_ms": int((perf_counter() - started) * 1000)}
 
     def _unkept(self, retried: bool, tool_context: dict[str, Any], steps: list[dict[str, object]]) -> str:
         """After the promise check's one retry, a request still not carried out is said by the code,
