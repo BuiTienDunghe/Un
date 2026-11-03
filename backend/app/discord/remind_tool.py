@@ -197,5 +197,27 @@ class Remind:
         }), None, None
 
 
+REMIND_RETRY = (
+    "Người dùng vừa dặn nhắc kèm giờ nhưng bạn chưa gọi `remind`, nên chưa có lời nhắc nào được hẹn. Gọi "
+    "`current_time` nếu cần biết bây giờ là mấy giờ, rồi gọi `remind`. Không được nói đã hẹn khi chưa gọi. Rồi viết "
+    "câu trả lời như khi trả lời lần đầu: không xin lỗi, không nhắc tới việc kiểm tra này."
+)
+
+
+def promised_by(load_turn: Callable[[str], TurnFacts | None]) -> Callable[[dict[str, Any]], bool]:
+    """The promise check's gate: the speaker's own words this turn ask to be reminded and name a time,
+    the same two tests the tool itself applies. No turn (not Discord) means nothing was asked of it."""
+    def promised(tool_context: dict[str, Any]) -> bool:
+        turn_id = (tool_context or {}).get("turn_id")
+        facts = load_turn(str(turn_id)) if turn_id else None
+        return facts is not None and asked_for_reminder(facts.own_text) and names_a_time(facts.own_text)
+
+    return promised
+
+
 def register(registry: ToolRegistry, service: ReminderService, sessions: sessionmaker) -> None:
-    registry.register(AgentTool(REMIND_SCHEMA, Remind(service, load_turn_facts(sessions)), "Đang hẹn giờ nhắc…"), ORDER)
+    load_turn = load_turn_facts(sessions)
+    registry.register(
+        AgentTool(REMIND_SCHEMA, Remind(service, load_turn), "Đang hẹn giờ nhắc…", promised=promised_by(load_turn), promise_retry=REMIND_RETRY),
+        ORDER,
+    )

@@ -19,6 +19,9 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
 - **Công cụ `ask_user`** (ticket 46). Tắt mặc định: `AGENT_ASK_USER_ENABLED=true`. Thiếu dữ kiện bắt buộc thì model hỏi MỘT câu và lượt kết thúc bằng câu đó (`stop_reason` `asked_user`), nên mỗi lượt hỏi tối đa một lần. Tắt thì danh sách công cụ và tin gửi model không đổi. Chưa đo tỉ lệ hỏi thừa trên bài đủ dữ kiện.
 - **Công cụ chờ người duyệt** (ticket 46, phần xin duyệt). Tắt mặc định: `DISCORD_APPROVALS_ENABLED=true` ở backend, migration `20261102_38`, chỉ ở server trong `DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST`. Một công cụ khai báo `requires_approval` thì vòng agent không tự chạy: lượt dừng, trả câu duyệt do code viết, lưu lệnh gọi vào bảng `discord_approvals`. Chỉ người nhờ (lấy từ lượt hội thoại, không từ model) duyệt hoặc từ chối được qua `/api/discord/approvals`; quá 10 phút thì huỷ và không chạy. **Chưa có công cụ thật nào mang cờ này** (`remember` giữ nguyên), chưa có nút trên Discord, chưa có công cụ hỏi lại; tỉ lệ hỏi thừa chưa đo.
 
+### Fixed (03/11, thử trên Discord thật)
+- **Ún nói đã hẹn nhắc mà không hẹn.** Người dùng dặn nhắc kèm giờ mà model trả lời không gọi `remind` thì lượt được gửi lại một lần; vẫn không gọi thì code thêm dòng "chưa thực hiện được". Đo với model thật, 10 câu dặn nhắc: hẹn thật 7/10 → 8/10, hai câu còn lại nay có dòng báo.
+
 ### Changed
 - **Postgres, Qdrant, Redis chỉ mở trên máy này** (`127.0.0.1`), và Qdrant ghim `v1.18.2` thay vì `latest`, ở cả compose và CI. Có hiệu lực từ lần `docker compose up` kế tiếp; dữ liệu giữ nguyên.
 

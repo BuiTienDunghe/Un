@@ -247,6 +247,11 @@ READ_ON_RETRY = (
     "không xin lỗi, không nhắc tới việc kiểm tra này."
 )
 DOCUMENT_TOOLS = ("search_documents", "read_document")
+# The promise check (03/11, Discord): "nhắc mình uống nước 5 phút nữa" was answered "Ún sẽ nhắc lúc
+# 13:53" without a remind call, so nothing was scheduled. A tool whose request the code can recognise
+# carries `promised`; an answer that skipped it goes back once. On wherever such a tool is registered.
+PROMISE_CHECK_STEP = "promise_check"
+PROMISE_CHECK_LABEL = "Đang làm đúng việc được nhờ…"
 
 
 def _last_user_text(messages: list[dict[str, Any]]) -> str:
@@ -283,6 +288,10 @@ class AgentTool:
     # Ticket 46: a successful call ends the turn, and the text it returns is the whole reply (ask_user).
     # The turn therefore holds at most one such call; one written after it in the same round is dropped.
     ends_turn: bool = False
+    # The promise check (03/11): `promised(tool_context)` says the speaker's own words asked for what only
+    # this tool does. An answer that never called it is sent back once with `promise_retry`.
+    promised: Callable[[dict[str, Any]], bool] | None = None
+    promise_retry: str | None = None
 
     @property
     def name(self) -> str:
@@ -421,7 +430,7 @@ class AgentService:
         on_step: Callable[[dict[str, object]], None] | None = None,
     ) -> tuple[str, str, list[dict[str, object]]]:
         """The loop below, with its model calls counted against agent_call_cap (ticket 43)."""
-        with turn_call_budget("agent", agent_call_cap(self.max_steps, self.lookup_check, self.read_on_check, self.read_rest)):
+        with turn_call_budget("agent", agent_call_cap(self.max_steps, self.lookup_check, self.read_on_check, self.read_rest, self._promises() != [])):
             return self._run(messages, tool_context, on_step)
 
     def _run(
@@ -503,6 +512,7 @@ class AgentService:
         lookup_retried = False
         read_on_retried = False
         read_rest_tried = False
+        promise_retried = False
 
         def gave_up(answer: str) -> bool:
             """Found documents, left some unread, and said the fact is not there, with time left to do something about it."""
@@ -574,6 +584,24 @@ class AgentService:
             calls = result["tool_calls"]
             if not calls:
                 answer = result["content"]
+                owed = (
+                    self._owed_tool(tool_context, steps)
+                    if not promise_retried and self.turn_budget_seconds - (self.clock() - turn_started) >= self.final_reserve_seconds
+                    else None
+                )
+                if owed is not None:
+                    # The rejected attempt reached no one and is not kept: shown its own "đã hẹn", the model
+                    # said it again on 2 of 10 real requests (03/11).
+                    promise_retried = True
+                    steps.append({
+                        "kind": PROMISE_CHECK_STEP, "tool_name": None, "arguments": None, "content": None,
+                        "latency_ms": round_latency, **last,
+                    })
+                    checked_out.add(len(working))
+                    working.append({"role": "system", "content": owed.promise_retry or f"Người dùng vừa nhờ việc cần gọi {owed.name} mà bạn chưa gọi. Gọi {owed.name} ngay; không được nói đã làm khi chưa gọi."})
+                    rounds += 1
+                    emit(PROMISE_CHECK_STEP, label=PROMISE_CHECK_LABEL)
+                    continue
                 if (
                     self.lookup_check and not lookup_retried and self._offers_lookup()
                     # "Not in the text you sent" is a true answer about a paste, not a lookup skipped.
@@ -634,7 +662,7 @@ class AgentService:
                     emit("answer_check", label=ANSWER_CHECK_LABEL)
                     continue
                 # Ticket 45: what the reading pass could not read is told to the user by the code, not left to the model.
-                answer += closing
+                answer += closing + self._unkept(promise_retried, tool_context, steps)
                 steps.append({
                     "kind": "final", "tool_name": None, "arguments": None,
                     "content": _clip(answer, 4000), "latency_ms": round_latency,
@@ -749,7 +777,7 @@ class AgentService:
         # Out of rounds or time, there is no retry left: the check only marks the trace.
         # The fixed out-of-time reply is ours, not the model's, and is not checked.
         check = self._check_answer(answer, working, checked_out) if stop_reason != STOP_TURN_BUDGET_EXHAUSTED else {"trace": {}}
-        answer += closing
+        answer += closing + (self._unkept(promise_retried, tool_context, steps) if stop_reason != STOP_TURN_BUDGET_EXHAUSTED else "")
         steps.append({
             "kind": "final", "tool_name": None, "arguments": None,
             "content": _clip(answer, 4000), "latency_ms": int((perf_counter() - started) * 1000),
@@ -785,6 +813,30 @@ class AgentService:
 
     def _error(self, code: str, message: str, error_type: str | None = None) -> tuple[str, str, str | None]:
         return self._dump({"error": message, "code": code}), code, error_type
+
+    def _promises(self) -> list[AgentTool]:
+        """The offered tools that carry a promise check."""
+        offered = {id(schema) for schema in self._offered_schemas()}
+        return [tool for tool in self.registry.tools() if tool.promised is not None and id(tool.schema) in offered]
+
+    def _owed_tool(self, tool_context: dict[str, Any], steps: list[dict[str, object]]) -> AgentTool | None:
+        """A tool the speaker asked for that this turn has not called. A gate that fails says nothing is owed."""
+        called = {step["tool_name"] for step in steps if step["kind"] == "tool_call"}
+        for tool in self._promises():
+            if tool.name in called:
+                continue
+            try:
+                if tool.promised(tool_context):
+                    return tool
+            except Exception:
+                pass
+        return None
+
+    def _unkept(self, retried: bool, tool_context: dict[str, Any], steps: list[dict[str, object]]) -> str:
+        """After the promise check's one retry, a request still not carried out is said by the code,
+        so an answer that claims it was done does not stand alone."""
+        owed = self._owed_tool(tool_context, steps) if retried else None
+        return f"\n\n(Lưu ý: lượt này chưa thực hiện được việc bạn nhờ ({owed.name}). Bạn dặn lại giúp mình nhé.)" if owed else ""
 
     def _offers_lookup(self) -> bool:
         """Whether the registry holds a tool to look something up with (BFCL's holds only the task's own functions)."""
