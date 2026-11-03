@@ -41,8 +41,9 @@ REPLY_TIMEOUT_SECONDS = 150.0
 CLIENT_TIMEOUT_SECONDS = 30.0
 # PhoWhisper-medium, pinned at 55a7e3e of vinai/PhoWhisper-medium (3,06 GB fp32 on disk, 2,2 GB on the card in fp16,
 # 0,64 s for a 6 s clip warm; small was 0,8 GB and 0,32 s). Published WER, CMV-Vi / VIVOS: small 11,08 / 6,33, medium
-# 8,27 / 4,97 (read speech, not Discord voices). data/ is not in the repo; VOICE_MODEL_DIR=data/models/phowhisper-small
-# goes back to small, still on disk at a86b604.
+# 8,27 / 4,97 (read speech, not Discord voices). On the owner's three Discord recordings (03/11) small heard 1 of 3
+# right, medium 3 of 3, the same under fp32 and without chunking. data/ is not in the repo; small (a86b604) was deleted
+# on the owner's word, and VOICE_MODEL_DIR still points the service at another folder.
 MODEL_DIR = Path(os.environ.get("VOICE_MODEL_DIR") or Path(__file__).resolve().parent.parent / "data" / "models" / "phowhisper-medium")
 SAMPLE_RATE = 16_000
 MAX_RECORDING_SECONDS = 180.0
