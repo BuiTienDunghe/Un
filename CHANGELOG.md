@@ -12,6 +12,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
 ## [Unreleased]
 
 ### Added
+- **Nút mic ở ô soạn tin của web** (03/11). Bấm để ghi âm, bấm lần nữa để dừng, Esc để bỏ; tiếng được gửi lên `/voice/transcribe`, nghe bằng PhoWhisper-medium trên máy này (không dùng nhận giọng của trình duyệt, vì Chrome gửi giọng lên máy chủ Google), và chữ được điền vào ô soạn để sửa rồi mới gửi. Cần `VOICE_URL`; trình duyệt chỉ cho dùng micro ở `localhost` hoặc https, chỗ khác nút bị khoá và nói lý do.
 - **Code tự đọc nốt tài liệu** (`agent.read_rest`, tắt trong code, bật trong `models.yaml` theo quyết định của chủ dự án 03/11). Lượt đã tìm thấy tài liệu, còn phần chưa đọc mà báo không thấy thì code đọc phần còn lại, mỗi phần một lần gọi model để ghi chú, tối đa 8 phần, rồi model trả lời từ ghi chú. Ngoại lệ thứ sáu của luật 5.
 - Bước đọc tiếp (`agent.read_on_check`, mặc định tắt): lượt đã tìm thấy tài liệu, mới xem một phần mà báo "chưa thấy" được gửi lại một lần để đọc tiếp. v0-long.2 có thêm dữ kiện nhưng chưa bài nào đạt; 66 bài v0 giữ nguyên 55.
 - **Tra trước khi nói không có** (`agent.lookup_check`, bật theo quyết định của chủ dự án 02/11). Lượt chưa gọi công cụ nào mà trả lời không có thông tin hoặc cần tìm thì bị đẩy lại một lần để tra, tốn thêm một lần gọi model: ngoại lệ thứ năm của luật 5. Câu trả lời về văn bản dán không bị đẩy lại. Agent Eval 54 → 55/66 trên cùng ngày (doc-25); bộ đo đã thấy trước khi chỉnh mẫu, nên chưa chứng minh ngoài 66 bài này.

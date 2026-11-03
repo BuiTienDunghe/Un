@@ -149,6 +149,14 @@
   flex: 1; min-width: 0; resize: none; border: 0; background: transparent; font-size: 14px; line-height: 1.5;
   color: var(--text); padding: 8px 0; outline: none; min-height: 38px; max-height: 200px; font-family: inherit;
 }
+/* Nút mic (nhập bằng giọng nói): đỏ và nhấp nháy khi đang ghi, mờ khi máy đang nghe. */
+.composer-mic { margin-bottom: 2px; }
+.composer-mic:hover:not(:disabled) { background: var(--accent-soft); color: var(--accent); }
+.composer-mic.is-recording { background: var(--danger); color: #fff; animation: mic-pulse 1.2s ease-in-out infinite; }
+.composer-mic.is-recording:hover { background: var(--danger); color: #fff; }
+.composer-mic.is-busy { opacity: .6; cursor: progress; }
+@keyframes mic-pulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--danger) 25%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .composer-mic.is-recording { animation: none; } }
 .composer-tools { display: flex; align-items: center; gap: 6px; padding: 6px 10px 8px; overflow-x: auto; white-space: nowrap; }
 .composer-model { font-size: 11px; color: var(--text-3); flex: none; }
 .jump-latest {

@@ -35,7 +35,17 @@
   const CHAT_HINTS = {
     STREAM_FAILED: "Máy chủ mất kết nối với mô hình khi đang trả lời. Thử lại sau giây lát.",
     INTERNAL_ERROR: "Máy chủ gặp lỗi không xác định. Xem log backend để biết chi tiết.",
+    VOICE_NOT_ENABLED: "Máy nghe giọng chưa bật (VOICE_URL trong .env trống).",
+    VOICE_UNAVAILABLE: "Máy nghe giọng không trả lời. Thử lại sau giây lát.",
+    VOICE_FAILED: "Máy nghe giọng không nghe được đoạn này. Thử nói lại.",
+    AUDIO_TOO_LARGE: "Đoạn ghi âm dài quá. Nói ngắn hơn rồi thử lại.",
+    AUDIO_REJECTED: "Máy nghe giọng không nhận đoạn ghi âm này (dài quá hoặc hỏng).",
   };
+
+  /* Nút mic: ghi âm trong trình duyệt rồi gửi lên /voice/transcribe, nơi máy nghe chạy trên chính máy
+     này (PhoWhisper-medium, tools/voice_server.py). Không dùng nhận giọng có sẵn của trình duyệt: Chrome
+     gửi giọng nói lên máy chủ Google. Chữ nghe được điền vào ô soạn để sửa rồi mới gửi, không tự gửi. */
+  const VOICE_MAX_MS = 170000;   // máy nghe nhận tối đa 180 giây; dừng sớm hơn một chút
 
   /* Thẻ gợi ý: chữ hiển thị theo prototype (P:793-797), chữ điền vào ô soạn theo app cũ (app.js:1294-1299). */
   const SUGGESTIONS = [
@@ -1341,6 +1351,7 @@
       placeholder: S.mode === "rag" ? "Hỏi về nội dung tài liệu đã chọn…" : "Nhập tin nhắn…",
     });
     const send = h("button", { type: "button", class: "icon-btn-primary composer-send" });
+    const mic = buildMic(input);
     const seg = segmented([
       { value: "general", label: "Trò chuyện", icon: "chat" },
       { value: "rag", label: "Tài liệu", icon: "book" },
@@ -1361,7 +1372,7 @@
       icon("chevron-down", { size: 14 }), "Tin mới nhất");
     const wrap = h("div", { class: "composer-wrap" }, jump,
       h("div", { class: "composer" },
-        h("div", { class: "composer-row" }, input, send),
+        h("div", { class: "composer-row" }, input, mic.btn, send),
         h("div", { class: "composer-tools" }, seg, docsChip, memChip, toolsChip, h("span", { class: "spacer" }), model)));
 
     // syncJump: ô soạn cao lên (tới 200px) đẩy tin nhắn cuối ra khỏi tầm nhìn mà không có sự kiện
@@ -1380,7 +1391,98 @@
       if (event.detail > 1 || performance.now() - S.gen.startedAt < 400) return;
       abortTurn();
     });
-    return { wrap, input, send, seg, docsChip, memChip, toolsChip, model, jump };
+    return { wrap, input, send, mic, seg, docsChip, memChip, toolsChip, model, jump };
+  }
+
+  /* Ba trạng thái: rảnh → đang ghi (bấm lần nữa để dừng, Esc để bỏ) → đang nghe → rảnh. Rời màn hình
+     giữa chừng thì tắt micro và bỏ đoạn đang ghi; chữ về muộn sau khi đã rời thì không điền vào đâu. */
+  function buildMic(input) {
+    const supported = Boolean(window.MediaRecorder && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    const idleTitle = supported
+      ? "Nói thay vì gõ: bấm để ghi âm, bấm lần nữa để dừng"
+      : "Trình duyệt không cho dùng micro ở địa chỉ này (cần mở qua localhost hoặc https)";
+    const btn = h("button", {
+      type: "button", class: "icon-btn icon-btn-32 composer-mic", title: idleTitle, "aria-label": "Ghi âm để nhập bằng giọng nói",
+      disabled: !supported,
+    }, icon("mic", { size: 16 }));
+    let rec = null;   // { recorder, stream, chunks, timer, ticker, started, discard }
+
+    function setState(state, title) {
+      btn.classList.toggle("is-recording", state === "recording");
+      btn.classList.toggle("is-busy", state === "hearing");
+      btn.disabled = !supported || state === "hearing";
+      btn.title = title || idleTitle;
+      btn.setAttribute("aria-pressed", state === "recording" ? "true" : "false");
+    }
+
+    function release() {
+      if (!rec) return;
+      clearTimeout(rec.timer);
+      clearInterval(rec.ticker);
+      rec.stream.getTracks().forEach((track) => track.stop());
+    }
+
+    function stop(discard) {
+      if (!rec || rec.recorder.state === "inactive") return;
+      rec.discard = Boolean(discard);
+      rec.recorder.stop();
+    }
+
+    async function start() {
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (error) {
+        toast(error && error.name === "NotAllowedError" ? "Trình duyệt chưa cho dùng micro. Cho phép micro cho trang này rồi thử lại." : "Không mở được micro.", "danger");
+        return;
+      }
+      const recorder = new MediaRecorder(stream);
+      rec = { recorder, stream, chunks: [], started: Date.now(), discard: false };
+      recorder.addEventListener("dataavailable", (event) => { if (event.data && event.data.size) rec.chunks.push(event.data); });
+      recorder.addEventListener("stop", () => {
+        const done = rec;
+        release();
+        rec = null;
+        if (done.discard || !V || !done.chunks.length) { setState("idle"); return; }
+        hear(new Blob(done.chunks, { type: recorder.mimeType || "audio/webm" }));
+      });
+      recorder.start();
+      rec.timer = setTimeout(() => stop(false), VOICE_MAX_MS);
+      const tick = () => {
+        const seconds = Math.round((Date.now() - rec.started) / 1000);
+        setState("recording", `Đang ghi ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}, bấm để dừng, Esc để bỏ`);
+      };
+      tick();
+      rec.ticker = setInterval(tick, 1000);
+    }
+
+    async function hear(blob) {
+      setState("hearing", "Đang nghe…");
+      try {
+        const audio = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result).split(",", 2)[1] || "");
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(blob);
+        });
+        const data = await Shell.api("/voice/transcribe", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ audio_base64: audio }) });
+        const text = String((data && data.text) || "").trim();
+        if (!V || V.input !== input) return;
+        if (!text) { toast("Không nghe ra lời nào. Thử nói lại gần micro hơn."); return; }
+        const before = input.value.replace(/\s+$/, "");
+        fillComposer(before ? `${before} ${text}` : text);
+      } catch (error) {
+        if (V && V.input === input) toast(viError(error), "danger");
+      } finally {
+        setState("idle");
+      }
+    }
+
+    btn.addEventListener("click", () => { if (rec) stop(false); else start(); });
+    input.addEventListener("keydown", (event) => { if (event.key === "Escape" && rec) { event.preventDefault(); stop(true); } });
+    btn.addEventListener("keydown", (event) => { if (event.key === "Escape" && rec) { event.preventDefault(); stop(true); } });
+    setState("idle");
+    return { btn, stop: () => stop(true) };
   }
 
   function buildEmpty() {
@@ -1953,6 +2055,7 @@
   function unmount() {
     abortTurn();
     closeCite({ restore: false });
+    if (V) V.mic.stop();   // tắt micro, bỏ đoạn đang ghi
     V = null;
   }
 
