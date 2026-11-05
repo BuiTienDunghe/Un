@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -81,6 +82,10 @@ def read_scores(score_root: Path, categories: list[str]) -> dict[str, dict[str, 
 
 
 def main(argv: list[str] | None = None) -> int:
+    # BFCL opens the result files with the locale's codec, cp1252 on Windows, and they hold Vietnamese:
+    # without UTF-8 mode the 06/11 scoring died on its first file. The mode is set at interpreter start.
+    if not sys.flags.utf8_mode and argv is None:
+        return subprocess.run([sys.executable, "-X", "utf8", *sys.argv]).returncode
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("run_dir", type=Path)
     args = parser.parse_args(argv)

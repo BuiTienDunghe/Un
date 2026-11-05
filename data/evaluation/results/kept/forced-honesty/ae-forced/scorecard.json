@@ -1,0 +1,118 @@
+{
+ "scorecard_version": "agent-eval-scorecard-v1",
+ "run_id": "ae-forced",
+ "commit": "a8436b46de6a29ce934b1c0f9446bb136aa88f06",
+ "worktree_dirty": true,
+ "dataset_version": "agent-eval-v0.8",
+ "dataset_sha256": "35b39db48e7ce5600aecdf63d3009ff40629e36f7efe684f875640e23dc40212",
+ "grader_version": "agent-eval-grader-v0.4",
+ "model": "qwen3.5:9b",
+ "started_at": "2026-11-05T22:21:48.908019+00:00",
+ "condition": {
+  "temperature": 0.0,
+  "seed": 42,
+  "cold": false,
+  "loaded_at_start": [
+   "qwen3.5:9b"
+  ],
+  "source": "manifest",
+  "gpu_shared": false,
+  "gpu_at_start": {
+   "utilization_percent": 0,
+   "memory_used_mib": 6962,
+   "processes": [
+    "ChatGPT.exe",
+    "llama-server.exe"
+   ]
+  }
+ },
+ "correctness": {
+  "passed": 57,
+  "tasks": 66,
+  "pass_rate": 0.8636,
+  "by_category": {
+   "documents": {
+    "passed": 39,
+    "tasks": 45,
+    "pass_rate": 0.8667
+   },
+   "history": {
+    "passed": 8,
+    "tasks": 11,
+    "pass_rate": 0.7273
+   },
+   "no_tool": {
+    "passed": 5,
+    "tasks": 5,
+    "pass_rate": 1.0
+   },
+   "status": {
+    "passed": 5,
+    "tasks": 5,
+    "pass_rate": 1.0
+   }
+  },
+  "fabricated": 0,
+  "fabricated_tasks": [],
+  "not_found_missed": 0,
+  "not_found_missed_tasks": [],
+  "citation_passed": 18,
+  "citation_tasks": 21,
+  "citation_rate": 0.8571,
+  "citation_verbatim": 18,
+  "answer_checks": 0,
+  "answer_check_tasks": [],
+  "finals_unsupported": 0,
+  "finals_unsupported_tasks": []
+ },
+ "efficiency": {
+  "tasks_ran": 66,
+  "tokens_in_mean": 5194,
+  "tokens_in_median": 4463,
+  "tokens_out_mean": 248,
+  "tokens_out_median": 217,
+  "model_rounds_mean": 1.864,
+  "tool_calls": 52,
+  "tool_calls_per_solved": 0.912,
+  "tool_calls_mean_of_solved": 0.754,
+  "latency_p50_ms": 4411,
+  "latency_p95_ms": 10452,
+  "latency_max_ms": 22849
+ },
+ "robustness": {
+  "task_errors": {},
+  "budget_exhausted": 2,
+  "stop_reasons": {
+   "final": 64,
+   "max_steps": 2,
+   "turn_budget": 0,
+   "turn_budget_exhausted": 0,
+   "tool_call_error": 0
+  },
+  "stop_reasons_unavailable": null,
+  "forced_stops_match_budget_exhausted": true,
+  "tool_error_codes": {
+   "TOOL_UNAVAILABLE_HERE": 3
+  },
+  "tool_errors_uncoded": null,
+  "bad_arguments_rate": 0.0,
+  "results_trimmed_by_item": 1
+ },
+ "traceability": {
+  "turns": 66,
+  "complete": 64,
+  "complete_rate": 0.9697,
+  "parts": {
+   "rounds_timed_and_counted": 66,
+   "calls_named_and_shaped": 66,
+   "calls_answered": 64,
+   "final_has_stop_reason": 66
+  }
+ },
+ "limits": {
+  "points_per_task": 1.52,
+  "cold_rule": "so ở nhiệt độ 0 chỉ giữa các lần lạnh (gỡ model chính trước mỗi lần đo)",
+  "first_divergence_rule": "so từng bài chỉ chắc tới chỗ câu trả lời khác nhau đầu tiên",
+  "fabrication": "chỉ đếm được ở bài có tiêu chí phủ định"
+ }
+}
