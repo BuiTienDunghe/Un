@@ -250,6 +250,13 @@ DOCUMENT_TOOLS = ("search_documents", "read_document")
 # The promise check (03/11, Discord): "nhắc mình uống nước 5 phút nữa" was answered "Ún sẽ nhắc lúc
 # 13:53" without a remind call, so nothing was scheduled. A tool whose request the code can recognise
 # carries `promised`; an answer that skipped it goes back once. On wherever such a tool is registered.
+# Said with every forced answer: told only "answer now with what you gathered", the model wrote "không
+# có tuyến SFO→CIA" for a route it never asked about (BFCL multi_turn_miss_func_174, 02/11), and the
+# later turns believed it.
+FORCED_ANSWER_HONESTY = (
+    "Chỉ khẳng định điều đã thấy trong kết quả công cụ. Điều chưa tra hoặc việc chưa làm thì nói rõ là chưa tra, "
+    "chưa làm; đừng nói là không có, và đừng nói là đã làm."
+)
 PROMISE_CHECK_STEP = "promise_check"
 PROMISE_CHECK_LABEL = "Đang làm đúng việc được nhờ…"
 
@@ -771,7 +778,7 @@ class AgentService:
                 else "Không gọi được công cụ nữa. Trả lời ngay bằng những gì đã thu thập được."
                 if stop_reason == STOP_TOOL_CALL_ERROR
                 else "Hết thời gian dùng công cụ. Trả lời ngay bằng những gì đã thu thập được."
-            ),
+            ) + " " + FORCED_ANSWER_HONESTY,
         })
         emit("answering", label=ANSWERING_LABEL)
         started = perf_counter()

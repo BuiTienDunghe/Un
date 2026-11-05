@@ -23,12 +23,13 @@ from app.services.agent_service import (
     TOOL_CALL_ERROR_STEP,
     TOOL_CALL_PARSE,
     TOOL_CALL_RETRY,
+    FORCED_ANSWER_HONESTY,
     AgentService,
 )
 
 SERVER = "XML syntax error on line 12: element <function> closed by </parameter>"
 PARSE = OllamaToolCallParseError(f"Ollama could not parse the model's tool call: {SERVER}")
-FORCED = "Không gọi được công cụ nữa. Trả lời ngay bằng những gì đã thu thập được."
+FORCED = "Không gọi được công cụ nữa. Trả lời ngay bằng những gì đã thu thập được. " + FORCED_ANSWER_HONESTY
 INVENTED = "Phụ cấp lưu trú là 100.000 - 200.000 VNĐ/ngày."
 HONEST = "Mình chưa tra được tài liệu nào nói về phụ cấp lưu trú."
 

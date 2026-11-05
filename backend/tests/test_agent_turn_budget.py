@@ -133,6 +133,15 @@ def test_used_up_tool_rounds_keep_their_old_note_and_reason():
     assert router.final_messages[-1]["content"].startswith("Đã dùng tối đa số lượt công cụ")
 
 
+def test_a_forced_answer_is_told_to_claim_only_what_it_saw():
+    # BFCL multi_turn_miss_func_174: forced to answer, the model said a route it never asked about did not exist.
+    clock = Clock()
+    router = Router(clock, [tool_round(), tool_round(), tool_round()])
+    agent(router, clock).run([{"role": "user", "content": "giá vé?"}])
+    assert router.final_messages[-1]["content"].endswith(agent_module.FORCED_ANSWER_HONESTY)
+    assert "chưa tra" in agent_module.FORCED_ANSWER_HONESTY and "đừng nói là không có" in agent_module.FORCED_ANSWER_HONESTY
+
+
 def test_the_deadline_does_not_outlive_the_turn():
     clock = Clock()
     agent(Router(clock, [answer("chào")]), clock).run([{"role": "user", "content": "chào"}])
