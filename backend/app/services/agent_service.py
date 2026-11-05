@@ -261,7 +261,8 @@ PROMISE_CHECK_STEP = "promise_check"
 # What the structured call is told about `requested`, for any tool (agent_service._fill_owed).
 PROMISE_REQUESTED = (
     "`requested`: false nếu tin nhắn thật ra không nhờ việc này ngay bây giờ (kể lại, trích lời người khác, hỏi "
-    "nghĩa, cảm ơn, nói chuyện khác) hoặc còn thiếu điều bắt buộc mà người dùng chưa nói; khi đó mọi trường khác là null."
+    "nghĩa, hỏi hay phàn nàn về chuyện đã qua, cảm ơn, nói chuyện khác) hoặc còn thiếu điều bắt buộc mà người dùng "
+    "chưa nói; khi đó mọi trường khác là null."
 )
 # _fill_owed's answer when the model says the speaker asked for nothing.
 DECLINED = object()
