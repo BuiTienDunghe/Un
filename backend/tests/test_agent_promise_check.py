@@ -85,7 +85,7 @@ def kinds(steps):
 REMIND = call("remind", {"text": "uống nước", "in_minutes": 5})
 
 
-FILLED = json.dumps({"text": "uống nước", "in_minutes": 5, "at": None})
+FILLED = json.dumps({"requested": True, "text": "uống nước", "in_minutes": 5, "at": None})
 
 
 def test_an_answer_that_claims_a_reminder_it_never_set_has_the_reminder_set_from_a_structured_call():
@@ -106,14 +106,14 @@ def test_the_structured_call_holds_every_key_and_lets_the_optional_ones_be_null(
     agent, router, _ = wired([final(CLAIMED), final("Ún sẽ nhắc bạn.")], filled=FILLED)
     run(agent)
     schema = router.schemas[0]
-    assert schema["required"] == ["text", "in_minutes", "at"]
+    assert schema["required"] == ["requested", "text", "in_minutes", "at"] and schema["properties"]["requested"]["type"] == "boolean"
     assert schema["properties"]["text"]["type"] == "string" and schema["properties"]["in_minutes"]["type"] == ["integer", "null"]
     asked = router.structured_prompts[0][-1]["content"]
     assert REMIND_FILL in asked and "Lịch:" in asked and "(hôm nay)" in asked
 
 
 def test_arguments_the_tool_refuses_are_refused_as_the_models_own_would_be():
-    filled = json.dumps({"text": "đi ăn tối với sếp", "in_minutes": 5, "at": None})
+    filled = json.dumps({"requested": True, "text": "đi ăn tối với sếp", "in_minutes": 5, "at": None})
     agent, _, service = wired([final(CLAIMED), final("Mình chưa hẹn được.")], filled=filled)
     _, steps = run(agent)
     assert service.list_for(GUILD, ME) == []
@@ -210,3 +210,41 @@ def test_the_cap_grows_by_two_only_when_a_tool_carries_a_promise():
     assert agent_call_cap(3, promise_check=True) == agent_call_cap(3) + 2
     plain = AgentService(Router([final("x")]), SimpleNamespace(), SimpleNamespace())
     assert not any(tool.promised for tool in plain.registry.tools())
+
+
+# ---- review 06/11 ----
+
+def test_when_the_model_says_nothing_was_asked_the_answer_stands_with_no_note():
+    # "Sếp bảo: nhắc tôi họp lúc 3 giờ chiều. Câu đó nghĩa là sao?" passes the word gate.
+    quoted = "Sếp bảo: nhắc tôi họp lúc 3 giờ chiều. Câu đó nghĩa là sao?"
+    explained = "Câu đó là sếp dặn bạn tự nhớ cuộc họp chiều nay."
+    declined = json.dumps({"requested": False, "text": None, "in_minutes": None, "at": None})
+    agent, router, service = wired([final(explained)], own_text=quoted, filled=declined)
+    answer, steps = run(agent, quoted)
+    assert answer == explained and "chưa thực hiện" not in answer
+    assert service.list_for(GUILD, ME) == [] and len(router.prompts) == 1
+    step = next(s for s in steps if s["kind"] == PROMISE_CHECK_STEP)
+    assert step["arguments_shape"] == {"declined": True}
+
+
+def test_a_thank_you_after_a_reminder_is_no_second_request():
+    # Read with the request before it, "hôm nay" made the check set the same reminder again.
+    service = build()[0]
+    registry = core_tools()
+    from app.discord import remind_tool
+    facts = TurnFacts(GUILD, "chan", None, ME, own_text=f"{ASKED} cảm ơn, hôm nay mệt quá", request_text="cảm ơn, hôm nay mệt quá")
+    tool = Remind(service, lambda turn_id: facts)
+    registry.register(AgentTool(remind_tool.REMIND_SCHEMA, tool, None, promised=remind_tool.promised_by(tool.load_turn), promise_retry=REMIND_RETRY, promise_fill=REMIND_FILL), remind_tool.ORDER)
+    router = StructuredRouter([final("Nghỉ ngơi chút nhé.")], FILLED)
+    agent = AgentService(router, SimpleNamespace(), SimpleNamespace(), registry=registry)
+    answer, steps = run(agent, "cảm ơn, hôm nay mệt quá")
+    assert answer == "Nghỉ ngơi chút nhé." and PROMISE_CHECK_STEP not in kinds(steps)
+    assert router.schemas == [] and service.list_for(GUILD, ME) == []
+
+
+def test_a_remind_call_the_tool_refused_is_not_counted_as_kept():
+    bad = call("remind", {"text": "uống nước", "at": "15:00"})
+    agent, _, service = wired([bad, final(CLAIMED), final("Ún sẽ nhắc bạn.")], filled=FILLED)
+    _, steps = run(agent)
+    assert next(s for s in steps if s["kind"] == "tool_result")["error_code"] == "BAD_ARGUMENTS"
+    assert PROMISE_CHECK_STEP in kinds(steps) and len(service.list_for(GUILD, ME)) == 1

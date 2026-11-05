@@ -272,3 +272,21 @@ def test_with_both_on_the_code_reads_and_the_model_is_not_also_sent_back(flags):
     _, steps, router = run([SEARCH, final(GAVE_UP), final(GAVE_UP)], **flags)
     assert kinds(steps).count(READ_REST_STEP) == 1
     assert "read_on_check" not in kinds(steps)
+
+
+def test_a_store_that_fails_while_reading_the_rest_costs_the_extra_not_the_turn():
+    class Broken(Reader):
+        def read_chunks(self, document_id, from_chunk, n):
+            if from_chunk == 0 and n > 3:  # the code's own read; the model's read_document asks n <= 3
+                raise RuntimeError("database down")
+            return super().read_chunks(document_id, from_chunk, n)
+    answer, steps, _ = run([SEARCH, final(GAVE_UP)], reader=Broken())
+    assert answer == GAVE_UP and READ_REST_STEP not in kinds(steps)
+
+
+def test_a_second_forced_answer_that_fails_leaves_the_first():
+    def down():
+        raise RuntimeError("ollama 500")
+    router = Router([SEARCH, READ_FIRST, READ_FIRST], forced=[GAVE_UP, down])
+    answer, _, _ = run([], reader=Reader(sizes={"doc-1": 6}), router=router)
+    assert answer == GAVE_UP

@@ -103,6 +103,9 @@ class TurnFacts:
     thread_id: str | None
     author_id: str
     own_text: str
+    # This message alone. own_text may hold the request just before it, so the tool can take an hour
+    # given in answer to "lúc mấy giờ?"; the promise check reads this one only (see promised_by).
+    request_text: str = ""
 
 
 def load_turn_facts(sessions: sessionmaker) -> Callable[[str], TurnFacts | None]:
@@ -127,6 +130,7 @@ def load_turn_facts(sessions: sessionmaker) -> Callable[[str], TurnFacts | None]
                 own_text=words_behind_the_turn(
                     turn.request_text.split(IMAGE_NOTE, 1)[0], previous.split(IMAGE_NOTE, 1)[0] if previous else None,
                 ),
+                request_text=turn.request_text.split(IMAGE_NOTE, 1)[0],
             )
 
     return load
@@ -199,8 +203,9 @@ class Remind:
 
 REMIND_RETRY = (
     "Người dùng vừa dặn nhắc kèm giờ nhưng bạn chưa gọi `remind`, nên chưa có lời nhắc nào được hẹn. Gọi "
-    "`current_time` nếu cần biết bây giờ là mấy giờ, rồi gọi `remind`. Không được nói đã hẹn khi chưa gọi. Rồi viết "
-    "câu trả lời như khi trả lời lần đầu: không xin lỗi, không nhắc tới việc kiểm tra này."
+    "`current_time` nếu cần biết bây giờ là mấy giờ, rồi gọi `remind`. Không được nói đã hẹn khi chưa gọi. Nếu "
+    "tin nhắn thật ra không nhờ đặt nhắc (kể lại, trích lời người khác, hỏi nghĩa) hoặc chưa nói giờ thì đừng gọi, "
+    "trả lời như bình thường. Rồi viết câu trả lời như khi trả lời lần đầu: không xin lỗi, không nhắc tới việc kiểm tra này."
 )
 
 
@@ -212,17 +217,23 @@ REMIND_FILL = (
     "việc cần làm, vài chữ lấy từ lời người dùng, không kèm giờ, không kèm \"nhắc mình\", không kèm tên hay nhãn "
     "người nói (ví dụ \"đi vệ sinh\", \"gọi mẹ\"). Đúng một trong `in_minutes` (số phút kể từ bây giờ, khi họ nói "
     "\"N phút/giờ nữa\") hoặc `at` (giờ Việt Nam dạng 2026-11-03T15:00, đọc ngày ở Lịch; \"4h chiều\" là 16:00); "
-    "cái còn lại là null."
+    "cái còn lại là null. Người dùng chưa nói giờ nhắc (một con số chỉ số lượng, như \"2 hộp sữa\", không phải giờ) "
+    "thì `requested` là false."
 )
 
 
 def promised_by(load_turn: Callable[[str], TurnFacts | None]) -> Callable[[dict[str, Any]], bool]:
-    """The promise check's gate: the speaker's own words this turn ask to be reminded and name a time,
-    the same two tests the tool itself applies. No turn (not Discord) means nothing was asked of it."""
+    """The promise check's gate: THIS message asks to be reminded and names a time, the two tests the
+    tool itself applies. Not the request before it: read with it, "cảm ơn, hôm nay mệt quá" sent after a
+    reminder was set (its "nay" a time word) made the check set a second one (review 06/11). An hour
+    given in answer to "lúc mấy giờ?" is left to the model. No turn (not Discord) means nothing asked."""
     def promised(tool_context: dict[str, Any]) -> bool:
         turn_id = (tool_context or {}).get("turn_id")
         facts = load_turn(str(turn_id)) if turn_id else None
-        return facts is not None and asked_for_reminder(facts.own_text) and names_a_time(facts.own_text)
+        if facts is None:
+            return False
+        text = facts.request_text or facts.own_text
+        return asked_for_reminder(text) and names_a_time(text)
 
     return promised
 

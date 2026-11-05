@@ -258,6 +258,13 @@ FORCED_ANSWER_HONESTY = (
     "chưa làm; đừng nói là không có, và đừng nói là đã làm."
 )
 PROMISE_CHECK_STEP = "promise_check"
+# What the structured call is told about `requested`, for any tool (agent_service._fill_owed).
+PROMISE_REQUESTED = (
+    "`requested`: false nếu tin nhắn thật ra không nhờ việc này ngay bây giờ (kể lại, trích lời người khác, hỏi "
+    "nghĩa, cảm ơn, nói chuyện khác) hoặc còn thiếu điều bắt buộc mà người dùng chưa nói; khi đó mọi trường khác là null."
+)
+# _fill_owed's answer when the model says the speaker asked for nothing.
+DECLINED = object()
 PROMISE_CHECK_LABEL = "Đang làm đúng việc được nhờ…"
 
 
@@ -522,7 +529,7 @@ class AgentService:
         lookup_retried = False
         read_on_retried = False
         read_rest_tried = False
-        promise_retried = False
+        promise_retried = promise_declined = False
 
         def gave_up(answer: str) -> bool:
             """Found documents, left some unread, and said the fact is not there, with time left to do something about it."""
@@ -538,12 +545,17 @@ class AgentService:
             """The code reads what is left and puts the notes in `working`; returns the line for the
             answer, None when nothing could be read. The rejected attempt reached no one and is not
             kept: the model answers from the notes, not against itself."""
-            reading_rest = read_rest(
-                self.router, self.document_reader, _last_user_text(messages), tool_context["read_state"], tool_context["document_names"],
-                window.view(working), self.inline_max_tokens, lambda: self.turn_budget_seconds - (self.clock() - turn_started),
-                self.final_reserve_seconds, emit, steps, self.defense,
-                lambda name, arguments: arguments_shape(name, arguments, self.registry.declared()),
-            )
+            # A store or model failure here costs this extra, never the turn: the answer already written stands.
+            try:
+                reading_rest = read_rest(
+                    self.router, self.document_reader, _last_user_text(messages), tool_context["read_state"], tool_context["document_names"],
+                    window.view(working), self.inline_max_tokens, lambda: self.turn_budget_seconds - (self.clock() - turn_started),
+                    self.final_reserve_seconds, emit, steps, self.defense,
+                    lambda name, arguments: arguments_shape(name, arguments, self.registry.declared()),
+                )
+            except Exception:
+                consume_usage()
+                return None
             if reading_rest is None:
                 return None
             steps.append({
@@ -599,6 +611,16 @@ class AgentService:
                     if not promise_retried and self.turn_budget_seconds - (self.clock() - turn_started) >= self.final_reserve_seconds
                     else None
                 )
+                filled = self._fill_owed(owed, window.view(working), turn_started) if owed is not None else None
+                if owed is not None and filled is DECLINED:
+                    # The words matched a request, and the model, asked, said it was none ("câu đó nghĩa là sao",
+                    # no hour given, a thank-you after one): the answer stands, and no "not done" line follows.
+                    promise_retried = promise_declined = True
+                    steps.append({
+                        "kind": PROMISE_CHECK_STEP, "tool_name": None, "arguments": None, "content": None,
+                        "latency_ms": round_latency, "arguments_shape": {"declined": True}, **last,
+                    })
+                    owed = None
                 if owed is not None:
                     # The rejected attempt reached no one and is not kept: shown its own "đã hẹn", the model
                     # said it again on 2 of 10 real requests (03/11).
@@ -607,7 +629,6 @@ class AgentService:
                         "kind": PROMISE_CHECK_STEP, "tool_name": None, "arguments": None, "content": None,
                         "latency_ms": round_latency, **last,
                     })
-                    filled = self._fill_owed(owed, window.view(working), turn_started)
                     if filled is not None:
                         # Told again in words, the model on the Discord prompt still answered without the call
                         # (2 of 11 set, 03/11). Asked for the arguments alone, in a JSON the decoder holds to
@@ -697,7 +718,7 @@ class AgentService:
                     emit("answer_check", label=ANSWER_CHECK_LABEL)
                     continue
                 # Ticket 45: what the reading pass could not read is told to the user by the code, not left to the model.
-                answer += closing + self._unkept(promise_retried, tool_context, steps)
+                answer += closing + self._unkept(promise_retried and not promise_declined, tool_context, steps)
                 steps.append({
                     "kind": "final", "tool_name": None, "arguments": None,
                     "content": _clip(answer, 4000), "latency_ms": round_latency,
@@ -807,12 +828,12 @@ class AgentService:
                         answer, model_used = self.router.chat("general", window.view(working))
                     usage = last = consume_usage()
                     closing += told
-                except ModelCallTimeoutError:
+                except Exception:  # out of time, or the model down: the first answer stands (review 06/11)
                     consume_usage()
         # Out of rounds or time, there is no retry left: the check only marks the trace.
         # The fixed out-of-time reply is ours, not the model's, and is not checked.
         check = self._check_answer(answer, working, checked_out) if stop_reason != STOP_TURN_BUDGET_EXHAUSTED else {"trace": {}}
-        answer += closing + (self._unkept(promise_retried, tool_context, steps) if stop_reason != STOP_TURN_BUDGET_EXHAUSTED else "")
+        answer += closing + (self._unkept(promise_retried and not promise_declined, tool_context, steps) if stop_reason != STOP_TURN_BUDGET_EXHAUSTED else "")
         steps.append({
             "kind": "final", "tool_name": None, "arguments": None,
             "content": _clip(answer, 4000), "latency_ms": int((perf_counter() - started) * 1000),
@@ -856,7 +877,8 @@ class AgentService:
 
     def _owed_tool(self, tool_context: dict[str, Any], steps: list[dict[str, object]]) -> AgentTool | None:
         """A tool the speaker asked for that this turn has not called. A gate that fails says nothing is owed."""
-        called = {step["tool_name"] for step in steps if step["kind"] == "tool_call"}
+        # A call the tool refused (remind(at="15:00") -> BAD_ARGUMENTS) kept nothing: only a result without an error counts.
+        called = {step["tool_name"] for step in steps if step["kind"] == "tool_result" and not step.get("error_code")}
         for tool in self._promises():
             if tool.name in called:
                 continue
@@ -867,10 +889,16 @@ class AgentService:
                 pass
         return None
 
-    def _fill_owed(self, tool: AgentTool, view: list[dict[str, Any]], turn_started: float) -> tuple[dict[str, Any], dict[str, Any]] | None:
+    def _fill_owed(self, tool: AgentTool, view: list[dict[str, Any]], turn_started: float) -> tuple[dict[str, Any], dict[str, Any]] | object | None:
         """The owed tool's arguments from one structured-output call: (arguments, the step's usage
-        and latency), or None when the tool asks for none, the provider cannot (not Ollama), time is
-        short or the reply is not an object. None falls back to the retry in words."""
+        and latency); DECLINED when the model says the speaker asked for no such thing; or None when the
+        tool asks for none, the provider cannot (not Ollama), time is short or the reply is not an
+        object. None falls back to the retry in words.
+
+        The gate is a word pattern, so it fires on "Sếp bảo: nhắc tôi họp lúc 3 giờ. Câu đó nghĩa là
+        sao?" or "nhắc mình mua 2 hộp sữa" (a number, no hour) (review 06/11). Holding the decoder to the
+        tool's schema alone would then force a reminder nobody asked for, so the model first says, in
+        `requested`, whether this message asks for it now."""
         left = self.turn_budget_seconds - (self.clock() - turn_started) - self.final_reserve_seconds
         if not tool.promise_fill or tool.requires_approval or tool.ends_turn or left <= 0 or not hasattr(self.router, "chat_structured"):
             return None
@@ -881,10 +909,13 @@ class AgentService:
         schema = {
             "type": "object",
             "properties": {
-                key: spec if key in parameters.get("required", []) else {**spec, "type": [spec.get("type", "string"), "null"]}
-                for key, spec in properties.items()
+                "requested": {"type": "boolean", "description": f"tin nhắn này có thật sự nhờ {tool.name} ngay bây giờ không"},
+                **{
+                    key: spec if key in parameters.get("required", []) else {**spec, "type": [spec.get("type", "string"), "null"]}
+                    for key, spec in properties.items()
+                },
             },
-            "required": list(properties),
+            "required": ["requested", *properties],
         }
         now = datetime.now(VIETNAM_TIME)
         calendar = "; ".join(
@@ -892,7 +923,7 @@ class AgentService:
             for offset in range(8) for day in [now + timedelta(days=offset)]
         )
         ask = {"role": "system", "content": (
-            f"{tool.promise_fill}\nBây giờ là {now:%H:%M} {WEEKDAYS[now.weekday()]} {now:%d/%m/%Y} (giờ Việt Nam). Lịch: {calendar}.\n"
+            f"{tool.promise_fill}\n{PROMISE_REQUESTED}\nBây giờ là {now:%H:%M} {WEEKDAYS[now.weekday()]} {now:%d/%m/%Y} (giờ Việt Nam). Lịch: {calendar}.\n"
             f"Trả về đúng một JSON theo lược đồ: {json.dumps(schema, ensure_ascii=False)}"
         )}
         started = perf_counter()
@@ -906,6 +937,8 @@ class AgentService:
             return None
         if not isinstance(arguments, dict):
             return None
+        if arguments.pop("requested", True) is False:
+            return DECLINED
         return {key: value for key, value in arguments.items() if value is not None}, {**usage, "latency_ms": int((perf_counter() - started) * 1000)}
 
     def _unkept(self, retried: bool, tool_context: dict[str, Any], steps: list[dict[str, object]]) -> str:
