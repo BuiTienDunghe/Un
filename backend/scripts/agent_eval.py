@@ -294,6 +294,10 @@ class UsageRecordingRouter:
     def __init__(self, inner: Any) -> None:
         self.inner = inner
         self.rounds: list[dict[str, Any]] = []
+        # Told (round index, the calls the model wrote) after every chat_tools round that returned. The BFCL
+        # runner records the calls from here: recorded where a tool ran, a call to a name the task never
+        # declared was lost, and BFCL's own handler would have kept (and failed) it.
+        self.on_tool_calls: Any = None
 
     def _call(self, kind: str, call: Any) -> Any:
         consume_usage()  # a value left by an earlier failed call must not leak in
@@ -304,7 +308,10 @@ class UsageRecordingRouter:
             self.rounds.append({"call": kind, **consume_usage(), "latency_ms": int((perf_counter() - started) * 1000)})
 
     def chat_tools(self, mode: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -> tuple[dict[str, Any], str]:
-        return self._call("chat_tools", lambda: self.inner.chat_tools(mode, messages, tools))
+        result = self._call("chat_tools", lambda: self.inner.chat_tools(mode, messages, tools))
+        if self.on_tool_calls is not None:
+            self.on_tool_calls(len(self.rounds) - 1, list(result[0].get("tool_calls") or []))
+        return result
 
     def chat(self, mode: str, messages: list[dict[str, Any]], options: dict[str, Any] | None = None) -> tuple[str, str]:
         # A call with options is a part's note (long_input, document_reading), not the forced answer:

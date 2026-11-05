@@ -211,6 +211,18 @@ def test_a_task_that_runs_nothing_keeps_the_answer_text_and_a_task_that_calls_ke
     assert json.loads(line["result"][0][name]) == call[0][0][1]
 
 
+@needs_clone
+def test_a_call_to_a_name_the_task_never_declared_is_recorded_as_the_model_wrote_it():
+    # Review 06/11: calls were recorded where a tool ran, so an invented name never reached the result,
+    # and an irrelevance task that made one scored as if the model had answered in words.
+    line, _ = run_one("irrelevance", "irrelevance_0", [[("made_up_function", {"x": 1})], "Không có hàm nào dùng được."])
+    assert line["result"] == [{"made_up_function": json.dumps({"x": 1})}]
+
+    name, arguments = oracle_single_turn("simple_python", "simple_python_6")[0][0]
+    line, _ = run_one("simple_python", "simple_python_6", [[(name, arguments), ("math.factorial", {"n": 5})], "xong"])
+    assert [list(c) for c in line["result"]] == [[name], ["math.factorial"]], "both calls of the round, the undeclared one too"
+
+
 # ── multi-turn: the loop's state is BFCL's ───────────────────────────────
 
 

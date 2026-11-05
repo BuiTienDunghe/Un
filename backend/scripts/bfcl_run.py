@@ -75,7 +75,8 @@ IDS_PATH = PROJECT_ROOT / "data" / "benchmarks" / "bfcl" / "ids_v1.json"
 RESULTS_DIR = PROJECT_ROOT / "data" / "evaluation" / "results" / "bfcl"
 DEFAULT_CLONE = Path(r"C:\Users\dungbt06\tools\gorilla-6ea5797\berkeley-function-call-leaderboard")
 CLONE_COMMIT = "6ea5797"
-RUNNER_VERSION = "bfcl-run-v1"
+# v2 (06/11): calls are recorded as the model wrote them, not where a tool ran; v1 scores do not compare.
+RUNNER_VERSION = "bfcl-run-v2"
 
 # The name BFCL files the results under and the scorer registers; no underscore, because
 # BFCL's runner turns every "_" of a result directory back into "/" to look the model up.
@@ -243,23 +244,27 @@ def tool_traffic(steps: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 class TurnLog:
-    """The calls the loop executed, by model round. A round is the router's call count so far:
-    UsageRecordingRouter appends to `rounds` when a call returns, so while a tool runs the
-    current round is the last one appended."""
+    """The calls the model wrote, by model round, as BFCL's own handler records them: every call of a
+    round, a name the task never declared and arguments that are not an object included. They used to
+    be recorded where a tool ran, so a call to an invented name was lost and an irrelevance task that
+    made one scored as if it had answered in words (review 06/11). A round is the router's call count."""
 
     def __init__(self, recording: UsageRecordingRouter) -> None:
         self.recording = recording
         self.by_round: dict[int, list[dict[str, str]]] = {}
+        recording.on_tool_calls = self.emitted
 
-    def add(self, recorded: dict[str, str]) -> None:
-        self.by_round.setdefault(len(self.recording.rounds) - 1, []).append(recorded)
+    def emitted(self, round_index: int, calls: list[dict[str, Any]]) -> None:
+        for call in calls:
+            arguments = call.get("arguments")
+            self.by_round.setdefault(round_index, []).append({str(call.get("name")): json.dumps(arguments if arguments is not None else {}, ensure_ascii=False)})
 
     def take(self) -> dict[int, list[dict[str, str]]]:
         taken, self.by_round = self.by_round, {}
         return taken
 
 
-def make_tool(bfcl: Bfcl, doc: dict[str, Any], *, execute: dict[str, Any] | None, log: TurnLog) -> AgentTool:
+def make_tool(bfcl: Bfcl, doc: dict[str, Any], *, execute: dict[str, Any] | None) -> AgentTool:
     """One of the task's functions as a registry tool. `execute` is None in a single-turn task
     (BFCL runs nothing there), else what the multi-turn backends need to run a call."""
     schema = bfcl.to_tool(doc)
@@ -270,7 +275,6 @@ def make_tool(bfcl: Bfcl, doc: dict[str, Any], *, execute: dict[str, Any] | None
         if not isinstance(arguments, dict):
             return service._error("BAD_ARGUMENTS", f"{name} cần tham số là một đối tượng.")
         recorded = {name: json.dumps(arguments, ensure_ascii=False)}
-        log.add(recorded)
         if execute is None:
             return SINGLE_TURN_OK, None, None
         results, _ = bfcl.utils.execute_multi_turn_func_call(
@@ -335,7 +339,7 @@ def run_entry(
     )
     registry = ToolRegistry()
     for order, doc in enumerate(entry["function"]):
-        registry.register(make_tool(bfcl, doc, execute=execute, log=log), order)
+        registry.register(make_tool(bfcl, doc, execute=execute), order)
     agent = make_agent(registry)
     held_out: dict[str, list[dict[str, Any]]] = entry.get("missed_function", {})
 
@@ -355,7 +359,7 @@ def run_entry(
                 # The functions held back appear now, and the user turn is BFCL's fixed sentence
                 # (the data's own turn is empty): BFCL does the same in inference_multi_turn_FC.
                 for position, doc in enumerate(held_out[str(turn_index)]):
-                    registry.register(make_tool(bfcl, doc, execute=execute, log=log), len(entry["function"]) + position)
+                    registry.register(make_tool(bfcl, doc, execute=execute), len(entry["function"]) + position)
                 turn_messages = [{"role": "user", "content": bfcl.additional_function_prompt}]
             recording.take()
             log.take()
@@ -531,6 +535,10 @@ def main(argv: list[str] | None = None) -> int:
     from app.services.agent_service import FINAL_RESERVE_SECONDS, TURN_BUDGET_SECONDS
     from app.services.model_router import ModelRouter
 
+    # A Windows console is cp1252: the first Vietnamese progress line ended the 06/11 run after one task.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     args = parse_args(argv)
     bfcl = Bfcl(args.clone)
     selection = select(load_ids(args.ids), args.only)
