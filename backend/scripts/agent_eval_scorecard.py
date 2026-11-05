@@ -44,6 +44,8 @@ CONDITIONS_PATH = KEPT_DIR / "agent-eval-run-conditions.json"
 FABRICATION_CHECK = "must_not_mention"
 NOT_FOUND_CHECK = "not_found"
 STOP_REASONS = ("final", "max_steps", "turn_budget", "turn_budget_exhausted", "tool_call_error")
+# The stops whose answer comes from the forced plain-chat call (agent_service's last block).
+FORCED_STOPS = ("max_steps", "turn_budget", "tool_call_error")
 _OMITTED = re.compile(r'"omitted":\s*\d+')
 _UNCODED_ERROR = re.compile(r'"error":')
 
@@ -172,8 +174,10 @@ def robustness(results: list[dict[str, Any]], events: list[dict[str, Any]] | Non
             if stop is not None else None
         ),
         "stop_reasons_unavailable": None if stop is not None else "bước final không có stop_reason (trước ticket 16)",
-        # Both count the turns that ran out of tool rounds; a mismatch is a definition error.
-        "max_steps_matches_budget_exhausted": (stop.get("max_steps", 0) == base["budget_exhausted"]) if stop is not None else None,
+        # Both count the turns answered by the forced call (out of rounds, out of time for tools, or a tool call
+        # that would not parse); a mismatch is a definition error. Counting max_steps alone read every
+        # tool_call_error turn as a gap.
+        "forced_stops_match_budget_exhausted": (sum(stop.get(reason, 0) for reason in FORCED_STOPS) == base["budget_exhausted"]) if stop is not None else None,
         "tool_error_codes": dict(sorted(codes.items())) if codes is not None else None,
         "tool_errors_uncoded": None if coded else sum(bool(_UNCODED_ERROR.search(str(e.get("content") or ""))) for e in tool_results),
         "bad_arguments_rate": _rate(codes.get("BAD_ARGUMENTS", 0), len(calls)) if codes is not None else None,
@@ -318,7 +322,7 @@ def render(card: dict[str, Any]) -> str:
         f"| Hiệu quả | độ trễ p50 / p95 / max (ms) | {_fmt(e['latency_p50_ms'])} / {_fmt(e['latency_p95_ms'])} / {_fmt(e['latency_max_ms'])} |",
         f"| Bền | lỗi của bài | {_fmt(r['task_errors'])} |",
         f"| Bền | stop_reason | {stop_text} |",
-        f"| Bền | số max_steps khớp số budget_exhausted ({r['budget_exhausted']}) | {_fmt(r.get('max_steps_matches_budget_exhausted'))} |",
+        f"| Bền | số lượt trả lời ép buộc khớp số budget_exhausted ({r['budget_exhausted']}) | {_fmt(r.get('forced_stops_match_budget_exhausted'))} |",
         f"| Bền | mã lỗi công cụ (không mã) | {_fmt(r.get('tool_error_codes'))} ({_fmt(r.get('tool_errors_uncoded'))}) |",
         f"| Bền | tỉ lệ BAD_ARGUMENTS | {_fmt(r.get('bad_arguments_rate'))} |",
         f"| Bền | kết quả bị cắt theo mục | {_fmt(r.get('results_trimmed_by_item'))} |",

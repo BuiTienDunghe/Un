@@ -126,7 +126,7 @@ def test_a_turn_that_ended_asking_shows_in_the_stop_reasons_and_otherwise_the_co
 def test_robustness_reads_codes_after_ticket_16_and_counts_uncoded_errors_before(tmp_path):
     r = scorecard(after_16_run(tmp_path))["robustness"]
     assert r["stop_reasons"] == {"final": 3, "max_steps": 0, "turn_budget": 0, "turn_budget_exhausted": 0, "tool_call_error": 0}
-    assert r["max_steps_matches_budget_exhausted"] is True
+    assert r["forced_stops_match_budget_exhausted"] is True
     assert r["tool_error_codes"] == {"BAD_ARGUMENTS": 1, "TOOL_UNAVAILABLE_HERE": 1} and r["tool_errors_uncoded"] is None
     assert r["bad_arguments_rate"] == 0.25 and r["results_trimmed_by_item"] == 1
     assert r["task_errors"] == {"INPUT_TOO_LONG": 1}
@@ -159,10 +159,9 @@ def test_a_tool_call_ollama_could_not_parse_is_its_own_stop_reason(tmp_path):
     r = card["robustness"]
     assert r["stop_reasons"] == {"final": 1, "max_steps": 0, "turn_budget": 0, "turn_budget_exhausted": 0, "tool_call_error": 1}
     assert r["tool_error_codes"] is None and r["task_errors"] == {}, "the failed call reached no tool, and the turn ran"
-    # Two checks read these turns as gaps, and are left as they are: the runner marks a turn
-    # budget_exhausted for any plain chat round, as it does a turn_budget one; and a failed
-    # round has no token counts to give.
-    assert r["max_steps_matches_budget_exhausted"] is False
+    # A tool_call_error turn is answered by the forced call too, so it is no gap in the stop count;
+    # a failed round still has no token counts to give.
+    assert r["forced_stops_match_budget_exhausted"] is True
     assert card["traceability"]["parts"]["rounds_timed_and_counted"] == 0
 
 

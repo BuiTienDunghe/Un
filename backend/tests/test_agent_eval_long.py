@@ -241,3 +241,7 @@ def test_with_long_input_on_the_reading_pass_engages_through_the_runner_and_the_
     assert kinds.count("long_input_part") == parts == router.notes_asked, "one call per part, none dropped for the window"
     seen = str(router.sent[0][-1]["content"])
     assert "Đã đọc đủ mọi phần." in seen and "GHI CHÚ PHẦN 1/" in seen and len(seen) < len(task["input"]) / 4, "the digest, not the slip or the paste"
+    # The parts' notes are not the forced answer: the turn answered in its first round.
+    result = _jsonl(out_dir / "task_results.jsonl")[0]
+    assert result["budget_exhausted"] is False
+    assert {e["call"] for e in _jsonl(out_dir / "events.jsonl") if e["kind"] == "model_round"} == {"chat_part", "chat_tools"}

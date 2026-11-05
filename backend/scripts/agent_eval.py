@@ -307,7 +307,14 @@ class UsageRecordingRouter:
         return self._call("chat_tools", lambda: self.inner.chat_tools(mode, messages, tools))
 
     def chat(self, mode: str, messages: list[dict[str, Any]], options: dict[str, Any] | None = None) -> tuple[str, str]:
-        return self._call("chat", lambda: self.inner.chat(mode, messages, options))
+        # A call with options is a part's note (long_input, document_reading), not the forced answer:
+        # counting it as "chat" marked a turn that read a paste in parts as out of tool rounds.
+        return self._call("chat" if options is None else "chat_part", lambda: self.inner.chat(mode, messages, options))
+
+    def chat_structured(self, mode: str, messages: list[dict[str, Any]], schema: dict[str, Any]) -> tuple[str, str]:
+        # The promise check asks for an owed tool's arguments this way; without it here the eval ran the
+        # retry in words while the API ran the structured call.
+        return self._call("chat_structured", lambda: self.inner.chat_structured(mode, messages, schema))
 
     def take(self) -> list[dict[str, Any]]:
         rounds, self.rounds = self.rounds, []
