@@ -1,0 +1,67 @@
+{
+  "run_id": "ctl2",
+  "runner": "bfcl-run-v2",
+  "commit": "b712d26b0e5549966def5f129727f1bc3040909c",
+  "worktree_dirty": true,
+  "bfcl_commit": "6ea57973c7a6097fd7c5915698c54c17c5b1b6c8",
+  "bfcl_expected": "6ea5797",
+  "ids_file": "data\\benchmarks\\bfcl\\ids_v1.json",
+  "ids_sha256": "4aef3f23881bafdf9b55522216e10ae7955010a078e66130f18df3ed56b56550",
+  "tasks": {
+    "simple_python": 10,
+    "multiple": 8,
+    "irrelevance": 7,
+    "multi_turn_base": 5,
+    "multi_turn_miss_func": 3
+  },
+  "model": "qwen3.5:9b",
+  "digest": "6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7",
+  "ollama_version": "0.40.13",
+  "general_version": {
+    "requested_id": "general-v0",
+    "loaded_id": "general-v0",
+    "status": "active",
+    "verified": true
+  },
+  "probed": true,
+  "ollama_loaded_at_start": [],
+  "gpu_shared": false,
+  "gpu_at_start": {
+    "utilization_percent": 0,
+    "memory_used_mib": 13,
+    "processes": [
+      "ChatGPT.exe"
+    ]
+  },
+  "temperature": 0.0,
+  "seed": 42,
+  "think": false,
+  "num_ctx": 16384,
+  "agent_config": {
+    "max_steps": 3,
+    "tool_result_max_chars": 2400,
+    "turn_budget_seconds": 90.0,
+    "final_reserve_seconds": 20.0
+  },
+  "agent_guide_sha256": "e7fec3a305a9467e461323ec9073e6bd3818ed388801f3b7019a0a1f66d9a537",
+  "persona_prompt": null,
+  "history_between_turns": "user and answer text only",
+  "carry_tool_traffic": false,
+  "lookup_check": false,
+  "single_turn_scored_calls": "first model round only",
+  "unload_between_tasks": true,
+  "started_at": "2026-11-06T05:04:30.294341+00:00",
+  "argv": [
+    "--probe",
+    "--env-file",
+    "C:/Users/dungbt06/local-ai-core/.env",
+    "--run-id",
+    "ctl2",
+    "--gpu-shared",
+    "no",
+    "--unload-between-tasks",
+    "--out",
+    "C:/Users/dungbt06/local-ai-core/data/evaluation/results/kept/bfcl-bare"
+  ],
+  "finished_at": "2026-11-06T05:09:46.629663+00:00"
+}

@@ -1,0 +1,21 @@
+{
+  "arm": "bare",
+  "runner": "bfcl-bare-v1",
+  "commit": "b712d26b0e5549966def5f129727f1bc3040909c",
+  "bfcl_clone": "6ea5797",
+  "ids_file": "data\\benchmarks\\bfcl\\ids_v1.json",
+  "model": "qwen3.5:9b",
+  "alias": "un-bare-qwen9b",
+  "parameters": "presence_penalty               1.5\nseed                           42\ntemperature                    1\ntop_k                          20\ntop_p                          0.95\nnum_ctx                        16384",
+  "base_digest": "6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7",
+  "alias_digest": "d7c86521ac3c5023c6a7e8b9f5496670e26e56a20e14906b90d336ce87842962",
+  "loaded_context": 16384,
+  "ollama_version": "0.40.13",
+  "temperature": 0.0,
+  "reasoning_effort": "none",
+  "unload_between_tasks": true,
+  "started_at": "2026-11-06T04:59:41.013889+00:00",
+  "gpu_at_start": "44, 0 %, 13 MiB",
+  "finished_at": "2026-11-06T05:04:04.794093+00:00",
+  "gpu_at_end": "74, 92 %, 13 MiB"
+}
