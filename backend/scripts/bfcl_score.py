@@ -1,6 +1,10 @@
 """Score a run of scripts.bfcl_run with BFCL's own checker (ticket 42). Runs in bfcl-venv, not in Ún's.
 
     C:/Users/dungbt06/tools/bfcl-venv/Scripts/python.exe backend/scripts/bfcl_score.py <run_dir>
+    C:/Users/dungbt06/tools/bfcl-venv/Scripts/python.exe backend/scripts/bfcl_score.py <run_dir> --model-dir qwen-bare-ollama
+
+Both arms (bfcl_run, bfcl_bare) store results the way BFCL's FC handlers do ({name: json-arguments}),
+so one pair of decoders scores either; --model-dir names the folder the results are under.
 
 BFCL's `evaluate` refuses a model name that is not in its MODEL_CONFIG_MAPPING and imports every
 vendor's handler to build that table. Rather than edit the clone or the package, this script
@@ -28,15 +32,15 @@ MODEL_DIR = "un-harness"
 GROUPS = ("non_live", "multi_turn")
 
 
-def categories_in(result_root: Path) -> list[str]:
+def categories_in(result_root: Path, model_dir: str = MODEL_DIR) -> list[str]:
     """The categories with a result file, from the file names BFCL_v4_<category>_result.json."""
     found = []
-    for path in sorted((result_root / MODEL_DIR).rglob("BFCL_v4_*_result.json")):
+    for path in sorted((result_root / model_dir).rglob("BFCL_v4_*_result.json")):
         found.append(path.name.removeprefix("BFCL_v4_").removesuffix("_result.json"))
     return found
 
 
-def register_harness() -> None:
+def register_harness(model_dir: str = MODEL_DIR) -> None:
     from bfcl_eval.constants.model_config import MODEL_CONFIG_MAPPING, ModelConfig
     from bfcl_eval.model_handler.base_handler import BaseHandler
     from bfcl_eval.model_handler.utils import convert_to_function_call
@@ -52,8 +56,8 @@ def register_harness() -> None:
         def decode_execute(self, result, has_tool_call_tag):
             return convert_to_function_call(result)
 
-    MODEL_CONFIG_MAPPING[MODEL_DIR] = ModelConfig(
-        model_name=MODEL_DIR,
+    MODEL_CONFIG_MAPPING[model_dir] = ModelConfig(
+        model_name=model_dir,
         display_name="Ún harness (local, agent loop)",
         url="https://github.com/",
         org="local-ai-core",
@@ -66,10 +70,10 @@ def register_harness() -> None:
     )
 
 
-def read_scores(score_root: Path, categories: list[str]) -> dict[str, dict[str, object]]:
+def read_scores(score_root: Path, categories: list[str], model_dir: str = MODEL_DIR) -> dict[str, dict[str, object]]:
     scores: dict[str, dict[str, object]] = {}
     for category in categories:
-        for path in (score_root / MODEL_DIR).rglob(f"BFCL_v4_{category}_score.json"):
+        for path in (score_root / model_dir).rglob(f"BFCL_v4_{category}_score.json"):
             header = json.loads(path.read_text(encoding="utf-8").splitlines()[0])
             failed = [json.loads(line)["id"] for line in path.read_text(encoding="utf-8").splitlines()[1:] if line.strip()]
             scores[category] = {
@@ -88,22 +92,23 @@ def main(argv: list[str] | None = None) -> int:
         return subprocess.run([sys.executable, "-X", "utf8", *sys.argv]).returncode
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("run_dir", type=Path)
+    parser.add_argument("--model-dir", default=MODEL_DIR)
     args = parser.parse_args(argv)
     run_dir = args.run_dir.resolve()
     result_root = run_dir / "result"
-    categories = categories_in(result_root)
+    categories = categories_in(result_root, args.model_dir)
     if not categories:
-        print(f"no result files under {result_root / MODEL_DIR}", file=sys.stderr)
+        print(f"no result files under {result_root / args.model_dir}", file=sys.stderr)
         return 2
     # Set before bfcl_eval is imported: its eval_config reads it, and creates the folders at import.
     os.environ["BFCL_PROJECT_ROOT"] = str(run_dir / "bfcl")
     sys.dont_write_bytecode = True
     from bfcl_eval.eval_checker import eval_runner
 
-    register_harness()
+    register_harness(args.model_dir)
     score_root = run_dir / "bfcl" / "score"
-    eval_runner.main([MODEL_DIR], categories, str(result_root), str(score_root), partial_eval=True)
-    scores = read_scores(score_root, categories)
+    eval_runner.main([args.model_dir], categories, str(result_root), str(score_root), partial_eval=True)
+    scores = read_scores(score_root, categories, args.model_dir)
     (run_dir / "scores.json").write_text(json.dumps(scores, ensure_ascii=False, indent=2), encoding="utf-8")
     for category, score in scores.items():
         print(f"{category:<24} {score['correct']}/{score['total']}  failed: {', '.join(score['failed_ids']) or '-'}")

@@ -388,3 +388,20 @@ def test_a_run_that_does_nothing_fails_a_multi_turn_task_and_an_irrelevance_task
     assert done.returncode == 0, done.stdout[-2000:] + done.stderr[-2000:]
     scores = json.loads((tmp_path / "scores.json").read_text(encoding="utf-8"))
     assert scores["multi_turn_base"]["correct"] == 0 and scores["irrelevance"]["correct"] == 0, scores
+
+
+@needs_clone
+@needs_scorer
+def test_the_scorer_scores_the_bare_arms_folder_when_told_its_name(tmp_path):
+    bfcl = bfcl_run.Bfcl(CLONE)
+    plan = {"simple_python": ["simple_python_6"], "irrelevance": ["irrelevance_0"]}
+    model = Scripted(oracle_single_turn("simple_python", "simple_python_6") + ["Không hàm nào dùng được."])
+    recording = UsageRecordingRouter(model)
+    bfcl_run.run_all(bfcl, plan, recording, agent_factory(recording), tmp_path, run_tag=bfcl_run.RUN_TAG, progress=lambda text: None)
+    # bfcl_bare's results sit under BFCL's folder for its registry name, in the same stored form.
+    (tmp_path / "result" / "un-harness").rename(tmp_path / "result" / "qwen-bare-ollama")
+    done = subprocess.run([str(BFCL_PYTHON), "-X", "utf8", str(SCORER), str(tmp_path), "--model-dir", "qwen-bare-ollama"],
+                          capture_output=True, text=True, timeout=600)
+    assert done.returncode == 0, done.stdout[-2000:] + done.stderr[-2000:]
+    scores = json.loads((tmp_path / "scores.json").read_text(encoding="utf-8"))
+    assert {category: (s["correct"], s["total"]) for category, s in scores.items()} == {"simple_python": (1, 1), "irrelevance": (1, 1)}, scores
