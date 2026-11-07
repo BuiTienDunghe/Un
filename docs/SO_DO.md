@@ -20,6 +20,22 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
 
 ---
 
+## 08/11/2026 — Kiểm thử các sửa nhỏ backend trong worktree riêng
+
+- **Câu hỏi:** chặn research gửi model cloud nhầm sang Ollama, gom tạo client và truy vấn liệt kê theo lô có giữ đúng các hợp đồng đang dùng không?
+- **Điều kiện:** gốc `eeb90be`, nhánh `codex/backend-small-fixes`, worktree riêng; model/HTTP giả. Lượt SQL dùng container PostgreSQL riêng, database `local_ai_smallfixes_test`, migration tới head. Không gọi model thật, không dùng database/Redis/Qdrant của các test đang chạy.
+- **Đăng ký trước:** không; kiểm thử hồi quy, không đo chất lượng model hoặc độ trễ.
+- **Kết quả:**
+
+  | Lượt | Đạt | Bỏ qua | Hỏng |
+  |---|---:|---:|---:|
+  | Unit/API/provider/harness chọn lọc | 259 | 2 | 0 |
+  | SQL theo lô và wiring worker | 9 | 0 | 0 |
+
+- **Kết luận:** các kiểm thử đã chạy đều đạt. Hai bài rebuild cần PostgreSQL/Qdrant thật bị bỏ qua ở lượt unit. Bài SQL kiểm thứ tự, version active, ingestion mới nhất và truy vấn theo lô trên PostgreSQL riêng; chưa đo lợi ích thời gian. Research cloud trả lỗi chưa hỗ trợ rõ ràng; không bổ sung sinh JSON cloud. Bài router giả chỉ kiểm research dùng cấu hình được cung cấp, không kiểm quá trình fallback. Tổng truy vấn paper có thể tăng ở đường đọc tệp để lấy số trang. Worktree và database riêng vẫn dùng chung tài nguyên máy với lượt đo đang chạy; chưa chứng minh không có tranh tài nguyên.
+- **Trạng thái:** xong.
+- **Bằng chứng:** `data/evaluation/results/kept/backend-small-fixes-2026-11-08/` (`REPORT.md`, `unit.xml`, `postgres.xml`, `metadata-normalization.json`). XML công khai đã bỏ hostname và chuẩn hóa đường dẫn; kết quả testcase giữ nguyên, bản gốc giữ cục bộ trong thư mục bị Git bỏ qua. Đây là hiệu chỉnh báo cáo, không chạy thêm test.
+
 ## 07/11/2026 — Bỏ từng phần lời dặn của Ún trên các bài BFCL chênh
 
 - **Câu hỏi:** phần nào của harness làm thua model trần ở simple_python (mục dưới)?
