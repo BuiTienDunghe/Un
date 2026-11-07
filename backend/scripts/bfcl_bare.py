@@ -49,7 +49,10 @@ def ollama(path: str, body: dict | None = None) -> dict:
 
 
 def unload() -> None:
-    ollama("/api/generate", {"model": ALIAS, "keep_alive": 0})
+    """The alias and the model it is made from: Ollama serves the alias from a runner already loaded
+    for qwen3.5:9b (same weights, same context), which the harness arm leaves behind (07/11)."""
+    for name in (ALIAS, BASE_MODEL):
+        ollama("/api/generate", {"model": name, "keep_alive": 0})
 
 
 def make_alias() -> dict:
@@ -104,6 +107,7 @@ def preflight() -> int | None:
     """One tiny request through the very endpoint, then the context Ollama loaded it with."""
     from openai import OpenAI
 
+    unload()
     client = OpenAI(base_url=os.environ["OPENAI_BASE_URL"], api_key=os.environ["OPENAI_API_KEY"])
     client.chat.completions.create(model=ALIAS, messages=[{"role": "user", "content": "ok"}], temperature=0,
                                    reasoning_effort="none", max_tokens=1)

@@ -126,7 +126,7 @@ def main() -> int:
             if after != before:
                 log(out, f"OLLAMA CHANGED during {arm} {category}: {before} -> {after}")
             score = subprocess.run([BFCL_PY, "-X", "utf8", str(REPO / "backend" / "scripts" / "bfcl_score.py"), str(run_dir),
-                                    "--model-dir", model_dir], capture_output=True, text=True)
+                                    "--model-dir", model_dir], capture_output=True, text=True, encoding="utf-8", errors="replace")
             line = next((l for l in score.stdout.splitlines() if l.startswith(category)), score.stderr[-300:])
             log(out, f"done {arm} {category}: exit {code}, {(time.time() - started) / 60:.0f} min, {line.split('failed')[0].strip()}")
     log(out, "all done")
