@@ -129,6 +129,7 @@ def main(argv: list[str] | None = None) -> int:
         return subprocess.run([sys.executable, "-X", "utf8", *sys.argv]).returncode
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("run_dir", type=Path)
+    parser.add_argument("--ids", type=Path, default=IDS_PATH, help="{category: [ids]}, as BFCL's test_case_ids_to_generate.json")
     args = parser.parse_args(argv)
     run_dir = args.run_dir.resolve()
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -136,7 +137,7 @@ def main(argv: list[str] | None = None) -> int:
     os.environ["OPENAI_BASE_URL"] = OLLAMA + "/v1"
     os.environ["OPENAI_API_KEY"] = "ollama"  # the SDK wants one; Ollama ignores it
     (run_dir / "bfcl").mkdir(exist_ok=True)
-    (run_dir / "bfcl" / "test_case_ids_to_generate.json").write_text(IDS_PATH.read_text(encoding="utf-8"), encoding="utf-8")
+    (run_dir / "bfcl" / "test_case_ids_to_generate.json").write_text(args.ids.read_text(encoding="utf-8"), encoding="utf-8")
 
     alias = make_alias()
     context = preflight()
@@ -145,7 +146,7 @@ def main(argv: list[str] | None = None) -> int:
         return 3
     manifest = {
         "arm": "bare", "runner": "bfcl-bare-v1", "commit": git_commit(), "bfcl_clone": CLONE_COMMIT,
-        "ids_file": str(IDS_PATH.relative_to(PROJECT_ROOT)), "model": BASE_MODEL, "alias": ALIAS, **alias,
+        "ids_file": str(args.ids), "ids": {c: len(v) for c, v in json.loads(args.ids.read_text(encoding="utf-8")).items()}, "model": BASE_MODEL, "alias": ALIAS, **alias,
         "loaded_context": context, "ollama_version": ollama("/api/version").get("version"),
         "temperature": 0.0, "reasoning_effort": "none", "unload_between_tasks": True,
         "started_at": datetime.now(UTC).isoformat(), "gpu_at_start": gpu(),

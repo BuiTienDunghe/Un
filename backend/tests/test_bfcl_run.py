@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -405,3 +406,26 @@ def test_the_scorer_scores_the_bare_arms_folder_when_told_its_name(tmp_path):
     assert done.returncode == 0, done.stdout[-2000:] + done.stderr[-2000:]
     scores = json.loads((tmp_path / "scores.json").read_text(encoding="utf-8"))
     assert {category: (s["correct"], s["total"]) for category, s in scores.items()} == {"simple_python": (1, 1), "irrelevance": (1, 1)}, scores
+
+
+@needs_clone
+@needs_scorer
+def test_java_and_javascript_functions_reach_the_model_as_bfcls_own_pre_processing_makes_them(tmp_path):
+    bfcl = bfcl_run.Bfcl(CLONE)
+    probe = (
+        "import json, sys\n"
+        "from bfcl_eval.utils import _func_doc_language_specific_pre_processing as pre\n"
+        "out = {}\n"
+        "for category in ('simple_java', 'simple_javascript'):\n"
+        "    lines = open(sys.argv[1] + f'/BFCL_v4_{category}.json', encoding='utf-8').read().splitlines()[:12]\n"
+        "    out[category] = [pre(json.loads(line)['function'], category) for line in lines]\n"
+        "print(json.dumps(out))\n"
+    )
+    done = subprocess.run([str(BFCL_PYTHON), "-X", "utf8", "-c", probe, str(bfcl.data)], capture_output=True, text=True, timeout=300,
+                          env={**os.environ, "BFCL_PROJECT_ROOT": str(tmp_path)})
+    assert done.returncode == 0, done.stderr[-2000:]
+    theirs = json.loads(done.stdout.strip().splitlines()[-1])
+    for category, functions in theirs.items():
+        ids = [json.loads(line)["id"] for line in (bfcl.data / f"BFCL_v4_{category}.json").read_text(encoding="utf-8").splitlines()[:12]]
+        ours = [entry["function"] for entry in bfcl.load_entries(category, ids)]
+        assert ours == functions, category

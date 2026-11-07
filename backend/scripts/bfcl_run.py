@@ -84,9 +84,11 @@ MODEL_DIR = "un-harness"
 TEMPERATURE = 0.0
 SEED = 42
 
-SINGLE_TURN = ("simple_python", "multiple", "irrelevance")
-MULTI_TURN = ("multi_turn_base", "multi_turn_miss_func")
+SINGLE_TURN = ("simple_python", "simple_java", "simple_javascript", "multiple", "parallel", "parallel_multiple", "irrelevance")
+MULTI_TURN = ("multi_turn_base", "multi_turn_miss_func", "multi_turn_miss_param", "multi_turn_long_context")
 HINT = " Note that the provided function is in Python 3 syntax."
+LANGUAGE_HINTS = {"simple_java": " Note that the provided function is in Java 8 SDK syntax.",
+                  "simple_javascript": " Note that the provided function is in JavaScript syntax."}
 SINGLE_TURN_OK = json.dumps({"result": "ok"})
 # What BFCL joins with the task id into the name of a backend instance and then `eval`s as a
 # variable: it must stay a valid identifier, which a run id (it starts with a date) is not. Fixed,
@@ -164,8 +166,7 @@ class Bfcl:
                             if doc["name"] == name:
                                 held_out[turn].append(entry["function"].pop(position))
                                 break
-            for doc in entry["function"]:
-                doc["description"] += HINT
+            language_doc(entry["function"], category)
         return entries
 
     def to_tool(self, doc: dict[str, Any]) -> dict[str, Any]:
@@ -202,6 +203,40 @@ class Bfcl:
                     elif items["type"] == "object" and "properties" in items:
                         items["properties"] = self._cast(items["properties"])
         return properties
+
+
+def language_doc(docs: list[dict[str, Any]], category: str) -> None:
+    """BFCL's _func_doc_language_specific_pre_processing (bfcl_eval/utils.py at 6ea5797), copied
+    because that module creates directories next to the clone on import: the language hint at the
+    end of each description and, for Java and JavaScript, every parameter sent as a string whose
+    description names the type it stands for."""
+    hint = LANGUAGE_HINTS.get(category, HINT)
+    for doc in docs:
+        doc["description"] += hint
+        properties = doc["parameters"]["properties"]
+        if category == "simple_java":
+            for value in properties.values():
+                if value["type"] == "any":
+                    value["description"] += " This parameter can be of any type of Java object in string representation."
+                else:
+                    value["description"] += f" This is Java {value['type']} type parameter in string representation."
+                if value["type"] in ("ArrayList", "Array"):
+                    value["description"] += f" The list elements are of type {value['items']['type']}; they are not in string representation."
+                    del value["items"]
+                value["type"] = "string"
+        elif category == "simple_javascript":
+            for value in properties.values():
+                if value["type"] == "any":
+                    value["description"] += " This parameter can be of any type of JavaScript object in string representation."
+                else:
+                    value["description"] += f" This is JavaScript {value['type']} type parameter in string representation."
+                if value["type"] == "array":
+                    value["description"] += f" The list elements are of type {value['items']['type']}; they are not in string representation."
+                    del value["items"]
+                if value["type"] == "dict" and "properties" in value:
+                    value["description"] += f" The dictionary entries have the following schema; they are not in string representation. {json.dumps(value['properties'])}"
+                    del value["properties"]
+                value["type"] = "string"
 
 
 def load_ids(path: Path = IDS_PATH) -> dict[str, list[str]]:
@@ -283,7 +318,7 @@ def make_tool(bfcl: Bfcl, doc: dict[str, Any], *, execute: dict[str, Any] | None
             execute["involved_classes"],
             execute["model_name"],
             execute["entry_id"],
-            long_context=False,
+            long_context=execute.get("long_context", False),
             is_evaL_run=False,
         )
         try:
@@ -333,6 +368,7 @@ def run_entry(
             "involved_classes": entry["involved_classes"],
             "model_name": run_tag,
             "entry_id": entry["id"],
+            "long_context": "long_context" in category,
         }
         if multi
         else None
