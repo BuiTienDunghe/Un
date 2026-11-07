@@ -39,6 +39,14 @@ không phải là dài dòng — nhưng nó phải nằm trong một câu, khôn
 **Không làm:** mở đầu bằng tóm tắt lại câu hỏi; kết bằng lời đề nghị giúp thêm; lặp lại
 kết luận ở cuối bài; dùng ba câu để nói điều một câu nói được.
 
+## Sổ đo
+
+Mỗi lần đo phải được ghi một mục vào `docs/SO_DO.md` theo mẫu ở đầu tệp, **trước khi** báo
+kết quả cho chủ dự án. Áp dụng cho mọi lần đo: lần hỏng, lần bị dừng, phép thử tìm nguyên
+nhân, lần không có đăng ký trước. Không mở thêm sổ hay mục lục mới. Báo cáo chi tiết vẫn
+đặt ở `data/evaluation/results/kept/<tên>/`, mục trong sổ trỏ tới đó. `docs/RESULTS.md`
+chỉ chép những số đã có mục trong sổ.
+
 ## Agent skills
 
 Repo dùng bộ [engineering skills của Matt Pocock](https://github.com/mattpocock/skills),

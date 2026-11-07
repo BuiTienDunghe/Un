@@ -4,6 +4,10 @@ Every number quoted about this project — in the README, in a model card, in a 
 line — resolves to a row here, and every row names the file that produced it. If a
 number cannot be traced to a file in this repository, it does not belong on the CV.
 
+This page is curated. The log of every measurement, including failed, stopped and
+negative ones, is [SO_DO.md](SO_DO.md) (in Vietnamese, newest first); a number here
+must have its entry there.
+
 Measured on `PC-dungbt`: RTX 5060 Ti (16 GB), Ryzen 7 7700, 31 GB RAM, Windows 11,
 Ollama 0.33.2. What these numbers do **not** catch is the subject of
 [FAILURE_MODES.md](FAILURE_MODES.md).

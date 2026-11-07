@@ -24,8 +24,9 @@ Two cautions, because a number without its measuring conditions is a rumour:
 - `data/evaluation/rag_multidoc_baseline.json` is what the gate reads. These
   files are evidence, not gates; promoting a file here never changes a gate.
 
-To promote another report: copy it in, add a row above, and cite it from
-`docs/RESULTS.md`. Nothing else in `results/` is tracked.
+To promote another report: copy it in and add its entry to `docs/SO_DO.md`, the one
+log of every measurement since 07/11/2026; the tables in this file are no longer
+extended. Nothing else in `results/` is tracked.
 
 ## Agent Eval
 

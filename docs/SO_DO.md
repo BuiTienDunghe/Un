@@ -1,0 +1,111 @@
+# Sổ đo
+
+Mọi lần đo của dự án được ghi ở đây, kể cả những lần hỏng, bị dừng hoặc cho kết quả âm. Mỗi lần một mục, mục mới nhất ở trên cùng.
+
+Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng chi tiết. `docs/RESULTS.md` chỉ chép lại những số đủ chắc để đưa ra ngoài (README, CV), và mỗi số ở đó phải có mục tương ứng ở đây.
+
+## Mẫu một mục
+
+```
+## dd/mm/yyyy — <đo cái gì, một dòng>
+
+- **Câu hỏi:** điều muốn biết, một câu.
+- **Điều kiện:** commit, model và digest, phiên bản Ollama, số bài/bộ dữ liệu, nhiệt độ/seed, đối chứng cùng ngày hay không.
+- **Đăng ký trước:** đường dẫn, hoặc "không" (phép thử tìm nguyên nhân sau khi thấy số).
+- **Kết quả:** bảng.
+- **Kết luận:** một hai câu; dự đoán đúng hay sai.
+- **Trạng thái:** xong / dừng giữa chừng / hỏng / chờ quyết định.
+- **Bằng chứng:** đường dẫn; ghi "(chỉ trên máy)" nếu thư mục không nằm trong git.
+```
+
+---
+
+## 07/11/2026 — Bỏ từng phần lời dặn của Ún trên các bài BFCL chênh
+
+- **Câu hỏi:** phần nào của harness làm thua model trần ở simple_python (mục dưới)?
+- **Điều kiện:** commit `9462fc5`, qwen3.5:9b `6488c96f`, Ollama 0.40.13, nhiệt độ 0, seed 42, gỡ model mỗi bài. 81 bài simple_python: 41 bài hai nhánh chênh nhau + 40 bài cả hai cùng đạt (chọn ngẫu nhiên, seed 42). Ba bản lời dặn chạy liền nhau 17:02–17:30, bản nguyên bản là đối chứng.
+- **Đăng ký trước:** không. Đây là phép thử tìm nguyên nhân sau khi đã thấy kết quả.
+- **Kết quả:**
+
+  | Lời dặn | Đạt / 81 | 28 bài chỉ harness trượt | 13 bài chỉ trần trượt | 40 bài cùng đạt | Trả lời bằng chữ |
+  |---|---|---|---|---|---|
+  | Nguyên bản | 53 | 0 | 13 | 40 | 23 |
+  | Bỏ hết (chỉ còn luật chống chèn lệnh) | 74 | 25 | 9 | 40 | 3 |
+  | Chỉ bỏ câu "Chỉ gọi công cụ khi … kiến thức chung thì trả lời thẳng, không gọi gì." | 74 | 23 | 11 | 40 | 0 |
+
+- **Kết luận:** câu "kiến thức chung thì trả lời thẳng" là nguyên nhân chính: bỏ câu đó thì không còn bài nào trả lời bằng chữ. Bản nguyên bản tái lập đúng từng bài của lần chạy lớn. Còn 4 bài sai giá trị (lãi suất 5,0 thay 0,05…) chỉ hết khi bỏ toàn bộ lời dặn, chưa tách được câu nào gây ra. Chưa đo tác động lên Ún khi chat thật (Agent Eval).
+- **Trạng thái:** chờ chọn cách sửa lời dặn (bỏ / viết lại / giữ).
+- **Bằng chứng:** `data/evaluation/results/bfcl-guide-ablation/` (chỉ trên máy): `ids.json`, `groups.json`, `guide_variant.py`, mỗi bản một thư mục có `guide.txt` và `scores.json`.
+
+## 07/11/2026 — BFCL phạm vi lớn: model trần và harness (dừng sau 1/11 hạng mục)
+
+- **Câu hỏi:** trên 2 190 bài BFCL không live và nhiều lượt, harness hơn hay kém model trần, theo từng hạng mục?
+- **Điều kiện:** qwen3.5:9b `6488c96f`, Ollama 0.40.13 (không đổi suốt lần chạy), nhiệt độ 0, seed 42, ngữ cảnh 16 384, tắt suy nghĩ, gỡ model mỗi bài. Harness commit `2ddb14a` (14:55–15:46), trần `9462fc5` (15:47–16:14), cùng bộ chấm gốc của BFCL. Hai nhánh chạy xen kẽ theo hạng mục.
+- **Đăng ký trước:** `data/evaluation/results/kept/bfcl-full/PREREGISTRATION.md` (`2ddb14a`).
+- **Kết quả (simple_python, 400 bài):**
+
+  | | Đạt | Tỉ lệ |
+  |---|---|---|
+  | Trần | 367 | 91,75 % |
+  | Harness | 352 | 88,0 % |
+
+  Bài chênh: 28 chỉ harness trượt, 13 chỉ trần trượt; McNemar chính xác hai phía p = 0,03. Trả lời bằng chữ thay vì gọi hàm: harness 25, trần 6; các lỗi khác 23 và 27.
+
+- **Kết luận:** dự đoán "chênh trong ±3 điểm" **sai**: harness kém 3,75 điểm, có nghĩa thống kê. Nguyên nhân xem mục trên.
+- **Trạng thái:** dừng theo lệnh chủ dự án lúc 17:00. multi_turn_base của harness dở 159/200, chưa chấm, nhánh trần chưa chạy; 9 hạng mục còn lại chưa chạy. Chạy lại cùng lệnh thì simple_python được bỏ qua.
+- **Bằng chứng:** `data/evaluation/results/bfcl-full-run/` (chỉ trên máy): `progress.log`, `<nhánh>/<hạng mục>/scores.json`. Bộ điều phối: `data/evaluation/results/kept/bfcl-full/run_full_bfcl.py`.
+
+## 06/11/2026 — Model trần trên BFCL so với harness, 33 bài
+
+- **Câu hỏi:** cùng model, vòng lặp gốc của BFCL so với vòng lặp của Ún thì bên nào điểm cao hơn?
+- **Điều kiện:** 33 bài `ids_v1.json`, qwen3.5:9b `6488c96f`, Ollama 0.40.13, nhiệt độ 0, seed 42, ngữ cảnh 16 384, tắt suy nghĩ. Trần 11:59–12:04, đối chứng harness `ctl2` 12:04–12:09.
+- **Đăng ký trước:** `data/evaluation/results/kept/bfcl-bare/PREREGISTRATION.md` (`b712d26`).
+- **Kết quả:**
+
+  | | Harness `ctl2` | Trần |
+  |---|---|---|
+  | Tổng | 25/33 | 23/33 |
+
+- **Kết luận:** chênh 2 bài, chưa phân biệt được. Dự đoán "trần 26–29" **sai**. Vòng lặp 20 bước của BFCL không cứu được bài 128 và 180.
+- **Trạng thái:** xong.
+- **Bằng chứng:** `data/evaluation/results/kept/bfcl-bare/REPORT.md` (`e04d26d`).
+
+---
+
+## Trước khi có sổ (ghi bù 07/11/2026)
+
+Các lần đo dưới đây có trước khi có sổ này. Mỗi dòng tóm tắt một báo cáo trong `data/evaluation/results/kept/`. Muốn biết điều kiện đo đầy đủ thì mở báo cáo đó. Các số đo retrieval, embedding và chunker từ 08–09/2026 nằm ở `docs/RESULTS.md`.
+
+| Ngày | Thư mục | Câu hỏi đo | Kết quả chính | Kết luận / trạng thái |
+|---|---|---|---|---|
+| 06/11/2026 | `forced-honesty` | Rà và sửa harness trước khi đo BFCL đầy đủ | BFCL 33 bài (bộ chạy v2) 25/33 → 25/33; Agent Eval 66 bài 57 → 57; nhắc việc hẹn nhầm 1/5 → 0/5 | Không bài nào đổi. Mốc BFCL đúng là 25/33 (26/33 cũ bị chấm sai). H1/H2 chờ chủ dự án |
+| 03/11/2026 | `agent-eval-read-rest` | Code tự đọc nốt tài liệu trên v0-long.2 | ctx-01..07: 0/7 → 4/7 → 5/7 → 6/7; 66 bài v0: 55 → 56 | 6/7 chưa phải số trên dữ liệu chưa từng thấy. Báo cáo ghi `agent.read_rest` tắt |
+| 02/11/2026 | `harness-fix-239b67` | Nguyên nhân các bài hỏng BFCL/Agent Eval; thử H1, H2, H3 | BFCL 26/33 → H1 27, H2 27, H1+H2 28/33; Agent Eval 54/66 → H3 55, H3b 55/66 | Dự đoán cho H2 sai. Cả ba cờ vẫn tắt, chờ chủ dự án quyết |
+| 02/11/2026 | `agent-eval-v0.8-wave2` | Đợt 2: dọn ngữ cảnh (trần 4 000) và đọc văn bản dài | 66 bài: đối chứng 54, dọn 54, đọc dài 54; BFCL 26/33 | Không đổi điểm. Bộ bài gần như không chạm tới hai tính năng, chưa có bằng chứng lợi hay hại |
+| 02/11/2026 | `agent-eval-v0.8-h3b-on` | H3b tắt và bật, đo cùng ngày | 66 bài: 54 → 55; 65/66 câu trùng chữ, chỉ doc-25 đổi | Mẫu nhận diện chỉnh trên chính bộ bài này, nên chưa nói được gì ngoài 66 bài |
+| 02/11/2026 | `agent-eval-v0.8-bisect-41` | Vì sao mốc tụt từ 58 xuống 54? | 66 bài: cùng `717e4d3` cho 58 (29/10) và 55 (02/11); phần do code chỉ 55 → 54 | 3 bài tụt do môi trường đổi, không do code. Phần môi trường nào đổi thì chưa xác định |
+| 02/11/2026 | `agent-eval-read-on` | Bước đọc tiếp và dọn ngữ cảnh trên v0-long.2 | Mọi nhánh 0/4 hoặc 0/3 bài đạt; dữ kiện ctx-01..04 0/13 → 4/13 (3 vòng), 5/13 (8 vòng); 66 bài v0: 55 và 55 | Đọc tiếp có ích ở ctx-01..04. Dọn ngữ cảnh chưa thấy lợi. Mẫu quá nhỏ |
+| 02/11/2026 | `agent-eval-v0-long-first` | Lần đầu chạy v0-long: ticket 45 (đọc rất dài), ticket 44 (dọn ngữ cảnh) | end-*: 0/7 → 6/7; ctx-*: 0/7 → 0/7, dọn 0 lần | Ticket 45 có lợi rõ. Ticket 44 chưa đo được |
+| 01/11/2026 | `agent-eval-v0.8-baseline-41` | Mốc Agent Eval v0.8 mới (ticket 41) | agent-eval-v0.8: 58/66 (`717e4d3`) → 54/66 (`bd27676`); chỉ 3/66 câu trùng chữ | Tụt điểm, chưa xác định thay đổi nào gây ra. Là số tự chấm |
+| 29/10/2026 | `agent-eval-v0.8-n1-gate` | Gộp N1 lên main có làm đổi câu trả lời nào ngoài dự kiến không? | G1 66/66 giống mốc; 58/66 (agent-eval-v0.8); trên 62 bài v0.7: main 45/62, bản gộp 55/62 | Đạt G1, gộp lên main sau khi fable duyệt |
+| 29/10/2026 | `agent-eval-v0.8-paste-arbitration` | Phân xử N1 (nạp nguyên văn bản) với C7 (cho lật 7 vòng) | agent-eval-v0.8, 19 bài: nền 10, N1 18, C7 14; trung vị độ trễ 5,5 s so với 11,8 s | Theo nhánh R2 của luật: chọn N1, bỏ C. Dự đoán p5 sai |
+| 29/10/2026 | `agent-eval-v0.7-tool-call-parse` | Ticket 27: lệnh công cụ viết hỏng làm mất cả lượt | doc-44 không còn mất lượt; M1 trùng M0 62/62; main M0 45/62 (agent-eval-v0.7) | Đạt cả bốn điều, đề xuất gộp ticket 27 |
+| 28/10/2026 | `agent-eval-v0.7-paste-nudge-search` | #3-D: nhắc lại khi chưa đọc (B) và tìm trong đoạn dán (C) | agent-eval-v0.7, 15 bài dán: nền 10, +1 10, +1+3' 9; nền đủ bộ 50/62 | Cả hai đề xuất trượt luật, không gộp gì. 50/62 là mốc cô lập đầu tiên |
+| 28/10/2026 | `agent-eval-v0.6-paste-slip-c` | #3-C: lời phiếu lần hai, đo trên 9 bài | agent-eval-v0.6: 2/9 → 6/9; bài mới từ trượt thành đạt chỉ 1/3 | Điều 3 sai nên không đề xuất gộp. Dự đoán "doc-44, 46, 47 mở cả ba" sai |
+| 28/10/2026 | `agent-eval-v0.5-paste-slip-b` | #3-B: lời phiếu đoạn dán mới, đo trên 5 bài | agent-eval-v0.5: mở đoạn dán 2/5 → 5/5; điểm 1/5 → 1/5 | Điều 4 sai (doc-42) nên không đề xuất gộp. Bài trượt chủ yếu vì model xin `n` vượt trần |
+| 28/10/2026 | `agent-eval-v0.4-baseline-20261028` | Mốc trên main với bộ chấm v0.4 | agent-eval-v0.4: 39/48; 8 bài mới 4/8; so với C4 có 0/48 câu khác chữ | Là mốc hồi quy, không có luật ship. Dự đoán đúng |
+| 28/10/2026 | `agent-eval-v0.3-c4-registry` | C4 dời `search_history` sang gói Discord: hành vi có giữ nguyên không? | agent-eval-v0.3: 48/48 câu trùng từng chữ; hai bên đều 39/48 | Cả ba dự đoán đúng, C4 giữ nguyên hành vi |
+| 28/10/2026 | `agent-eval-v0.3-pastes` | #3: đoạn dán dài đến được agent dưới dạng phiếu | agent-eval-v0.3: 39/48 → 39/48; doc-39 gọi `read_document` 0 lần | Một điều trong luật sai nên không đề xuất giữ. Chủ dự án quyết |
+| 28/10/2026 | `agent-eval-v0.3-answer-check` | #2: kiểm con số trong câu trả lời trước khi gửi | agent-eval-v0.3: 38 → 39/48; số không nguồn ở doc-10 từ 6 → 0 | Mọi dự đoán đúng, đề xuất giữ #2. Ở doc-22, lời tự sửa của model lộ ra cho người dùng |
+| 28/10/2026 | `agent-eval-v0.3-read-B-20261028` | #1-B: có công cụ đọc nhưng giữ lời dặn cũ | agent-eval-v0.3: 38/48; 40 bài cũ 33; bài đọc dài 4/5 | Đạt luật, đề xuất ship #1-B. 40 bài cũ vừa đúng ngưỡng. doc-10 bịa số |
+| 28/10/2026 | `agent-eval-v0.3-read-20261028` | #1 công cụ đọc theo handle: so trước và sau | agent-eval-v0.3: 35/48 → 34/48; 40 bài cũ 34 → 29; 8 bài mới 1/8 → 5/8 | Dự đoán "doc-33..37 đạt cả 5" sai (chỉ 4/5). Không tách được phần tụt thật khỏi xáo trộn do đổi lời dặn |
+| 28/10/2026 | `agent-eval-v0.3-baseline-20261028` | Mốc v0.3, có thêm 8 bài đọc dài | agent-eval-v0.3: 35/48; 40 bài cũ 34/40; 8 bài mới 1/8 | Là mốc, không có luật ship. Dự đoán đúng. hist-11 bịa câu trả lời |
+| 27/10/2026 | `agent-eval-v0.2-harness-controls-20261027` | Ticket 16 (đồng hồ, mã lỗi, trace) có làm điểm tụt không? | agent-eval-v0.2: A 34/40, B 34/40; hỏi lại "server nào": A 2/3, B 0/3 | Không tụt, dự đoán đúng. Đề xuất đóng ticket 16 |
+| 27/10/2026 | `agent-eval-v0.2-1a-v2-20261027` | Lời dặn 1a-v2 (và 1a-v2 + 2b) có qua luật ship không? | agent-eval-v0.2: A 34/40, E 33, F 33; mục tiêu 1a 4/5; mất 3 bài theo dõi | Trượt luật: không ship E, không ship F |
+| 27/10/2026 | `agent-eval-v0.2-harness-20261027` | Ticket 10: cách cắt kết quả công cụ mới (3a), lời dặn 1a và gợi ý 2b có giúp được không? | agent-eval-v0.2, lạnh: A 34/40, B(1a) 30/40, C(2b) 34/40, D(1a+2b) 30/40; mất trích dẫn: có 1a 32/36, không có 1a 5/45 | 1a có hại, 2b đứng một mình không đổi gì, chưa nên ship 1a. Điểm neo đáng tin: gỡ model trước mỗi lần đo |
+| 27/10/2026 | `agent-eval-v0.1-baseline-20261027` | Mốc thăm dò đầu tiên của agent trên 40 bài; chạy lại có ra cùng kết quả không? | agent-eval-v0.1: r1 lạnh 33/40, r2 = r3 34/40, t0.4 29/40; đếm tay 35/40 (số chính thức vẫn 34/40) | Mới là thăm dò. Lỗi lớn nhất là agent "không chịu tra". Lần chạy lạnh khác lần nóng, nguyên nhân chưa đo |
+
+Ghi chú về bảng:
+- 6 mục ngày 02/11 không ghi giờ đo nên thứ tự giữa chúng trong ngày không rõ.
+- `agent-eval-v0-long-2` (4 nhánh `a-off`, `a-on`, `b-off`, `b-on`) và `bfcl-v1-base` (điểm BFCL bộ chạy v1, 5 hạng mục) không có báo cáo; số của chúng được dẫn trong các báo cáo cùng thời.
+- Nhật ký điểm Agent Eval dạng máy đọc `kept/agent-eval-scorecard-history.jsonl` vẫn được ghi tự động, và không thay cho sổ này.
