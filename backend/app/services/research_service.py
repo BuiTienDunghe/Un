@@ -559,7 +559,7 @@ class ResearchService:
         document_ids = {paper.document_id for paper in papers}
         documents = {document.id: document for document in session.scalars(select(Document).where(Document.id.in_(document_ids)))}
         repo = PostgresDocumentRepository(session)
-        runs = {document_id: repo.latest_run(document_id) for document_id in document_ids}
+        runs = repo.latest_runs(document_ids)
         counts = dict(session.execute(select(ResearchAnnotation.paper_id, func.count()).where(ResearchAnnotation.paper_id.in_([paper.id for paper in papers])).group_by(ResearchAnnotation.paper_id)).all())
         return [self._paper_row(paper, documents.get(paper.document_id), runs.get(paper.document_id), int(counts.get(paper.id, 0))) for paper in papers]
 

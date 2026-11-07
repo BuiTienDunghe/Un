@@ -247,11 +247,20 @@ class PostgresDocumentService:
     def list_documents(self) -> list[dict[str, object]]:
         with self.sessions() as session:
             docs = session.scalars(select(Document).where(Document.status != "deleted").order_by(Document.created_at.desc())).all()
+            runs = PostgresDocumentRepository(session).latest_runs([document.id for document in docs])
+            version_ids = {
+                document.active_version_id or (runs[document.id].version_id if document.id in runs else None)
+                for document in docs
+            } - {None}
+            versions = {
+                version.id: version
+                for version in session.scalars(select(DocumentVersion).where(DocumentVersion.id.in_(version_ids)))
+            } if version_ids else {}
             result = []
             for document in docs:
-                run = PostgresDocumentRepository(session).latest_run(document.id)
-                version = session.get(DocumentVersion, document.active_version_id) if document.active_version_id else (session.get(DocumentVersion, run.version_id) if run else None)
-                result.append(self._document_payload(document, run, version))
+                run = runs.get(document.id)
+                version_id = document.active_version_id or (run.version_id if run else None)
+                result.append(self._document_payload(document, run, versions.get(version_id)))
             return result
 
     def promote_ocr_run(self, job: dict[str, object]) -> dict[str, object]:
