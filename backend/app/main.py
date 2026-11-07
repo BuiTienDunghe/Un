@@ -9,13 +9,10 @@ from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
 from app import __version__
+from app.llm_clients.factory import PROVIDERS, create_llm_clients
 from app.services import model_choice
 from app.config.model_registry import write_attention_marker
 from app.config.settings import PROJECT_ROOT, get_settings
-from app.llm_clients.ollama_client import OllamaClient
-from app.llm_clients.gemini_client import GeminiClient
-from app.llm_clients.deepseek_client import DeepSeekClient
-from app.llm_clients.anthropic_client import AnthropicClient
 from app import discord
 from app.routers import agent, auth, chat, conversations, dashboard, documents, health, memory, models, ocr, rag, research, vision, voice
 from app.security.api_key import require_api_key_for_read
@@ -52,37 +49,8 @@ from app.postgres.database import create_postgres_engine, create_session_factory
 async def lifespan(app: FastAPI):
     settings = get_settings()
 
-    # ── Local Ollama client (always initialised) ──────────────────────────
-    ollama_client = OllamaClient(
-        settings.ollama_base_url,
-        settings.ollama_chat_timeout_seconds,
-        settings.ollama_health_timeout_seconds,
-        settings.ollama_retry_count,
-    )
-
-    # ── Cloud LLM client registry ─────────────────────────────────────────
-    # Only clients whose API key is present in .env are registered.
-    # Add the key to .env then set the matching `provider:` in models.yaml.
-    llm_clients: dict = {"ollama": ollama_client}
-    if settings.gemini_api_key:
-        llm_clients["gemini"] = GeminiClient(
-            api_key=settings.gemini_api_key,
-            chat_timeout=settings.gemini_chat_timeout_seconds,
-            retry_count=settings.gemini_retry_count,
-        )
-    if settings.deepseek_api_key:
-        llm_clients["deepseek"] = DeepSeekClient(
-            api_key=settings.deepseek_api_key,
-            base_url=settings.deepseek_base_url,
-            chat_timeout=settings.deepseek_chat_timeout_seconds,
-            retry_count=settings.deepseek_retry_count,
-        )
-    if settings.anthropic_api_key:
-        llm_clients["anthropic"] = AnthropicClient(
-            api_key=settings.anthropic_api_key,
-            chat_timeout=settings.anthropic_chat_timeout_seconds,
-            retry_count=settings.anthropic_retry_count,
-        )
+    llm_clients = create_llm_clients(settings, providers=PROVIDERS)
+    ollama_client = llm_clients["ollama"]
 
     # Settings validates the mandatory PostgreSQL URL before this point.
     postgres_sessions = create_session_factory(create_postgres_engine(str(settings.database_url)))

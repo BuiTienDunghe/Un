@@ -6,11 +6,11 @@ TEXT = "thủ tục cấp lại căn cước công dân"
 
 def vectors() -> dict[str, list[float]]:
     from app.config.settings import Settings
-    from app.llm_clients.ollama_client import OllamaClient
+    from app.llm_clients.factory import create_llm_clients
     from app.services.model_router import ModelRouter
     s = Settings()
     resolved = s.resolve_models(allow_missing_collections=True)
-    router = ModelRouter({"ollama": OllamaClient(s.ollama_base_url, s.ollama_chat_timeout_seconds, s.ollama_health_timeout_seconds, s.ollama_retry_count)},
+    router = ModelRouter(create_llm_clients(s, providers=("ollama",)),
                          s.load_models(), embedding_refusal=resolved.embedding_refusal())
     return {side: router.embed(TEXT, side=side)[0] for side in ("query", "passage")}
 

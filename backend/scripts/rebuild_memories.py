@@ -24,7 +24,7 @@ from sqlalchemy import select
 
 from app.config.model_registry import QdrantUnreachable
 from app.config.settings import get_settings
-from app.llm_clients.ollama_client import OllamaClient
+from app.llm_clients.factory import create_llm_clients
 from app.postgres.database import create_postgres_engine, create_session_factory
 from app.postgres.models import Memory
 from app.services.model_router import ModelRouter
@@ -84,7 +84,7 @@ def main() -> int:
     collections = settings.qdrant_collections()
     sessions = create_session_factory(create_postgres_engine(settings.database_url))
     router = ModelRouter(
-        {"ollama": OllamaClient(settings.ollama_base_url, settings.ollama_chat_timeout_seconds, settings.ollama_health_timeout_seconds, settings.ollama_retry_count)},
+        create_llm_clients(settings, providers=("ollama",)),
         settings.load_models(), embedding_refusal=refusal,
     )
     qdrant = QdrantStore(settings.qdrant_url, settings.qdrant_timeout_seconds, collections.memories, collections.documents,

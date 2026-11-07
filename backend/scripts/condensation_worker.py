@@ -15,7 +15,7 @@ import argparse
 import time
 
 from app.config.settings import get_settings
-from app.llm_clients.gemini_client import GeminiClient
+from app.llm_clients.factory import create_llm_clients
 from app.postgres.database import create_postgres_engine, create_session_factory
 from app.discord.condensation_service import DiscordCondensationService
 
@@ -42,11 +42,7 @@ def build_service(settings) -> DiscordCondensationService | None:
     factory = create_session_factory(create_postgres_engine(str(settings.database_url)))
     return DiscordCondensationService(
         factory,
-        GeminiClient(
-            settings.gemini_api_key,
-            settings.gemini_chat_timeout_seconds,
-            settings.gemini_retry_count,
-        ),
+        create_llm_clients(settings, providers=("gemini",))["gemini"],
         model=str(condenser_config.get("name", "gemini-2.5-flash")),
         temperature=float(condenser_config.get("temperature", 0.2)),
         max_tokens=int(condenser_config.get("max_tokens", 4096)),

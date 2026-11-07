@@ -3,7 +3,7 @@ from __future__ import annotations
 import socket
 
 from app.config.settings import get_settings
-from app.llm_clients.ollama_client import OllamaClient
+from app.llm_clients.factory import create_llm_clients
 from app.postgres.database import create_postgres_engine, create_session_factory
 from app.discord.memory_extractor import (
     DiscordMemoryExtractorAdapter,
@@ -97,14 +97,7 @@ def discord_memory_ingest(job_id: str) -> None:
                     memories_sweep=collections.all_memories,
                 ),
                 ModelRouter(
-                    {
-                        "ollama": OllamaClient(
-                            settings.ollama_base_url,
-                            settings.ollama_chat_timeout_seconds,
-                            settings.ollama_health_timeout_seconds,
-                            settings.ollama_retry_count,
-                        )
-                    },
+                    create_llm_clients(settings, providers=("ollama",)),
                     settings.load_models(),
                     embedding_refusal=resolved.embedding_refusal(),
                 ),
