@@ -544,6 +544,17 @@ def test_overrides_touch_a_copy_and_a_missing_seed_stays_missing():
     assert shipped["general"] == {"name": "qwen3.5:9b", "temperature": 0.4, "top_p": 0.9}, "the resolved config is shared and must not move"
 
 
+def test_another_model_takes_only_the_name_of_general_and_only_on_ollama():
+    shipped = {"general": {"name": "qwen3.5:9b", "temperature": 0.4, "context": 16384, "think": False}, "embedding": {"name": "e"}}
+
+    swapped = override_general(shipped, temperature=0, seed=42, name="lfm3:1.7b")
+
+    assert swapped["general"] == {"name": "lfm3:1.7b", "temperature": 0, "context": 16384, "think": False, "seed": 42}
+    assert shipped["general"]["name"] == "qwen3.5:9b" and swapped["embedding"] == {"name": "e"}
+    with pytest.raises(ValueError, match="anthropic"):
+        override_general({"general": {"name": "claude", "provider": "anthropic"}}, name="lfm3:1.7b")
+
+
 def test_a_malformed_dataset_is_refused_before_any_model_call(tmp_path):
     bad = [{**DOC_TASK}, {**DOC_TASK}, {"id": "x", "category": "nope", "input": "?", "expect": {"must_mention": ["a"]}}]
     with pytest.raises(ValueError, match="id trùng: doc-x.*category 'nope'"):

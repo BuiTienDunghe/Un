@@ -41,6 +41,16 @@ IDS_PATH = PROJECT_ROOT / "data" / "benchmarks" / "bfcl" / "ids_v1.json"
 CLONE_COMMIT = "6ea5797"
 
 
+def names_for(model: str) -> tuple[str, str]:
+    """(registry, alias) for a base model: the 9B keeps the names its 06/11 and 07/11 runs used, so
+    their folders still score; another model (08/11 comparison) gets its own, with no "_" (BFCL
+    turns every "_" of a result folder back into "/") and no ":" (not a path character)."""
+    if model == "qwen3.5:9b":
+        return "qwen-bare-ollama", "un-bare-qwen9b"
+    slug = "".join(ch if ch.isalnum() else "-" for ch in model.lower()).strip("-")
+    return f"{slug}-bare-ollama", f"un-bare-{slug}"
+
+
 def ollama(path: str, body: dict | None = None) -> dict:
     data = None if body is None else json.dumps(body).encode()
     request = urllib.request.Request(OLLAMA + path, data=data, headers={"Content-Type": "application/json"})
@@ -91,8 +101,8 @@ def register() -> None:
 
     MODEL_CONFIG_MAPPING[REGISTRY] = ModelConfig(
         model_name=ALIAS,
-        display_name="Qwen3.5 9B bare (Ollama, BFCL's own loop)",
-        url="https://ollama.com/library/qwen3.5",
+        display_name=f"{BASE_MODEL} bare (Ollama, BFCL's own loop)",
+        url=f"https://ollama.com/library/{BASE_MODEL.split(':')[0]}",
         org="local-ai-core",
         license="n/a",
         model_handler=BareOllamaHandler,
@@ -129,12 +139,16 @@ def git_commit() -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    global REGISTRY, ALIAS, BASE_MODEL
     if not sys.flags.utf8_mode and argv is None:
         return subprocess.run([sys.executable, "-X", "utf8", *sys.argv]).returncode
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("run_dir", type=Path)
     parser.add_argument("--ids", type=Path, default=IDS_PATH, help="{category: [ids]}, as BFCL's test_case_ids_to_generate.json")
+    parser.add_argument("--model", default=BASE_MODEL, help="the Ollama model to measure (default: qwen3.5:9b); score with --model-dir <slug>-bare-ollama")
     args = parser.parse_args(argv)
+    BASE_MODEL = args.model
+    REGISTRY, ALIAS = names_for(BASE_MODEL)
     run_dir = args.run_dir.resolve()
     run_dir.mkdir(parents=True, exist_ok=True)
     os.environ["BFCL_PROJECT_ROOT"] = str(run_dir / "bfcl")
@@ -150,7 +164,7 @@ def main(argv: list[str] | None = None) -> int:
         return 3
     manifest = {
         "arm": "bare", "runner": "bfcl-bare-v1", "commit": git_commit(), "bfcl_clone": CLONE_COMMIT,
-        "ids_file": str(args.ids), "ids": {c: len(v) for c, v in json.loads(args.ids.read_text(encoding="utf-8")).items()}, "model": BASE_MODEL, "alias": ALIAS, **alias,
+        "ids_file": str(args.ids), "ids": {c: len(v) for c, v in json.loads(args.ids.read_text(encoding="utf-8")).items()}, "model": BASE_MODEL, "alias": ALIAS, "registry": REGISTRY, **alias,
         "loaded_context": context, "ollama_version": ollama("/api/version").get("version"),
         "temperature": 0.0, "reasoning_effort": "none", "unload_between_tasks": True,
         "started_at": datetime.now(UTC).isoformat(), "gpu_at_start": gpu(),

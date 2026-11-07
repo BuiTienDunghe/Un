@@ -328,10 +328,17 @@ class UsageRecordingRouter:
         return rounds
 
 
-def override_general(models: dict[str, dict[str, Any]], *, temperature: float | None = None, seed: int | None = None) -> dict[str, dict[str, Any]]:
-    """A copy of the resolved models with the eval's sampling on `general`.
+def override_general(
+    models: dict[str, dict[str, Any]], *, temperature: float | None = None, seed: int | None = None, name: str | None = None
+) -> dict[str, dict[str, Any]]:
+    """A copy of the resolved models with the eval's sampling on `general`, and with `name` another
+    Ollama model in its place (a model comparison, 08/11; every other setting of the role stays).
     Resolved.flat_models() is cached and shared, so it is never edited."""
     copied = {role: dict(config) for role, config in models.items()}
+    if name is not None:
+        if copied["general"].get("provider", "ollama") != "ollama":
+            raise ValueError(f"--model names an Ollama model, and general is served by {copied['general'].get('provider')}")
+        copied["general"]["name"] = name
     if temperature is not None:
         copied["general"]["temperature"] = temperature
     if seed is not None:
@@ -576,6 +583,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--tasks", help="comma-separated task ids (default: all)")
     parser.add_argument("--temperature", type=float, help="override the general model's temperature for this run only")
     parser.add_argument("--seed", type=int, help="pass a seed to Ollama for this run only (default: no seed)")
+    parser.add_argument("--model", help="another Ollama model in the general role for this run only (default: the registry's)")
     parser.add_argument("--out", type=Path, default=RESULTS_DIR)
     parser.add_argument("--run-id")
     parser.add_argument(
@@ -789,7 +797,7 @@ def main(argv: list[str] | None = None) -> int:
     if refusal:
         print(f"refusing to run: {refusal}", file=sys.stderr)
         return 2
-    models = override_general(resolved.flat_models(), temperature=args.temperature, seed=args.seed)
+    models = override_general(resolved.flat_models(), temperature=args.temperature, seed=args.seed, name=args.model)
     general = models["general"]
     reloader = None
     if args.unload_between_tasks:
@@ -866,7 +874,7 @@ def main(argv: list[str] | None = None) -> int:
         "seed": general["seed"] if "seed" in general else NO_SEED,
         "think": general.get("think"),
         "num_ctx": general.get("context"),
-        "overrides": {"temperature": args.temperature, "seed": args.seed},
+        "overrides": {"temperature": args.temperature, "seed": args.seed, "model": args.model},
         "argv": sys.argv[1:] if argv is None else argv,
     }
     out_dir = args.out / run_id

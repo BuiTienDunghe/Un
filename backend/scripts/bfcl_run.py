@@ -550,6 +550,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--unload-between-tasks", action="store_true", help="unload and reload the general model before every task (as in agent_eval); otherwise once, before the first")
     parser.add_argument("--carry-tool-traffic", action="store_true", help="keep each turn's tool calls and results in the next turn's history, as BFCL's own runner does (default: text only, as Ún's chat path)")
     parser.add_argument("--max-steps", type=int, help="tool rounds per turn for this run only (default: agent.max_steps of the config)")
+    parser.add_argument("--model", help="another Ollama model in the general role for this run only (default: the registry's)")
     parser.add_argument("--lookup-check", action="store_true", help="the agent's lookup check (harness-fix round); a no-op here, since no BFCL registry holds a lookup tool")
     return parser.parse_args(argv)
 
@@ -593,7 +594,7 @@ def main(argv: list[str] | None = None) -> int:
     if refusal:
         print(f"refusing to run: {refusal}", file=sys.stderr)
         return 2
-    models = override_general(resolved.flat_models(), temperature=TEMPERATURE, seed=SEED)
+    models = override_general(resolved.flat_models(), temperature=TEMPERATURE, seed=SEED, name=args.model)
     general = models["general"]
     if general.get("provider", "ollama") != "ollama":
         print(f"refusing to run: the pins are for an Ollama model, and general is served by {general.get('provider')}", file=sys.stderr)

@@ -393,6 +393,16 @@ def test_a_run_that_does_nothing_fails_a_multi_turn_task_and_an_irrelevance_task
 
 @needs_clone
 @needs_scorer
+def test_the_bare_arm_keeps_the_9b_names_and_gives_another_model_a_folder_bfcl_can_read_back():
+    from scripts import bfcl_bare
+
+    assert bfcl_bare.names_for("qwen3.5:9b") == ("qwen-bare-ollama", "un-bare-qwen9b")
+    registry, alias = bfcl_bare.names_for("lfm3:1.7b")
+    assert (registry, alias) == ("lfm3-1-7b-bare-ollama", "un-bare-lfm3-1-7b")
+    assert not set("_:/.") & set(registry + alias)
+    assert bfcl_bare.names_for("qwen3.5:2b") != bfcl_bare.names_for("qwen3.5:9b")
+
+
 def test_the_scorer_scores_the_bare_arms_folder_when_told_its_name(tmp_path):
     bfcl = bfcl_run.Bfcl(CLONE)
     plan = {"simple_python": ["simple_python_6"], "irrelevance": ["irrelevance_0"]}
