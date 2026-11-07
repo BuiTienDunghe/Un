@@ -59,6 +59,10 @@ class AnnotationNotFoundError(ResearchError):
     pass
 
 
+class ResearchProviderUnsupportedError(ResearchError):
+    """Research JSON generation currently supports the served Ollama provider only."""
+
+
 class SummaryMissingError(ResearchError):
     """Chưa paper nào trong dự án có tóm tắt → không có gì để rút insight."""
 
@@ -851,6 +855,12 @@ class ResearchService:
     # ── tóm tắt / insight ────────────────────────────────────────────────
     def _general_model(self) -> tuple[str, dict[str, Any]]:
         config = (getattr(self.router, "models", None) or {}).get("general", {}) if self.router is not None else {}
+        provider = str(config.get("provider", "ollama")).lower()
+        if provider != "ollama":
+            raise ResearchProviderUnsupportedError(
+                "Tóm tắt paper và tổng hợp insight hiện chỉ hỗ trợ Ollama. "
+                f"Provider general đang phục vụ là {provider}; chức năng này chưa hỗ trợ provider đó."
+            )
         name = str(config.get("name") or "")
         if not name:
             raise OllamaModelNotLoadedError("Chưa cấu hình model vai trò general.")

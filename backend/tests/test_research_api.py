@@ -396,3 +396,21 @@ def test_chat_without_a_thread_is_unchanged(api):
         body = "".join(response.iter_text())
     assert '"thread_id": null' in body
     assert not [call for call in api.app.state.research_service.calls if call[0] == "record_thread_turn"]
+
+
+@pytest.mark.parametrize("endpoint,method", [
+    ("/research/papers/pap_1/summary", "generate_summary"),
+    ("/research/projects/prj_1/insights", "generate_insights"),
+])
+def test_unsupported_summary_provider_has_a_configuration_error(api, monkeypatch, endpoint, method):
+    from app.services.research_service import ResearchProviderUnsupportedError
+
+    def unsupported(*args, **kwargs):
+        raise ResearchProviderUnsupportedError("Provider general đang phục vụ là anthropic; chưa hỗ trợ tóm tắt.")
+
+    monkeypatch.setattr(api.app.state.research_service, method, unsupported)
+    response = api.post(endpoint)
+    assert response.status_code == 409
+    assert response.json()["error_code"] == "RESEARCH_PROVIDER_UNSUPPORTED"
+    assert "anthropic" in response.json()["message"]
+    assert "ollama pull" not in response.json()["message"]
