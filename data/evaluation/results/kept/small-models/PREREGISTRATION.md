@@ -74,6 +74,16 @@ Lúc viết phần này mới có ba kết quả: hai lần kiểm 81 bài của
 - **Tham số.** Nhánh harness gửi `top_p 0.9` lấy từ cấu hình của 9B cho mọi model. Ở nhiệt độ 0, model luôn chọn chữ có xác suất cao nhất, nên `top_p` không đổi kết quả. Câu "các tham số khác giữ mặc định của từng model" ở trên chỉ đúng với nhánh trần.
 - **Khởi động lại bộ điều phối** để nạp các thay đổi trên. Job đang chạy dở sẽ được chạy lại từ đầu; job đã xong được bỏ qua.
 
+## Bổ sung 08/11, 05:21: bỏ các job 9B nhiều lượt
+
+Chủ dự án yêu cầu: "không cần chạy 9B". Lúc đó 9B đã xong các job sau, và các job này được giữ: kiểm 81 bài ở cả hai nhánh, irrelevance ở cả hai nhánh, Agent Eval (57/66). Chưa có số nào của model nhỏ trên multi_turn_base.
+
+- **Bỏ ba job.** Ba job còn lại của 9B là multi_turn_base nhánh trần (200 bài), 41 bài còn thiếu của nhánh harness, và 20 bài kiểm. Mỗi job được đánh dấu bằng một `done.json` có `"status": "skipped"`. Bộ điều phối bỏ qua job khi gặp tệp này, nên không phải khởi động lại, và Agent Eval của 2B đang chạy không bị mất.
+- **Hệ quả cho multi_turn_base:**
+  - Model nhỏ ở nhánh harness chỉ so được với 9B trên 159 bài đo ngày 07/11. 159 bài này không có phép kiểm 20 bài. Căn cứ để dùng chúng: phép kiểm 81 bài cho kết quả giống hệt ngày 07/11, cùng Ollama 0.40.13 và cùng digest.
+  - Không có 9B chạy trần, nên câu hỏi 2 (harness nâng hay hạ điểm) không trả lời được cho 9B ở loại bài này. Model nhỏ chạy trần cũng không có mốc 9B để so.
+- **Luật "đáng thử tiếp" không đổi.** Luật này không dùng multi_turn_base.
+
 ## Giới hạn đã biết
 
 - BFCL là bài tiếng Anh. Phần tiếng Việt chỉ có Agent Eval, một bộ tự viết.
