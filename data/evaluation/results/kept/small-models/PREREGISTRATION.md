@@ -63,6 +63,17 @@ Lý do:
 
   Luật này chỉ để chọn ứng viên thử tiếp, không phải để ship. Ship còn cần đo D1 và bài chat tiếng Việt.
 
+## Bổ sung 08/11, khoảng 02:00, sau khi Fable duyệt commit b7457d5
+
+Lúc viết phần này mới có ba kết quả: hai lần kiểm 81 bài của 9B đều cho ra đúng như ngày 07/11 ở cả 81/81 bài, và LFM3 chạy trần simple_python đạt 359/400. Những thay đổi dưới đây không chạm tới ba kết quả đó.
+
+- **Kiểm 20 bài multi_turn_base của 9B.** Nếu có bài nào khác ngày 07/11, nhánh harness của 9B chạy lại đủ 200 bài và không dùng lại 159 bài cũ. Luật này giống luật của phép kiểm 81 bài.
+- **Bài lỗi.** Một job có hơn 5 % số bài mang trường `error` thì bị coi là hỏng và chạy lại một lần. Số bài lỗi của mỗi job được báo kèm kết quả.
+- **Giới hạn thời gian mỗi job.** Khoảng 10 lần thời gian 9B cần. Quá giới hạn thì job bị huỷ, coi là hỏng và chạy lại một lần.
+- **Digest.** Manifest của Agent Eval không ghi digest. Bộ điều phối ghi digest của cả ba model vào `progress.log` khi bắt đầu.
+- **Tham số.** Nhánh harness gửi `top_p 0.9` lấy từ cấu hình của 9B cho mọi model. Ở nhiệt độ 0, model luôn chọn chữ có xác suất cao nhất, nên `top_p` không đổi kết quả. Câu "các tham số khác giữ mặc định của từng model" ở trên chỉ đúng với nhánh trần.
+- **Khởi động lại bộ điều phối** để nạp các thay đổi trên. Job đang chạy dở sẽ được chạy lại từ đầu; job đã xong được bỏ qua.
+
 ## Giới hạn đã biết
 
 - BFCL là bài tiếng Anh. Phần tiếng Việt chỉ có Agent Eval, một bộ tự viết.
