@@ -1,0 +1,528 @@
+{
+  "scores": {
+    "9b bare simple_python": {
+      "passed": 367,
+      "total": 400,
+      "pct": 91.75
+    },
+    "9b bare irrelevance": {
+      "passed": 197,
+      "total": 240,
+      "pct": 82.08
+    },
+    "9b harness simple_python": {
+      "passed": 352,
+      "total": 400,
+      "pct": 88.0
+    },
+    "9b harness irrelevance": {
+      "passed": 201,
+      "total": 240,
+      "pct": 83.75
+    },
+    "9b harness multi_turn_base": {
+      "passed": 31,
+      "total": 159,
+      "pct": 19.5
+    },
+    "lfm3 bare simple_python": {
+      "passed": 359,
+      "total": 400,
+      "pct": 89.75
+    },
+    "lfm3 bare irrelevance": {
+      "passed": 135,
+      "total": 240,
+      "pct": 56.25
+    },
+    "lfm3 bare multi_turn_base": {
+      "passed": 103,
+      "total": 200,
+      "pct": 51.5
+    },
+    "lfm3 harness simple_python": {
+      "passed": 363,
+      "total": 400,
+      "pct": 90.75
+    },
+    "lfm3 harness irrelevance": {
+      "passed": 166,
+      "total": 240,
+      "pct": 69.17
+    },
+    "lfm3 harness multi_turn_base": {
+      "passed": 38,
+      "total": 200,
+      "pct": 19.0
+    },
+    "2b bare simple_python": {
+      "passed": 287,
+      "total": 400,
+      "pct": 71.75
+    },
+    "2b bare irrelevance": {
+      "passed": 179,
+      "total": 240,
+      "pct": 74.58
+    },
+    "2b bare multi_turn_base": {
+      "passed": 43,
+      "total": 200,
+      "pct": 21.5
+    },
+    "2b harness simple_python": {
+      "passed": 341,
+      "total": 400,
+      "pct": 85.25
+    },
+    "2b harness irrelevance": {
+      "passed": 82,
+      "total": 240,
+      "pct": 34.17
+    },
+    "2b harness multi_turn_base": {
+      "passed": 29,
+      "total": 200,
+      "pct": 14.5
+    }
+  },
+  "errors": {
+    "2b harness simple_python": [
+      "simple_python_71"
+    ],
+    "2b harness multi_turn_base": [
+      "multi_turn_base_40",
+      "multi_turn_base_102"
+    ]
+  },
+  "pairs": [
+    {
+      "a": "9b harness",
+      "b": "9b bare",
+      "cat": "simple_python",
+      "tasks": 400,
+      "a_passed": 352,
+      "b_passed": 367,
+      "only_a": 13,
+      "only_b": 28,
+      "p": 0.0275
+    },
+    {
+      "a": "lfm3 harness",
+      "b": "lfm3 bare",
+      "cat": "simple_python",
+      "tasks": 400,
+      "a_passed": 363,
+      "b_passed": 359,
+      "only_a": 13,
+      "only_b": 9,
+      "p": 0.5235
+    },
+    {
+      "a": "2b harness",
+      "b": "2b bare",
+      "cat": "simple_python",
+      "tasks": 400,
+      "a_passed": 341,
+      "b_passed": 287,
+      "only_a": 66,
+      "only_b": 12,
+      "p": 0.0
+    },
+    {
+      "a": "lfm3 bare",
+      "b": "9b bare",
+      "cat": "simple_python",
+      "tasks": 400,
+      "a_passed": 359,
+      "b_passed": 367,
+      "only_a": 19,
+      "only_b": 27,
+      "p": 0.302
+    },
+    {
+      "a": "lfm3 harness",
+      "b": "9b harness",
+      "cat": "simple_python",
+      "tasks": 400,
+      "a_passed": 363,
+      "b_passed": 352,
+      "only_a": 33,
+      "only_b": 22,
+      "p": 0.177
+    },
+    {
+      "a": "2b bare",
+      "b": "9b bare",
+      "cat": "simple_python",
+      "tasks": 400,
+      "a_passed": 287,
+      "b_passed": 367,
+      "only_a": 4,
+      "only_b": 84,
+      "p": 0.0
+    },
+    {
+      "a": "2b harness",
+      "b": "9b harness",
+      "cat": "simple_python",
+      "tasks": 400,
+      "a_passed": 341,
+      "b_passed": 352,
+      "only_a": 26,
+      "only_b": 37,
+      "p": 0.2074
+    },
+    {
+      "a": "lfm3 bare",
+      "b": "2b bare",
+      "cat": "simple_python",
+      "tasks": 400,
+      "a_passed": 359,
+      "b_passed": 287,
+      "only_a": 88,
+      "only_b": 16,
+      "p": 0.0
+    },
+    {
+      "a": "lfm3 harness",
+      "b": "2b harness",
+      "cat": "simple_python",
+      "tasks": 400,
+      "a_passed": 363,
+      "b_passed": 341,
+      "only_a": 40,
+      "only_b": 18,
+      "p": 0.0054
+    },
+    {
+      "a": "9b harness",
+      "b": "9b bare",
+      "cat": "irrelevance",
+      "tasks": 240,
+      "a_passed": 201,
+      "b_passed": 197,
+      "only_a": 14,
+      "only_b": 10,
+      "p": 0.5413
+    },
+    {
+      "a": "lfm3 harness",
+      "b": "lfm3 bare",
+      "cat": "irrelevance",
+      "tasks": 240,
+      "a_passed": 166,
+      "b_passed": 135,
+      "only_a": 63,
+      "only_b": 32,
+      "p": 0.0019
+    },
+    {
+      "a": "2b harness",
+      "b": "2b bare",
+      "cat": "irrelevance",
+      "tasks": 240,
+      "a_passed": 82,
+      "b_passed": 179,
+      "only_a": 8,
+      "only_b": 105,
+      "p": 0.0
+    },
+    {
+      "a": "lfm3 bare",
+      "b": "9b bare",
+      "cat": "irrelevance",
+      "tasks": 240,
+      "a_passed": 135,
+      "b_passed": 197,
+      "only_a": 8,
+      "only_b": 70,
+      "p": 0.0
+    },
+    {
+      "a": "lfm3 harness",
+      "b": "9b harness",
+      "cat": "irrelevance",
+      "tasks": 240,
+      "a_passed": 166,
+      "b_passed": 201,
+      "only_a": 15,
+      "only_b": 50,
+      "p": 0.0
+    },
+    {
+      "a": "2b bare",
+      "b": "9b bare",
+      "cat": "irrelevance",
+      "tasks": 240,
+      "a_passed": 179,
+      "b_passed": 197,
+      "only_a": 17,
+      "only_b": 35,
+      "p": 0.0175
+    },
+    {
+      "a": "2b harness",
+      "b": "9b harness",
+      "cat": "irrelevance",
+      "tasks": 240,
+      "a_passed": 82,
+      "b_passed": 201,
+      "only_a": 4,
+      "only_b": 123,
+      "p": 0.0
+    },
+    {
+      "a": "lfm3 bare",
+      "b": "2b bare",
+      "cat": "irrelevance",
+      "tasks": 240,
+      "a_passed": 135,
+      "b_passed": 179,
+      "only_a": 26,
+      "only_b": 70,
+      "p": 0.0
+    },
+    {
+      "a": "lfm3 harness",
+      "b": "2b harness",
+      "cat": "irrelevance",
+      "tasks": 240,
+      "a_passed": 166,
+      "b_passed": 82,
+      "only_a": 96,
+      "only_b": 12,
+      "p": 0.0
+    },
+    {
+      "a": "lfm3 harness",
+      "b": "lfm3 bare",
+      "cat": "multi_turn_base",
+      "tasks": 200,
+      "a_passed": 38,
+      "b_passed": 103,
+      "only_a": 5,
+      "only_b": 70,
+      "p": 0.0
+    },
+    {
+      "a": "2b harness",
+      "b": "2b bare",
+      "cat": "multi_turn_base",
+      "tasks": 200,
+      "a_passed": 29,
+      "b_passed": 43,
+      "only_a": 15,
+      "only_b": 29,
+      "p": 0.0488
+    },
+    {
+      "a": "lfm3 harness",
+      "b": "9b harness",
+      "cat": "multi_turn_base",
+      "tasks": 159,
+      "a_passed": 31,
+      "b_passed": 31,
+      "only_a": 18,
+      "only_b": 18,
+      "p": 1.0
+    },
+    {
+      "a": "2b harness",
+      "b": "9b harness",
+      "cat": "multi_turn_base",
+      "tasks": 159,
+      "a_passed": 26,
+      "b_passed": 31,
+      "only_a": 16,
+      "only_b": 21,
+      "p": 0.5114
+    },
+    {
+      "a": "lfm3 bare",
+      "b": "2b bare",
+      "cat": "multi_turn_base",
+      "tasks": 200,
+      "a_passed": 103,
+      "b_passed": 43,
+      "only_a": 70,
+      "only_b": 10,
+      "p": 0.0
+    },
+    {
+      "a": "lfm3 harness",
+      "b": "2b harness",
+      "cat": "multi_turn_base",
+      "tasks": 200,
+      "a_passed": 38,
+      "b_passed": 29,
+      "only_a": 23,
+      "only_b": 14,
+      "p": 0.1877
+    }
+  ],
+  "agent_eval": {
+    "9b": {
+      "passed": 57,
+      "total": 66,
+      "by_category": {
+        "documents": [
+          39,
+          45
+        ],
+        "history": [
+          8,
+          11
+        ],
+        "no_tool": [
+          5,
+          5
+        ],
+        "status": [
+          5,
+          5
+        ]
+      },
+      "no_tool_with_a_call": [],
+      "errors": []
+    },
+    "lfm3": {
+      "passed": 33,
+      "total": 66,
+      "by_category": {
+        "documents": [
+          22,
+          45
+        ],
+        "history": [
+          3,
+          11
+        ],
+        "no_tool": [
+          5,
+          5
+        ],
+        "status": [
+          3,
+          5
+        ]
+      },
+      "no_tool_with_a_call": [],
+      "errors": [],
+      "only_this": [
+        "doc-55",
+        "hist-10"
+      ],
+      "only_9b": [
+        "doc-10",
+        "doc-11",
+        "doc-12",
+        "doc-23",
+        "doc-25",
+        "doc-28",
+        "doc-29",
+        "doc-30",
+        "doc-31",
+        "doc-32",
+        "doc-34",
+        "doc-35",
+        "doc-37",
+        "doc-38",
+        "doc-45",
+        "doc-53",
+        "doc-54",
+        "doc-56",
+        "hist-01",
+        "hist-02",
+        "hist-03",
+        "hist-07",
+        "hist-08",
+        "hist-09",
+        "stat-02",
+        "stat-05"
+      ],
+      "vs_9b": {
+        "only_a": 2,
+        "only_b": 26,
+        "p": 0.0
+      }
+    },
+    "2b": {
+      "passed": 47,
+      "total": 66,
+      "by_category": {
+        "documents": [
+          36,
+          45
+        ],
+        "history": [
+          4,
+          11
+        ],
+        "no_tool": [
+          3,
+          5
+        ],
+        "status": [
+          4,
+          5
+        ]
+      },
+      "no_tool_with_a_call": [
+        "nt-01",
+        "nt-02"
+      ],
+      "errors": [],
+      "only_this": [
+        "doc-19",
+        "doc-20",
+        "doc-26",
+        "doc-33",
+        "doc-55"
+      ],
+      "only_9b": [
+        "doc-10",
+        "doc-27",
+        "doc-31",
+        "doc-36",
+        "doc-45",
+        "doc-52",
+        "doc-56",
+        "doc-57",
+        "hist-02",
+        "hist-03",
+        "hist-04",
+        "hist-08",
+        "nt-01",
+        "nt-02",
+        "stat-02"
+      ],
+      "vs_9b": {
+        "only_a": 5,
+        "only_b": 15,
+        "p": 0.0414
+      }
+    },
+    "lfm3_vs_2b": {
+      "only_a": 8,
+      "only_b": 22,
+      "p": 0.0161
+    }
+  },
+  "rule": {
+    "lfm3": {
+      "simple_python >= 9B - 5": true,
+      "irrelevance >= 9B - 5": false,
+      "agent_eval >= 9B - 6": false,
+      "no no_tool task calls a tool": true,
+      "qualifies": false
+    },
+    "2b": {
+      "simple_python >= 9B - 5": true,
+      "irrelevance >= 9B - 5": false,
+      "agent_eval >= 9B - 6": false,
+      "no no_tool task calls a tool": false,
+      "qualifies": false
+    }
+  }
+}

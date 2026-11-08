@@ -20,6 +20,68 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
 
 ---
 
+## 08/11/2026 — LFM3-1.7B và Qwen3.5-2B, chạy trần và trong harness, so với qwen3.5:9b
+
+- **Câu hỏi:** model dưới 3B gọi công cụ tốt đến đâu so với 9B? Harness nâng hay hạ điểm của từng model? Có model nào đạt luật "đáng thử tiếp" đặt trước không?
+- **Điều kiện:**
+  - Code: runner giống nhau ở cả ba commit `b7457d5`, `eeb90be`, `ef0bc1f`; ba commit chỉ khác nhau ở bộ điều phối và đăng ký trước.
+  - Model: `qwen3.5:9b` 6488c96f (Q4_K_M), `lfm3:1.7b` b36a103f (Q4_K_M), `qwen3.5:2b` 324d162b (Q8_0).
+  - Chạy: Ollama 0.40.13 suốt lần đo; nhiệt độ 0, seed 42, ngữ cảnh 16 384, tắt suy nghĩ, gỡ model trước mỗi bài.
+  - Bài: BFCL v4 gồm simple_python 400, irrelevance 240, multi_turn_base 200; Agent Eval v0 66 bài, chỉ chạy nhánh harness.
+  - Thời gian: 08/11, 01:26–07:32, không lần tạm dừng nào. Bộ điều phối được khởi động lại lúc 02:06, đúng như kế hoạch trong phần bổ sung lúc 02:00. Manifest ghi `worktree_dirty: true` vì có tài liệu chưa commit; code không có gì chưa commit.
+  - 9B simple_python dùng lại số ngày 07/11, vì chạy lại 81 bài cho kết quả giống hệt ở cả hai nhánh.
+  - 9B multi_turn_base: nhánh harness là 159 bài ngày 07/11, không chạy lại để kiểm; nhánh trần không chạy, vì chủ dự án bỏ job 9B lúc 05:21.
+  - 3 bài của 2B nhánh harness bị lỗi "Cannot connect to Ollama" (simple_python_71, multi_turn_base_40, multi_turn_base_102), tính là trượt.
+- **Đăng ký trước:** `data/evaluation/results/kept/small-models/PREREGISTRATION.md`, gồm hai phần bổ sung lúc 02:00 và 05:21.
+- **Kết quả** (số bài đạt):
+
+  | | 9B trần | 9B harness | LFM3 trần | LFM3 harness | 2B trần | 2B harness |
+  |---|---:|---:|---:|---:|---:|---:|
+  | simple_python /400 | 367 | 352 | 359 | 363 | 287 | 341 |
+  | irrelevance /240 | 197 | 201 | 135 | 166 | 179 | 82 |
+  | multi_turn_base /200 | — | 31/159 | 103 | 38 | 43 | 29 |
+  | Agent Eval /66 | — | 57 | — | 33 | — | 47 |
+
+  So từng bài, McNemar chính xác. "A hơn" là số bài chỉ A đạt, "B hơn" là số bài chỉ B đạt:
+
+  | A so với B | Bài | A hơn | B hơn | p |
+  |---|---|---:|---:|---:|
+  | LFM3: harness so với trần | multi_turn_base | 5 | 70 | <0,001 |
+  | LFM3: harness so với trần | irrelevance | 63 | 32 | 0,002 |
+  | 2B: harness so với trần | simple_python | 66 | 12 | <0,001 |
+  | 2B: harness so với trần | irrelevance | 8 | 105 | <0,001 |
+  | LFM3 harness so với 9B harness | simple_python | 33 | 22 | 0,18 |
+  | LFM3 harness so với 9B harness | irrelevance | 15 | 50 | <0,001 |
+  | LFM3 harness so với 9B harness | multi_turn_base (159 bài) | 18 | 18 | 1,0 |
+  | LFM3 so với 9B | Agent Eval | 2 | 26 | <0,001 |
+  | 2B so với 9B | Agent Eval | 5 | 15 | 0,04 |
+  | 2B: harness so với trần | multi_turn_base | 15 | 29 | 0,049 |
+
+  Cặp 2B nhiều lượt không đứng vững. Cả hai bài lỗi đều là bài 2B chạy trần làm đạt. Bỏ hai bài đó ra thì còn 15/28, p 0,07.
+
+  Luật "đáng thử tiếp" (nhánh harness):
+
+  | | simple ≥ 83,0 | irrelevance ≥ 78,75 | Agent Eval ≥ 51 | Không bài no_tool nào gọi công cụ | Đạt luật |
+  |---|---|---|---|---|---|
+  | LFM3 | 90,75 ✓ | 69,17 ✗ | 33 ✗ | ✓ | không |
+  | 2B | 85,25 ✓ | 34,17 ✗ | 47 ✗ | nt-01, nt-02 ✗ | không |
+
+- **Kết luận:**
+  - Không model nhỏ nào đạt luật. Cả hai trượt ở irrelevance và Agent Eval.
+  - Dự đoán: 7/15 khoảng dự đoán đúng. Hai dự đoán về hướng đều đúng: harness kéo 2B sang gọi công cụ, giúp simple_python và hại irrelevance. Sai nhiều nhất là LFM3 chạy trần multi_turn_base: dự đoán 15–35 %, đo được 51,5 %.
+  - Phát hiện ngoài câu hỏi: harness làm LFM3 mất 70 bài multi_turn_base mà model chạy trần làm được.
+- **Phép thử tìm nguyên nhân (không đăng ký trước, đếm sau khi thấy số):**
+  - Bài LFM3 chạy trần đạt: ở những bài cần hơn 3 vòng gọi trong một lượt, harness làm mất 40/44; ở các bài còn lại, mất 30/59.
+  - 24/70 bài bị mất không lần nào chạm trần 3 vòng. 13 bài trong số đó có một lượt bỏ trống, tức không gọi công cụ nào.
+  - Tỉ lệ trượt khi có chạm trần so với khi không chạm: LFM3 94 % so với 59 %, 2B 90 % so với 76 %, 9B (159 bài) 88 % so với 73 %.
+  - Ba nguyên nhân khả dĩ chưa tách được: trần 3 vòng, việc chỉ mang chữ sang lượt sau, và lượt bỏ trống.
+  - Runner có sẵn `--max-steps` và `--carry-tool-traffic`, đêm nay đều để mặc định.
+  - Đây là phép đếm, chưa phải phép thử nhân quả.
+- **Trạng thái:** xong. Fable đã kiểm 08/11 và tính lại mọi số và mọi cặp so; không có số nào sai. Đã sửa 4 chỗ diễn giải (cặp 2B nhiều lượt, cách nói về trần vòng, ngày đo thời gian của 9B, các cặp còn thiếu). Chi tiết ở cuối `REPORT.md`.
+- **Bằng chứng:**
+  - `data/evaluation/results/kept/small-models/`: `analyze.py`, `analysis.json`, `diag_multi_turn.py`, `nine_harness_multi_turn_159_scores.json`, `REPORT.md`.
+  - Kết quả thô ở `data/evaluation/results/small-models-run/` (chỉ trên máy): `progress.log`, và `<nhánh>/<model>/<bài>/scores.json`.
+
 ## 07/11/2026 — Bỏ từng phần lời dặn của Ún trên các bài BFCL chênh
 
 - **Câu hỏi:** phần nào của harness làm thua model trần ở simple_python (mục dưới)?
