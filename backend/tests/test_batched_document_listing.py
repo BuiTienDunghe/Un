@@ -98,6 +98,75 @@ def test_latest_runs_preserves_timestamp_null_and_id_tie_ordering(database):
         assert queries == []
 
 
+def test_cold_paper_listing_does_not_reload_each_document(database, tmp_path, monkeypatch):
+    from app.services import document_pages
+    from test_source_page_counts import pdf_bytes
+    engine, sessions, prefix = database
+    ids = [seed(sessions, prefix, f"source{i}") for i in range(12)]
+    with sessions.begin() as session:
+        session.add(ResearchProject(id=prefix + "_source_project", name="Sources"))
+        session.flush()
+        for i, doc_id in enumerate(ids):
+            session.add(ResearchPaper(id=f"{prefix}_source_p{i:02d}", project_id=prefix + "_source_project", document_id=doc_id, short_name=str(i), title=str(i), tags=[]))
+            for run in session.scalars(select(IngestionRun).where(IngestionRun.document_id == doc_id)):
+                run.total_pages = 0
+            folder = tmp_path / doc_id
+            folder.mkdir()
+            (folder / "original.pdf").write_bytes(pdf_bytes(2))
+    source_service = PostgresDocumentService(sessions, None, None, None, None, tmp_path, 480, 80, None)
+    service = ResearchService(sessions, source_service, ollama_base_url="http://127.0.0.1:1")
+    actual = document_pages.page_count
+    opens = []
+    def page_count(path):
+        opens.append(path)
+        return actual(path)
+    monkeypatch.setattr(document_pages, "page_count", page_count)
+    with sessions() as session:
+        papers = list(session.scalars(select(ResearchPaper).where(ResearchPaper.project_id == prefix + "_source_project").order_by(ResearchPaper.id)))
+        with reads(engine) as queries:
+            cold = service._paper_rows(session, papers)
+        assert len(queries) == 3
+        assert [row["total_pages"] for row in cold] == [2] * 12
+        assert len(opens) == 12
+        with reads(engine) as queries:
+            warm = service._paper_rows(session, papers)
+        assert len(queries) == 3 and warm == cold and len(opens) == 12
+        (tmp_path / ids[0] / "original.pdf").write_bytes(pdf_bytes(7))
+        assert service._paper_rows(session, papers)[0]["total_pages"] == 7
+        assert len(opens) == 13
+
+
+@pytest.mark.parametrize("terminal", ["queued", "failed", "cancelled"])
+def test_replacement_uses_current_pdf_even_when_old_run_sorts_first(database, tmp_path, terminal):
+    import hashlib
+    from test_source_page_counts import pdf_bytes
+    engine, sessions, prefix = database
+    doc_id = seed(sessions, prefix, "replace")
+    folder = tmp_path / doc_id
+    folder.mkdir()
+    (folder / "original.pdf").write_bytes(pdf_bytes(8))
+    # A queue marker prevents creating a real background thread. The queued job
+    # and outbox remain in this disposable database; no Redis worker runs.
+    source = PostgresDocumentService(sessions, None, None, None, None, tmp_path, 480, 80, None, job_queue=object())
+    service = ResearchService(sessions, source, ollama_base_url="http://127.0.0.1:1")
+    with sessions() as session:
+        assert service._total_pages(session.get(Document, doc_id), PostgresDocumentRepository(session).latest_run(doc_id)) == 8
+    data = pdf_bytes(12)
+    result = source._replace_content(doc_id, "source.pdf", ".pdf", "application/pdf", data, hashlib.sha256(data).hexdigest())
+    with sessions.begin() as session:
+        if terminal == "failed":
+            PostgresDocumentRepository(session).fail_run(result["run_id"], "FIXTURE", "fixture failure")
+        elif terminal == "cancelled":
+            source.cancel_ingestion(result["run_id"])
+    with sessions() as session:
+        doc = session.get(Document, doc_id)
+        old_run = PostgresDocumentRepository(session).latest_run(doc_id)
+        assert old_run.id != result["run_id"]
+        with reads(engine) as queries:
+            assert service._total_pages(doc, old_run) == 12
+        assert queries == []
+
+
 def test_document_listing_preserves_payload_and_uses_bounded_reads(database, tmp_path):
     engine, sessions, prefix = database
     active = seed(sessions, prefix, "active", runs=(("old", NOW, 1), ("new", NOW + timedelta(seconds=1), 2)), offset=1)

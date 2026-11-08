@@ -30,7 +30,7 @@ from app.llm_clients.ollama_client import OllamaModelNotLoadedError, OllamaTimeo
 from app.postgres.models import Document, IngestionRun, Message, ResearchAnnotation, ResearchCluster, ResearchEdge, ResearchPaper, ResearchProject, ResearchThread, new_id
 from app.postgres.repositories import PostgresDocumentRepository
 from app.schemas.research_schema import PaperSummary, ProjectInsights
-from app.services import document_pages
+from app.services.source_page_counts import SourcePageCounts
 from app.services.postgres_document_service import DocumentAlreadyIndexingError, DocumentNotFoundError, SourceUnavailableError
 
 
@@ -508,7 +508,7 @@ class ResearchService:
         self.ollama_base_url = ollama_base_url.rstrip("/")
         self.router = model_router if model_router is not None else getattr(document_service, "router", None)
         self._post = http_post or httpx.post
-        self._page_counts: dict[str, int | None] = {}
+        self._page_counts = SourcePageCounts()
 
     # ── quyền ────────────────────────────────────────────────────────────
     @staticmethod
@@ -543,15 +543,32 @@ class ResearchService:
     def _total_pages(self, document: Document | None, run: IngestionRun | None) -> int | None:
         if document is None:
             return None
-        if run is not None and run.total_pages:
-            return int(run.total_pages)
-        if document.id not in self._page_counts:
-            try:
-                path, _ = self.documents.source_file(document.id)
-                self._page_counts[document.id] = document_pages.page_count(path)
-            except (DocumentNotFoundError, SourceUnavailableError):
-                self._page_counts[document.id] = None
-        return self._page_counts[document.id]
+        historical_pages = int(run.total_pages) if run is not None and run.total_pages else None
+        try:
+            # The production service can use the record already loaded by
+            # _paper_rows. Small legacy adapters may only expose source_file(id).
+            loaded_source = getattr(self.documents, "source_file_for", None)
+            path, _ = loaded_source(document) if loaded_source is not None else self.documents.source_file(document.id)
+        except (DocumentNotFoundError, SourceUnavailableError):
+            self._page_counts.discard(document.id)
+            return historical_pages
+        # TXT/MD/DOCX use parser-defined logical pages, not PDF page counts.
+        # A pin/retention edit must not discard their ingestion metadata.
+        if path.suffix.lower() != ".pdf":
+            return historical_pages
+        # A queued/failed/cancelled replacement can leave an old successful run
+        # as latest_run(). Only use its count without opening the PDF if its
+        # completion covers both the current record and the current file.
+        known_at = None
+        if run is not None and document.status == "indexed" and run.version_id == document.active_version_id:
+            completed = run.completed_at or document.indexed_at
+            if (completed is not None and completed.utcoffset() is not None
+                    and document.updated_at is not None and document.updated_at.utcoffset() is not None
+                    and document.updated_at <= completed):
+                known_at = completed
+        pages = self._page_counts.count(document.id, path, document.content_hash,
+                                       known_pages=historical_pages, known_at=known_at)
+        return pages
 
     def _paper_rows(self, session, papers: list[ResearchPaper]) -> list[dict[str, Any]]:
         if not papers:

@@ -673,9 +673,15 @@ class PostgresDocumentService:
         """Đường dẫn tệp gốc + tên hiển thị. SourceUnavailableError khi tệp đã bị
         gỡ (`source_available=false`) hoặc không còn trên đĩa."""
         document, _run, _version = self._load(document_id)
+        return self.source_file_for(document)
+
+    def source_file_for(self, document: Document) -> tuple[Path, str]:
+        """Resolve a previously loaded record, with the same source checks and no SQL."""
+        if document.status in {"deleting", "deleted"}:
+            raise DocumentNotFoundError(document.id)
         path = self._source_path(document)
         if not document.source_available or not path.is_file():
-            raise SourceUnavailableError(document_id)
+            raise SourceUnavailableError(document.id)
         return path, document.original_filename
 
     def page_cache_dir(self, document_id: str) -> Path:
