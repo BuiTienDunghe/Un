@@ -1,5 +1,8 @@
+from uuid import uuid4
+
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, Response, UploadFile
 from fastapi.responses import FileResponse
+from loguru import logger
 
 from app.schemas.document_schema import ChunkFeedbackRequest, ChunkFeedbackResponse, ChunkListResponse, DocumentStatusResponse, IndexRequest, IndexResponse, IngestionStatusResponse, ReplaceSourceResponse, RetentionRequest, UploadResponse
 from app.schemas.research_schema import PageBoxesResponse, PageWordsResponse
@@ -62,7 +65,23 @@ def index_document(payload: IndexRequest, request: Request) -> IndexResponse:
     except QdrantDimensionMismatchError as error:
         raise HTTPException(status_code=422, detail={"error_code": "VECTOR_DIMENSION_MISMATCH", "message": str(error)}) from error
     except Exception as error:
-        raise HTTPException(status_code=422, detail={"error_code": "DOCUMENT_PARSE_FAILED", "message": str(error)}) from error
+        # Enqueueing does not parse the document. Infrastructure failures and
+        # malformed service results are server errors, not invalid user input.
+        # The run may already exist if formatting the response failed, so do
+        # not tell the caller to retry blindly.
+        error_id = uuid4().hex
+        logger.bind(
+            event="document_index_request_failed", document_id=payload.document_id,
+            error_id=error_id, error_type=type(error).__name__,
+        ).exception("Could not complete document index request")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error_code": "DOCUMENT_INDEX_REQUEST_FAILED",
+                "message": "Không thể xử lý yêu cầu lập chỉ mục. Kiểm tra trạng thái tài liệu trước khi thử lại.",
+                "detail": {"error_id": error_id},
+            },
+        ) from error
 
 
 @router.get("/ingestions/{run_id}", response_model=IngestionStatusResponse)
