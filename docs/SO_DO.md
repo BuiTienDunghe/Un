@@ -20,6 +20,29 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
 
 ---
 
+## 08/11/2026 — Cải tiến backend trên nhánh và xác nhận bằng CPU
+
+- **Câu hỏi:** sửa cache số trang, bỏ SQL lặp khi liệt kê paper và phân loại lỗi index có giữ hồi quy, có hiệu quả so với base/main không?
+- **Điều kiện:** chỉ worktree `codex/backend-small-fixes`, base `67260f3`; main tham chiếu `c01d6dd` không đổi code. Python 3.11.9, PostgreSQL 16 Alpine/Redis 7 Alpine/Qdrant v1.18.2 dùng một lần, không volume thật; database `backend_improve_test` và `backend_improve_perf_test`. CUDA ẩn; Ollama cổng chết; khóa cloud trống; guard chặn mạng ngoài loopback và cổng model. Reranker real từ cache chạy CPU offline.
+- **Đăng ký trước:** phạm vi/phương pháp ở `.scratch/backend-small-fixes-followups/IMPLEMENTATION.md` trước lượt focused; không phải đăng ký ngưỡng chất lượng model.
+- **Kết quả:**
+
+  | Lượt / đường | Kết quả |
+  | --- | --- |
+  | Focused ban đầu | 99 đạt |
+  | Full đầu | 2029 đạt, 1 hỏng do real reranker còn thử mạng |
+  | Reranker chỉ đồng bộ cờ offline | 19 đạt, 1 hỏng |
+  | Reranker tiến trình offline mới | 20 đạt |
+  | **Full cuối** | **2033 đạt, 0 hỏng, 0 bỏ qua** |
+  | Cú pháp / schema | 423 tệp Python không lỗi cú pháp; không schema drift |
+  | 100 paper lạnh: main / base / sau sửa | 403 / 304 / 4 SELECT; trung vị 720,45 / 610,27 / 96,87 ms |
+  | 100 paper ấm: main / base / sau sửa | 103 / 4 / 4 SELECT; 99,29 / 13,46 / 25,29 ms |
+  | 100 paper có metadata: main / base / sau sửa | 103 / 4 / 4 SELECT; 97,52 / 13,10 / 26,44 ms |
+
+- **Kết luận:** đường fallback lạnh nhanh hơn và bỏ query theo từng paper; nguồn ổn định cho payload giống nhau. Đường metadata/cache ấm chậm hơn base do kiểm filesystem để tránh cache cũ, vẫn nhanh hơn main trong fixture. Giữ đầy đủ các lượt lỗi; sửa test offline bằng tiến trình mới, không nới guard. Thay đổi source được kiểm bằng unit/SQL, không suy ra cải thiện chất lượng harness.
+- **Trạng thái:** xong; không merge vào main. Khoảng chờ hạn mức duyệt không tính vào thời gian test.
+- **Bằng chứng:** `data/evaluation/results/kept/backend-improvements-2026-11-08/REPORT.md`, XML/JSON kèm theo, script `.scratch/backend-small-fixes-followups/`; raw log/PDF tại `data/logs/backend-improvements-2026-11-08/` (chỉ trên máy).
+
 ## 08/11/2026 — Kiểm thử các sửa nhỏ backend trong worktree riêng
 
 - **Câu hỏi:** chặn research gửi model cloud nhầm sang Ollama, gom tạo client và truy vấn liệt kê theo lô có giữ đúng các hợp đồng đang dùng không?
