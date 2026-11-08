@@ -8,8 +8,9 @@ from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import delete, func, select, update
-from sqlalchemy.engine import make_url
 from sqlalchemy.exc import IntegrityError
+
+from tests.database_support import validate_postgres_test_url
 
 from app.postgres.database import create_postgres_engine, create_session_factory
 from app.discord.memory_repositories import (
@@ -35,11 +36,8 @@ pytestmark = pytest.mark.skipif(not URL, reason="set POSTGRES_TEST_URL")
 
 @pytest.fixture
 def memory_database():
-    assert URL is not None
-    database_name = make_url(URL).database or ""
-    assert database_name == "local_ai_core_test"
-    assert database_name != "local_ai_core"
-    factory = create_session_factory(create_postgres_engine(URL))
+    url = validate_postgres_test_url(URL)
+    factory = create_session_factory(create_postgres_engine(url))
     prefix = f"sprint2b2-{uuid4().hex}"
     yield factory, prefix
     with factory.begin() as database:

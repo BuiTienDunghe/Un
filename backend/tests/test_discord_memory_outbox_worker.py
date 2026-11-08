@@ -9,7 +9,8 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy import delete, func, select
-from sqlalchemy.engine import make_url
+
+from tests.database_support import validate_postgres_test_url
 
 from app.postgres.database import create_postgres_engine, create_session_factory
 from app.discord.memory_job_repository import (
@@ -136,9 +137,8 @@ class ExtractorStub:
 
 @pytest.fixture
 def memory_transport():
-    assert URL is not None
-    assert make_url(URL).database == "local_ai_core_test"
-    factory = create_session_factory(create_postgres_engine(URL))
+    url = validate_postgres_test_url(URL)
+    factory = create_session_factory(create_postgres_engine(url))
     prefix = f"sprint2b3-{uuid4().hex}"
     yield factory, prefix
     with factory.begin() as database:

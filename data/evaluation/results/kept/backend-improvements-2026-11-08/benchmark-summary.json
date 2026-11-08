@@ -1,0 +1,146 @@
+[
+  {
+    "label": "main",
+    "mode": "known",
+    "rows": 100,
+    "samples": 10,
+    "median_ms": 97.51554997637868,
+    "min_ms": 94.22339999582618,
+    "max_ms": 102.12389996740967,
+    "selects": [
+      103
+    ],
+    "pdf_reads": [
+      0
+    ],
+    "payload_equal": true
+  },
+  {
+    "label": "before",
+    "mode": "known",
+    "rows": 100,
+    "samples": 10,
+    "median_ms": 13.097450020723045,
+    "min_ms": 12.179600074887276,
+    "max_ms": 14.618400018662214,
+    "selects": [
+      4
+    ],
+    "pdf_reads": [
+      0
+    ],
+    "payload_equal": true
+  },
+  {
+    "label": "after",
+    "mode": "known",
+    "rows": 100,
+    "samples": 10,
+    "median_ms": 26.440649991855025,
+    "min_ms": 24.98559991363436,
+    "max_ms": 28.56870007235557,
+    "selects": [
+      4
+    ],
+    "pdf_reads": [
+      0
+    ],
+    "payload_equal": true
+  },
+  {
+    "label": "main",
+    "mode": "cold",
+    "rows": 100,
+    "samples": 10,
+    "median_ms": 720.451149973087,
+    "min_ms": 696.4115999871865,
+    "max_ms": 838.1220999872312,
+    "selects": [
+      403
+    ],
+    "pdf_reads": [
+      100
+    ],
+    "payload_equal": true
+  },
+  {
+    "label": "before",
+    "mode": "cold",
+    "rows": 100,
+    "samples": 10,
+    "median_ms": 610.265800030902,
+    "min_ms": 596.3084000395611,
+    "max_ms": 632.4381999438629,
+    "selects": [
+      304
+    ],
+    "pdf_reads": [
+      100
+    ],
+    "payload_equal": true
+  },
+  {
+    "label": "after",
+    "mode": "cold",
+    "rows": 100,
+    "samples": 10,
+    "median_ms": 96.86620003776625,
+    "min_ms": 91.60589997190982,
+    "max_ms": 99.21460004989058,
+    "selects": [
+      4
+    ],
+    "pdf_reads": [
+      100
+    ],
+    "payload_equal": true
+  },
+  {
+    "label": "main",
+    "mode": "warm",
+    "rows": 100,
+    "samples": 10,
+    "median_ms": 99.29239994380623,
+    "min_ms": 97.3363999510184,
+    "max_ms": 112.73100005928427,
+    "selects": [
+      103
+    ],
+    "pdf_reads": [
+      0
+    ],
+    "payload_equal": true
+  },
+  {
+    "label": "before",
+    "mode": "warm",
+    "rows": 100,
+    "samples": 10,
+    "median_ms": 13.462149945553392,
+    "min_ms": 11.958499904721975,
+    "max_ms": 16.574200009927154,
+    "selects": [
+      4
+    ],
+    "pdf_reads": [
+      0
+    ],
+    "payload_equal": true
+  },
+  {
+    "label": "after",
+    "mode": "warm",
+    "rows": 100,
+    "samples": 10,
+    "median_ms": 25.287500000558794,
+    "min_ms": 24.076899979263544,
+    "max_ms": 27.346499962732196,
+    "selects": [
+      4
+    ],
+    "pdf_reads": [
+      0
+    ],
+    "payload_equal": true
+  }
+]

@@ -3,6 +3,17 @@
 Use a dedicated PostgreSQL database and Redis DB 15; never point tests at the
 development database.
 
+`POSTGRES_TEST_URL` must be supplied explicitly and use a `postgresql+` driver
+with a database name ending in `_test` (for example `local_ai_core_test` or
+`backend_audit_test`). The shared validator in `backend/tests/database_support.py`
+runs before the suite imports the application. It rejects production names,
+non-PostgreSQL URLs, and query parameters that can override the selected
+database (`dbname`, `database`, `service`, `servicefile`). Invalid configuration
+fails before any test connection; an absent URL still skips integration tests.
+The suffix is a guard, not proof of isolation: create a dedicated database or
+disposable container and never reuse production credentials/data. Migration
+tests downgrade and re-upgrade this database, so do not share it with another run.
+
 ```powershell
 $env:POSTGRES_TEST_URL='postgresql+psycopg://local_ai:change-me@127.0.0.1:5432/local_ai_core_test'
 $env:REDIS_TEST_URL='redis://127.0.0.1:6379/15'

@@ -568,7 +568,7 @@ def select(ids: dict[str, list[str]], only: str | None) -> dict[str, list[str]]:
 
 def main(argv: list[str] | None = None) -> int:
     from app.config.model_registry import ProductionProbes
-    from app.llm_clients.ollama_client import OllamaClient
+    from app.llm_clients.factory import create_llm_clients
     from app.services.agent_service import FINAL_RESERVE_SECONDS, TURN_BUDGET_SECONDS
     from app.services.model_router import ModelRouter
 
@@ -607,7 +607,7 @@ def main(argv: list[str] | None = None) -> int:
         timeout=settings.ollama_chat_timeout_seconds,
     )
     router = ModelRouter(
-        {"ollama": OllamaClient(settings.ollama_base_url, settings.ollama_chat_timeout_seconds, settings.ollama_health_timeout_seconds, settings.ollama_retry_count)},
+        create_llm_clients(settings, providers=("ollama",)),
         models,
     )
     config = settings.load_config()

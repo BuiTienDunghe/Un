@@ -28,7 +28,7 @@ from app.services.rag_service import InsufficientContextError
 from app.services.reranker_service import RerankerUnavailableError
 from app.services.research_service import (
     AnnotationNotFoundError, ClusterNotFoundError, EdgeNotFoundError, InvalidEdgeError, NotIndexedError, PaperNotFoundError, ProjectNotFoundError,
-    SummaryMissingError, ThreadMismatchError, ThreadNotFoundError, compose_question,
+    ResearchProviderUnsupportedError, SummaryMissingError, ThreadMismatchError, ThreadNotFoundError, compose_question,
 )
 from app.stores.qdrant_store import QdrantUnavailableError
 from app.utils.sse import sse_event
@@ -79,6 +79,8 @@ def _translate(error: Exception) -> HTTPException:
         return _error(409, "RESEARCH_SOURCE_UNAVAILABLE", "Tệp gốc của paper này đã bị gỡ.")
     if isinstance(error, InvalidEdgeError):
         return _error(422, "RESEARCH_EDGE_INVALID", str(error))
+    if isinstance(error, ResearchProviderUnsupportedError):
+        return _error(409, "RESEARCH_PROVIDER_UNSUPPORTED", str(error))
     if isinstance(error, OllamaModelNotLoadedError):
         return _error(502, "MODEL_NOT_LOADED", str(error))
     if isinstance(error, OllamaTimeoutError):

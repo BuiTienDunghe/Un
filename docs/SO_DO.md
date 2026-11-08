@@ -20,6 +20,29 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
 
 ---
 
+## 08/11/2026 — Cải tiến backend trên nhánh và xác nhận bằng CPU
+
+- **Câu hỏi:** sửa cache số trang, bỏ SQL lặp khi liệt kê paper và phân loại lỗi index có giữ hồi quy, có hiệu quả so với base/main không?
+- **Điều kiện:** chỉ worktree `codex/backend-small-fixes`, base `67260f3`; main tham chiếu `c01d6dd` không đổi code. Python 3.11.9, PostgreSQL 16 Alpine/Redis 7 Alpine/Qdrant v1.18.2 dùng một lần, không volume thật; database `backend_improve_test` và `backend_improve_perf_test`. CUDA ẩn; Ollama cổng chết; khóa cloud trống; guard chặn mạng ngoài loopback và cổng model. Reranker real từ cache chạy CPU offline.
+- **Đăng ký trước:** phạm vi/phương pháp ở `.scratch/backend-small-fixes-followups/IMPLEMENTATION.md` trước lượt focused; không phải đăng ký ngưỡng chất lượng model.
+- **Kết quả:**
+
+  | Lượt / đường | Kết quả |
+  | --- | --- |
+  | Focused ban đầu | 99 đạt |
+  | Full đầu | 2029 đạt, 1 hỏng do real reranker còn thử mạng |
+  | Reranker chỉ đồng bộ cờ offline | 19 đạt, 1 hỏng |
+  | Reranker tiến trình offline mới | 20 đạt |
+  | **Full cuối** | **2033 đạt, 0 hỏng, 0 bỏ qua** |
+  | Cú pháp / schema | 423 tệp Python không lỗi cú pháp; không schema drift |
+  | 100 paper lạnh: main / base / sau sửa | 403 / 304 / 4 SELECT; trung vị 720,45 / 610,27 / 96,87 ms |
+  | 100 paper ấm: main / base / sau sửa | 103 / 4 / 4 SELECT; 99,29 / 13,46 / 25,29 ms |
+  | 100 paper có metadata: main / base / sau sửa | 103 / 4 / 4 SELECT; 97,52 / 13,10 / 26,44 ms |
+
+- **Kết luận:** đường fallback lạnh nhanh hơn và bỏ query theo từng paper; nguồn ổn định cho payload giống nhau. Đường metadata/cache ấm chậm hơn base do kiểm filesystem để tránh cache cũ, vẫn nhanh hơn main trong fixture. Giữ đầy đủ các lượt lỗi; sửa test offline bằng tiến trình mới, không nới guard. Thay đổi source được kiểm bằng unit/SQL, không suy ra cải thiện chất lượng harness.
+- **Trạng thái:** xong; không merge vào main. Khoảng chờ hạn mức duyệt không tính vào thời gian test.
+- **Bằng chứng:** `data/evaluation/results/kept/backend-improvements-2026-11-08/REPORT.md`, XML/JSON kèm theo, script `.scratch/backend-small-fixes-followups/`; raw log/PDF tại `data/logs/backend-improvements-2026-11-08/` (chỉ trên máy).
+
 ## 08/11/2026 — LFM3-1.7B và Qwen3.5-2B, chạy trần và trong harness, so với qwen3.5:9b
 
 - **Câu hỏi:** model dưới 3B gọi công cụ tốt đến đâu so với 9B? Harness nâng hay hạ điểm của từng model? Có model nào đạt luật "đáng thử tiếp" đặt trước không?
@@ -81,6 +104,22 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
 - **Bằng chứng:**
   - `data/evaluation/results/kept/small-models/`: `analyze.py`, `analysis.json`, `diag_multi_turn.py`, `nine_harness_multi_turn_159_scores.json`, `REPORT.md`.
   - Kết quả thô ở `data/evaluation/results/small-models-run/` (chỉ trên máy): `progress.log`, và `<nhánh>/<model>/<bài>/scores.json`.
+
+## 08/11/2026 — Kiểm thử các sửa nhỏ backend trong worktree riêng
+
+- **Câu hỏi:** chặn research gửi model cloud nhầm sang Ollama, gom tạo client và truy vấn liệt kê theo lô có giữ đúng các hợp đồng đang dùng không?
+- **Điều kiện:** gốc `eeb90be`, nhánh `codex/backend-small-fixes`, worktree riêng; model/HTTP giả. Lượt SQL dùng container PostgreSQL riêng, database `local_ai_smallfixes_test`, migration tới head. Không gọi model thật, không dùng database/Redis/Qdrant của các test đang chạy.
+- **Đăng ký trước:** không; kiểm thử hồi quy, không đo chất lượng model hoặc độ trễ.
+- **Kết quả:**
+
+  | Lượt | Đạt | Bỏ qua | Hỏng |
+  |---|---:|---:|---:|
+  | Unit/API/provider/harness chọn lọc | 259 | 2 | 0 |
+  | SQL theo lô và wiring worker | 9 | 0 | 0 |
+
+- **Kết luận:** các kiểm thử đã chạy đều đạt. Hai bài rebuild cần PostgreSQL/Qdrant thật bị bỏ qua ở lượt unit. Bài SQL kiểm thứ tự, version active, ingestion mới nhất và truy vấn theo lô trên PostgreSQL riêng; chưa đo lợi ích thời gian. Research cloud trả lỗi chưa hỗ trợ rõ ràng; không bổ sung sinh JSON cloud. Bài router giả chỉ kiểm research dùng cấu hình được cung cấp, không kiểm quá trình fallback. Tổng truy vấn paper có thể tăng ở đường đọc tệp để lấy số trang. Worktree và database riêng vẫn dùng chung tài nguyên máy với lượt đo đang chạy; chưa chứng minh không có tranh tài nguyên.
+- **Trạng thái:** xong.
+- **Bằng chứng:** `data/evaluation/results/kept/backend-small-fixes-2026-11-08/` (`REPORT.md`, `unit.xml`, `postgres.xml`, `metadata-normalization.json`). XML công khai đã bỏ hostname và chuẩn hóa đường dẫn; kết quả testcase giữ nguyên, bản gốc giữ cục bộ trong thư mục bị Git bỏ qua. Đây là hiệu chỉnh báo cáo, không chạy thêm test.
 
 ## 07/11/2026 — Bỏ từng phần lời dặn của Ún trên các bài BFCL chênh
 

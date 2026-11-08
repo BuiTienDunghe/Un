@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Collection
 from datetime import UTC, datetime
 from hashlib import sha256
 from uuid import NAMESPACE_URL, uuid5
@@ -77,6 +78,18 @@ class PostgresDocumentRepository:
 
     def latest_run(self, document_id: str) -> IngestionRun | None:
         return self.session.scalar(select(IngestionRun).where(IngestionRun.document_id == document_id).order_by(IngestionRun.started_at.desc().nullslast(), IngestionRun.id.desc()).limit(1))
+
+    def latest_runs(self, document_ids: Collection[str]) -> dict[str, IngestionRun]:
+        """The same ordering as latest_run(), in one PostgreSQL DISTINCT ON query."""
+        if not document_ids:
+            return {}
+        rows = self.session.scalars(
+            select(IngestionRun)
+            .where(IngestionRun.document_id.in_(document_ids))
+            .distinct(IngestionRun.document_id)
+            .order_by(IngestionRun.document_id, IngestionRun.started_at.desc().nullslast(), IngestionRun.id.desc())
+        )
+        return {run.document_id: run for run in rows}
 
     def set_stage(self, run_id: str, stage: str, **values: object) -> IngestionRun:
         if stage not in RUN_STAGES:

@@ -272,3 +272,35 @@ def test_attach_paper_refs_maps_citations_to_papers_and_keeps_the_page():
     assert (first["paper_id"], first["short_name"], first["color_index"], first["page"]) == ("pap_1", "Attention", 2, 3)
     assert (gone["paper_id"], gone["short_name"], gone["color_index"], gone["page"]) == (None, None, None, None)
     assert messages[1]["sources"][0] == {"document_id": "doc_1", "page_start": 3, "excerpt": "x"}  # không sửa đầu vào
+
+
+@pytest.mark.parametrize("provider", ["anthropic", "gemini", "deepseek"])
+def test_research_rejects_cloud_before_making_an_ollama_request(provider):
+    from types import SimpleNamespace
+    from app.services.research_service import ResearchProviderUnsupportedError
+
+    def forbidden_post(*args, **kwargs):
+        pytest.fail("an unsupported provider must not be sent to Ollama")
+
+    router = SimpleNamespace(models={"general": {"provider": provider, "name": "cloud-model"}})
+    service = ResearchService(None, None, ollama_base_url="http://local", model_router=router, http_post=forbidden_post)
+    with pytest.raises(ResearchProviderUnsupportedError, match=provider) as caught:
+        service._json_call([], PaperSummary.model_json_schema(), 5)
+    assert "ollama pull" not in str(caught.value)
+
+
+def test_research_uses_served_ollama_config_even_when_cloud_was_requested(monkeypatch):
+    from types import SimpleNamespace
+
+    monkeypatch.setenv("MODEL_VERSION_GENERAL", "general-haiku-v1")
+    router = SimpleNamespace(models={"general": {"provider": "ollama", "name": "served-local", "context": 8192}})
+    calls = []
+
+    def post(url, json, timeout):
+        calls.append((url, json, timeout))
+        return _Response(200, '{"brief": "ok"}')
+
+    service = ResearchService(None, None, ollama_base_url="http://local", model_router=router, http_post=post)
+    result, model = service._json_call([], PaperSummary.model_json_schema(), 5)
+    assert (result, model) == ({"brief": "ok"}, "served-local")
+    assert len(calls) == 1 and calls[0][1]["model"] == "served-local" and calls[0][2] == 5

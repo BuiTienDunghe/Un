@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from loguru import logger
 
 from app.config.settings import get_settings
-from app.llm_clients.ollama_client import OllamaClient
+from app.llm_clients.factory import create_llm_clients
 from app.postgres.database import create_postgres_engine, create_session_factory
 from app.postgres.repositories import PostgresDocumentRepository
 from app.services.chunk_context_service import ChunkContextService
@@ -81,7 +81,7 @@ def _service() -> tuple[PostgresDocumentService, object, JobQueueService]:
     # A `degraded` embedding makes router.embed raise EmbeddingRefusedError before
     # Ollama: index_for_worker fails the run DOCUMENT_INDEX_FAILED, the previous
     # active version stays, and RQ classifies it non-retryable.
-    router = ModelRouter({"ollama": OllamaClient(settings.ollama_base_url, settings.ollama_chat_timeout_seconds, settings.ollama_health_timeout_seconds, settings.ollama_retry_count)}, settings.load_models(), embedding_refusal=resolved.embedding_refusal())
+    router = ModelRouter(create_llm_clients(settings, providers=("ollama",)), settings.load_models(), embedding_refusal=resolved.embedding_refusal())
     rag_config = settings.load_config().get("rag", {})
     chunk_context = ChunkContextService.from_config(router, rag_config, enabled_override=settings.rag_contextual_retrieval_enabled)
     collections = settings.qdrant_collections()

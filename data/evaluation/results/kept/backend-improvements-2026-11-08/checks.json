@@ -1,0 +1,96 @@
+{
+  "base": "67260f3",
+  "main_reference": "c01d6dd",
+  "runs": [
+    {
+      "label": "focused",
+      "passed": 99,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "label": "full",
+      "passed": 2029,
+      "failed": 1,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "label": "reranker-offline",
+      "passed": 19,
+      "failed": 1,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "label": "reranker-fresh-process",
+      "passed": 20,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "label": "full-final",
+      "passed": 2033,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "python_files_parsed": 423,
+  "syntax_errors": 0,
+  "normalization": [
+    {
+      "file": "focused.xml",
+      "raw_sha256": "2c598a502f8be244e45779b67ac4e2f9c47757ec78704c825ddd5e4fe472e0bd",
+      "normalized_sha256": "278e7ebae0158e6dc46286e9a229639da7ca9fcc57852e26dda8d56cb3bb0c08"
+    },
+    {
+      "file": "full.xml",
+      "raw_sha256": "9c14343c289ea4ea25fa4c8f68d19bd778da7cf80ededdd9aca930543c42ae60",
+      "normalized_sha256": "d1b332857d220d8f9e9a5e7539c8c5ef51e156b7bab3b3bbbd5046b3a4b28ec5"
+    },
+    {
+      "file": "reranker-offline.xml",
+      "raw_sha256": "2d67e6a77b3393019f9074f4c9fe532a1381a89b717bce59a0680ca737ab4436",
+      "normalized_sha256": "a2e3b69172ea8f848433e0b8c3248a3dffb57eb80c8040e3e70f119344fb57a5"
+    },
+    {
+      "file": "reranker-fresh-process.xml",
+      "raw_sha256": "c70cceeae8e35f12da7149e6e56ba04bea89f8d001b7ba050715cfeb3b780123",
+      "normalized_sha256": "0df3faa83eaab83419e0b70050f06a1e45c5358fedccc7483a9bf6d5b7a9c28e"
+    },
+    {
+      "file": "full-final.xml",
+      "raw_sha256": "ba50c60bbb3da4860ef3fd03a7f5853c8a9029a1c5ec2bd882e0a5e2bfd0d735",
+      "normalized_sha256": "03aa9d3213d424e63bb512060d5fcbe7c10cff15d900c2f502ae7c84b65ea596"
+    }
+  ],
+  "changed_backend_file_sha256": {
+    "backend/app/routers/documents.py": "6462a2667c4a29784e4ca700224057703b26529b0d9a7aa150a16491674beb62",
+    "backend/app/services/postgres_document_service.py": "4b134f3f3fb49062add732bbf0160a58b7ba2afc9a900bc64d879b37e057dca6",
+    "backend/app/services/research_service.py": "d03c34a2a3c56b9482063cb45ad8f5b2a5cc022e63e57fa8367bd6b5fb171d19",
+    "backend/app/services/source_page_counts.py": "e271bbcb3e1260365079604ed827af9d1bbcb9008c202030731a6a656759efc7",
+    "backend/tests/conftest.py": "56bae6866f93c93d3f554712b7a8688eeedd047765109a7aa2c2a71cc6e3edb3",
+    "backend/tests/database_support.py": "10887469ff8a298d3ebf253fc6a3010fc09bade35a77c222bfc084a0e6425b36",
+    "backend/tests/test_batched_document_listing.py": "328fb7b88ca405aee82424635909cc0a9be1333cff7e46f3f29be870148ea316",
+    "backend/tests/test_database_url_contract.py": "9fa238f5c64b06c988c47262e0c806f54a09c7535c2abbf1cb8326d2662defac",
+    "backend/tests/test_discord_memory_foundation.py": "4aaa0622acafa2a2d27cd5065ee48fe1b27e8639d789bf19252d54482cc792f7",
+    "backend/tests/test_discord_memory_migration.py": "ebcde2542dcb6a7e6ca2a95f9543fd2a6635a895dd27064c004420def254b312",
+    "backend/tests/test_discord_memory_outbox_migration.py": "38a550ea8cb6a1dfff18f667dc96762f9172a695acdf68a649689b5a57ed43fe",
+    "backend/tests/test_discord_memory_outbox_worker.py": "853b433514a4562ecc4b151f38533e1b389bc7ac6979b071440654735570efc6",
+    "backend/tests/test_discord_memory_rule_filter_migration.py": "50995f7ed8b3611aff7e5755b5db104305c4e11ffe2437e387d6e8815daa4643",
+    "backend/tests/test_document_index_errors.py": "2a89a6fd23728ee21c29c025c384b324ddbd06dc5f76494877115a812d75fc87",
+    "backend/tests/test_model_migration_reconciliation.py": "4262a22b01c087050d9e867e89beee26ab8514648a4ad91922c80073b1ebb6f7",
+    "backend/tests/test_reranker_versions.py": "35f2625e7c2e680f6ad7cfa31f0b83c40aa7d1b546e0db7f590247a831853217",
+    "backend/tests/test_source_page_counts.py": "44bdb929ce5afb76c0c5250c4fe276bc432b0f90abca5265e3e292a1b69764a7"
+  },
+  "cpu_only": {
+    "cuda_visible_devices": "",
+    "network": "loopback only, model ports denied",
+    "ollama": "unused port",
+    "cloud_keys": "empty",
+    "real_reranker": "cached weights, CPU, fresh offline subprocess"
+  }
+}

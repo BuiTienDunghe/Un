@@ -1,0 +1,20 @@
+{
+  "description": "Public XML copies omit hostname attributes and use repository-relative paths. Test identities, outcomes, counters, timestamps and durations are preserved.",
+  "private_originals": "data/logs/backend-small-fixes-private-evidence/ (gitignored; local only)",
+  "files": {
+    "unit.xml": {
+      "original_sha256": "9f0e44c64f518775b0b30ef61fd1188e197cc06f59e997e8a7b896c2199918eb",
+      "public_sha256": "d8cbceb2707b1e0d418f0165147b48aaedfc438c118bda45ed95f4ff0c23648d",
+      "hostname_attributes_removed": 1,
+      "path_fields_normalized": 2,
+      "test_identities_results_counts_and_timing_preserved": true
+    },
+    "postgres.xml": {
+      "original_sha256": "feb94ec962ca36c82bf0bba398966ed11d5efddaded5e190a3a4e4a836fee900",
+      "public_sha256": "6d22d7cd518af070f760a7eeeb36aad05c1043fe45104cd9d6d9782251f01452",
+      "hostname_attributes_removed": 1,
+      "path_fields_normalized": 0,
+      "test_identities_results_counts_and_timing_preserved": true
+    }
+  }
+}
