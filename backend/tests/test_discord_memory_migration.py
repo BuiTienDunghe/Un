@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine, inspect, text
-from sqlalchemy.engine import make_url
 
+from tests.database_support import validate_postgres_test_url
 from tests.migration_support import head_revision
 
 
@@ -37,11 +37,8 @@ def _run_alembic(*arguments: str) -> subprocess.CompletedProcess[str]:
 
 
 def test_revision_16_upgrade_downgrade_reupgrade_isolated_database():
-    assert URL is not None
-    parsed = make_url(URL)
-    assert parsed.database == "local_ai_core_test"
-    assert parsed.database != "local_ai_core"
-    engine = create_engine(URL, pool_pre_ping=True)
+    url = validate_postgres_test_url(URL)
+    engine = create_engine(url, pool_pre_ping=True)
     legacy_columns_before = {
         column["name"] for column in inspect(engine).get_columns("memories")
     }

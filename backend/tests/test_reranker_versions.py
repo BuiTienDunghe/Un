@@ -9,7 +9,10 @@ HF_HUB_OFFLINE (never a download) and is skipped when the cache does not hold it
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
+import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -401,11 +404,12 @@ def test_missing_extra_rejects_every_version_with_the_pip_hint(monkeypatch, even
     assert [item["extra"]["reason"] for item in named(events, "reranker_version_rejected")] == ["import", "import"]
 
 
-def test_real_reranker_v0_from_the_disk_cache_passes_every_check(monkeypatch):
+def test_real_reranker_v0_from_the_disk_cache_passes_every_check():
     """The shipped registry against the real weights, offline: acceptance C on this
     machine (reranker active with parity on the recorded scores). Skipped when the HF
     cache does not hold the pinned snapshot — the test never downloads."""
-    pytest.importorskip("sentence_transformers")
+    if importlib.util.find_spec("sentence_transformers") is None:
+        pytest.skip("sentence_transformers is not installed")
     huggingface_hub = pytest.importorskip("huggingface_hub")
     chain = load_registry(DEFAULT_REGISTRY_PATH).chain("reranker")
     assert [item.id for item in chain] == ["reranker-v0"], "the candidate after `active` is never in the chain"
@@ -413,7 +417,21 @@ def test_real_reranker_v0_from_the_disk_cache_passes_every_check(monkeypatch):
     cached = huggingface_hub.try_to_load_from_cache(v0.hub, "config.json", revision=v0.revision)
     if not isinstance(cached, str):
         pytest.skip(f"{v0.hub}@{v0.revision} is not in the HF disk cache")
-    monkeypatch.setenv("HF_HUB_OFFLINE", "1")  # loader_kwargs() -> local_files_only=True: no network
+    # Hub/transformers capture offline flags at import. Earlier tests may have
+    # imported them online; use a fresh process with flags set before imports.
+    env = os.environ.copy()
+    env.update(HF_HUB_OFFLINE="1", TRANSFORMERS_OFFLINE="1", CUDA_VISIBLE_DEVICES="")
+    result = subprocess.run(
+        [sys.executable, "-B", "-c", "from tests.test_reranker_versions import _assert_cached_reranker; _assert_cached_reranker()"],
+        cwd=Path(__file__).resolve().parents[1], env=env, capture_output=True,
+        text=True, encoding="utf-8", errors="replace", timeout=120,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def _assert_cached_reranker():
+    chain = load_registry(DEFAULT_REGISTRY_PATH).chain("reranker")
+    v0 = chain[0]
 
     reranker = RerankerService(True, v0.name, 15, versions=chain)
     outcome = reranker.warmup()

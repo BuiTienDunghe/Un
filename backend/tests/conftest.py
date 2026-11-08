@@ -2,6 +2,8 @@ import os
 from pathlib import Path
 from uuid import uuid4
 
+from tests.database_support import validate_postgres_test_url
+
 os.environ["LOG_DIR"] = str(Path(__file__).parent / "test_logs")
 # Settings reads the project .env, so an operator who configures a real API key
 # would otherwise make every write-endpoint test 401 on their machine but not in
@@ -48,14 +50,13 @@ os.environ["LOCAL_AI_JWT_SECRET"] = ""
 if os.getenv("POSTGRES_TEST_URL"):
     # Normal API tests use the isolated PostgreSQL database, never a local
     # SQLite file or the runtime PostgreSQL database.
-    os.environ["DATABASE_URL"] = os.environ["POSTGRES_TEST_URL"]
+    os.environ["DATABASE_URL"] = validate_postgres_test_url(os.environ["POSTGRES_TEST_URL"])
 
 import pytest
 from fastapi.testclient import TestClient
 from redis import Redis
 from rq import Queue
 from sqlalchemy import delete
-from sqlalchemy.engine import make_url
 
 from app.main import app
 from app.postgres.database import create_postgres_engine, create_session_factory
@@ -67,10 +68,7 @@ def _integration_database_url() -> str:
     url = os.getenv("POSTGRES_TEST_URL")
     if not url:
         pytest.skip("set POSTGRES_TEST_URL to run worker integration tests")
-    database = make_url(url).database or ""
-    if not database.endswith("_test"):
-        pytest.skip("POSTGRES_TEST_URL must target a database ending in _test")
-    return url
+    return validate_postgres_test_url(url)
 
 
 @pytest.fixture

@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine, inspect, text
-from sqlalchemy.engine import make_url
 
+from tests.database_support import validate_postgres_test_url
 from tests.migration_support import head_revision
 
 
@@ -42,9 +42,8 @@ def _filter_check(engine) -> str:
 
 
 def test_revision_17_adds_and_reverses_not_run_vocabulary():
-    assert URL is not None
-    assert make_url(URL).database == "local_ai_core_test"
-    engine = create_engine(URL, pool_pre_ping=True)
+    url = validate_postgres_test_url(URL)
+    engine = create_engine(url, pool_pre_ping=True)
     try:
         _alembic("downgrade", "20260728_16")
         assert "not_run" not in _filter_check(engine)

@@ -13,8 +13,8 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine, inspect
-from sqlalchemy.engine import make_url
 
+from tests.database_support import validate_postgres_test_url
 from tests.migration_support import head_revision
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -55,9 +55,8 @@ def _idempotency_key_is_nullable(engine) -> bool:
 
 
 def test_revision_21_creates_indexes_and_tightens_the_outbox_key_reversibly():
-    assert URL is not None
-    assert make_url(URL).database == "local_ai_core_test"
-    engine = create_engine(URL, pool_pre_ping=True)
+    url = validate_postgres_test_url(URL)
+    engine = create_engine(url, pool_pre_ping=True)
     try:
         for table, names in CREATED_INDEXES.items():
             assert names <= _index_names(engine, table)
