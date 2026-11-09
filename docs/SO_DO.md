@@ -20,6 +20,90 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
 
 ---
 
+## 10/11/2026 — Bản cũ (main, 9B) so với bản mới của Codex (`c57aa3e`, chỉ model nhỏ)
+
+- **Câu hỏi:** nhánh `codex/tool-state-continuity` (`c57aa3e`, đã push lên nhánh cùng tên) cải thiện được gì so với main `3eac7f6`, tách phần do đổi model khỏi phần do code?
+- **Điều kiện:** Ollama 0.40.13; GPU RTX 5060 Ti rảnh, 40 °C lúc bắt đầu; API, bot và stack thật đang tắt. Bản mới chạy từ worktree tách riêng `local-ai-core-wt/check-c57aa3e` (detached), với `DISCORD_MEMORY_EXTRACTOR_MODEL=` rỗng trong tiến trình vì `.env` thật còn tag 9B làm chốt chặn từ chối khởi động; `.env` không bị sửa. Bản cũ chạy từ checkout chính (code `3eac7f6`, chỉ tài liệu bẩn). Mọi lượt tuần tự, dỡ mọi model giữa các lượt, dừng nếu GPU ≥ 85 °C hoặc có League.
+  - Test: đủ bộ backend và bộ gốc trên `c57aa3e`, Postgres 16/Redis 7/Qdrant v1.18.2 trong container dùng một lần (cổng 55441/56381/56334), migration tới head.
+  - Agent Eval v0 (66 bài, bộ chấm giống hệt ở hai bản), nhiệt độ 0, seed 42, dỡ model giữa từng bài: A = main + `qwen3.5:9b` (bản đang ship); C = main + `--model qwen3.5:2b` (chỉ đổi model); B = `c57aa3e`, model theo registry (`general-small-v1`, 2B). A–C là phần do model, C–B là phần do code/cấu hình mới.
+  - OCR: 10 ảnh tiếng Việt tự tạo của Codex (`data/benchmarks/ocr_evidence/v1`, có văn bản chuẩn từng ảnh, 3 ảnh mới Codex đã xem để chỉnh cách gom cột). Mỗi bản OCR chép 10 ảnh ở 200 dpi: `ocr-v2` (9B) và `ocr-v1` (GLM) của main; `ocr-ovis-v1` và `ocr-small-v1` (GLM) của nhánh. Đo tỷ lệ ký tự sai so với văn bản chuẩn (sau chuẩn hoá NFC và gộp khoảng trắng) và giây/ảnh. 28 câu hỏi: bản mới chạy nguyên `ocr_evidence_eval` (Ovis + LFM3 đọc bằng chứng); bản cũ xấp xỉ bằng 9B đọc toàn văn bản OCR rồi trả lời — cách này rộng tay với bản cũ hơn đường RAG thật.
+- **Đăng ký trước:** mục này, viết trước khi chạy. Dự đoán: A > C (model nhỏ yếu hơn, 08/11 là 57 so với 47); B ≈ C vì tính năng nhớ công cụ tắt; Ovis sai nhiều ký tự hơn `ocr-v2` nhưng nhanh hơn và ít VRAM hơn; mọi bản mới dùng ít VRAM hơn. Không chọn lại phép đo sau khi thấy số.
+- **Kết quả:**
+
+  Test trên `c57aa3e` (02:00–02:06):
+
+  | Lượt | Đạt | Hỏng | Bỏ qua |
+  |---|---:|---:|---:|
+  | Backend đủ bộ, có Postgres/Redis/Qdrant tạm | 2.214 | 4 | 0 |
+  | 4 bài hỏng chạy lại, thêm `REDIS_URL` trỏ container test | 5 (gồm bài cùng tệp) | 0 | 0 |
+  | Bộ gốc (bot, launcher) | 242 | 0 | 1 |
+
+  Cả 4 bài hỏng đều đọc `/health.status`: lượt đầu tôi chỉ đặt `REDIS_TEST_URL`, nên kiểm sức khoẻ gọi Redis mặc định ở cổng 6379 (đang tắt) và báo "degraded". Lỗi do môi trường của tôi, không phải code; Codex báo 2.217 đạt. Migration tới head `20261109_39` chạy sạch trên database trống.
+
+  Database thật (chỉ đếm, không đọc nội dung; bật container rồi tắt lại): 3 `discord_memories` active, 3 `memories` (web), 10 `discord_condensation_propositions`, alembic ở `20261102_38`. Đây là cỡ phần trí nhớ cũ không chuyển sang v2.
+
+  Đo trên GPU (02:04–02:28, không lượt nào dừng, nhiệt cao nhất 75 °C):
+
+  | Agent Eval /66 | Đạt | Trung vị/bài | VRAM đỉnh |
+  |---|---:|---:|---:|
+  | A main + 9B | 57 | 4,4 s | 6.950 MiB |
+  | C main + 2B | 47 | 2,1 s | 3.376 MiB |
+  | B `c57aa3e` + 2B | 47 | 2,0 s | 3.376 MiB |
+
+  C → B: 0 bài đổi. A → B: mất 15, được 5 (McNemar hai phía p ≈ 0,04); mất gồm nt-01, nt-02 (gọi công cụ khi không được gọi).
+
+  | OCR, 7 ảnh có văn bản chuẩn | Sai chữ và số | Sai thô | Giây/ảnh | VRAM đỉnh |
+  |---|---:|---:|---:|---:|
+  | cũ `ocr-v2` 9B | 0/887 | 3,38% | 2,10 | 7.046 MiB |
+  | mới `ocr-ovis-v1` | 2/887 | 41,86% | 1,79 | 1.658 MiB |
+  | GLM (cũ `ocr-v1` / mới `ocr-small-v1`) | 83 / 88 trên 887 | 12,2 / 12,7% | 0,91 | 3.880 MiB |
+
+  Sai thô là thước đã đăng ký; thước "chữ và số" thêm SAU khi thấy số, vì đọc văn bản thấy Ovis trả bảng dạng HTML và 9B tách cột bằng tab, còn văn bản chuẩn dùng `|`. Bỏ ký hiệu trình bày thì Ovis chỉ còn 2 lỗi dấu thật. VRAM là đỉnh của từng lượt riêng: bản cũ dùng lại 9B đã nạp cho OCR, bản mới nạp 2B, Ovis và LFM3 riêng; tổng khi chạy cùng lúc chưa đo. Câu hỏi trên 10 ảnh: cũ (9B đọc toàn văn OCR, xấp xỉ) 27/28, mới (Ovis + LFM3) 28/28.
+
+  Kiểm khẳng định của Codex về câu phủ định: chốt cũ `auto_apply_allowed` = False cho "Tôi thích cà phê đen" từ "Hãy nhớ tôi không thích cà phê đen" (bước kiểm phủ định bắt được), tức chốt cũ không tự lưu câu sai đó.
+- **Kết luận:** dự đoán đúng ở Agent Eval (A > C, B = C) và VRAM; sai ở OCR: Ovis gần bằng 9B về chữ (2 lỗi dấu trên 887), không kém rõ như dự đoán, lại nhanh hơn và chỉ cần 1/4 VRAM. Phần lợi của bản mới là tốc độ và bộ nhớ GPU; phần mất là năng lực trợ lý (10 bài), do đổi model chứ không do code. Bộ OCR và câu hỏi do Codex viết nên chỉ là kiểm hồi quy.
+- **Trạng thái:** xong.
+- **Bằng chứng:** `data/evaluation/results/kept/c57-compare-20261110/REPORT.md` cùng thư mục; bản thô `data/evaluation/results/c57-compare-20261110/` (chỉ trên máy).
+
+## 09/11/2026 — Test sau khi gộp `codex/backend-small-fixes` vào main
+
+- **Câu hỏi:** main sau khi gộp (`3eac7f6`) có qua các test của nhánh, kể cả các bài database mà ba agent duyệt không chạy được?
+- **Điều kiện:** checkout chính tại `3eac7f6`, `app` nạp từ checkout chính (đã in đường dẫn). GPU che, Ollama/Redis/Qdrant trỏ cổng chết, không ghi bytecode. Lượt 1: `POSTGRES_TEST_URL` gỡ, `DATABASE_URL` trỏ cổng chết. Lượt 2–3: container `postgres:16-alpine` dùng một lần, cổng 55692, database `review_merge_test`, migration tới head `20261102_38`, đã xoá container sau khi chạy. 01:38–01:42, máy rảnh.
+- **Đăng ký trước:** không; kiểm thử hồi quy sau khi gộp.
+- **Kết quả:**
+
+  | Lượt | Tệp | Đạt | Bỏ qua | Hỏng |
+  |---|---|---:|---:|---:|
+  | 1. Unit, không database | 11 tệp Codex chạy + 5 tệp mới/đổi của nhánh (`test_source_page_counts`, `test_document_index_errors`, `test_database_url_contract`, `test_batched_document_listing`, `test_reranker_versions`) | 328 | 9 | 0 |
+  | 2. Cùng 16 tệp, có Postgres | như trên | 335 | 2 | 0 |
+  | 3. Database và migration | `test_batched_document_listing`, `test_worker_extractor_model`, `test_source_page_counts`, `test_database_url_contract`, 6 tệp discord memory/migration | 121 | 0 | 0 |
+
+  2 bài bỏ qua ở lượt 2 cần Qdrant thật (`test_rebuild_scripts.py:113,155`). Có 3 cảnh báo luồng ở `test_bfcl_run` (tiến trình con đọc chữ UTF-8 bằng bảng mã cp1252); tệp test này không bị nhánh sửa, nên cảnh báo có từ trước.
+- **Kết luận:** main sau khi gộp qua hết các test đã chạy. Đã chạy được bài "3 câu truy vấn cho 12 paper" mà ba agent phải bỏ qua. Chưa chạy toàn bộ bộ test.
+- **Trạng thái:** xong.
+- **Bằng chứng:** `data/evaluation/results/kept/codex-small-fixes-review-2026-11-08/` (`postmerge-focused.xml`/`.txt` cho lượt 2, `postmerge-sql.xml`/`.txt` cho lượt 3; đã bỏ tên máy và đường dẫn). Lượt 1 chỉ có dòng tổng kết trong phiên. Kết luận duyệt: `.scratch/arch-plan-review/reviews/codex-backend-small-fixes-405c7c5.md`.
+
+## 09/11/2026 — Đối chiếu toàn pipeline cũ và ứng viên harness, kiểm chéo với ba subagent
+
+- **Câu hỏi:** ứng viên giữ traffic + nới vòng + guide trung tính mạnh/yếu ở những bước nào so với cấu hình cũ; thay model general ảnh hưởng tới những pipeline nào khác?
+- **Điều kiện:** đọc code/config tại head `c01d6dd`, báo cáo model nhỏ và chẩn đoán 08/11; không chạy inference/GPU hay benchmark latency mới, không sửa sản phẩm. Ba subagent đọc code, kiểm bằng chứng và đánh giá kiến trúc đã phản biện chéo cùng người tổng hợp. Các con số dưới đây chỉ được tính lại từ cùng 12 ca LFM3 cũ (48 lượt người dùng), không phải tập đánh giá mới.
+- **Đăng ký trước:** không; đối chiếu code và số đếm dẫn xuất từ phép đo đã hoàn tất.
+- **Kết quả:**
+
+  | Cấu hình trên cùng mẫu | Đạt/12 | Request model | Tool call | Ép final do max_steps |
+  |---|---:|---:|---:|---:|
+  | Cũ: guide cũ/3 vòng/chỉ chữ | 4 | 113 | 67 | 6 |
+  | Guide cũ/3 vòng/giữ traffic | 7 | 125 | 80 | 7 |
+  | Guide cũ/10 vòng/chỉ chữ | 5 | 132 | 83 | 0 |
+  | Guide cũ/10 vòng/giữ traffic | 8 | 143 | 95 | 0 |
+  | Guide trung tính/10 vòng/giữ traffic | 9 | 134 | 86 | 0 |
+
+  Tổng JSON messages cũ 316253 ký tự, tổ hợp tốt nhất 527764 (chưa gồm schemas). Đây là khối lượng request/context, không phải token/VRAM/latency. Việc tăng có cả phần công việc trước kia chưa hoàn tất.
+
+- **Kết luận:** ứng viên cải thiện tiếp nối/làm nhiều bước trên mẫu, chưa phải pipeline sản phẩm mới. Không ghép 9/12 (LFM3 cả ba can thiệp), 11/16 Agent Eval (LFM3 chỉ đổi guide/cap3), và 0/8 irrelevance (Qwen2B chỉ đổi guide) thành điểm của cùng một cấu hình. Pipeline ingestion/retrieval/memory không được sửa bởi can thiệp harness; đổi general riêng lại tác động cả rewrite/RAG answer/ghi chú/research/contextual indexing, trong khi OCR/vision/extractor/verifier vẫn giữ9B nên chưa bảo đảm giảm residency. Context retention phải tích hợp cả Web và Discord cùng quyền, thu gọn theo loại tool và chống chạy lại hành động. Cơ chế thu gọn hiện có nhắc gọi lại tool cũ, không phù hợp để bật nguyên xi cho action history. Mô tả retrieval đã được kiểm lại: dense kiểm PostgreSQL trước RRF/rerank; BM25 dùng cache active snapshot, cập nhật chéo tiến trình theo TTL mặc định5s; không có kiểm active chung sau rerank.
+- **Trạng thái:** xong; báo cáo phân biệt cấu hình hiện có, ứng viên đã đo và thiết kế đề xuất. Không kết luận nhanh hơn bao nhiêu hoặc VRAM giảm bao nhiêu khi chưa đo toàn tải.
+- **Bằng chứng:** `data/evaluation/results/kept/harness-pipeline-comparison-20261109/REPORT.md`, `workload_comparison.json`, `config_snapshot.json`; nguồn số và request gốc trỏ về `harness-root-cause-20261108/` và `small-models/`. Các tệp đối chiếu chưa commit.
+
 ## 08/11/2026 — Cải tiến backend trên nhánh và xác nhận bằng CPU
 
 - **Câu hỏi:** sửa cache số trang, bỏ SQL lặp khi liệt kê paper và phân loại lỗi index có giữ hồi quy, có hiệu quả so với base/main không?
@@ -42,6 +126,95 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
 - **Kết luận:** đường fallback lạnh nhanh hơn và bỏ query theo từng paper; nguồn ổn định cho payload giống nhau. Đường metadata/cache ấm chậm hơn base do kiểm filesystem để tránh cache cũ, vẫn nhanh hơn main trong fixture. Giữ đầy đủ các lượt lỗi; sửa test offline bằng tiến trình mới, không nới guard. Thay đổi source được kiểm bằng unit/SQL, không suy ra cải thiện chất lượng harness.
 - **Trạng thái:** xong; không merge vào main. Khoảng chờ hạn mức duyệt không tính vào thời gian test.
 - **Bằng chứng:** `data/evaluation/results/kept/backend-improvements-2026-11-08/REPORT.md`, XML/JSON kèm theo, script `.scratch/backend-small-fixes-followups/`; raw log/PDF tại `data/logs/backend-improvements-2026-11-08/` (chỉ trên máy).
+
+## 08/11/2026 — Chẩn đoán harness: lịch sử công cụ, giới hạn vòng, system prompt và đọc văn bản dài
+
+- **Câu hỏi:** vì sao model nhỏ chạy trong harness trượt những bài chạy trần làm được; lỗi ở code/prompt nào đã kiểm được bằng đối chứng?
+- **Điều kiện:** head `c01d6dd`, không sửa code/cấu hình sản phẩm; giữ các thay đổi có sẵn của người dùng. Ollama 0.40.13; LFM3-1.7B `b36a103fe2f8` Q4_K_M và Qwen3.5-2B `324d162be6ca` Q8_0; nhiệt độ 0, seed 42, context 16384, think=false, gỡ/nạp từng bài. Bộ công cụ BFCL giả và fixture Agent Eval, không truy cập database thật. Trong một phần phiên có audit CPU/DB khác chạy đồng thời (mục dưới); không dùng thời gian để kết luận tốc độ. Không có turn mới dừng vì thời gian.
+- **Đăng ký trước:** `data/evaluation/results/kept/harness-root-cause-20261108/PREREGISTRATION.md`; các phép bổ sung sau khi đọc dữ liệu ghi trước khi chạy trong `ADDENDUM.md`. Đây là mẫu chẩn đoán chọn sau khi thấy kết quả, không phải tập xác nhận để ship.
+- **Kết quả:** 253 lượt bài trong 19 nhánh, không lỗi hạ tầng. Đối chứng LFM3 nhiều lượt mới tái lập đúng toàn bộ result (lệnh gọi và câu trả lời) 12/12 so với sáng. Hai đối chứng Agent Eval tái lập tập đạt/trượt cũ trên 16 ca/model.
+
+  LFM3, cùng 12 ca chẩn đoán (8 ca trần đạt/harness trượt, 4 ca cùng đạt):
+
+  | Guide | 3 vòng/chỉ chữ | 3 vòng/giữ công cụ | 10 vòng/chỉ chữ | 10 vòng/giữ công cụ |
+  |---|---:|---:|---:|---:|
+  | Cũ | 4/12 | 7/12 | 5/12 | 8/12 |
+  | Trung tính theo tool thật | 5/12 | 7/12 | 8/12 | 9/12 |
+
+  Prompt, cùng các ca đã chọn trước:
+
+  | Phép thử | Guide cũ | Trung tính | Chỉ bỏ “hay kiến thức chung” |
+  |---|---:|---:|---:|
+  | 2B simple_python | 5/8 | 6/8 | 5/8 |
+  | 2B irrelevance | 5/8 | 0/8 | 3/8 |
+  | LFM3 Agent Eval | 6/16 | 11/16 | — |
+  | 2B Agent Eval | 5/16 | 6/16 | — |
+  | LFM3 nhiều lượt, 3 vòng/chỉ chữ | 4/12 | 5/12 | 3/12 |
+
+  - Agent Eval 2B + chỉ thêm clock_note như chat thật: 7/16 (cứu nt-01, doc-31, hist-02; mất doc-25). Chỉ dùng persona bot thật ở task Discord: 6/16 (cứu hist-02). Eval vẫn khác tool registry/memory của sản phẩm; không gọi đây là production parity đầy đủ.
+  - 2B doc-57, chỉ đổi prompt ghi chú: vẫn 0/1. Body HTTP trước cắt đã thiếu số đúng; không còn length stop ở bản focused nhưng vẫn ghi thiếu. Đối chứng định vị đưa đoạn nguồn 2000 ký tự: lấy được 265.000, vẫn chọn 330.000 của điều kiện khác và bỏ 870.000. Không chấm ca oracle thành bài Agent Eval đạt.
+  - LFM3 doc-57 thực tế đạt cả bản cũ/mới và guide trung tính, dù ghi chú phần sau có nhiễu. Không gộp lỗi của 2B sang LFM3.
+  - 6 cặp request cùng messages/schema/model alias qua `/api/chat` và `/v1/chat/completions`: 6/6 cùng call name/arguments. Chỉ kiểm được sáu request đó.
+  - Probe không model tái hiện mất mã công cụ qua lượt, trần chuỗi thao tác, dict quá dài bị cắt hỏng JSON, và bộ kiểm số chấp nhận số đã xuất hiện trong lời model. Không có tool output bị cắt/bỏ mục trong các ca nhiều lượt cũ của hai model, nên không lấy lỗi JSON này giải thích cú tụt cũ.
+  - Kiểm `test_bfcl_run.py`: lần đầu 20 đạt/1 trượt provenance vì Git sandbox khác chủ repo; chạy lại đúng bài với safe.directory trong môi trường tiến trình: 1/1 đạt. Clone BFCL được kiểm read-only đúng `6ea5797`, sạch; ba file checker/executor/trading_bot cài trong venv khớp byte clone. Manifest ghi bfcl_commit=unknown được giữ nguyên, xác minh bổ sung trong verification.json. Không đổi Git config toàn cục.
+- **Kết luận:** mất state công cụ, prompt thiên hỏi đáp và cơ chế ép trả lời có tác động tương tác; tăng vòng riêng lẻ hoặc bỏ một câu không sửa hết, còn có hồi quy. Ca 138 nới vòng tự thêm watchlist dù chỉ được hỏi phân tích. Hai ca còn trượt ở bản tốt nhất (104,106) đạt trạng thái/nội dung cần nhưng thiếu response trung gian/đúng dạng BFCL; không gọi mọi bài trượt là không làm được việc. Đọc dài của 2B còn lỗi chọn dữ kiện/điều kiện áp dụng sau khi thử prompt và trích đoạn ngắn. Chưa sửa sản phẩm hoặc quyết định đổi model từ mẫu này.
+- **Trạng thái:** xong; đã đọc độc lập lại số liệu và code. Các file nguồn không đổi hash; Ollama giữ phiên bản và đã gỡ model sau đo.
+- **Bằng chứng:** `data/evaluation/results/kept/harness-root-cause-20261108/REPORT.md`, `new_analysis.json`, `ae_analysis.json`, `verification.json`, `prompt_inventory.json`, `baseline_reproduction.json`, `code_probe_results.json`, `endpoint_parity.json`, `oracle_excerpt.json`; request/body HTTP và kết quả từng bài ở `runs/*/` (chỉ trên máy, chưa commit).
+
+## 08/11/2026 — Audit backend-small-fixes: hồi quy đầy đủ và so main trên database riêng
+
+- **Câu hỏi:** nhánh có hồi quy mới không, và tối ưu listing có tốt hơn main trong phép đo trực tiếp không?
+- **Điều kiện:** main `c01d6dd`, nhánh `67260f3`; Python 3.11.9; PostgreSQL 16 Alpine, Redis 7 Alpine, Qdrant v1.18.2 dùng một lần trên localhost cổng ngẫu nhiên, không volume dữ liệu thật. Ollama cổng chết, khóa cloud trống, GPU ẩn khỏi Python. Toàn bộ backend suite; benchmark service dùng cùng fixture, đảo thứ tự hai nhánh. Có phép chẩn đoán model khác chạy đồng thời: thời gian chỉ tham khảo, không khẳng định phép kia không chịu tranh tài nguyên.
+- **Đăng ký trước:** không; kiểm hồi quy và đo chẩn đoán, không đánh giá chất lượng model.
+- **Kết quả:**
+
+  | Lượt/đường gọi | Kết quả |
+  | --- | --- |
+  | Backend đầy đủ, môi trường đầu | 1906 đạt, 8 hỏng, 66 lỗi thiết lập |
+  | Chạy lại sau sửa tên database và cờ offline cho loader giả | 75 đạt; tổng trạng thái cuối 1980 ca duy nhất đều đạt |
+  | Parse source Python / schema check | 258 tệp không lỗi cú pháp; Alembic check không có drift |
+  | 500 tài liệu, main → nhánh | 1001 → 3 SELECT; trung vị 844,35 → 33,17 ms |
+  | 500 paper biết số trang, main → nhánh | 503 → 4 SELECT; 441,59 → 36,69 ms |
+  | 500 paper cache lạnh, main → nhánh | 2003 → 1504 SELECT; 3152,32 → 2767,08 ms; vẫn đọc 500 PDF |
+  | Payload trên các cỡ/đường gọi | 20/20 cỡ/đường giống nhau |
+  | Probe cache page count sau thay PDF | cả hai nhánh giữ 8 dù tệp mới có 12 trang |
+
+- **Kết luận:** giảm truy vấn được kiểm trực tiếp, có lợi rõ cho listing lớn trong môi trường đo; chưa thấy hồi quy mới trong bộ kiểm đã chạy. Không phải một lượt backend xanh duy nhất: lỗi môi trường ban đầu được giữ trong hồ sơ. Benchmark đầu dừng do banner PDF phá JSON parser, đã sửa parser rồi chạy lại toàn bộ. Cache page count cũ và contextualization khác giữa API/worker là vấn đề có sẵn; agent loop/prompt/model giống main nên chưa có cải thiện chất lượng harness do nhánh.
+- **Trạng thái:** xong; không sửa sản phẩm, không merge/commit.
+- **Bằng chứng:** `data/evaluation/results/kept/backend-small-fixes-audit-2026-11-08/REPORT.md`, XML/JSON kèm theo; script `.scratch/backend-small-fixes-audit/`. Log gốc `data/logs/backend-small-fixes-audit/` (chỉ trên máy).
+
+## 08/11/2026 — Chạy lại bài SQL của nhánh `codex/backend-small-fixes` trên Postgres riêng
+
+- **Câu hỏi:** 9 bài SQL theo lô và wiring worker của nhánh có đạt khi người duyệt tự chạy không?
+- **Điều kiện:** worktree nhánh tại `67260f3` (code giống `0062f9b`, chỉ commit tài liệu đổi). Container `postgres:16-alpine` dùng một lần, cổng 55691, database `review_smallfixes_test`, migration tới head `20261102_38`; đã xoá container sau khi chạy. `POSTGRES_TEST_URL` và `DATABASE_URL` đặt tường minh vào database đó. GPU che, Ollama/Redis/Qdrant trỏ cổng chết, không ghi bytecode. Khoảng 13:29, máy rảnh (lần đo model nhỏ đã xong, GPU 0 %).
+- **Đăng ký trước:** không; kiểm thử hồi quy khi duyệt.
+- **Kết quả:**
+
+  | Lượt | `app` nạp từ | Đạt | Hỏng |
+  |---|---|---:|---:|
+  | 1 | checkout chính (lỗi của tôi: `PYTHONPATH` viết kiểu `/c/...`, Python Windows bỏ qua) | 6 | 3 |
+  | 2 | worktree (đã in đường dẫn) | 9 | 0 |
+
+- **Kết luận:** nhánh đạt 9/9, khớp lượt của Codex. Lượt 1 không nói gì về nhánh. Nó chỉ cho thấy 3 bài theo lô hỏng khi chạy trên code cũ, tức là các bài này thật sự kiểm thay đổi của nhánh. Tôi chỉ xem lý do hỏng của bài paper (5 câu SELECT thay vì 3). Hai bài còn lại chưa xem; đoán là do code cũ thiếu `latest_runs`.
+- **Trạng thái:** xong.
+- **Bằng chứng:** chỉ có dòng tổng kết pytest trong phiên này; kết luận duyệt ở `.scratch/arch-plan-review/reviews/codex-backend-small-fixes-67260f3.md`.
+
+## 08/11/2026 — Test của Codex chồng lên lần đo model nhỏ: bài nào bị ảnh hưởng
+
+- **Câu hỏi:** lượt test unit của Codex (02:47:41, 55 giây) và SQL (02:50:24, 5 giây) có làm đổi điểm của job đo nào không?
+- **Điều kiện:** dựng lại thời điểm từng bài từ `logs/harness-qwen3-5-2b-simple_python.log` (thời gian chạy + thời gian nạp mỗi bài, chạy tuần tự), neo hai đầu: giờ bắt đầu job và giờ ghi tệp kết quả (02:48:05, lúc sinh xong). Đạt/hỏng lấy từ tệp điểm BFCL.
+- **Đăng ký trước:** không; phép thử tìm nguyên nhân, làm sau khi Codex chỉ ra bản duyệt trước chưa kiểm độc lập.
+- **Kết quả:**
+
+  | Job | Chồng lên | Bài trong cửa sổ | Ảnh hưởng điểm |
+  |---|---|---|---|
+  | harness qwen3.5:2b simple_python | khoảng 24 giây cuối | neo đầu: 0; neo cuối: 6 (`394`–`399`), cả 6 đạt | không |
+  | bare qwen3.5:2b simple_python | 02:48:21–02:50:29 (15 giây cuối lượt unit, Codex dựng container Postgres, lượt SQL), thêm 20 giây lượt test của tôi lúc ~02:57 | — | không thể: không có trần mỗi lượt, job 23 phút so với trần 267 phút, thoát 0, không bài lỗi |
+
+  Ba bài hỏng ngay trước cửa sổ (`391`–`393`) hỏng vì sai nội dung (viết "British pounds" thay vì "GBP"), chạy 1,6–1,9 giây, không phải vì chậm.
+- **Kết luận:** máy bận chỉ đổi được điểm khi làm một bài chạm trần thời gian, và không bài nào trong hai cửa sổ chạm trần. Cột "giây mỗi bài" của 2B chạy trần simple_python (3,4 giây, báo cáo model nhỏ) có lẫn khoảng 2 phút máy bận trong 23 phút; chưa đo lệch bao nhiêu.
+- **Trạng thái:** xong.
+- **Bằng chứng:** `data/evaluation/results/kept/codex-small-fixes-review-2026-11-08/` (`overlap.py`, `overlap_output.txt`); log gốc ở `data/evaluation/results/small-models-run/` (chỉ trên máy).
 
 ## 08/11/2026 — LFM3-1.7B và Qwen3.5-2B, chạy trần và trong harness, so với qwen3.5:9b
 
@@ -104,6 +277,39 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
 - **Bằng chứng:**
   - `data/evaluation/results/kept/small-models/`: `analyze.py`, `analysis.json`, `diag_multi_turn.py`, `nine_harness_multi_turn_159_scores.json`, `REPORT.md`.
   - Kết quả thô ở `data/evaluation/results/small-models-run/` (chỉ trên máy): `progress.log`, và `<nhánh>/<model>/<bài>/scores.json`.
+
+## 08/11/2026 — Chạy lại test chọn lọc khi duyệt nhánh `codex/backend-small-fixes`
+
+- **Câu hỏi:** các test của nhánh có đạt khi người duyệt chạy lại không?
+- **Điều kiện:** worktree nhánh tại `0062f9b`, Python 3.11 của `.venv`, `app` nạp từ worktree (đã kiểm đường dẫn). `POSTGRES_TEST_URL` gỡ, GPU che, Ollama và DB trỏ cổng chết, không ghi bytecode. Khoảng 02:57, chạy song song với job bare qwen3.5:2b của lần đo model nhỏ (nhánh bare không có giới hạn thời gian mỗi lượt).
+- **Đăng ký trước:** không; kiểm thử hồi quy khi duyệt.
+- **Kết quả:**
+
+  | Tệp | Đạt | Bỏ qua | Hỏng |
+  |---|---:|---:|---:|
+  | `test_llm_factory`, `test_research_pure`, `test_research_api`, `test_model_router`, `test_discord_boundary`, `test_batched_document_listing` | 74 | 3 | 0 |
+
+- **Kết luận:** khớp lượt của Codex. 3 bài bỏ qua là bài SQL theo lô (cần Postgres riêng), không chạy lại.
+- **Trạng thái:** xong.
+- **Bằng chứng:** chỉ có dòng tổng kết của pytest trong phiên này, không lưu tệp; kết luận duyệt ở `.scratch/arch-plan-review/reviews/codex-backend-small-fixes-0062f9b.md`.
+
+## 08/11/2026 — Đếm commit để đánh giá plan "chia backend theo miền"
+
+- **Câu hỏi:** nếu xếp file theo miền nghiệp vụ thay vì theo lớp, mỗi lần sửa có gọn vào ít chỗ hơn không; và file nào thực sự hay bị sửa?
+- **Điều kiện:** `git log --since=2026-10-01 -- backend/app`, head `b7457d5`, 99 commit. "Thư mục" = thư mục cấp một dưới `backend/app/`. "Miền" = gán từng file theo từ khoá trong tên (luật trong `cochange.py`), thô, chưa kiểm tay từng file. Kèm một phép thử: gọi `ResearchService._json_call` với model general là `claude-haiku-5-5` (router giả, HTTP giả trả 404, không chạy Ollama thật).
+- **Đăng ký trước:** không.
+- **Kết quả:**
+
+  | | Theo thư mục (hiện tại) | Theo miền (plan) |
+  |---|---|---|
+  | Trung bình chạm mỗi commit | 2,04 | 2,12 |
+  | Commit chỉ chạm một chỗ | 54/99 | 52/99 |
+
+  Commit chạm `models.py`/`settings`/`main.py`/`schemas` (vẫn dùng chung dù chia miền): 36/99. Số commit theo file: `agent_service.py` 44, `main.py` 27, `model_registry.py` 5, `postgres_document_service.py` 3, `research_service.py` 2, `chat.js` 3, `research.js` 2, `memory_repositories.py` 1. Phép thử research: tên model Claude được gửi tới `/api/chat` của Ollama, ra lỗi "Model claude-haiku-5-5 chưa có trong Ollama".
+
+- **Kết luận:** xếp theo miền không làm lần sửa gọn hơn (cùng kết luận với đánh giá 27/10). Chỗ nóng duy nhất là vòng lặp agent và phần nối dây ở `main.py`. Phần tóm tắt paper sẽ hỏng nếu đổi general sang Claude.
+- **Trạng thái:** xong.
+- **Bằng chứng:** `data/evaluation/results/kept/cochange-2026-11-08/` (`cochange.py`, `output.txt`); đánh giá đầy đủ ở `.scratch/arch-plan-review/REVIEW.md`.
 
 ## 08/11/2026 — Kiểm thử các sửa nhỏ backend trong worktree riêng
 

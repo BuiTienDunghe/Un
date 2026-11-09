@@ -1,0 +1,615 @@
+{
+  "jobs": [
+    {
+      "event": "done",
+      "job": "ocr-old-v2-9b",
+      "exit": 0,
+      "minutes": 0.9,
+      "vram_peak_mib": 7046,
+      "gpu_peak_c": 66,
+      "ollama_after": "0.40.13",
+      "stopped": null,
+      "at": "10/11 02:05:28"
+    },
+    {
+      "event": "done",
+      "job": "ocr-old-v1-glm",
+      "exit": 0,
+      "minutes": 0.3,
+      "vram_peak_mib": 3880,
+      "gpu_peak_c": 64,
+      "ollama_after": "0.40.13",
+      "stopped": null,
+      "at": "10/11 02:05:47"
+    },
+    {
+      "event": "done",
+      "job": "ocr-new-ovis",
+      "exit": 0,
+      "minutes": 0.4,
+      "vram_peak_mib": 1658,
+      "gpu_peak_c": 61,
+      "ollama_after": "0.40.13",
+      "stopped": null,
+      "at": "10/11 02:06:17"
+    },
+    {
+      "event": "done",
+      "job": "ocr-new-glm",
+      "exit": 0,
+      "minutes": 0.3,
+      "vram_peak_mib": 3880,
+      "gpu_peak_c": 59,
+      "ollama_after": "0.40.13",
+      "stopped": null,
+      "at": "10/11 02:06:36"
+    },
+    {
+      "event": "done",
+      "job": "ocr-new-evidence",
+      "exit": 0,
+      "minutes": 0.5,
+      "vram_peak_mib": 3219,
+      "gpu_peak_c": 60,
+      "ollama_after": "0.40.13",
+      "stopped": null,
+      "at": "10/11 02:07:12"
+    },
+    {
+      "event": "done",
+      "job": "ae-A-main-9b",
+      "exit": 0,
+      "minutes": 9.4,
+      "vram_peak_mib": 6950,
+      "gpu_peak_c": 75,
+      "ollama_after": "0.40.13",
+      "stopped": null,
+      "at": "10/11 02:16:38"
+    },
+    {
+      "event": "done",
+      "job": "ae-C-main-2b",
+      "exit": 0,
+      "minutes": 5.8,
+      "vram_peak_mib": 3376,
+      "gpu_peak_c": 67,
+      "ollama_after": "0.40.13",
+      "stopped": null,
+      "at": "10/11 02:22:28"
+    },
+    {
+      "event": "done",
+      "job": "ae-B-branch-2b",
+      "exit": 0,
+      "minutes": 5.7,
+      "vram_peak_mib": 3376,
+      "gpu_peak_c": 64,
+      "ollama_after": "0.40.13",
+      "stopped": null,
+      "at": "10/11 02:28:11"
+    }
+  ],
+  "ocr": {
+    "ocr-old-v2-9b": {
+      "cer_total_pct": 3.38,
+      "content_cer_total_pct": 0.0,
+      "content_chars": 887,
+      "per_image": [
+        {
+          "id": "invoice",
+          "cer": 0.0,
+          "content_cer": 0.0,
+          "content_edits": 0,
+          "seconds": 10.626,
+          "error": null
+        },
+        {
+          "id": "invoice_degraded",
+          "cer": 0.0,
+          "content_cer": 0.0,
+          "content_edits": 0,
+          "seconds": 1.62,
+          "error": null
+        },
+        {
+          "id": "table",
+          "cer": 11.76,
+          "content_cer": 0.0,
+          "content_edits": 0,
+          "seconds": 1.924,
+          "error": null
+        },
+        {
+          "id": "two_columns",
+          "cer": 0.0,
+          "content_cer": 0.0,
+          "content_edits": 0,
+          "seconds": 2.06,
+          "error": null
+        },
+        {
+          "id": "document_instruction",
+          "cer": 0.0,
+          "content_cer": 0.0,
+          "content_edits": 0,
+          "seconds": 1.832,
+          "error": null
+        },
+        {
+          "id": "material_receipt",
+          "cer": 0.0,
+          "content_cer": 0.0,
+          "content_edits": 0,
+          "seconds": 2.136,
+          "error": null
+        },
+        {
+          "id": "shipment_table",
+          "cer": 13.01,
+          "content_cer": 0.0,
+          "content_edits": 0,
+          "seconds": 1.932,
+          "error": null
+        },
+        {
+          "id": "meeting_notice",
+          "cer": null,
+          "seconds": 2.166,
+          "error": null
+        },
+        {
+          "id": "allowance_table",
+          "cer": null,
+          "seconds": 2.15,
+          "error": null
+        },
+        {
+          "id": "dispatch_panels",
+          "cer": null,
+          "seconds": 2.334,
+          "error": null
+        }
+      ],
+      "median_seconds": 2.098,
+      "digests": {
+        "qwen3.5:9b": "6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7"
+      }
+    },
+    "ocr-old-v1-glm": {
+      "cer_total_pct": 12.16,
+      "content_cer_total_pct": 9.36,
+      "content_chars": 887,
+      "per_image": [
+        {
+          "id": "invoice",
+          "cer": 5.85,
+          "content_cer": 6.06,
+          "content_edits": 10,
+          "seconds": 4.095,
+          "error": null
+        },
+        {
+          "id": "invoice_degraded",
+          "cer": 4.09,
+          "content_cer": 4.24,
+          "content_edits": 7,
+          "seconds": 0.715,
+          "error": null
+        },
+        {
+          "id": "table",
+          "cer": 17.65,
+          "content_cer": 6.67,
+          "content_edits": 8,
+          "seconds": 0.903,
+          "error": null
+        },
+        {
+          "id": "two_columns",
+          "cer": 15.31,
+          "content_cer": 15.96,
+          "content_edits": 15,
+          "seconds": 0.895,
+          "error": null
+        },
+        {
+          "id": "document_instruction",
+          "cer": 9.8,
+          "content_cer": 10.31,
+          "content_edits": 10,
+          "seconds": 0.878,
+          "error": null
+        },
+        {
+          "id": "material_receipt",
+          "cer": 15.17,
+          "content_cer": 15.83,
+          "content_edits": 22,
+          "seconds": 0.92,
+          "error": null
+        },
+        {
+          "id": "shipment_table",
+          "cer": 21.95,
+          "content_cer": 10.28,
+          "content_edits": 11,
+          "seconds": 0.879,
+          "error": null
+        },
+        {
+          "id": "meeting_notice",
+          "cer": null,
+          "seconds": 0.986,
+          "error": null
+        },
+        {
+          "id": "allowance_table",
+          "cer": null,
+          "seconds": 0.944,
+          "error": null
+        },
+        {
+          "id": "dispatch_panels",
+          "cer": null,
+          "seconds": 1.034,
+          "error": null
+        }
+      ],
+      "median_seconds": 0.9115,
+      "digests": {
+        "local-ai/glm-ocr:eot-v1": "400242df76b292fc3b2fddbc746abd64db357b0a763b82f16289817cac257c7c"
+      }
+    },
+    "ocr-new-ovis": {
+      "cer_total_pct": 41.86,
+      "content_cer_total_pct": 0.23,
+      "content_chars": 887,
+      "per_image": [
+        {
+          "id": "invoice",
+          "cer": 1.17,
+          "content_cer": 0.0,
+          "content_edits": 0,
+          "seconds": 4.239,
+          "error": null
+        },
+        {
+          "id": "invoice_degraded",
+          "cer": 1.17,
+          "content_cer": 0.0,
+          "content_edits": 0,
+          "seconds": 1.842,
+          "error": null
+        },
+        {
+          "id": "table",
+          "cer": 140.44,
+          "content_cer": 0.0,
+          "content_edits": 0,
+          "seconds": 1.2,
+          "error": null
+        },
+        {
+          "id": "two_columns",
+          "cer": 2.04,
+          "content_cer": 0.0,
+          "content_edits": 0,
+          "seconds": 1.896,
+          "error": null
+        },
+        {
+          "id": "document_instruction",
+          "cer": 1.96,
+          "content_cer": 0.0,
+          "content_edits": 0,
+          "seconds": 1.281,
+          "error": null
+        },
+        {
+          "id": "material_receipt",
+          "cer": 2.07,
+          "content_cer": 0.0,
+          "content_edits": 0,
+          "seconds": 1.895,
+          "error": null
+        },
+        {
+          "id": "shipment_table",
+          "cer": 157.72,
+          "content_cer": 1.87,
+          "content_edits": 2,
+          "seconds": 1.199,
+          "error": null
+        },
+        {
+          "id": "meeting_notice",
+          "cer": null,
+          "seconds": 1.73,
+          "error": null
+        },
+        {
+          "id": "allowance_table",
+          "cer": null,
+          "seconds": 1.263,
+          "error": null
+        },
+        {
+          "id": "dispatch_panels",
+          "cer": null,
+          "seconds": 2.335,
+          "error": null
+        }
+      ],
+      "median_seconds": 1.786,
+      "digests": {
+        "hf.co/prithivMLmods/ATH-MaaS-OvisOCR3-GGUF:Q8_0": "5c3b084e81d574957c584d058d895b5670ddb2df1a0f8ff111f779a5603b2d06"
+      }
+    },
+    "ocr-new-glm": {
+      "cer_total_pct": 12.68,
+      "content_cer_total_pct": 9.92,
+      "content_chars": 887,
+      "per_image": [
+        {
+          "id": "invoice",
+          "cer": 8.77,
+          "content_cer": 9.09,
+          "content_edits": 15,
+          "seconds": 2.959,
+          "error": null
+        },
+        {
+          "id": "invoice_degraded",
+          "cer": 4.09,
+          "content_cer": 4.24,
+          "content_edits": 7,
+          "seconds": 0.725,
+          "error": null
+        },
+        {
+          "id": "table",
+          "cer": 17.65,
+          "content_cer": 6.67,
+          "content_edits": 8,
+          "seconds": 0.895,
+          "error": null
+        },
+        {
+          "id": "two_columns",
+          "cer": 15.31,
+          "content_cer": 15.96,
+          "content_edits": 15,
+          "seconds": 0.855,
+          "error": null
+        },
+        {
+          "id": "document_instruction",
+          "cer": 9.8,
+          "content_cer": 10.31,
+          "content_edits": 10,
+          "seconds": 0.869,
+          "error": null
+        },
+        {
+          "id": "material_receipt",
+          "cer": 15.17,
+          "content_cer": 15.83,
+          "content_edits": 22,
+          "seconds": 0.918,
+          "error": null
+        },
+        {
+          "id": "shipment_table",
+          "cer": 21.95,
+          "content_cer": 10.28,
+          "content_edits": 11,
+          "seconds": 0.868,
+          "error": null
+        },
+        {
+          "id": "meeting_notice",
+          "cer": null,
+          "seconds": 0.963,
+          "error": null
+        },
+        {
+          "id": "allowance_table",
+          "cer": null,
+          "seconds": 0.922,
+          "error": null
+        },
+        {
+          "id": "dispatch_panels",
+          "cer": null,
+          "seconds": 1.023,
+          "error": null
+        }
+      ],
+      "median_seconds": 0.9065000000000001,
+      "digests": {
+        "local-ai/glm-ocr:eot-v1": "400242df76b292fc3b2fddbc746abd64db357b0a763b82f16289817cac257c7c"
+      }
+    }
+  },
+  "old_qa": {
+    "non_abstain_total": 24,
+    "non_abstain_hit": 23,
+    "abstain": [
+      {
+        "q": "Số tài khoản ngân hàng là gì?",
+        "answer": "Dựa trên văn bản được cung cấp, thông tin về **số tài khoản ngân hàng** không có trong nội dung của hóa đơn này. Văn bản chỉ nêu rõ phương thức thanh toán là \"Chuyển khoản\" nhưng không liệt kê số tài khoản cụ thể."
+      },
+      {
+        "q": "Số điện thoại của người nhận là gì?",
+        "answer": "Dựa trên văn bản được cung cấp, thông tin về số điện thoại của người nhận (Phạm Ngọc Quỳnh) **không có** trong nội dung này. Văn bản chỉ ghi rõ họ tên người nhận mà không đề cập đến số điện thoại."
+      },
+      {
+        "q": "Số điện thoại của người chủ trì là gì?",
+        "answer": "Dựa trên văn bản được cung cấp, thông tin về số điện thoại của người chủ trì (Đặng Khánh Huyền) **không có** trong nội dung. Văn bản chỉ ghi rõ họ tên, mã lịch, thời gian, địa điểm và email liên hệ."
+      },
+      {
+        "q": "Số tài khoản nhận phụ cấp của NV-84 là gì?",
+        "answer": "Dựa trên văn bản được cung cấp, không có thông tin về số tài khoản nhận phụ cấp của NV-84. Văn bản chỉ liệt kê mã nhân viên, bộ phận và số tiền phụ cấp."
+      }
+    ]
+  },
+  "new_qa": {
+    "passed": 28,
+    "total": 28,
+    "groups": {
+      "regression": {
+        "total": 18,
+        "passed": 18
+      },
+      "fresh": {
+        "total": 10,
+        "passed": 10
+      }
+    }
+  },
+  "agent_eval": {
+    "ae-A-main-9b": {
+      "passed": 57,
+      "total": 66,
+      "errors": 0,
+      "median_latency_ms": 4435.0,
+      "p90_latency_ms": 8074,
+      "manifest": {
+        "model": "qwen3.5:9b",
+        "general_version": {
+          "requested_id": "general-v0",
+          "loaded_id": "general-v0",
+          "source": "registry",
+          "status": "active",
+          "verified": false
+        },
+        "temperature": 0.0,
+        "top_p": 0.9,
+        "seed": 42,
+        "think": false,
+        "num_ctx": 16384,
+        "max_steps": 3,
+        "commit": "3eac7f6dbbe0cb37f5aa079057ace9b502ed540e",
+        "worktree_dirty": true,
+        "ollama_version": "0.40.13",
+        "context_budget": null,
+        "read_rest": true,
+        "agent_guide_sha256": "c1bbda21fdda5f7c3113a24a2798ecc5ebb8ff3f01e4892c20d46aaa24f4bace"
+      }
+    },
+    "ae-C-main-2b": {
+      "passed": 47,
+      "total": 66,
+      "errors": 0,
+      "median_latency_ms": 2126.0,
+      "p90_latency_ms": 4695,
+      "manifest": {
+        "model": "qwen3.5:2b",
+        "general_version": {
+          "requested_id": "general-v0",
+          "loaded_id": "general-v0",
+          "source": "registry",
+          "status": "active",
+          "verified": false
+        },
+        "temperature": 0.0,
+        "top_p": 0.9,
+        "seed": 42,
+        "think": false,
+        "num_ctx": 16384,
+        "max_steps": 3,
+        "commit": "3eac7f6dbbe0cb37f5aa079057ace9b502ed540e",
+        "worktree_dirty": true,
+        "ollama_version": "0.40.13",
+        "context_budget": null,
+        "read_rest": true,
+        "agent_guide_sha256": "c1bbda21fdda5f7c3113a24a2798ecc5ebb8ff3f01e4892c20d46aaa24f4bace"
+      }
+    },
+    "ae-B-branch-2b": {
+      "passed": 47,
+      "total": 66,
+      "errors": 0,
+      "median_latency_ms": 2034.0,
+      "p90_latency_ms": 4461,
+      "manifest": {
+        "model": "qwen3.5:2b",
+        "general_version": {
+          "requested_id": "general-small-v1",
+          "loaded_id": "general-small-v1",
+          "source": "registry",
+          "status": "active",
+          "verified": false
+        },
+        "temperature": 0.0,
+        "top_p": null,
+        "seed": 42,
+        "think": false,
+        "num_ctx": 16384,
+        "max_steps": 3,
+        "commit": "c57aa3ee123653593570647b068f4f2373ecd7d0",
+        "worktree_dirty": false,
+        "ollama_version": "0.40.13",
+        "context_budget": null,
+        "read_rest": true,
+        "agent_guide_sha256": "c1bbda21fdda5f7c3113a24a2798ecc5ebb8ff3f01e4892c20d46aaa24f4bace"
+      }
+    },
+    "ae-A-main-9b -> ae-C-main-2b": {
+      "lost": [
+        "doc-10",
+        "doc-27",
+        "doc-31",
+        "doc-36",
+        "doc-45",
+        "doc-52",
+        "doc-56",
+        "doc-57",
+        "hist-02",
+        "hist-03",
+        "hist-04",
+        "hist-08",
+        "nt-01",
+        "nt-02",
+        "stat-02"
+      ],
+      "won": [
+        "doc-19",
+        "doc-20",
+        "doc-26",
+        "doc-33",
+        "doc-55"
+      ]
+    },
+    "ae-C-main-2b -> ae-B-branch-2b": {
+      "lost": [],
+      "won": []
+    },
+    "ae-A-main-9b -> ae-B-branch-2b": {
+      "lost": [
+        "doc-10",
+        "doc-27",
+        "doc-31",
+        "doc-36",
+        "doc-45",
+        "doc-52",
+        "doc-56",
+        "doc-57",
+        "hist-02",
+        "hist-03",
+        "hist-04",
+        "hist-08",
+        "nt-01",
+        "nt-02",
+        "stat-02"
+      ],
+      "won": [
+        "doc-19",
+        "doc-20",
+        "doc-26",
+        "doc-33",
+        "doc-55"
+      ]
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{"event": "start", "job": "ocr-old-v2-9b", "ollama": "0.40.13", "gpu_c": 41, "vram_idle_mib": 0, "unloaded": [], "at": "10/11 02:04:34"}
+{"event": "done", "job": "ocr-old-v2-9b", "exit": 0, "minutes": 0.9, "vram_peak_mib": 7046, "gpu_peak_c": 66, "ollama_after": "0.40.13", "stopped": null, "at": "10/11 02:05:28"}
+{"event": "start", "job": "ocr-old-v1-glm", "ollama": "0.40.13", "gpu_c": 48, "vram_idle_mib": 0, "unloaded": ["qwen3.5:9b"], "at": "10/11 02:05:31"}
+{"event": "done", "job": "ocr-old-v1-glm", "exit": 0, "minutes": 0.3, "vram_peak_mib": 3880, "gpu_peak_c": 64, "ollama_after": "0.40.13", "stopped": null, "at": "10/11 02:05:47"}
+{"event": "start", "job": "ocr-new-ovis", "ollama": "0.40.13", "gpu_c": 48, "vram_idle_mib": 0, "unloaded": ["local-ai/glm-ocr:eot-v1"], "at": "10/11 02:05:50"}
+{"event": "done", "job": "ocr-new-ovis", "exit": 0, "minutes": 0.4, "vram_peak_mib": 1658, "gpu_peak_c": 61, "ollama_after": "0.40.13", "stopped": null, "at": "10/11 02:06:17"}
+{"event": "start", "job": "ocr-new-glm", "ollama": "0.40.13", "gpu_c": 47, "vram_idle_mib": 0, "unloaded": ["hf.co/prithivMLmods/ATH-MaaS-OvisOCR3-GGUF:Q8_0"], "at": "10/11 02:06:20"}
+{"event": "done", "job": "ocr-new-glm", "exit": 0, "minutes": 0.3, "vram_peak_mib": 3880, "gpu_peak_c": 59, "ollama_after": "0.40.13", "stopped": null, "at": "10/11 02:06:36"}
+{"event": "start", "job": "ocr-new-evidence", "ollama": "0.40.13", "gpu_c": 47, "vram_idle_mib": 0, "unloaded": ["local-ai/glm-ocr:eot-v1"], "at": "10/11 02:06:39"}
+{"event": "done", "job": "ocr-new-evidence", "exit": 0, "minutes": 0.5, "vram_peak_mib": 3219, "gpu_peak_c": 60, "ollama_after": "0.40.13", "stopped": null, "at": "10/11 02:07:12"}
+{"event": "start", "job": "ae-A-main-9b", "ollama": "0.40.13", "gpu_c": 47, "vram_idle_mib": 1658, "unloaded": ["lfm3:1.7b", "hf.co/prithivMLmods/ATH-MaaS-OvisOCR3-GGUF:Q8_0"], "at": "10/11 02:07:15"}
+{"event": "done", "job": "ae-A-main-9b", "exit": 0, "minutes": 9.4, "vram_peak_mib": 6950, "gpu_peak_c": 75, "ollama_after": "0.40.13", "stopped": null, "at": "10/11 02:16:38"}
+{"event": "start", "job": "ae-C-main-2b", "ollama": "0.40.13", "gpu_c": 54, "vram_idle_mib": 0, "unloaded": ["qwen3.5:9b"], "at": "10/11 02:16:41"}
+{"event": "done", "job": "ae-C-main-2b", "exit": 0, "minutes": 5.8, "vram_peak_mib": 3376, "gpu_peak_c": 67, "ollama_after": "0.40.13", "stopped": null, "at": "10/11 02:22:28"}
+{"event": "start", "job": "ae-B-branch-2b", "ollama": "0.40.13", "gpu_c": 50, "vram_idle_mib": 0, "unloaded": ["qwen3.5:2b"], "at": "10/11 02:22:31"}
+{"event": "done", "job": "ae-B-branch-2b", "exit": 0, "minutes": 5.7, "vram_peak_mib": 3376, "gpu_peak_c": 64, "ollama_after": "0.40.13", "stopped": null, "at": "10/11 02:28:11"}

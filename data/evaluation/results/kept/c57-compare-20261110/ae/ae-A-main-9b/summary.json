@@ -1,0 +1,138 @@
+{
+  "overall": {
+    "passed": 57,
+    "total": 66,
+    "rate": 0.8636
+  },
+  "errors": 0,
+  "by_category": {
+    "documents": {
+      "passed": 39,
+      "total": 45,
+      "rate": 0.8667
+    },
+    "history": {
+      "passed": 8,
+      "total": 11,
+      "rate": 0.7273
+    },
+    "no_tool": {
+      "passed": 5,
+      "total": 5,
+      "rate": 1.0
+    },
+    "status": {
+      "passed": 5,
+      "total": 5,
+      "rate": 1.0
+    }
+  },
+  "by_check": {
+    "args_expected": {
+      "passed": 1,
+      "total": 2,
+      "rate": 0.5
+    },
+    "args_valid": {
+      "passed": 38,
+      "total": 39,
+      "rate": 0.9744
+    },
+    "citation": {
+      "passed": 18,
+      "total": 21,
+      "rate": 0.8571
+    },
+    "completed": {
+      "passed": 66,
+      "total": 66,
+      "rate": 1.0
+    },
+    "figures_without_lookup": {
+      "passed": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "must_mention": {
+      "passed": 56,
+      "total": 60,
+      "rate": 0.9333
+    },
+    "must_not_mention": {
+      "passed": 13,
+      "total": 13,
+      "rate": 1.0
+    },
+    "no_access": {
+      "passed": 3,
+      "total": 3,
+      "rate": 1.0
+    },
+    "no_ask_back": {
+      "passed": 2,
+      "total": 3,
+      "rate": 0.6667
+    },
+    "not_found": {
+      "passed": 4,
+      "total": 4,
+      "rate": 1.0
+    },
+    "refusal": {
+      "passed": 2,
+      "total": 2,
+      "rate": 1.0
+    },
+    "tool_budget": {
+      "passed": 6,
+      "total": 6,
+      "rate": 1.0
+    },
+    "tools_forbidden": {
+      "passed": 62,
+      "total": 62,
+      "rate": 1.0
+    },
+    "tools_required": {
+      "passed": 35,
+      "total": 36,
+      "rate": 0.9722
+    }
+  },
+  "by_retrieval_source": {
+    "handwritten": {
+      "passed": 4,
+      "total": 6,
+      "rate": 0.6667
+    },
+    "recorded": {
+      "passed": 15,
+      "total": 18,
+      "rate": 0.8333
+    }
+  },
+  "citation_verbatim": {
+    "verbatim": 18,
+    "of_tasks_with_citation": 21
+  },
+  "failed_tasks": [
+    "doc-19",
+    "doc-20",
+    "doc-22",
+    "doc-26",
+    "hist-05",
+    "hist-10",
+    "doc-33",
+    "hist-11",
+    "doc-55"
+  ],
+  "latency_ms": {
+    "mean": 5191,
+    "p50": 4435,
+    "max": 22742
+  },
+  "tokens_in_total": 342821,
+  "tokens_out_total": 16381,
+  "mean_tool_calls": 0.79,
+  "budget_exhausted": 2
+}

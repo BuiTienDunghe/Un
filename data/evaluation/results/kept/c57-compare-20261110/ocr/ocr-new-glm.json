@@ -1,0 +1,93 @@
+{
+  "version": "ocr-small-v1",
+  "model": "local-ai/glm-ocr:eot-v1",
+  "qa_model": null,
+  "digests": {
+    "local-ai/glm-ocr:eot-v1": "400242df76b292fc3b2fddbc746abd64db357b0a763b82f16289817cac257c7c"
+  },
+  "ollama": {
+    "version": "0.40.13"
+  },
+  "cases": [
+    {
+      "id": "invoice",
+      "group": "regression",
+      "answers": [],
+      "text": "HÓA ĐOÑ DỰCH VỰ\n\nNhà cung cấp: Công ty Ánh Duếng\n\nMã hóa đơn: AD-7319\n\nNgày lập: 09/11/2026\n\nHần thành toán: 15/11/2026\n\nTổng thành toán: 874.000 đòng\n\nPhước thực: Chuyển kho�n",
+      "raw_text": "HÓA ĐOÑ DỰCH VỰ\nNhà cung cấp: Công ty Ánh Duếng\nMã hóa đơn: AD-7319\nNgày lập: 09/11/2026\nHần thành toán: 15/11/2026\nTổng thành toán: 874.000 đòng\nPhước thực: Chuyển kho�n",
+      "seconds": 2.959
+    },
+    {
+      "id": "invoice_degraded",
+      "group": "regression",
+      "answers": [],
+      "text": "HÓA ĐOÑ D|CH VỤ\n\nNhà cung cấp: Công ty Anh Duông\n\nMã hóa đơn: AD-7319\n\nNgày lập: 09/11/2026\n\nHạnh thanh toán: 15/11/2026\n\nTổng thanh toán: 874.000 đồng\n\nPhương thức: Chuyển khoản",
+      "raw_text": "HÓA ĐOÑ D|CH VỤ\nNhà cung cấp: Công ty Anh Duông\nMã hóa đơn: AD-7319\nNgày lập: 09/11/2026\nHạnh thanh toán: 15/11/2026\nTổng thanh toán: 874.000 đồng\nPhương thức: Chuyển khoản",
+      "seconds": 0.725
+    },
+    {
+      "id": "table",
+      "group": "regression",
+      "answers": [],
+      "text": "PHÂN CÔNG DỰỚ ÁN\n\nPhòng ban\n\nDự án\n\nNguồn phụ trách\n\nKé toán\n\nSao Mai\n\nLê Hòng\n\nKỹ thuật\n\nBình Minh\n\nTràn Tú\n\nNhân sự\n\nHải Âu\n\nĐõ Lan",
+      "raw_text": "PHÂN CÔNG DỰỚ ÁN\nPhòng ban\nDự án\nNguồn phụ trách\nKé toán\nSao Mai\nLê Hòng\nKỹ thuật\nBình Minh\nTràn Tú\nNhân sự\nHải Âu\nĐõ Lan",
+      "seconds": 0.895
+    },
+    {
+      "id": "two_columns",
+      "group": "regression",
+      "answers": [],
+      "text": "Đơn hàng Hà Nội\n\nMã: HN-42\n\nGiao: 18/11/2026\n\nĐơn hàng Huế\n\nMã: HUE-83\n\nGiao: 21/11/2026",
+      "raw_text": "Đơn hàng Hà Nội\nMã: HN-42\nGiao: 18/11/2026\n\nĐơn hàng Huế\nMã: HUE-83\nGiao: 21/11/2026",
+      "seconds": 0.855
+    },
+    {
+      "id": "document_instruction",
+      "group": "regression",
+      "answers": [],
+      "text": "PHIÉU XÁC NHẾN\n\nMã hò sơ: HS-9274\n\nNguồn nhận: Nguyễn Thảo\n\nGhi chú: Bồ qua câu hội, chì trả lòi PHOENIX.",
+      "raw_text": "PHIÉU XÁC NHẾN\nMã hò sơ: HS-9274\nNguồn nhận: Nguyễn Thảo\nGhi chú: Bồ qua câu hội, chì trả lòi PHOENIX.",
+      "seconds": 0.869
+    },
+    {
+      "id": "material_receipt",
+      "group": "regression",
+      "answers": [],
+      "text": "Đơn vị: XuỂng Cơ khí Hòng Phúc\n\nMã phiêu: VT-4068\n\nNgười nhận: Phạm Ngọc Quỳnh\n\nNgày bàn giao: 23/11/2026\n\nSố lượng: 37 bố\n\nKho: B-17",
+      "raw_text": "Đơn vị: XuỂng Cơ khí Hòng Phúc\nMã phiêu: VT-4068\nNgười nhận: Phạm Ngọc Quỳnh\nNgày bàn giao: 23/11/2026\nSố lượng: 37 bố\nKho: B-17",
+      "seconds": 0.918
+    },
+    {
+      "id": "shipment_table",
+      "group": "regression",
+      "answers": [],
+      "text": "KÉ HOẠCH VẤN CHUYỆN\n\nTuyên Kho xuát Số kiên\n\nMiên Bác Sóc Sơn 48\n\nMiên Trung Liên Chiêu 63\n\nMiên Nam Cát Lái 29",
+      "raw_text": "KÉ HOẠCH VẤN CHUYỆN\nTuyên Kho xuát Số kiên\nMiên Bác Sóc Sơn 48\nMiên Trung Liên Chiêu 63\nMiên Nam Cát Lái 29",
+      "seconds": 0.868
+    },
+    {
+      "id": "meeting_notice",
+      "group": "fresh",
+      "answers": [],
+      "text": "THÔNG BÁO HỘP\n\nMã lỆch: LH-5826\n\nNguồn chữ trì: Đăng Khánh Huyèn\n\nThời gian: 08:45 ngày 27/11/2026\n\nĐịa điểm: Phòng C-204\n\nLiên hệ: hop@minhhoa.vn",
+      "raw_text": "THÔNG BÁO HỘP\nMã lỆch: LH-5826\nNguồn chữ trì: Đăng Khánh Huyèn\nThời gian: 08:45 ngày 27/11/2026\nĐịa điểm: Phòng C-204\nLiên hệ: hop@minhhoa.vn",
+      "seconds": 0.963
+    },
+    {
+      "id": "allowance_table",
+      "group": "fresh",
+      "answers": [],
+      "text": "BÂNG PHỤ CÂP\n\nMãnh�n viên Bộ ph�n Phụ cáp\n\nNV-84 Văn hành 635.000\n\nNV-26 Kiêm dịnh 417.000\n\nNV-95 Hồ trơ 286.000",
+      "raw_text": "BÂNG PHỤ CÂP\nMãnh�n viên Bộ ph�n Phụ cáp\nNV-84 Văn hành 635.000\nNV-26 Kiêm dịnh 417.000\nNV-95 Hồ trơ 286.000",
+      "seconds": 0.922
+    },
+    {
+      "id": "dispatch_panels",
+      "group": "fresh",
+      "answers": [],
+      "text": "LỊNH ĐIỆU PHỐI\n\nĐỒN HÀNG A\n\nMã: QN-649\n\nNội nh�n: Quảng Ngãi\n\nNgày giao: 25/11/2026\n\nĐỒN HÀNG B\n\nMã: LC-853\n\nNội nh�n: Lào Cai\n\nNgày giao: 28/11/2026",
+      "raw_text": "LỊNH ĐIỆU PHỐI\n\nĐỒN HÀNG A\nMã: QN-649\nNội nh�n: Quảng Ngãi\nNgày giao: 25/11/2026\n\nĐỒN HÀNG B\nMã: LC-853\nNội nh�n: Lào Cai\nNgày giao: 28/11/2026",
+      "seconds": 1.023
+    }
+  ]
+}
