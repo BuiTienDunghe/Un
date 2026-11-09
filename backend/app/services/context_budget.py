@@ -144,7 +144,7 @@ def calls_have_results(messages: list[dict[str, Any]]) -> bool:
     return True
 
 
-def clear_old_results(messages: list[dict[str, Any]], budget: ContextBudget, ceiling: int, scale: float = 1.0) -> tuple[list[dict[str, Any]], int]:
+def clear_old_results(messages: list[dict[str, Any]], budget: ContextBudget, ceiling: int, scale: float = 1.0, protected_results: set[int] | None = None) -> tuple[list[dict[str, Any]], int]:
     """`messages` with the oldest tool results replaced by notes until the estimate (times
     `scale`) is at most `ceiling`; returns (messages, how many were replaced). Under the
     ceiling it returns `messages` itself. A result no longer than its note stays: clearing
@@ -156,6 +156,8 @@ def clear_old_results(messages: list[dict[str, Any]], budget: ContextBudget, cei
     view = list(messages)
     cleared = 0
     for index in results[: max(0, len(results) - budget.keep_recent)]:
+        if index in (protected_results or set()):
+            continue
         name, arguments = calls.get(index, (str(view[index].get("tool_name") or "công cụ"), None))
         note = cleared_note(name, arguments)
         if len(str(view[index].get("content") or "")) <= len(note):
@@ -171,17 +173,18 @@ class ContextWindow:
     """One turn's use of a ContextBudget: the view to send for each model call, and the
     correction learned from the tokens the model reported for the last one."""
 
-    def __init__(self, budget: ContextBudget | None, default_ceiling: int) -> None:
+    def __init__(self, budget: ContextBudget | None, default_ceiling: int, *, protected_results: set[int] | None = None) -> None:
         self.budget = budget
         self.ceiling = (budget.ceiling_tokens or default_ceiling) if budget else 0
         self.cleared = 0
         self._scale = 1.0
         self._estimated: float | None = None
+        self._protected_results = protected_results or set()
 
     def view(self, working: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if self.budget is None:
             return working
-        sent, cleared = clear_old_results(working, self.budget, self.ceiling, self._scale)
+        sent, cleared = clear_old_results(working, self.budget, self.ceiling, self._scale, self._protected_results)
         self.cleared = max(self.cleared, cleared)
         self._estimated = estimate_tokens(sent)
         return sent

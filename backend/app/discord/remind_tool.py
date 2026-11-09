@@ -241,6 +241,6 @@ def promised_by(load_turn: Callable[[str], TurnFacts | None]) -> Callable[[dict[
 def register(registry: ToolRegistry, service: ReminderService, sessions: sessionmaker) -> None:
     load_turn = load_turn_facts(sessions)
     registry.register(
-        AgentTool(REMIND_SCHEMA, Remind(service, load_turn), "Đang hẹn giờ nhắc…", promised=promised_by(load_turn), promise_retry=REMIND_RETRY, promise_fill=REMIND_FILL),
+        AgentTool(REMIND_SCHEMA, Remind(service, load_turn), "Đang hẹn giờ nhắc…", promised=promised_by(load_turn), promise_retry=REMIND_RETRY, promise_fill=REMIND_FILL, state_policy="receipt"),
         ORDER,
     )

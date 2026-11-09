@@ -31,6 +31,8 @@ half-deleting:
      lines in the same result stay. Their words are read BEFORE steps 6-7 delete
      them, since nothing else says what to look for. Only verbatim copies are
      found (app/discord/member_redaction.py); a paraphrase is not detectable.
+     Private tool-state envelopes are cleared in full throughout each affected
+     guild: derived observations cannot safely be attributed by matching words.
 
 Every step is scoped to the guild where the member asked (--guild-id). --all-guilds
 widens every step to every guild they have anything in; it is never the default (the
@@ -179,6 +181,15 @@ def _copies(database, guild_id: str, author_id: str, index: QuoteIndex, requests
         if changed:
             changes.append((turn, "response_text", redacted))
     for row in database.scalars(select(AgentTrace).where(AgentTrace.conversation_id.in_(conversations))):
+        if row.kind == "tool_state":
+            # Machine envelopes can contain both raw and derived observations
+            # about any speaker. Revoke the entire scoped cache, including its
+            # routing metadata; a word-level redaction cannot prove it is safe.
+            if row.content is not None:
+                changes.append((row, "content", None))
+            if row.arguments is not None:
+                changes.append((row, "arguments", None))
+            continue
         if row.kind == "tool_result" and row.tool_name == "search_history":
             redacted, changed = redact_history_result(row.content, author_id, index)
             field = "content"
@@ -207,10 +218,14 @@ def _all_copies(database, words: dict[str, tuple[QuoteIndex, dict[str, set[str]]
 
 
 def _copy_counts(changes: list[tuple[object, str, object]]) -> dict[str, int]:
+    def rows_of(model) -> int:
+        # A tool-state envelope can require changes to two fields. Report rows,
+        # not field edits, so dry-run/apply/recount retain the same meaning.
+        return len({row.id if row.id is not None else id(row) for row, _, _ in changes if isinstance(row, model)})
     return {
-        "conversation_messages": sum(1 for row, _, _ in changes if isinstance(row, Message)),
-        "agent_trace_steps": sum(1 for row, _, _ in changes if isinstance(row, AgentTrace)),
-        "turn_responses": sum(1 for row, _, _ in changes if isinstance(row, DiscordSessionTurn)),
+        "conversation_messages": rows_of(Message),
+        "agent_trace_steps": rows_of(AgentTrace),
+        "turn_responses": rows_of(DiscordSessionTurn),
     }
 
 

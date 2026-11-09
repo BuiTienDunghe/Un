@@ -91,7 +91,8 @@ async def lifespan(app: FastAPI):
     app.state.qdrant_store = qdrant_store
     app.state.logging_service = logging_service
     app.state.memory_service = MemoryService(auxiliary_store, qdrant_store, router, logging_service)
-    app.state.chat_service = ChatService(auxiliary_store, router, logging_service, settings.conversation_history_limit, app.state.memory_service)
+    app.state.chat_service = ChatService(auxiliary_store, router, logging_service, settings.conversation_history_limit, app.state.memory_service,
+                                         tool_state_enabled=settings.agent_tool_state_enabled)
     ocr_service = OCRService(router, auxiliary_store)
     queue = (
         JobQueueService(

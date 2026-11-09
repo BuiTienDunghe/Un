@@ -35,6 +35,7 @@ from app.services.long_input import read_long_input
 from app.services.pastes import INLINE_MAX_TOKENS, is_paste, read_paste, take_pastes
 from app.services.injection_defense import InjectionDefense
 from app.services.model_router import ModelRouter
+from app.services.tool_state import ToolStateRecorder
 
 
 class RetrievalBackend(Protocol):
@@ -310,6 +311,9 @@ class AgentTool:
     promised: Callable[[dict[str, Any]], bool] | None = None
     promise_retry: str | None = None
     promise_fill: str | None = None
+    # Opt-in durable observations. Unknown/MCP tools remain unremembered until
+    # an operator-owned registration declares their policy.
+    state_policy: str = "none"
 
     @property
     def name(self) -> str:
@@ -484,6 +488,11 @@ class AgentService:
         guide = {"role": "system", "content": self.defense.agent_guide(AGENT_GUIDE)}
         insert_at = 1 if working and working[0].get("role") == "system" else 0
         working.insert(insert_at, guide)
+        protected_state = set()
+        for index, row in enumerate(working):
+            if row.get("_tool_state_receipt"):
+                protected_state.add(index)
+                working[index] = {key: value for key, value in row.items() if key != "_tool_state_receipt"}
         # The turn's own copy, so the caller's dict is never written to. It carries what
         # read_document may open: a document search_documents showed in THIS turn, one the
         # caller allows outright (ticket 20 #1, A2), or a paste in this turn's messages —
@@ -509,7 +518,7 @@ class AgentService:
         consume_usage()
         last: dict[str, int | None] = {"tokens_in": None, "tokens_out": None}
         # What the model is sent each call: `working` itself, or with old tool results cleared (ticket 44).
-        window = ContextWindow(self.context_budget, self.inline_max_tokens)
+        window = ContextWindow(self.context_budget, self.inline_max_tokens, protected_results=protected_state)
         # Ticket 45: read the long paste in parts before the first round, under the turn's own clock.
         reading = None
         if self.long_input and messages and is_paste(messages[-1]) and working[-1] is not messages[-1]:
@@ -644,8 +653,11 @@ class AgentService:
                         })
                         emit("tool_call", tool=owed.name, label=owed.label or TOOL_LABEL)
                         tool_started = perf_counter()
+                        tool_context["_state_resources"] = {}
+                        tool_context["_state_resources_unknown"] = False
                         text, error_code, error_type = self._run_tool(owed.name, arguments, tool_context)
                         output = self.defense.wrap_tool_result(text)
+                        self._record_tool_state({"name": owed.name, "arguments": arguments}, output, error_code, tool_context)
                         steps.append({
                             "kind": "tool_result", "tool_name": owed.name, "tool_declared": True, "arguments": None,
                             "content": output, "latency_ms": int((perf_counter() - tool_started) * 1000),
@@ -746,10 +758,13 @@ class AgentService:
                 # only when it is a declared one, like the trace.
                 emit("tool_call", tool=call["name"] if declared else None, label=(tool.label if tool and tool.label else TOOL_LABEL))
                 tool_started = perf_counter()
+                tool_context["_state_resources"] = {}
+                tool_context["_state_resources_unknown"] = False
                 if tool is not None and tool.requires_approval:
                     # Ticket 46: kept for a person, not run. Kept: the turn ends here with the gate's reply.
                     held = self._hold_for_approval(call["name"], call["arguments"], tool_context)
                     if isinstance(held, ApprovalNotice):
+                        self._record_tool_state(call, None, APPROVAL_PENDING, tool_context)
                         steps.append({
                             "kind": "tool_result", "tool_name": call["name"], "tool_declared": True, "arguments": None,
                             "content": None, "latency_ms": int((perf_counter() - tool_started) * 1000),
@@ -766,6 +781,7 @@ class AgentService:
                 else:
                     text, error_code, error_type = self._run_tool(call["name"], call["arguments"], tool_context)
                     if tool is not None and tool.ends_turn and error_code is None:
+                        self._record_tool_state(call, text, None, tool_context)
                         steps.append({
                             "kind": "tool_result", "tool_name": call["name"], "tool_declared": True, "arguments": None,
                             "content": None, "latency_ms": int((perf_counter() - tool_started) * 1000),
@@ -781,6 +797,7 @@ class AgentService:
                 # D5: tool output is untrusted data (document chunks, memory
                 # text); the defense marks it so before the model reads it.
                 output = self.defense.wrap_tool_result(text)
+                self._record_tool_state(call, output, error_code, tool_context)
                 steps.append({
                     "kind": "tool_result", "tool_name": call["name"], "tool_declared": declared, "arguments": None,
                     "content": output, "latency_ms": int((perf_counter() - tool_started) * 1000),
@@ -1018,6 +1035,9 @@ class AgentService:
         except (TypeError, ValueError):
             top_k = 4
         chunks = self.retrieval_service.retrieve(query, min(max(top_k, 1), 8), None)
+        if (tool_context or {}).get("_tool_recorder") is not None:
+            tool_context["_state_resources"] = {str(chunk["document_id"]): str(chunk["version_id"]) for chunk in chunks if chunk.get("document_id") and chunk.get("version_id")}
+            tool_context["_state_resources_unknown"] = any(not chunk.get("document_id") or not chunk.get("version_id") for chunk in chunks)
         if not chunks:
             return self._dump({"result": "không tìm thấy đoạn tài liệu nào phù hợp"}), None, None
         readable = (tool_context or {}).get("readable_documents")
@@ -1066,6 +1086,11 @@ class AgentService:
             found = self.document_reader.read_chunks(document_id, _bounded(arguments.get("from_chunk"), 0, 0), n)
         if found is None:
             return self._error(BAD_ARGUMENTS, NOT_READABLE)
+        if (tool_context or {}).get("_tool_recorder") is not None:
+            if document_id in pastes or not found.get("version_id"):
+                tool_context["_state_resources_unknown"] = True
+            else:
+                tool_context["_state_resources"] = {document_id: str(found["version_id"])}
         total = int(found.get("total_chunks") or 0)
         if not found.get("chunks"):
             if page:
@@ -1114,6 +1139,14 @@ class AgentService:
             excess = len(text(1)) - limit
             shown[0]["content"] = _clip(shown[0]["content"], max(1, len(shown[0]["content"]) - excess))
         return self._dump(json.loads(text(count)), limit=limit)
+
+    def _record_tool_state(self, call, output, error_code, context):
+        recorder = (context or {}).get("_tool_recorder")
+        tool = self.registry.get(call["name"])
+        if isinstance(recorder, ToolStateRecorder) and tool is not None and not context.get("_state_resources_unknown"):
+            recorder.record(call["name"], call["arguments"], output, error_code,
+                            policy=tool.state_policy, schema=tool.schema,
+                            resources=context.get("_state_resources") or {})
 
     def _system_status(self, arguments: dict[str, Any], tool_context: dict[str, Any] | None) -> ToolOutput:
         return self._dump(self.operational_service.health()), None, None
@@ -1184,9 +1217,9 @@ def core_tools() -> ToolRegistry:
     each tool is a schema and the handler that runs it, so none can be declared without a
     handler, nor run without being declared."""
     registry = ToolRegistry()
-    registry.register(AgentTool(SEARCH_DOCUMENTS_SCHEMA, AgentService._search_documents, "Đang tra tài liệu…"), SEARCH_DOCUMENTS_ORDER)
-    registry.register(AgentTool(READ_DOCUMENT_SCHEMA, AgentService._read_document, "Đang đọc tài liệu…"), READ_DOCUMENT_ORDER)
+    registry.register(AgentTool(SEARCH_DOCUMENTS_SCHEMA, AgentService._search_documents, "Đang tra tài liệu…", state_policy="read"), SEARCH_DOCUMENTS_ORDER)
+    registry.register(AgentTool(READ_DOCUMENT_SCHEMA, AgentService._read_document, "Đang đọc tài liệu…", state_policy="read"), READ_DOCUMENT_ORDER)
     registry.register(AgentTool(SYSTEM_STATUS_SCHEMA, AgentService._system_status, "Đang xem trạng thái hệ thống…"), SYSTEM_STATUS_ORDER)
     registry.register(AgentTool(CURRENT_TIME_SCHEMA, AgentService._current_time, "Đang xem giờ…"), CURRENT_TIME_ORDER)
-    registry.register(AgentTool(CALCULATE_SCHEMA, AgentService._calculate, "Đang tính…"), CALCULATE_ORDER)
+    registry.register(AgentTool(CALCULATE_SCHEMA, AgentService._calculate, "Đang tính…", state_policy="read"), CALCULATE_ORDER)
     return registry

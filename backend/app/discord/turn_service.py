@@ -5,6 +5,7 @@ import threading
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy.exc import IntegrityError
@@ -131,6 +132,47 @@ class DiscordTurnService:
         if self.agent_tools_guild_allowlist is None:
             return True
         return guild_id in self.agent_tools_guild_allowlist
+
+    def _agent_tool_context(self, guild_id: str | None, turn: DiscordSessionTurn, previous_turns: list[DiscordSessionTurn]) -> dict[str, object]:
+        context: dict[str, object] = {"guild_id": guild_id, "turn_id": str(turn.id)}
+        if not getattr(self.chat_service, "tool_state_enabled", False):
+            return context
+        # These identities come from persisted Discord metadata. The index
+        # follows build_discord_speaker_context exactly: one user slot for each
+        # prior turn and an assistant slot only when its response is not None.
+        # Do not match answer text: different people can receive identical text.
+        context["actor_id"] = turn.author_id
+        anchors = []
+        index = 0
+        for previous in previous_turns:
+            index += 1
+            if previous.response_text is not None:
+                if previous.status == "completed" and turn.author_id and previous.author_id == turn.author_id:
+                    anchors.append({"origin": str(previous.id), "index": index})
+                index += 1
+        context["_state_anchors"] = anchors
+        return context
+
+    @staticmethod
+    def _elapsed_ms(start: datetime | None, end: datetime | None) -> int | None:
+        if not isinstance(start, datetime) or not isinstance(end, datetime):
+            return None
+        try:
+            elapsed = (end - start).total_seconds()
+            return round(elapsed * 1000) if elapsed >= 0 else None
+        except (TypeError, ValueError, OverflowError):
+            return None
+
+    def _state_event(self, event: str, turn_id: UUID, **timings: int | None) -> None:
+        if not getattr(self.chat_service, "tool_state_enabled", False):
+            return
+        fields = {key: value for key, value in timings.items() if isinstance(value, int) and value >= 0}
+        try:
+            logger.info("%s turn_id=%s %s", event, turn_id, " ".join(f"{key}={value}" for key, value in fields.items()),
+                        extra={"event": event, "turn_id": str(turn_id), **fields})
+        except Exception:
+            # Telemetry must never cost the answer or change delivery state.
+            pass
 
     @staticmethod
     def _result(
@@ -301,11 +343,15 @@ class DiscordTurnService:
                 database.flush()
                 turn = database.get(DiscordSessionTurn, turn_id)
                 assert turn is not None
-                return self._result(turn)
+                result = self._result(turn)
+                end_to_end_ms = self._elapsed_ms(getattr(turn, "created_at", None), getattr(turn, "completed_at", None))
         except IntegrityError as error:
             raise DiscordTurnDeliveryConflictError(
                 "A Discord response message is already linked to another turn."
             ) from error
+        if outcome == "completed":
+            self._state_event("tool_state_turn_completed", turn_id, end_to_end_ms=end_to_end_ms)
+        return result
 
     def fail(
         self,
@@ -527,6 +573,7 @@ class DiscordTurnService:
                 turn,
                 reply_target=reply_target,
             )
+            tool_context = self._agent_tool_context(session.guild_id, turn, previous_turns)
             model_history = [*speaker_context.history]
             if speaker_context.reply_target_message is not None:
                 model_history.append(speaker_context.reply_target_message)
@@ -563,6 +610,8 @@ class DiscordTurnService:
             guild_id = session.guild_id
             channel_id = session.channel_id
             base_instruction = speaker_context.system_instruction
+            queue_wait_ms = self._elapsed_ms(getattr(turn, "created_at", None), getattr(turn, "started_at", None) or datetime.now(UTC))
+        self._state_event("tool_state_turn_started", turn_id, queue_wait_ms=queue_wait_ms)
         # Ticket 36: what a person approved from decided's suggestions. Its own short read.
         if self.message_labels is not None:
             try:
@@ -628,7 +677,7 @@ class DiscordTurnService:
                     use_tools=use_tools_for_turn,
                     # search_history scopes to THIS session's guild, server-side —
                     # a model-supplied guild id is never trusted (§3.1 lesson).
-                    tool_context={"guild_id": session.guild_id, "turn_id": str(turn_id)},
+                    tool_context=tool_context,
                     **progress,
                 )
         except ConversationNotFoundError:
@@ -658,4 +707,6 @@ class DiscordTurnService:
                 )
             turn = database.get(DiscordSessionTurn, turn_id)
             assert turn is not None
-            return self._result(turn, execution_token=execution_token)
+            result = self._result(turn, execution_token=execution_token)
+        self._state_event("tool_state_response_saved", turn_id)
+        return result

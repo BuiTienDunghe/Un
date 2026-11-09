@@ -8,6 +8,7 @@ from app.llm_clients.gemini_client import GeminiClient
 from app.llm_clients.deepseek_client import DeepSeekClient
 from app.llm_clients.anthropic_client import AnthropicClient
 from app.services.call_budget import count_generation_call
+from app.services.input_metrics import measure_input
 
 
 # Union type for all supported clients
@@ -130,6 +131,7 @@ class ModelRouter:
         model_name = str(config["name"])
         client = self._get_client(config)
         count_generation_call()
+        measure_input("chat", messages)
 
         if isinstance(client, OllamaClient):
             answer = client.chat(
@@ -166,6 +168,7 @@ class ModelRouter:
         if not isinstance(client, OllamaClient):
             raise NotImplementedError("structured output needs an Ollama general model")
         count_generation_call()
+        measure_input("structured", messages, [schema])
         answer = client.chat(
             model=str(config["name"]),
             messages=messages,
@@ -190,6 +193,7 @@ class ModelRouter:
         model_name = str(config["name"])
         client = self._get_client(config)
         count_generation_call()
+        measure_input("tools", messages, tools)
         if isinstance(client, AnthropicClient):
             result = client.chat_tools(model=model_name, messages=messages, tools=tools, **self._anthropic_kwargs(config))
             return result, model_name

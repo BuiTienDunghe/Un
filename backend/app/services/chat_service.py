@@ -5,9 +5,15 @@ from hashlib import sha256
 from time import perf_counter
 from uuid import uuid4
 from collections.abc import Callable, Iterator
+import json
+
+from loguru import logger
 
 from app.llm_clients.usage import consume_usage
-from app.services.agent_service import STOP_TURN_BUDGET_EXHAUSTED, clock_note
+from app.services.agent_service import AGENT_GUIDE, STOP_TURN_BUDGET_EXHAUSTED, clock_note
+from app.services.tool_state import ToolStateRecorder
+from app.services.tool_state_bridge import continuity_scope, restore_history
+from app.services.input_metrics import model_input_measurements
 from app.services.call_budget import CHAT_CALL_CAP, turn_call_budget
 from app.services.logging_service import LoggingService
 from app.services.model_router import ModelRouter
@@ -27,12 +33,13 @@ def derive_conversation_title(message: str) -> str | None:
 
 
 class ChatService:
-    def __init__(self, store: AuxiliaryStore, router: ModelRouter, logging_service: LoggingService, history_limit: int, memory_service: MemoryService | None = None) -> None:
+    def __init__(self, store: AuxiliaryStore, router: ModelRouter, logging_service: LoggingService, history_limit: int, memory_service: MemoryService | None = None, *, tool_state_enabled: bool = False) -> None:
         self.store = store
         self.router = router
         self.logging_service = logging_service
         self.history_limit = history_limit
         self.memory_service = memory_service
+        self.tool_state_enabled = tool_state_enabled
         # Assigned by the composition root after the retrieval stack exists
         # (the agent needs services that are built later than this one).
         # None keeps every `use_tools` request on the plain-chat path.
@@ -110,6 +117,7 @@ class ChatService:
     ) -> tuple[str, str, str, int, list[dict[str, object]] | None]:
         is_new = conversation_id is None
         request_started = perf_counter()
+        state_request_id = str((tool_context or {}).get("turn_id") or uuid4()) if self.tool_state_enabled else None
         if conversation_id is None:
             conversation_id = str(uuid4())
             self.store.create_conversation(conversation_id, derive_conversation_title(message), user_id)
@@ -117,7 +125,10 @@ class ChatService:
             raise ConversationNotFoundError(conversation_id)
 
         try:
+            state_on = self.tool_state_enabled and use_tools and self.agent_service is not None
             history = (
+                self.store.get_agent_history(conversation_id, self.history_limit)
+                if state_on and model_history is None else
                 self.store.get_messages(conversation_id, self.history_limit)
                 if model_history is None
                 else model_history
@@ -135,6 +146,9 @@ class ChatService:
                 if memories:
                     context = "\n".join(f"- {memory['content']}" for memory in memories)
                     messages.append({"role": "system", "content": f"{self.memory_prompt}\n\nRelevant memories:\n{context}"})
+            history_rows = history
+            history = [{key: value for key, value in row.items() if key != "message_id"} for row in history_rows] if state_on else history_rows
+            history_prefix = len(messages)
             messages.extend(
                 [
                     *history,
@@ -142,10 +156,34 @@ class ChatService:
                     current_model_message or {"role": "user", "content": message},
                 ]
             )
-            started = perf_counter()
             agent_steps: list[dict[str, object]] | None = None
+            recorder = None
+            state_scope = None
+            state_stats = {"groups": 0, "chars": 0, "dropped": 0}
+            if state_on:
+                recorder = ToolStateRecorder()
+                state_scope = continuity_scope(conversation_id, user_id, tool_context)
+                schemas = self.agent_service._offered_schemas()
+                # Conservative character budget, including the actual schemas
+                # and guide. This is an estimate, not a tokenizer guarantee.
+                base_chars = len(json.dumps(messages, ensure_ascii=False))
+                schema_chars = len(json.dumps(schemas, ensure_ascii=False))
+                guide_chars = len(self.agent_service.defense.agent_guide(AGENT_GUIDE))
+                window = int(self.router.models.get("general", {}).get("context", 16384))
+                room = max(0, window * 2 - base_chars - schema_chars - guide_chars - 4096)
+                try:
+                    messages, state_stats = restore_history(self.store, conversation_id, state_scope, messages,
+                        history_prefix, history_rows, tool_context, self.agent_service.registry, room,
+                        allowed_names={schema["function"]["name"] for schema in schemas})
+                except Exception as error:
+                    logger.bind(event="tool_state_load_failed", error_type=type(error).__name__).warning("Tool history unavailable; using text history")
+                tool_context = {**(tool_context or {}), "_tool_recorder": recorder}
+                logger.bind(event="tool_state_context", request_id=state_request_id,
+                    base_chars=base_chars, schema_chars=schema_chars, history_chars=state_stats["chars"],
+                    groups=state_stats["groups"], dropped=state_stats["dropped"]).info("Prepared bounded tool history")
+            started = perf_counter()
             # In agent mode the agent counts its own calls; this turn adds none (ticket 43).
-            with turn_call_budget("chat", 0 if agent_mode else CHAT_CALL_CAP):
+            with model_input_measurements(state_on) as input_metrics, turn_call_budget("chat", 0 if agent_mode else CHAT_CALL_CAP):
                 if agent_mode:
                     # on_step: the agent's progress, for a caller that shows it (ticket 20 #4).
                     answer, model_used, agent_steps = self.agent_service.run(
@@ -160,6 +198,7 @@ class ChatService:
             if is_new:
                 self.store.delete_conversation(conversation_id)
             raise
+        model_finished = perf_counter()
         # Full-request latency, not model-call latency: the dashboard feeds
         # every row into one percentile, and a row that skips history + memory
         # lookup is a different quantity wearing the same name.
@@ -172,6 +211,14 @@ class ChatService:
             # Discord turns are the ones that carry their guild; the web's do not.
             source = "discord" if (tool_context or {}).get("guild_id") else "web"
             self.store.add_agent_traces(conversation_id, assistant_message_id, agent_steps, source=source)
+            if recorder is not None and state_scope is not None:
+                try:
+                    payload = recorder.payload()
+                    if payload.get("groups"):
+                        self.store.save_tool_state(conversation_id, assistant_message_id, state_scope, payload,
+                                                   origin=(tool_context or {}).get("turn_id"))
+                except Exception as error:
+                    logger.bind(event="tool_state_save_failed", error_type=type(error).__name__).warning("Answer saved but tool history unavailable")
         # Ticket 16: a turn that ran out of time replied with a fixed sentence, not an
         # answer; the dashboard counts it as an error, under its own code.
         out_of_time = bool(agent_steps) and agent_steps[-1].get("stop_reason") == STOP_TURN_BUDGET_EXHAUSTED
@@ -183,6 +230,13 @@ class ChatService:
             # (the Discord bot sends its own), so one constant would lie.
             prompt_hash=sha256(str(messages[0]["content"]).encode("utf-8")).hexdigest(),
         )
+        if state_on:
+            logger.bind(event="tool_state_request_completed", request_id=state_request_id,
+                prepare_ms=round((started-request_started)*1000), agent_ms=round((model_finished-started)*1000),
+                persist_ms=round((perf_counter()-model_finished)*1000), model_calls=len(input_metrics or []),
+                message_chars=sum(row["message_chars"] for row in input_metrics or []),
+                schema_chars=sum(row["schema_chars"] for row in input_metrics or []),
+                tokens_in=usage["tokens_in"], tokens_out=usage["tokens_out"]).info("Completed state-enabled request")
         return answer, model_used, conversation_id, latency_ms, agent_steps
 
     def stream_response(self, message: str, conversation_id: str | None, use_memory: bool = False, system_prompt: str | None = None, user_id: str | None = None) -> tuple[Iterator[str], str, str]:

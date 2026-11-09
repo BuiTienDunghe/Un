@@ -143,6 +143,7 @@ class ChunkInspectionService:
                 "document_id": document.id,
                 "filename": document.original_filename,
                 "total_chunks": int(total or 0),
+                "version_id": version.id,
                 "chunks": [
                     {"chunk_index": chunk.chunk_index, "page_start": chunk.page_start, "page_end": chunk.page_end, "content": chunk.content}
                     for chunk in rows
