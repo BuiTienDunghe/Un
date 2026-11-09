@@ -32,10 +32,26 @@ def test_ovis_route_is_allowed_for_ocr_only():
         validate_small_model_routes(registry(name), Overrides())
 
 
-def test_disabled_raw_override_cannot_smuggle_large_model():
-    with pytest.raises(ValueError):
-        validate_small_model_routes(registry("qwen3.5:2b"), Overrides(
-            disabled_roles=frozenset({"extractor"}), raw_tags={"extractor":"qwen3.5:9b"}))
+def test_enabled_raw_override_cannot_smuggle_large_model():
+    with pytest.raises(ValueError, match="refuses extractor override"):
+        validate_small_model_routes(registry("qwen3.5:2b"), Overrides(raw_tags={"extractor": "qwen3.5:9b"}))
+
+
+def test_leftover_raw_override_on_a_disabled_role_does_not_block_boot():
+    # The operating .env still carries DISCORD_MEMORY_EXTRACTOR_MODEL from the 9B era;
+    # source memory switches the extractor off, so that tag is never loaded.
+    validate_small_model_routes(registry("qwen3.5:2b"), Overrides(
+        disabled_roles=frozenset({"extractor"}), raw_tags={"extractor": "qwen3.5:9b"}))
+
+
+def test_source_memory_settings_disable_the_extractor_so_its_old_tag_is_ignored():
+    from app.config.model_registry import overrides_from_settings
+    from app.config.settings import Settings
+    settings = Settings(database_url="postgresql+psycopg://x:y@localhost/policy_test", _env_file=None,
+                        source_memory_enabled=True, discord_memory_extractor_model="qwen3.5:9b")
+    overrides = overrides_from_settings(settings)
+    assert "extractor" in overrides.disabled_roles
+    validate_small_model_routes(registry("qwen3.5:2b"), overrides)
 
 
 def test_refusal_happens_before_probe_construction(monkeypatch):

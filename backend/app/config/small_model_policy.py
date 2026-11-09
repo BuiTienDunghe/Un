@@ -27,5 +27,10 @@ def validate_small_model_routes(registry, overrides):
             if record.provider != "ollama" or record.name not in allowed:
                 raise ValueError(f"Small-model branch refuses {role}: {record.name!r}; no implicit model fallback")
     for role, tag in overrides.raw_tags.items():
+        # A switched-off role never loads its tag, so a leftover DISCORD_MEMORY_*_MODEL line
+        # must not stop the API booting. Switching the role back on removes it from
+        # disabled_roles and this check refuses the tag at that boot.
+        if role in overrides.disabled_roles:
+            continue
         if tag not in ALLOWED | (OCR_ONLY if role == "ocr" else frozenset()):
             raise ValueError(f"Small-model branch refuses {role} override: {tag!r}")
