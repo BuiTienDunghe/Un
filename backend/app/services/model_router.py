@@ -157,7 +157,8 @@ class ModelRouter:
 
         return answer, model_name
 
-    def chat_structured(self, mode: str, messages: list[dict[str, str]], schema: dict[str, Any]) -> tuple[str, str]:
+    def chat_structured(self, mode: str, messages: list[dict[str, str]], schema: dict[str, Any],
+                        options: dict[str, Any] | None = None) -> tuple[str, str]:
         """A reply that matches the JSON schema `schema`, by Ollama's structured outputs. Only an
         Ollama general serves it: any other provider raises NotImplementedError, and the caller
         does without."""
@@ -172,7 +173,7 @@ class ModelRouter:
         answer = client.chat(
             model=str(config["name"]),
             messages=messages,
-            options={**self._ollama_options(config), "temperature": 0},
+            options={**self._ollama_options(config), "temperature": 0, **(options or {})},
             keep_alive=str(config.get("keep_alive", "5m")),
             think=config.get("think") if isinstance(config.get("think"), bool) else None,
             format=schema,

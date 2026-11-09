@@ -1,0 +1,44 @@
+{
+  "job_id": "ocr_c81910032a15448a8b732027c558643f",
+  "ocr_model": "hf.co/prithivMLmods/ATH-MaaS-OvisOCR3-GGUF:Q8_0",
+  "blocks": 7,
+  "answer": {
+    "status": "cited",
+    "message": "Mã phiếu: VT-4068",
+    "evidence": [
+      {
+        "id": "p1b3",
+        "page": 1,
+        "kind": "text",
+        "text": "Mã phiếu: VT-4068",
+        "bbox": [
+          49,
+          203,
+          264,
+          239
+        ],
+        "parent_id": null,
+        "origin": "ocr",
+        "source_ids": []
+      }
+    ],
+    "model": "lfm3:1.7b",
+    "selection_calls": 1,
+    "citation_integrity": "passed",
+    "semantic_entailment": "not_checked",
+    "ocr_correctness": "not_checked",
+    "context_complete": true,
+    "job_id": "ocr_c81910032a15448a8b732027c558643f",
+    "question": "Mã phiếu là gì?"
+  },
+  "missing": {
+    "status": "insufficient_evidence",
+    "message": "Không tìm thấy bằng chứng để trả lời câu hỏi này.",
+    "evidence": [],
+    "model": null,
+    "selection_calls": 0,
+    "reason": "requested_field_missing",
+    "job_id": "ocr_c81910032a15448a8b732027c558643f",
+    "question": "Số điện thoại người nhận là gì?"
+  }
+}

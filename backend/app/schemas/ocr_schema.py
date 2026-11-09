@@ -9,3 +9,8 @@ class OcrJobOptions(BaseModel):
 
 class OcrEvaluationRequest(BaseModel):
     ground_truth: str = Field(min_length=1, max_length=2_000_000)
+
+
+class OcrQuestionRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=4000)
+    pages: list[int] | None = Field(default=None, max_length=100)

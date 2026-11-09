@@ -54,7 +54,7 @@ def test_pull_list_cli_prints_the_launcher_tags_and_create_list_prints_the_ocr_b
     env = {**ENV, "DATABASE_URL": os.environ.get("DATABASE_URL") or "postgresql+psycopg://x:y@localhost/x"}
     pull = subprocess.run([sys.executable, "-m", "app.config.model_registry", "--ollama-pull-list"], cwd=BACKEND, capture_output=True, text=True, env=env, check=False)
     assert pull.returncode == 0, pull.stderr
-    assert pull.stdout.split() == ["qwen3.5:2b", "qwen3-embedding:0.6b"]
+    assert pull.stdout.split() == ["qwen3.5:2b", "qwen3-embedding:0.6b", "hf.co/prithivMLmods/ATH-MaaS-OvisOCR3-GGUF:Q8_0"]
     create = subprocess.run([sys.executable, "-m", "app.config.model_registry", "--ollama-create-list"], cwd=BACKEND, capture_output=True, text=True, env=env, check=False)
     assert create.returncode == 0, create.stderr
     assert [line.split("\t") for line in create.stdout.strip().splitlines()] == [["local-ai/glm-ocr:eot-v1", str(PROJECT_ROOT / "data/models/ocr/ocr-v1/Modelfile")]]

@@ -97,6 +97,7 @@ async def lifespan(app: FastAPI):
                                          tool_state_enabled=settings.agent_tool_state_enabled)
     app.state.chat_service.source_memory = app.state.source_memory_service
     ocr_service = OCRService(router, auxiliary_store)
+    app.state.ocr_service = ocr_service
     queue = (
         JobQueueService(
             settings.redis_url,

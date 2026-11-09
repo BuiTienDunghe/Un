@@ -6,6 +6,7 @@ policy. This checks configured tags, not the authenticity of local weight files.
 ALLOWED = frozenset({"qwen3.5:2b", "lfm3:1.7b", "qwen3-embedding:0.6b",
                      "local-ai/glm-ocr:eot-v1", "glm-ocr:latest",
                      "local-ai/multilingual-e5-large:q8"})
+OCR_ONLY = frozenset({"hf.co/prithivMLmods/ATH-MaaS-OvisOCR3-GGUF:Q8_0"})
 
 
 def validate_small_model_routes(registry, overrides):
@@ -22,8 +23,9 @@ def validate_small_model_routes(registry, overrides):
                 raise ValueError(f"Small-model branch refuses {role}: {record.name!r}")
             if role in overrides.disabled_roles:
                 continue
-            if record.provider != "ollama" or record.name not in ALLOWED:
+            allowed = ALLOWED | (OCR_ONLY if role == "ocr" else frozenset())
+            if record.provider != "ollama" or record.name not in allowed:
                 raise ValueError(f"Small-model branch refuses {role}: {record.name!r}; no implicit model fallback")
     for role, tag in overrides.raw_tags.items():
-        if tag not in ALLOWED:
+        if tag not in ALLOWED | (OCR_ONLY if role == "ocr" else frozenset()):
             raise ValueError(f"Small-model branch refuses {role} override: {tag!r}")

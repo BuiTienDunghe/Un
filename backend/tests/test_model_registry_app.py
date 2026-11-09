@@ -37,7 +37,8 @@ BROKEN_ID = "reranker-missing-v9"
 BROKEN_DIR = PROJECT_ROOT / "data" / "models" / "reranker" / BROKEN_ID
 # Every Ollama tag the shipped file names, present with an arbitrary digest.
 TAGS = {"qwen3.5:2b": "sha256:general", "qwen3-embedding:0.6b": "sha256:embedding", "glm-ocr:latest": "sha256:ocr",
-        "local-ai/glm-ocr:eot-v1": "sha256:ocr-v1"}
+        "local-ai/glm-ocr:eot-v1": "sha256:ocr-v1",
+        "hf.co/prithivMLmods/ATH-MaaS-OvisOCR3-GGUF:Q8_0": "5c3b084e81d574957c584d058d895b5670ddb2df1a0f8ff111f779a5603b2d06"}
 # The states that are a decision, never a deviation (RoleResolution.deviates).
 DELIBERATE = {"active", "off", "unconfigured"}
 
@@ -294,7 +295,7 @@ def test_shipped_registry_with_every_probe_answering_is_all_active_off_or_unconf
     }
     assert all(row["fallback"] is False and row["source"] == "registry" for row in rows.values())
     assert [role for role, row in rows.items() if row["verified"]] == ["general", "embedding", "ocr"]
-    assert {role: row["loaded"] for role, row in rows.items() if row["loaded"]} == {"general": "general-small-v1", "embedding": "embedding-v0", "ocr": "ocr-small-v1"}
+    assert {role: row["loaded"] for role, row in rows.items() if row["loaded"]} == {"general": "general-small-v1", "embedding": "embedding-v0", "ocr": "ocr-ovis-v1"}
     assert health["status"] == "ok" and health["model_fallback"] == "ok"
     assert not marker_path().exists(), "a stale marker is removed by a boot in which nothing deviates"
     assert events_named(registry_events, "model_version_fallback") == []

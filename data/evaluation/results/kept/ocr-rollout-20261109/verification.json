@@ -1,0 +1,27 @@
+{
+  "branch": "codex/tool-state-continuity",
+  "copied_files_hash_verified": 49,
+  "tests": {
+    "target-full.xml": {
+      "tests": "2217",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0"
+    },
+    "target-final-focused.xml": {
+      "tests": "128",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0"
+    }
+  },
+  "live_api": "passed",
+  "qa_api_stopped": 2232,
+  "qa_containers_stopped": [
+    "local-ai-ocr-49ff478229-test",
+    "local-ai-ocr-49ff478229-test-qdrant",
+    "local-ai-ocr-49ff478229-test-redis"
+  ],
+  "production_restarted": false,
+  "ocr_weights_retained": true
+}

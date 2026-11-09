@@ -24,6 +24,14 @@ def test_only_explicit_small_local_routes_are_allowed():
         validate_small_model_routes(registry("cloud", "anthropic"), Overrides())
 
 
+def test_ovis_route_is_allowed_for_ocr_only():
+    name = "hf.co/prithivMLmods/ATH-MaaS-OvisOCR3-GGUF:Q8_0"
+    ocr = SimpleNamespace(roles={"ocr": object()}, chain=lambda role, pin=None: [SimpleNamespace(name=name, provider="ollama")])
+    validate_small_model_routes(ocr, Overrides())
+    with pytest.raises(ValueError):
+        validate_small_model_routes(registry(name), Overrides())
+
+
 def test_disabled_raw_override_cannot_smuggle_large_model():
     with pytest.raises(ValueError):
         validate_small_model_routes(registry("qwen3.5:2b"), Overrides(

@@ -179,7 +179,8 @@ On this experimental branch: 0 errors, 2 legacy report-stamp warnings (embedding
 
 Other modes: `--ollama-pull-list` (one hub tag per line — the launcher pulls these: the
 requested tag plus every fallback tag of every Ollama role that is not off; on the shipped
-file exactly `qwen3.5:2b`, `qwen3-embedding:0.6b`; OCR is create-built, not a hub pull), `--ollama-create-list`
+file exactly `qwen3.5:2b`, `qwen3-embedding:0.6b`,
+`hf.co/prithivMLmods/ATH-MaaS-OvisOCR3-GGUF:Q8_0`; the previous GLM fallback is create-built), `--ollama-create-list`
 (`tag<TAB>modelfile` for create-built tags; on the shipped file exactly
 `local-ai/glm-ocr:eot-v1` with `data/models/ocr/ocr-v1/Modelfile`), `--record-probe <id>` (hub reranker
 versions only: score `probe.pairs` on this runtime and print the `scores:` line to paste).

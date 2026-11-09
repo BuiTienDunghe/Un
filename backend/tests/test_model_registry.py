@@ -165,7 +165,7 @@ def test_shipped_registry_loads_every_role_with_todays_pointers():
     assert registry.path == DEFAULT_REGISTRY_PATH and tuple(registry.roles) == ROLES
     assert {role: entry.active for role, entry in registry.roles.items()} == {
         "general":"general-small-v1", "condenser":None, "embedding":"embedding-v0", "vision":None,
-        "ocr":"ocr-small-v1", "reranker":"reranker-v0", "extractor":None, "verifier":None}
+        "ocr":"ocr-ovis-v1", "reranker":"reranker-v0", "extractor":None, "verifier":None}
     assert registry.get("embedding","embedding-v0").collection_suffix == ""
     assert registry.get("embedding","embedding-e5l-v1").collection_suffix == "e5l"
     for entry in registry.roles.values():
@@ -178,7 +178,7 @@ def test_flat_models_equals_the_models_yaml_blocks_the_registry_replaced():
     assert flat["embedding"] == TODAY["embedding"]  # cache fingerprint unchanged
     assert flat["general"]["name"] == "qwen3.5:2b"
     assert flat["general"]["temperature"] == 0.0 and flat["general"]["think"] is False
-    assert flat["ocr"]["name"] == "local-ai/glm-ocr:eot-v1"
+    assert flat["ocr"]["name"] == "hf.co/prithivMLmods/ATH-MaaS-OvisOCR3-GGUF:Q8_0"
     assert "vision" not in flat and "extractor" not in flat and "verifier" not in flat
     assert resolved.flat_models() is flat
 
@@ -193,7 +193,7 @@ def test_load_models_is_identical_across_settings_instances():
 def test_shipped_pull_list_is_exactly_what_the_launcher_pulled_by_hand():
     registry = load_registry()
     overrides = Overrides(disabled_roles=FLAGS_OFF)
-    assert ollama_pull_list(registry, overrides) == ["qwen3.5:2b", "qwen3-embedding:0.6b"]
+    assert ollama_pull_list(registry, overrides) == ["qwen3.5:2b", "qwen3-embedding:0.6b", "hf.co/prithivMLmods/ATH-MaaS-OvisOCR3-GGUF:Q8_0"]
     assert ollama_create_list(registry, overrides) == [("local-ai/glm-ocr:eot-v1", PROJECT_ROOT / "data/models/ocr/ocr-v1/Modelfile")]
 
 

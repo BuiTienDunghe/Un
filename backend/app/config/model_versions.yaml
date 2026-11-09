@@ -31,6 +31,7 @@ roles:
         name: lfm3:1.7b
         context: 16384
         temperature: 0.0
+        think: false
         keep_alive: 5m
   condenser:
     active: null
@@ -121,7 +122,7 @@ roles:
         provider: ollama
         name: qwen3.5:2b
   ocr:
-    active: ocr-small-v1
+    active: ocr-ovis-v1
     versions:
     - id: ocr-small-v1
       provider: ollama
@@ -141,6 +142,34 @@ roles:
         max_tokens: 4096
         keep_alive: 5m
         prompt: 'Text Recognition:'
+        dpi: 200
+        min_text_characters: 80
+        min_alphanumeric_ratio: 0.45
+    - id: ocr-ovis-v1
+      provider: ollama
+      vram_mib: 2048 # conservative reservation; Ollama reported 1234 MiB at ctx 16384 in startup-probe.json
+      digest: 5c3b084e81d574957c584d058d895b5670ddb2df1a0f8ff111f779a5603b2d06
+      notes: >-
+        OvisOCR3 0.8B, community Q8 GGUF with BF16 vision projector. Native structured
+        prompt pinned in ocr_profiles.py. Raw JSON, normalized boxes and table rows
+        are retained. Startup can fall back only to the existing local GLM version.
+      provenance:
+        upstream: ATH-MaaS/OvisOCR3
+        upstream_revision: 17f255e2c8ae6d18d5d5edb0a474bd4ed39aef90
+        quantization: prithivMLmods/ATH-MaaS-OvisOCR3-GGUF
+        quantization_revision: c29551652e828085ca1e892092f1319dbee22d2f
+      config:
+        provider: ollama
+        name: hf.co/prithivMLmods/ATH-MaaS-OvisOCR3-GGUF:Q8_0
+        revision: ovisocr3-q8-c29551652e828085ca1e892092f1319dbee22d2f
+        enabled: true
+        context: 16384
+        temperature: 0.1
+        think: false
+        max_tokens: 8192
+        max_image_edge: 2048
+        output_contract: ovis_json
+        keep_alive: 2m
         dpi: 200
         min_text_characters: 80
         min_alphanumeric_ratio: 0.45

@@ -132,3 +132,8 @@ a.ocr-note-act { font-size: 12px; font-weight: 600; }
   .ocr-grid { grid-template-columns: minmax(0, 1fr); }
   .ocr-file-name { max-width: 200px; }
 }
+/* Evidence lookup keeps the original recognized text visible above the question. */
+.ocr-question { padding: 18px; display: grid; gap: 12px; border-top: 1px solid var(--border, #ddd); }
+.ocr-question-input { width: 100%; box-sizing: border-box; min-height: 64px; padding: 10px; color: inherit; background: transparent; border: 1px solid var(--border, #888); border-radius: 8px; font: inherit; resize: vertical; }
+.ocr-question > button { justify-self: start; }
+.ocr-question-reply { white-space: pre-wrap; overflow-wrap: anywhere; }

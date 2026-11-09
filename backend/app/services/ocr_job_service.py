@@ -15,6 +15,8 @@ from app.parsers.pymupdf_parser import PyMuPDFParser
 from app.parsers.smart_parser import SmartParser
 from app.services.model_router import ModelRouter
 from app.services.ocr_service import OCRService
+from app.services.ocr_evidence import native_evidence, parse_evidence
+from app.services.ocr_reader import read_evidence
 
 
 class OcrPromotionError(Exception):
@@ -69,7 +71,9 @@ class OcrJobService:
         job = self.jobs[job_id]
         with self._lock:
             if self._active:
-                job["status"] = "failed"; self._event(job, "Rejected", 0, "Another OCR job is currently running", "ERROR"); return
+                job["status"] = "failed"; self._event(job, "Rejected", 0, "Another OCR job is currently running", "ERROR")
+                self._save(job)
+                return
             self._active = job_id
         started = time.perf_counter()
         try:
@@ -87,19 +91,27 @@ class OcrJobService:
                 page_started = time.perf_counter()
                 if number in native:
                     text, model, config_hash, cache_hit, method = native[number], None, None, False, "native"
+                    blocks = [block.payload() for block in native_evidence(source, number)]
+                    raw, warnings = text, []
                 else:
                     result = self.ocr_service.recognize_png(png, int(job["dpi"]), allow_mock=True)
                     text = f"[MOCK OCR] Page {number}: simulated OCR output." if os.getenv("MOCK_OCR", "").lower() == "true" else result.text
                     model, config_hash, cache_hit, method = result.model, result.config_hash, result.cache_hit, "ocr"
+                    blocks = [block.payload(number) for block in (result.blocks or parse_evidence(text))]
+                    raw, warnings = result.raw_text if result.raw_text is not None else text, list(result.warnings)
                 page_dir = Path(str(job["root"])) / "pages" / f"page_{number:04d}"; page_dir.mkdir()
                 (page_dir / "original.png").write_bytes(png)
                 (page_dir / "text.txt").write_text(text, encoding="utf-8")
                 (page_dir / "result.md").write_text(text, encoding="utf-8")
-                payload = {"page": number, "text": text, "markdown": text, "extraction_method": method, "model": model, "ocr_config_hash": config_hash, "cache_hit": cache_hit}
+                (page_dir / "raw.txt").write_text(raw, encoding="utf-8")
+                payload = {"page": number, "text": text, "markdown": text, "extraction_method": method, "model": model, "ocr_config_hash": config_hash, "cache_hit": cache_hit, "blocks": blocks, "warnings": warnings}
                 (page_dir / "result.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
                 job["pages"].append({**payload, "image_url": f"/api/ocr/jobs/{job_id}/files/pages/page_{number:04d}/original.png", "duration_seconds": round(time.perf_counter() - page_started, 3)})  # type: ignore[index]
+                self._save(job)
             job["status"] = "completed"; self._event(job, "Completed", 100, "All selected pages processed")
         except Exception as error:
+            if isinstance(getattr(error, "raw_text", None), str):
+                (Path(str(job["root"])) / "failed-raw.txt").write_text(error.raw_text, encoding="utf-8")
             job["status"] = "failed"; self._event(job, "Failed", int(job.get("progress", 0)), str(error), "ERROR")
         finally:
             job["timings"] = {"total_seconds": round(time.perf_counter() - started, 3)}; job["metrics"] = system_metrics()
@@ -161,6 +173,23 @@ class OcrJobService:
         actual = "\n\n".join(str(page["text"]) for page in job["pages"])  # type: ignore[index]
         result = evaluate_ocr(ground_truth, actual); job["evaluation"] = result
         self._save(job)
+        return result
+
+    def ask(self, job_id: str, question: str, page_numbers: list[int] | None = None) -> dict:
+        job = self.view(job_id)
+        if job["status"] != "completed":
+            raise OcrPromotionError("OCR run must be completed before asking about its evidence")
+        blocks, pages = [], job.get("pages", [])
+        available = {page["page"] for page in pages}
+        if page_numbers and not set(page_numbers) <= available:
+            raise ValueError("Requested OCR page does not exist")
+        for page in pages:
+            if page_numbers and page["page"] not in page_numbers:
+                continue
+            blocks.extend(page.get("blocks") or [block.payload() for block in
+                parse_evidence(str(page["text"]), page=int(page["page"]))])
+        result = read_evidence(self.router, question, blocks)
+        result.update(job_id=job_id, question=question)
         return result
 
     def promote(self, job_id: str, document_service: PostgresDocumentService) -> dict[str, object]:

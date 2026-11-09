@@ -119,7 +119,7 @@ Cách promote, demote, revert và rebuild collection: `docs/model_registry.md`.
 | --- | --- | --- |
 | Chat tổng quát và RAG (`general`) | `general-small-v1` | qwen3.5:2b; không có fallback tự động |
 | Embedding (`embedding`) | `embedding-v0` | qwen3-embedding:0.6b cho tài liệu; memory v2 dùng PostgreSQL FTS |
-| OCR (`ocr`) | `ocr-small-v1` | local-ai/glm-ocr:eot-v1, giữ recipe build từ glm-ocr:latest |
+| OCR (`ocr`) | `ocr-ovis-v1` | OvisOCR3 Q8, JSON/bbox/bảng → bằng chứng cho model text; fallback local GLM khi probe không đạt. [Runbook](docs/ocr_pipeline.md) |
 | Reranker (`reranker`) | `reranker-v0` | cross-encoder/mmarco-mMiniLMv2-L12-H384-v1 |
 | Extractor / verifier / condenser memory | `null` | Không có model viết fact trên pipeline mới |
 | Vision | `null` | Tắt trong profile thử nghiệm này |

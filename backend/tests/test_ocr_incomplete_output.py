@@ -62,6 +62,13 @@ def test_other_server_errors_are_still_retried(monkeypatch):
     assert len(sent) == 2
 
 
+def test_text_only_structured_answer_reaching_cap_is_rejected(monkeypatch):
+    client, sent = _client(monkeypatch, _Reply(200, {"done_reason": "length", "message": {"content": '{"block_ids":[]}'}}))
+    with pytest.raises(OllamaIncompleteOutputError, match="Structured output"):
+        client.chat("text-only", [{"role": "user", "content": "question"}], {"num_predict": 128}, "0s", format={"type": "object"})
+    assert len(sent) == 1
+
+
 def test_router_sends_the_ocr_cap_as_num_predict(monkeypatch):
     client, sent = _client(monkeypatch, _Reply(200, {"done_reason": "stop", "message": {"content": "text"}}))
     router = ModelRouter({"ollama": client}, {"ocr": {"name": "local-ai/glm-ocr:eot-v1", "enabled": True, "context": 16384, "temperature": 0.1, "max_tokens": 4096}})

@@ -141,6 +141,8 @@ class OllamaClient:
                 response.raise_for_status()
                 body = response.json()
                 content = body.get("message", {}).get("content")
+                if format is not None and body.get("done_reason") == "length":
+                    raise OllamaIncompleteOutputError("Structured output reached num_predict before ending its turn")
                 if not isinstance(content, str):
                     raise OllamaUnavailableError("Ollama returned an invalid chat response")
                 # D4-lite: the counts were always in this body; they were
