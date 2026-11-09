@@ -11,6 +11,22 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-10
+
+### Changed (10/11, chỉ model nhỏ)
+- **Bỏ hẳn model 9B, chỉ chạy model nhỏ** (quyết định của chủ dự án, nhánh `codex/tool-state-continuity` gộp ở `4a57dfe`). `general` là Qwen3.5 2B (`general-small-v1`), chọn được LFM3 1.7B (`general-lfm-small-v1`); OCR là OvisOCR3 Q8 (`ocr-ovis-v1`, 1,0 GB, bản chuyển đổi cộng đồng ghim trong registry), GLM-OCR làm bản lùi; `vision`, `condenser`, `extractor`, `verifier` tắt. Khi khởi động, `small_model_policy.py` từ chối mọi tag ngoài danh sách cho phép; tag cũ của một vai đang tắt (như `DISCORD_MEMORY_EXTRACTOR_MODEL` còn trong `.env`) được bỏ qua. Đo cùng đêm 10/11, Agent Eval v0 66 bài, nhiệt độ 0: 9B 57 → 2B 47 (code cũ và mới trên 2B giống nhau từng bài), trung vị 4,4 → 2,0 s/bài, VRAM đỉnh 6.950 → 3.376 MiB. 2B gọi công cụ cả ở bài không được gọi (nt-01, nt-02). Thay cho các mục `ocr-v2` và `vision-v1` (Qwen 9B) bên dưới.
+- **OCR trả khối có cấu trúc cho model chỉ đọc chữ.** Ovis trả từng khối chữ và bảng kèm vị trí; LFM3 trả lời câu hỏi về ảnh từ khối bằng chứng và từ chối khi ảnh không có thông tin. Trên 10 ảnh tiếng Việt tự tạo (7 ảnh có văn bản chuẩn): sai chữ và số 2/887 (9B 0/887, GLM 83/887), 1,79 s/ảnh, 1.658 MiB; 28/28 câu hỏi (đường cũ xấp xỉ 27/28). Bộ ảnh do người làm viết: kiểm hồi quy, chưa đo scan thật hay chữ viết tay.
+- **Trí nhớ v2 lưu nguyên câu người dùng** (`SOURCE_MEMORY_ENABLED`, bật mặc định, migration `20261109_39`). Lưu nguyên văn, người nói, thời điểm và phạm vi (web theo tài khoản, Discord theo kênh hoặc luồng); sửa theo bản, quên có thu hồi khỏi ngữ cảnh; model không còn tự viết dữ kiện. Bật thì tắt luồng rút dữ kiện, duyệt và tóm tắt của Discord cũ; dữ kiện cũ không được chuyển sang, và lịch sử trò chuyện trước lúc nâng cấp không vào ngữ cảnh của v2. Tìm bằng full-text nên yếu khi người dùng diễn đạt khác. Reader 2B đúng 5/6 ca mới khoá trước khi chạy.
+
+### Added (09/11)
+- **Giữ kết quả công cụ qua lượt Web và Discord** (`AGENT_TOOL_STATE_ENABLED`, tắt mặc định). Tối đa 8 lượt, mỗi lượt 8 nhóm và 8.000 ký tự cho một cuộc trò chuyện, hết hạn sau 30 phút; kết quả cũ không mở quyền đọc tài liệu cho lượt mới, biên nhận nhắc việc và chờ duyệt không bị chạy lại. Kiểm trên CPU với model giả: thêm 12,6 ms mỗi lượt (trung vị), phần gửi model dài thêm 65 %. Chưa đo trên model thật; `scripts.bfcl_run --bounded-tool-state` chạy BFCL nhiều lượt qua cùng đoạn code này.
+
+### Fixed (08–09/11)
+- **Số trang PDF lại dùng được số của lần nạp** sau khi tìm kiếm chạm vào tài liệu: lần chạm chỉ ghi `last_accessed_at`, giữ `updated_at`. Tài liệu bị chạm trước bản sửa chỉ hồi lại khi nạp lại hoặc đọc lại PDF.
+- **Liệt kê paper không còn một câu SQL cho mỗi paper**: 100 paper, lần đầu 720 ms và 403 câu SELECT xuống 97 ms và 4 câu (đo trên CPU, Postgres riêng).
+- **Lỗi bất ngờ khi lập chỉ mục tài liệu** trả 500 `DOCUMENT_INDEX_REQUEST_FAILED` kèm `error_id` thay vì một lỗi chung; lỗi provider ở màn Nghiên cứu báo bằng tiếng Việt và chỉ cho thử lại khi có ích.
+- **Test không còn tự dùng database chung**: thiếu `POSTGRES_TEST_URL` thì test trỏ vào một địa chỉ không kết nối được; địa chỉ được cấp phải qua bộ kiểm tên `_test`.
+
 ### Added
 - **Nút mic ở ô soạn tin của web** (03/11). Bấm để ghi âm, bấm lần nữa để dừng, Esc để bỏ; tiếng được gửi lên `/voice/transcribe`, nghe bằng PhoWhisper-medium trên máy này (không dùng nhận giọng của trình duyệt, vì Chrome gửi giọng lên máy chủ Google), và chữ được điền vào ô soạn để sửa rồi mới gửi. Cần `VOICE_URL`; trình duyệt chỉ cho dùng micro ở `localhost` hoặc https, chỗ khác nút bị khoá và nói lý do.
 - **Code tự đọc nốt tài liệu** (`agent.read_rest`, tắt trong code, bật trong `models.yaml` theo quyết định của chủ dự án 03/11). Lượt đã tìm thấy tài liệu, còn phần chưa đọc mà báo không thấy thì code đọc phần còn lại, mỗi phần một lần gọi model để ghi chú, tối đa 8 phần, rồi model trả lời từ ghi chú. Ngoại lệ thứ sáu của luật 5.
@@ -1221,7 +1237,8 @@ dẫn nguồn đã đo được chất lượng, hai kênh web và Discord dùng
 - Bộ eval mới phủ một tài liệu và đã bão hòa ở 100%, chưa đo được tiến bộ tiếp theo (G7).
 - BM25 chạy trong tiến trình, giới hạn quy mô corpus (G8).
 
-[Unreleased]: https://github.com/BuiTienDunghe/Un/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/BuiTienDunghe/Un/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/BuiTienDunghe/Un/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/BuiTienDunghe/Un/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/BuiTienDunghe/Un/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/BuiTienDunghe/Un/compare/v1.2.0...v1.3.0
