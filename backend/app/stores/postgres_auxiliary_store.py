@@ -7,15 +7,15 @@ pipeline data and it does not implement a fallback to SQLite.
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from uuid import UUID
 
-from sqlalchemy import String, cast, exists, func, select
+from sqlalchemy import String, cast, delete, exists, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import sessionmaker
 
-from app.postgres.models import AgentTrace, AgentTraceSummary, Conversation, DiscordConversationSession, Memory, Message, MessageSource, OcrCache, OcrRun, RequestLog
+from app.postgres.models import AgentTrace, AgentTraceSummary, Conversation, DiscordConversationSession, Document, DocumentVersion, Memory, Message, MessageSource, OcrCache, OcrRun, RequestLog
 
 
 def _utc_now() -> datetime:
@@ -173,7 +173,7 @@ class PostgresAuxiliaryStore:
         with self._sessions() as session:
             rows = list(
                 session.scalars(
-                    select(AgentTrace).where(AgentTrace.message_id == message_id).order_by(AgentTrace.step_index)
+                    select(AgentTrace).where(AgentTrace.message_id == message_id, AgentTrace.kind != "tool_state").order_by(AgentTrace.step_index)
                 )
             )
             return [
@@ -188,6 +188,86 @@ class PostgresAuxiliaryStore:
                 }
                 for row in rows
             ]
+
+
+    def get_agent_history(self, conversation_id: str, limit: int) -> list[dict[str, object]]:
+        """Text plus trusted IDs, used only by the opt-in continuity path."""
+        with self._sessions() as session:
+            rows = list(session.scalars(select(Message).where(Message.conversation_id == conversation_id).order_by(Message.id.desc()).limit(limit)))
+        rows.reverse()
+        return [{"role": row.role, "content": row.content, "message_id": row.id} for row in rows]
+
+    def save_tool_state(self, conversation_id: str, message_id: int, scope: str,
+                        payload: dict[str, object], origin: str | None = None) -> None:
+        """A bounded private envelope; never put its content in trace summaries."""
+        from app.services.tool_state import STATE_KIND, ToolStateLimits
+        limits = ToolStateLimits()
+        encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+        if len(encoded) > limits.max_chars or not payload.get("groups"):
+            return
+        now = _utc_now()
+        with self._sessions.begin() as session:
+            # Serialize only the short state write/prune, never the model call.
+            conversation = session.scalar(select(Conversation).where(Conversation.id == conversation_id).with_for_update())
+            if conversation is None:
+                raise ValueError("tool-state conversation no longer exists")
+            message = session.get(Message, message_id, with_for_update=True)
+            if message is None or message.conversation_id != conversation_id or message.role != "assistant":
+                raise ValueError("tool state must belong to an assistant message in this conversation")
+            # Replacement is idempotent for the same persisted answer.
+            session.execute(delete(AgentTrace).where(AgentTrace.message_id == message_id, AgentTrace.kind == STATE_KIND))
+            session.add(AgentTrace(conversation_id=conversation_id, message_id=message_id, step_index=-1,
+                                   kind=STATE_KIND, arguments={"scope_key": scope, "origin": origin},
+                                   content=encoded, created_at=now))
+            session.flush()
+            keep = select(AgentTrace.id).where(AgentTrace.conversation_id == conversation_id, AgentTrace.kind == STATE_KIND).order_by(AgentTrace.id.desc()).limit(limits.max_envelopes)
+            session.execute(delete(AgentTrace).where(
+                AgentTrace.conversation_id == conversation_id, AgentTrace.kind == STATE_KIND,
+                or_(AgentTrace.created_at < now - timedelta(seconds=limits.max_age_seconds), AgentTrace.id.not_in(keep)),
+            ))
+
+    def load_tool_states(self, conversation_id: str, scope: str, *, message_ids: list[int] | None = None,
+                         origins: list[str] | None = None) -> list[dict[str, object]]:
+        from app.services.tool_state import STATE_KIND, ToolStateLimits
+        limits = ToolStateLimits()
+        selected = []
+        if message_ids:
+            selected.append(AgentTrace.message_id.in_(message_ids))
+        if origins:
+            selected.append(AgentTrace.arguments["origin"].astext.in_(origins))
+        if not selected:
+            return []
+        with self._sessions() as session:
+            rows = list(session.scalars(select(AgentTrace).where(
+                AgentTrace.conversation_id == conversation_id, AgentTrace.kind == STATE_KIND,
+                AgentTrace.arguments["scope_key"].astext == scope,
+                AgentTrace.created_at >= _utc_now() - timedelta(seconds=limits.max_age_seconds),
+                or_(*selected),
+            ).order_by(AgentTrace.id.desc()).limit(limits.max_envelopes)))
+            result = []
+            for row in rows:
+                if not row.content or len(row.content) > limits.max_chars:
+                    continue
+                try:
+                    payload = json.loads(row.content)
+                except (ValueError, TypeError):
+                    continue
+                if isinstance(payload, dict) and payload.get("v") == 1 and isinstance(payload.get("groups"), list):
+                    result.append({"message_id": row.message_id, "origin": (row.arguments or {}).get("origin"),
+                                   "payload": payload})
+            return result
+
+    def state_document_versions(self, document_ids: set[str]) -> dict[str, str]:
+        """Current canonical versions. History does not confer read permission."""
+        if not document_ids:
+            return {}
+        with self._sessions() as session:
+            rows = session.execute(select(Document.id, Document.active_version_id).join(
+                DocumentVersion, DocumentVersion.id == Document.active_version_id).where(
+                Document.id.in_(document_ids), Document.status == "indexed", Document.active_version_id.is_not(None),
+                DocumentVersion.document_id == Document.id, DocumentVersion.status == "active",
+            ))
+            return {document_id: version_id for document_id, version_id in rows}
 
     def list_conversations(self, owner_user_id: str | None = None) -> list[dict[str, object]]:
         conditions = [

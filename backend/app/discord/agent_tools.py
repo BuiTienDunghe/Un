@@ -179,4 +179,4 @@ def register_jokes(registry: ToolRegistry, label_service: Any) -> None:
 
 def register(registry: ToolRegistry, history_service: HistoryBackend | None) -> None:
     """Plug search_history into an agent's registry, reading `history_service`."""
-    registry.register(AgentTool(SEARCH_HISTORY_SCHEMA, SearchHistory(history_service), "Đang xem lịch sử tin nhắn của server…"), ORDER)
+    registry.register(AgentTool(SEARCH_HISTORY_SCHEMA, SearchHistory(history_service), "Đang xem lịch sử tin nhắn của server…", state_policy="read"), ORDER)

@@ -8,7 +8,7 @@ class MemoryCreateRequest(BaseModel):
 
 
 class MemoryUpdateRequest(MemoryCreateRequest):
-    pass
+    expected_revision: int | None = Field(default=None, ge=1)
 
 
 class MemorySearchRequest(BaseModel):
@@ -17,6 +17,11 @@ class MemorySearchRequest(BaseModel):
 
 
 class MemoryResponse(BaseModel):
+    source_id: str | None = None
+    revision: int | None = None
+    content_hash: str | None = None
+    status: str | None = None
+    author_id: str | None = None
     id: str
     content: str
     memory_type: str
@@ -26,6 +31,10 @@ class MemoryResponse(BaseModel):
 
 
 class MemorySearchResult(BaseModel):
+    source_id: str | None = None
+    revision: int | None = None
+    content_hash: str | None = None
+    author_id: str | None = None
     memory_id: str
     content: str
     memory_type: str

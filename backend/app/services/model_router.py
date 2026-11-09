@@ -8,6 +8,7 @@ from app.llm_clients.gemini_client import GeminiClient
 from app.llm_clients.deepseek_client import DeepSeekClient
 from app.llm_clients.anthropic_client import AnthropicClient
 from app.services.call_budget import count_generation_call
+from app.services.input_metrics import measure_input
 
 
 # Union type for all supported clients
@@ -130,6 +131,7 @@ class ModelRouter:
         model_name = str(config["name"])
         client = self._get_client(config)
         count_generation_call()
+        measure_input("chat", messages)
 
         if isinstance(client, OllamaClient):
             answer = client.chat(
@@ -155,7 +157,8 @@ class ModelRouter:
 
         return answer, model_name
 
-    def chat_structured(self, mode: str, messages: list[dict[str, str]], schema: dict[str, Any]) -> tuple[str, str]:
+    def chat_structured(self, mode: str, messages: list[dict[str, str]], schema: dict[str, Any],
+                        options: dict[str, Any] | None = None) -> tuple[str, str]:
         """A reply that matches the JSON schema `schema`, by Ollama's structured outputs. Only an
         Ollama general serves it: any other provider raises NotImplementedError, and the caller
         does without."""
@@ -166,10 +169,11 @@ class ModelRouter:
         if not isinstance(client, OllamaClient):
             raise NotImplementedError("structured output needs an Ollama general model")
         count_generation_call()
+        measure_input("structured", messages, [schema])
         answer = client.chat(
             model=str(config["name"]),
             messages=messages,
-            options={**self._ollama_options(config), "temperature": 0},
+            options={**self._ollama_options(config), "temperature": 0, **(options or {})},
             keep_alive=str(config.get("keep_alive", "5m")),
             think=config.get("think") if isinstance(config.get("think"), bool) else None,
             format=schema,
@@ -190,6 +194,7 @@ class ModelRouter:
         model_name = str(config["name"])
         client = self._get_client(config)
         count_generation_call()
+        measure_input("tools", messages, tools)
         if isinstance(client, AnthropicClient):
             result = client.chat_tools(model=model_name, messages=messages, tools=tools, **self._anthropic_kwargs(config))
             return result, model_name

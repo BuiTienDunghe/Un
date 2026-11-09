@@ -66,7 +66,7 @@ def test_discord_memory_configuration_defaults_are_safe():
     # ~49% of auto-applies and no harness fixes it).
     assert settings.discord_memory_extractor_model is None
     extractor = resolve(settings.registry(), overrides_from_settings(settings)).roles["extractor"]
-    assert extractor.requested_id == "extractor-v0" and extractor.record.config["name"] == "qwen3.5:9b"
+    assert extractor.requested_id is None and extractor.record is None
     # 28/08: v2 = vocabulary v2 (user.birthday, user.favorite_drink/food);
     # the wire format is unchanged, the bump re-keys idempotency.
     assert settings.discord_memory_extractor_schema_version == "v2"

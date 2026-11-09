@@ -1,0 +1,40 @@
+{
+  "ollama": {
+    "version": "0.40.13"
+  },
+  "models": [
+    {
+      "name": "lfm3:1.7b",
+      "digest": "b36a103fe2f8fbe9df2ceec88b9cfdf842dc04aaabe2b4677d1acf8e16570b5d",
+      "size": 1099638680,
+      "modified_at": "2026-11-08T01:18:06.6152693+07:00"
+    },
+    {
+      "name": "local-ai/glm-ocr:eot-v1",
+      "digest": "400242df76b292fc3b2fddbc746abd64db357b0a763b82f16289817cac257c7c",
+      "size": 2219298969,
+      "modified_at": "2026-09-29T05:42:23.2903067+07:00"
+    },
+    {
+      "name": "qwen3.5:2b",
+      "digest": "324d162be6ca5629ae4517c8710434d0bd2d665bc94dbad46e9af8fbf8a2f0df",
+      "size": 2741192820,
+      "modified_at": "2026-07-28T22:09:06.8536377+07:00"
+    },
+    {
+      "name": "qwen3-embedding:0.6b",
+      "digest": "ac6da0dfba84a81fdbfbaf330198c33cd77c4cdfc53e8bc50eb581914a15621d",
+      "size": 639150858,
+      "modified_at": "2026-07-11T02:40:52.9982715+07:00"
+    }
+  ],
+  "reader_residency_after_run": [],
+  "reader_ps_observation_after_fresh_cases": {
+    "origin": "Local GET /api/ps, recorded in tool output after fresh-case execution",
+    "name": "qwen3.5:2b",
+    "size": 2599377959,
+    "size_vram": 2599377959,
+    "context_length": 16384,
+    "limits": "Ollama residency self-report for this model; not GPU peak or whole-application memory"
+  }
+}

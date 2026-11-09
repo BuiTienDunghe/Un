@@ -1,0 +1,186 @@
+........................F.FF.F.......................................... [ 32%]
+..........................................................F............. [ 64%]
+....F...F......F........................................................ [ 96%]
+.......                                                                  [100%]
+================================== FAILURES ===================================
+_______________ test_discord_composition_scope_edit_and_forget ________________
+backend\tests\test_source_memory_discord.py:56: in test_discord_composition_scope_edit_and_forget
+    message_id, _ = send(client, guild, 'one', 'Hãy nhớ tôi không thích cà phê sentinel-cafe-982.')
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend\tests\test_source_memory_discord.py:42: in send
+    assert executed.status_code == 200 and executed.json().get('answer'), executed.text
+E   AssertionError: {"detail":"Not Found"}
+E   assert (404 == 200)
+E    +  where 404 = <Response [404 Not Found]>.status_code
+---------------------------- Captured stderr setup ----------------------------
+2026-11-09 21:11:36.560 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-09 21:11:36.560 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-09 21:11:36.560 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-09 21:11:36.561 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-09 21:11:36.561 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-09 21:11:36.563 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-09 21:11:36.563 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-09 21:11:36.563 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-09 21:11:36.563 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-09 21:11:36.563 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-small-v1 (registry)
+2026-11-09 21:11:36.563 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-small-v1)
+2026-11-09 21:11:36.563 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-09 21:11:36.563 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-09 21:11:36.563 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-09 21:11:36.563 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-09 21:11:36.563 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-09 21:11:36.563 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-09 21:11:36.563 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-09 21:11:36.803 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-09 21:11:36.803 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-09 21:11:36.803 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-09 21:11:36.803 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+_________ test_shipped_registry_loads_every_role_with_todays_pointers _________
+backend\tests\test_model_registry.py:167: in test_shipped_registry_loads_every_role_with_todays_pointers
+    assert {role: entry.active for role, entry in registry.roles.items()} == {
+E   AssertionError: assert {'condenser':...mall-v1', ...} == {'condenser':...eral-v0', ...}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'general': 'general-small-v1'} != {'general': 'general-v0'}
+E     {'condenser': None} != {'condenser': 'condenser-v0'}
+E     {'verifier': None} != {'verifier': 'verifier-v0'}
+E     {'vision': None} != {'vision': 'vision-v1'}...
+E     
+E     ...Full output truncated (3 lines hidden), use '-vv' to show
+---------------------------- Captured stderr call -----------------------------
+2026-11-09 21:11:38.211 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\backend\app\config\model_versions.yaml
+____ test_flat_models_equals_the_models_yaml_blocks_the_registry_replaced _____
+backend\tests\test_model_registry.py:184: in test_flat_models_equals_the_models_yaml_blocks_the_registry_replaced
+    assert list(flat[role].items()) == list(TODAY[role].items()), role
+E   AssertionError: general
+E   assert [('provider',...alive', '5m')] == [('provider',..., False), ...]
+E     
+E     At index 3 diff: ('temperature', 0.0) != ('temperature', 0.4)
+E     Right contains one more item: ('keep_alive', '5m')
+E     Use -v to get more diff
+---------------------------- Captured stderr call -----------------------------
+2026-11-09 21:11:38.234 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-09 21:11:38.235 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-09 21:11:38.235 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-09 21:11:38.235 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-09 21:11:38.235 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-09 21:11:38.235 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-09 21:11:38.235 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-09 21:11:38.235 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-09 21:11:38.235 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-09 21:11:38.235 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-small-v1 (registry)
+2026-11-09 21:11:38.235 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-small-v1)
+2026-11-09 21:11:38.235 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-09 21:11:38.235 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-09 21:11:38.235 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-09 21:11:38.235 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-09 21:11:38.235 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-09 21:11:38.235 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-09 21:11:38.235 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents / memories
+_____ test_shipped_pull_list_is_exactly_what_the_launcher_pulled_by_hand ______
+backend\tests\test_model_registry.py:211: in test_shipped_pull_list_is_exactly_what_the_launcher_pulled_by_hand
+    assert ollama_pull_list(registry, overrides) == ["qwen3.5:2b", "qwen3-embedding:0.6b", "glm-ocr:latest"]
+E   AssertionError: assert ['qwen3.5:2b'...m-ocr:eot-v1'] == ['qwen3.5:2b'...m-ocr:latest']
+E     
+E     At index 2 diff: 'local-ai/glm-ocr:eot-v1' != 'glm-ocr:latest'
+E     Use -v to get more diff
+---------------------------- Captured stderr call -----------------------------
+2026-11-09 21:11:38.279 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\backend\app\config\model_versions.yaml
+_____ test_settings_serves_a_fixture_registry_and_refuses_an_unknown_pin ______
+backend\tests\test_model_registry.py:893: in test_settings_serves_a_fixture_registry_and_refuses_an_unknown_pin
+    assert settings.load_models()["general"]["name"] == "qwen4:9b"
+           ^^^^^^^^^^^^^^^^^^^^^^
+backend\app\config\settings.py:423: in load_models
+    return self.resolve_models().flat_models()
+           ^^^^^^^^^^^^^^^^^^^^^
+backend\app\config\settings.py:413: in resolve_models
+    validate_small_model_routes(self.registry(), overrides)
+backend\app\config\small_model_policy.py:17: in validate_small_model_routes
+    raise ValueError(f"Small-model branch refuses {role}: {record.name!r}; no implicit model fallback")
+E   ValueError: Small-model branch refuses general: 'qwen4:9b'; no implicit model fallback
+---------------------------- Captured stderr call -----------------------------
+2026-11-09 21:11:39.491 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\AppData\Local\Temp\pytest-of-dungbt06\pytest-769\test_settings_serves_a_fixture0\registry.yaml
+___ test_suite_default_boot_serves_every_pointer_unverified_and_reports_ok ____
+backend\tests\test_model_registry_app.py:206: in test_suite_default_boot_serves_every_pointer_unverified_and_reports_ok
+    assert registry["vision"]["status"] == "active" and registry["vision"]["loaded"] == "vision-v1"
+E   AssertionError: assert ('unconfigured' == 'active'
+E     
+E     - active
+E     + unconfigured)
+---------------------------- Captured stderr setup ----------------------------
+2026-11-09 21:11:45.029 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-09 21:11:45.029 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-09 21:11:45.029 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+_ test_shipped_registry_with_every_probe_answering_is_all_active_off_or_unconfigured _
+backend\tests\test_model_registry_app.py:291: in test_shipped_registry_with_every_probe_answering_is_all_active_off_or_unconfigured
+    assert {role: row["status"] for role, row in rows.items()} == {
+E   AssertionError: assert {'condenser':...'active', ...} == {'condenser':...'active', ...}
+E     
+E     Omitting 4 identical items, use -vv to show
+E     Differing items:
+E     {'verifier': 'unconfigured'} != {'verifier': 'off'}
+E     {'condenser': 'unconfigured'} != {'condenser': 'off'}
+E     {'extractor': 'unconfigured'} != {'extractor': 'off'}
+E     {'vision': 'unconfigured'} != {'vision': 'active'}
+E     Use -v to get more diff
+---------------------------- Captured stderr setup ----------------------------
+2026-11-09 21:11:46.668 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-09 21:11:46.669 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-09 21:11:46.669 | INFO     | app.config.model_registry:_log:84 - general general-small-v1: tags ok=True tag qwen3.5:2b present
+2026-11-09 21:11:46.669 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-09 21:11:46.669 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-09 21:11:46.669 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-09 21:11:46.669 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-09 21:11:46.670 | INFO     | app.config.model_registry:_log:84 - embedding embedding-v0: collection_count ok=True width and counts agree
+2026-11-09 21:11:46.670 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-09 21:11:46.670 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-09 21:11:46.670 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-09 21:11:46.670 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-small-v1 (registry)
+2026-11-09 21:11:46.670 | INFO     | app.config.model_registry:_log:84 - ocr ocr-small-v1: ocr_stop ok=True read the probe line and stopped
+2026-11-09 21:11:46.670 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-small-v1)
+2026-11-09 21:11:46.670 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-09 21:11:46.670 | INFO     | app.config.model_registry:_log:84 - reranker: pending (loaded None)
+2026-11-09 21:11:46.670 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-09 21:11:46.670 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-09 21:11:46.670 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-09 21:11:46.670 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-09 21:11:46.670 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-09 21:11:46.854 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-09 21:11:46.854 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-09 21:11:46.854 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-09 21:11:46.854 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+_____________ test_discord_memory_configuration_defaults_are_safe _____________
+backend\tests\test_job_queue_routing.py:69: in test_discord_memory_configuration_defaults_are_safe
+    assert extractor.requested_id == "extractor-v0" and extractor.record.config["name"] == "qwen3.5:9b"
+E   AssertionError: assert (None == 'extractor-v0')
+E    +  where None = RoleResolution(role='extractor', requested_id=None, source='registry', loaded_id=None, status='unconfigured', reason=None, record=None, chain=(), probe=None, verified=False, latency_ms=None).requested_id
+---------------------------- Captured stderr call -----------------------------
+2026-11-09 21:11:47.242 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-09 21:11:47.242 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-09 21:11:47.242 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-09 21:11:47.242 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-09 21:11:47.242 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-09 21:11:47.242 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-09 21:11:47.242 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-09 21:11:47.242 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-09 21:11:47.242 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-09 21:11:47.243 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-small-v1 (registry)
+2026-11-09 21:11:47.243 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-small-v1)
+2026-11-09 21:11:47.243 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-09 21:11:47.243 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-09 21:11:47.243 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-09 21:11:47.243 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-09 21:11:47.243 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-09 21:11:47.243 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-09 21:11:47.243 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+=========================== short test summary info ===========================
+FAILED backend/tests/test_source_memory_discord.py::test_discord_composition_scope_edit_and_forget
+FAILED backend/tests/test_model_registry.py::test_shipped_registry_loads_every_role_with_todays_pointers
+FAILED backend/tests/test_model_registry.py::test_flat_models_equals_the_models_yaml_blocks_the_registry_replaced
+FAILED backend/tests/test_model_registry.py::test_shipped_pull_list_is_exactly_what_the_launcher_pulled_by_hand
+FAILED backend/tests/test_model_registry.py::test_settings_serves_a_fixture_registry_and_refuses_an_unknown_pin
+FAILED backend/tests/test_model_registry_app.py::test_suite_default_boot_serves_every_pointer_unverified_and_reports_ok
+FAILED backend/tests/test_model_registry_app.py::test_shipped_registry_with_every_probe_answering_is_all_active_off_or_unconfigured
+FAILED backend/tests/test_job_queue_routing.py::test_discord_memory_configuration_defaults_are_safe
+8 failed, 215 passed in 29.11s

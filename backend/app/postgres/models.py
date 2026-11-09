@@ -1393,3 +1393,34 @@ class ResearchThread(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     last_message_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class SourceMemoryState(Base):
+    __tablename__ = "source_memory_states"
+    tenant: Mapped[str] = mapped_column(String(160), primary_key=True)
+    audience: Mapped[str] = mapped_column(String(200), primary_key=True)
+    epoch: Mapped[int] = mapped_column(BigInteger, nullable=False, server_default="0")
+    barrier_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class SourceMemory(Base):
+    __tablename__ = "source_memories"
+    __table_args__ = (
+        CheckConstraint("status IN ('active', 'retracted')", name="ck_source_memory_status"),
+        CheckConstraint("revision > 0", name="ck_source_memory_revision"),
+        Index("ix_source_memory_audience", "tenant", "audience", "status"),
+        Index("ix_source_memory_tokens", "tokens", postgresql_using="gin"),
+    )
+    id: Mapped[str] = mapped_column(String(255), primary_key=True)
+    tenant: Mapped[str] = mapped_column(String(160), nullable=False)
+    audience: Mapped[str] = mapped_column(String(200), nullable=False)
+    actor: Mapped[str] = mapped_column(String(160), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    tokens: Mapped[Any] = mapped_column(TSVECTOR, nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    memory_type: Mapped[str] = mapped_column(String(64), nullable=False, server_default="source_note")
+    importance: Mapped[float] = mapped_column(Float, nullable=False, server_default="0.5")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())

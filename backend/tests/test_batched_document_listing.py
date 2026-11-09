@@ -196,6 +196,64 @@ def test_document_listing_preserves_payload_and_uses_bounded_reads(database, tmp
     assert all(row in expanded for row in rows)
 
 
+def test_rag_touch_keeps_cold_pdf_count_metadata_usable(database, tmp_path):
+    import hashlib
+    from app.services.postgres_retrieval_service import PostgresRetrievalService
+    from app.services.source_page_counts import SourcePageCounts
+    from test_source_page_counts import pdf_bytes
+
+    _engine, sessions, prefix = database
+    doc_id = seed(sessions, prefix, "rag_touch")
+    ignored_id = seed(sessions, prefix, "not_indexed", active=False, runs=(), status="uploaded")
+    folder = tmp_path / doc_id
+    folder.mkdir()
+    data = pdf_bytes(8)
+    (folder / "original.pdf").write_bytes(data)
+    # Cover filesystem timestamps deterministically (Windows clocks may differ
+    # slightly); this test concerns the later database access touch.
+    stat = (folder / "original.pdf").stat()
+    completed = datetime.fromtimestamp(max(stat.st_mtime_ns, stat.st_ctime_ns) / 1e9, UTC) + timedelta(seconds=1)
+    with sessions.begin() as session:
+        document = session.get(Document, doc_id)
+        document.content_hash = hashlib.sha256(data).hexdigest()
+        document.updated_at = document.indexed_at = completed
+        PostgresDocumentRepository(session).latest_run(doc_id).completed_at = completed
+
+    # Use the same best-effort access-receipt path as RAG; no search/model call.
+    PostgresRetrievalService(None, None, sessions)._touch_best_effort({doc_id, ignored_id})
+    with sessions() as session:
+        document = session.get(Document, doc_id)
+        assert document.last_accessed_at is not None
+        assert document.updated_at == completed
+        assert session.get(Document, ignored_id).last_accessed_at is None
+
+        source = PostgresDocumentService(sessions, None, None, None, None, tmp_path, 480, 80, None)
+        research = ResearchService(sessions, source, ollama_base_url="http://127.0.0.1:1")
+        def cannot_read(_path):
+            pytest.fail("RAG access must not force a PDF read for covered ingestion metadata")
+        research._page_counts = SourcePageCounts(loader=cannot_read)
+        # The service/cache was created after the touch, not warmed beforehand.
+        assert research._total_pages(document, PostgresDocumentRepository(session).latest_run(doc_id)) == 8
+
+
+def test_access_touch_does_not_disable_updated_at_for_real_metadata_edits(database):
+    _engine, sessions, prefix = database
+    doc_id = seed(sessions, prefix, "metadata_edit")
+    old = datetime(2000, 1, 1, tzinfo=UTC)
+    with sessions.begin() as session:
+        session.get(Document, doc_id).updated_at = old
+    with sessions.begin() as session:
+        PostgresDocumentRepository(session).touch_documents({doc_id})
+    with sessions() as session:
+        assert session.get(Document, doc_id).updated_at == old
+    with sessions.begin() as session:
+        session.get(Document, doc_id).pinned = True
+    with sessions() as session:
+        document = session.get(Document, doc_id)
+        assert document.pinned is True
+        assert document.updated_at > old
+
+
 class NoSourceFiles:
     def source_file(self, document_id):
         raise SourceUnavailableError(document_id)

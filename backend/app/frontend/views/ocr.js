@@ -707,6 +707,42 @@
     }
   }
 
+  function questionPanel(job) {
+    const ctx = V.ctx;
+    const sequence = V.seq;
+    const input = h("textarea", { class: "ocr-question-input", rows: 2, maxlength: 4000,
+      placeholder: "Ví dụ: Hạn thanh toán là ngày nào?", "aria-label": "Câu hỏi về tài liệu" });
+    const reply = h("div", { class: "ocr-question-reply", role: "status", "aria-live": "polite" });
+    const button = h("button", { type: "button", class: "btn btn-28 btn-primary" }, "Hỏi tài liệu");
+    button.addEventListener("click", async () => {
+      const question = input.value.trim();
+      if (!question || button.disabled) return;
+      button.disabled = true;
+      reply.textContent = "Đang tìm bằng chứng…";
+      try {
+        const answer = await Shell.api(`/api/ocr/jobs/${enc(job.id)}/ask`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question }), signal: ctx.signal,
+        });
+        if (!alive(ctx) || V.seq !== sequence) return;
+        const evidence = Array.isArray(answer.evidence) ? answer.evidence : [];
+        reply.replaceChildren(h("p", {}, answer.status === "cited"
+          ? "Thông tin tìm thấy trong tài liệu:" : String(answer.message || "Chưa tìm thấy bằng chứng.")));
+        for (const block of evidence) {
+          reply.append(h("div", { class: "ocr-page" },
+            h("div", { class: "ocr-page-head" }, `Trang ${block.page ?? "?"}`),
+            h("div", { class: "ocr-page-text" }, String(block.text || ""))));
+        }
+      } catch (error) {
+        if (alive(ctx) && V.seq === sequence && !isAbort(error)) reply.textContent = errText(error, "Không đọc được bằng chứng. Thử lại sau.");
+      } finally {
+        if (alive(ctx) && V.seq === sequence) button.disabled = false;
+      }
+    });
+    return h("div", { class: "ocr-question" }, h("h3", { class: "card-title" }, "Hỏi về tài liệu này"),
+      input, button, reply);
+  }
+
   /* ── kết quả nhận dạng (hộp kết quả của trang cũ) ────────────── */
   function renderResult() {
     if (!V) return;
@@ -759,7 +795,7 @@
         h("button", {
           type: "button", class: "btn btn-28 btn-outline hover-bg", onClick: () => copyText(full),
         }, icon("copy", { size: 13, sw: 1.9 }), "Sao chép")),
-      h("div", { class: "ocr-result-body" }, blocks));
+      h("div", { class: "ocr-result-body" }, blocks), questionPanel(job));
     V.result.hidden = false;
   }
 

@@ -1,0 +1,372 @@
+.......................................................F................ [  3%]
+........................................................................ [  6%]
+........................................................................ [  9%]
+..................................................F..................... [ 13%]
+........................................................................ [ 16%]
+........................................................................ [ 19%]
+........................................................................ [ 23%]
+........................................................................ [ 26%]
+........................................................................ [ 29%]
+........................................................................ [ 33%]
+.........................................................F.............. [ 36%]
+........................................................................ [ 39%]
+....................................F................................... [ 42%]
+........................................................................ [ 46%]
+........................................................................ [ 49%]
+........................................................................ [ 52%]
+........................................................................ [ 56%]
+........................................................................ [ 59%]
+........................................................................ [ 62%]
+....................FF.................................................. [ 66%]
+...................F.................................................... [ 69%]
+.................................................................FFFF... [ 72%]
+..F....F..FF.F.......................................................... [ 75%]
+..........................................FFF..F
+================================== FAILURES ===================================
+_ test_the_migration_adds_one_table_with_a_way_back_and_the_row_follows_its_turn _
+backend\tests\test_agent_approvals.py:507: in test_the_migration_adds_one_table_with_a_way_back_and_the_row_follows_its_turn
+    assert heads == [], "another migration was added after this one: recheck down_revision"
+E   AssertionError: another migration was added after this one: recheck down_revision
+E   assert ['20261109_39...ce_memory.py'] == []
+E     
+E     Left contains one more item: '20261109_39_source_memory.py'
+E     Use -v to get more diff
+_ test_a_probed_run_is_verified_and_refuses_a_general_model_that_is_not_served _
+backend\tests\test_agent_eval_record.py:51: in test_a_probed_run_is_verified_and_refuses_a_general_model_that_is_not_served
+    assert served.verified is True and probe_refusal(served, probed=True) is None
+E   AssertionError: assert (True is True and 'general missing: general-small-v1 tag qwen3.5:2b absent from /api/tags; chain exhausted (general-small-v1)' is None)
+E    +  where True = RoleResolution(role='general', requested_id='general-small-v1', source='registry', loaded_id=None, status='missing', r...v1 tag qwen3.5:2b absent from /api/tags; chain exhausted (general-small-v1)', ms=None), verified=True, latency_ms=None).verified
+E    +  and   'general missing: general-small-v1 tag qwen3.5:2b absent from /api/tags; chain exhausted (general-small-v1)' = probe_refusal(RoleResolution(role='general', requested_id='general-small-v1', source='registry', loaded_id=None, status='missing', r...v1 tag qwen3.5:2b absent from /api/tags; chain exhausted (general-small-v1)', ms=None), verified=True, latency_ms=None), probed=True)
+---------------------------- Captured stderr call -----------------------------
+2026-11-09 21:03:57.701 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-09 21:03:57.701 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-09 21:03:57.701 | INFO     | app.config.model_registry:_log:84 - general general-small-v1: tags ok=False tag qwen3.5:2b absent from /api/tags
+2026-11-09 21:03:57.701 | INFO     | app.config.model_registry:_log:84 - general: missing (loaded None)
+2026-11-09 21:03:57.701 | WARNING  | app.config.model_registry:_log:84 - general deviates from its pointer: general-small-v1 tag qwen3.5:2b absent from /api/tags; chain exhausted (general-small-v1)
+2026-11-09 21:03:57.701 | INFO     | app.config.model_registry:_log:84 - condenser: condenser-small-v1 (registry)
+2026-11-09 21:03:57.701 | INFO     | app.config.model_registry:_log:84 - condenser: off (loaded None)
+2026-11-09 21:03:57.701 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-09 21:03:57.701 | INFO     | app.config.model_registry:_log:84 - embedding embedding-v0: tags ok=False tag qwen3-embedding:0.6b absent from /api/tags
+2026-11-09 21:03:57.701 | INFO     | app.config.model_registry:_log:84 - embedding: missing (loaded None)
+2026-11-09 21:03:57.701 | WARNING  | app.config.model_registry:_log:84 - embedding deviates from its pointer: embedding-v0 tag qwen3-embedding:0.6b absent from /api/tags; chain exhausted (embedding-v0)
+2026-11-09 21:03:57.701 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-09 21:03:57.701 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-09 21:03:57.701 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-small-v1 (registry)
+2026-11-09 21:03:57.701 | INFO     | app.config.model_registry:_log:84 - ocr ocr-small-v1: tags ok=False tag local-ai/glm-ocr:eot-v1 absent from /api/tags
+2026-11-09 21:03:57.701 | INFO     | app.config.model_registry:_log:84 - ocr: disabled (loaded None)
+2026-11-09 21:03:57.701 | WARNING  | app.config.model_registry:_log:84 - ocr deviates from its pointer: ocr-small-v1 tag local-ai/glm-ocr:eot-v1 absent from /api/tags; chain exhausted (ocr-small-v1)
+2026-11-09 21:03:57.701 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-09 21:03:57.701 | INFO     | app.config.model_registry:_log:84 - reranker: pending (loaded None)
+2026-11-09 21:03:57.701 | INFO     | app.config.model_registry:_log:84 - extractor: extractor-small-v1 (registry)
+2026-11-09 21:03:57.701 | INFO     | app.config.model_registry:_log:84 - extractor: off (loaded None)
+2026-11-09 21:03:57.701 | INFO     | app.config.model_registry:_log:84 - verifier: verifier-small-v1 (registry)
+2026-11-09 21:03:57.701 | INFO     | app.config.model_registry:_log:84 - verifier: off (loaded None)
+2026-11-09 21:03:57.701 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+__________________ test_chat_returns_response_and_model_used __________________
+backend\tests\test_chat_api.py:6: in test_chat_returns_response_and_model_used
+    assert body["answer"] == "Mock response from qwen3.5:9b"
+E   AssertionError: assert 'Mock respons...om qwen3.5:2b' == 'Mock respons...om qwen3.5:9b'
+E     
+E     - Mock response from qwen3.5:9b
+E     ?                            ^
+E     + Mock response from qwen3.5:2b
+E     ?                            ^
+---------------------------- Captured stderr setup ----------------------------
+2026-11-09 21:05:25.719 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-09 21:05:25.720 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-09 21:05:25.720 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-09 21:05:25.938 | INFO     | app.services.logging_service:log_request:149 - request completed
+______________ test_the_discord_settings_fields_sit_in_one_block ______________
+backend\tests\test_discord_boundary.py:168: in test_the_discord_settings_fields_sit_in_one_block
+    assert not strays, (
+E   AssertionError: the discord_* fields of settings.py are no longer one block, these fields sit between them: ['source_memory_enabled']. Declare a Discord field inside the Discord block, and any other field outside it.
+E   assert not ['source_memory_enabled']
+_______ test_version_id_is_stamped_and_check_accepts_the_stamped_report _______
+backend\tests\test_extractor_benchmark_stamp.py:52: in test_version_id_is_stamped_and_check_accepts_the_stamped_report
+    errors, _ = check_registry(candidate_active(tmp_path, tmp_path / "bench.json"))
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend\tests\test_extractor_benchmark_stamp.py:41: in candidate_active
+    candidate = next(record for record in extractor["versions"] if record["id"] == STUDENT_ID)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   StopIteration
+---------------------------- Captured stdout call -----------------------------
+{}
+_____________ test_an_unstamped_report_cannot_promote_a_candidate _____________
+backend\tests\test_extractor_benchmark_stamp.py:60: in test_an_unstamped_report_cannot_promote_a_candidate
+    errors, _ = check_registry(candidate_active(tmp_path, tmp_path / "bench.json"))
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend\tests\test_extractor_benchmark_stamp.py:41: in candidate_active
+    candidate = next(record for record in extractor["versions"] if record["id"] == STUDENT_ID)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   StopIteration
+---------------------------- Captured stdout call -----------------------------
+{}
+_____________ test_discord_memory_configuration_defaults_are_safe _____________
+backend\tests\test_job_queue_routing.py:69: in test_discord_memory_configuration_defaults_are_safe
+    assert extractor.requested_id == "extractor-v0" and extractor.record.config["name"] == "qwen3.5:9b"
+E   AssertionError: assert ('extractor-small-v1' == 'extractor-v0'
+E     
+E     - extractor-v0
+E     + extractor-small-v1)
+---------------------------- Captured stderr call -----------------------------
+2026-11-09 21:06:43.863 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-09 21:06:43.863 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-09 21:06:43.863 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-09 21:06:43.863 | INFO     | app.config.model_registry:_log:84 - condenser: condenser-small-v1 (registry)
+2026-11-09 21:06:43.863 | INFO     | app.config.model_registry:_log:84 - condenser: off (loaded None)
+2026-11-09 21:06:43.864 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-09 21:06:43.864 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-09 21:06:43.864 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-09 21:06:43.864 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-09 21:06:43.864 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-small-v1 (registry)
+2026-11-09 21:06:43.864 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-small-v1)
+2026-11-09 21:06:43.864 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-09 21:06:43.864 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-09 21:06:43.864 | INFO     | app.config.model_registry:_log:84 - extractor: extractor-small-v1 (registry)
+2026-11-09 21:06:43.864 | INFO     | app.config.model_registry:_log:84 - extractor: off (loaded None)
+2026-11-09 21:06:43.864 | INFO     | app.config.model_registry:_log:84 - verifier: verifier-small-v1 (registry)
+2026-11-09 21:06:43.864 | INFO     | app.config.model_registry:_log:84 - verifier: off (loaded None)
+2026-11-09 21:06:43.864 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+____________ test_models_offers_the_switch_only_on_the_answer_role ____________
+backend\tests\test_model_choice.py:46: in test_models_offers_the_switch_only_on_the_answer_role
+    assert registry["general"]["chosen"] == QWEN
+E   AssertionError: assert 'general-small-v1' == 'general-v0'
+E     
+E     - general-v0
+E     + general-small-v1
+---------------------------- Captured stderr setup ----------------------------
+2026-11-09 21:06:58.054 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-09 21:06:58.055 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-09 21:06:58.055 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+_______ test_a_pick_waits_for_the_restart_and_leaves_the_registry_alone _______
+backend\tests\test_model_choice.py:59: in test_a_pick_waits_for_the_restart_and_leaves_the_registry_alone
+    assert response.status_code == 200
+E   assert 404 == 200
+E    +  where 404 = <Response [404 Not Found]>.status_code
+---------------------------- Captured stderr setup ----------------------------
+2026-11-09 21:06:58.479 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-09 21:06:58.480 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-09 21:06:58.480 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+____________ test_picking_the_default_or_reverting_drops_the_pick _____________
+backend\tests\test_model_choice.py:75: in test_picking_the_default_or_reverting_drops_the_pick
+    assert client.post("/models/general/promote", json={"version": QWEN}).status_code == 200
+E   AssertionError: assert 404 == 200
+E    +  where 404 = <Response [404 Not Found]>.status_code
+E    +    where <Response [404 Not Found]> = post('/models/general/promote', json={'version': 'general-v0'})
+E    +      where post = <starlette.testclient.TestClient object at 0x000001FF2DE97690>.post
+---------------------------- Captured stderr setup ----------------------------
+2026-11-09 21:06:58.877 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-09 21:06:58.877 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-09 21:06:58.877 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+_____ test_a_shell_pin_with_no_pick_is_not_shown_as_waiting_for_a_restart _____
+backend\tests\test_model_choice.py:89: in test_a_shell_pin_with_no_pick_is_not_shown_as_waiting_for_a_restart
+    assert versions_by_id(row)[HAIKU]["status"] == "active"
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'general-haiku-v1'
+---------------------------- Captured stderr setup ----------------------------
+2026-11-09 21:06:59.292 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-09 21:06:59.292 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-09 21:06:59.292 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+______________ test_check_reports_the_shipped_registry_as_valid _______________
+backend\tests\test_model_choice.py:119: in test_check_reports_the_shipped_registry_as_valid
+    assert body["ok"] is True and body["problems"] == []
+E   assert (False is True)
+---------------------------- Captured stderr setup ----------------------------
+2026-11-09 21:07:01.911 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-09 21:07:01.912 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-09 21:07:01.912 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-09 21:07:02.110 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\backend\app\config\model_versions.yaml
+____________ test_a_pick_is_refused_while_a_document_is_being_read ____________
+backend\tests\test_model_choice.py:164: in test_a_pick_is_refused_while_a_document_is_being_read
+    assert response.status_code == 409 and response.json()["error_code"] == "MODEL_SWITCH_BUSY"
+E   assert (404 == 409)
+E    +  where 404 = <Response [404 Not Found]>.status_code
+---------------------------- Captured stderr setup ----------------------------
+2026-11-09 21:07:02.808 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-09 21:07:02.809 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-09 21:07:02.810 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+_________ test_shipped_registry_loads_every_role_with_todays_pointers _________
+backend\tests\test_model_registry.py:167: in test_shipped_registry_loads_every_role_with_todays_pointers
+    assert {role: entry.active for role, entry in registry.roles.items()} == {
+E   AssertionError: assert {'condenser':...mall-v1', ...} == {'condenser':...eral-v0', ...}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'condenser': 'condenser-small-v1'} != {'condenser': 'condenser-v0'}
+E     {'general': 'general-small-v1'} != {'general': 'general-v0'}
+E     {'ocr': 'ocr-small-v1'} != {'ocr': 'ocr-v2'}
+E     {'verifier': 'verifier-small-v1'} != {'verifier': 'verifier-v0'}...
+E     
+E     ...Full output truncated (3 lines hidden), use '-vv' to show
+---------------------------- Captured stderr call -----------------------------
+2026-11-09 21:07:05.089 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\backend\app\config\model_versions.yaml
+____ test_flat_models_equals_the_models_yaml_blocks_the_registry_replaced _____
+backend\tests\test_model_registry.py:184: in test_flat_models_equals_the_models_yaml_blocks_the_registry_replaced
+    assert list(flat[role].items()) == list(TODAY[role].items()), role
+E   AssertionError: general
+E   assert [('provider',...alive', '5m')] == [('provider',..., False), ...]
+E     
+E     At index 1 diff: ('name', 'qwen3.5:2b') != ('name', 'qwen3.5:9b')
+E     Right contains one more item: ('keep_alive', '5m')
+E     Use -v to get more diff
+---------------------------- Captured stderr call -----------------------------
+2026-11-09 21:07:05.111 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-09 21:07:05.111 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-09 21:07:05.111 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-09 21:07:05.112 | INFO     | app.config.model_registry:_log:84 - condenser: condenser-small-v1 (registry)
+2026-11-09 21:07:05.112 | INFO     | app.config.model_registry:_log:84 - condenser: off (loaded None)
+2026-11-09 21:07:05.112 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-09 21:07:05.112 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-09 21:07:05.112 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-09 21:07:05.112 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-09 21:07:05.112 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-small-v1 (registry)
+2026-11-09 21:07:05.112 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-small-v1)
+2026-11-09 21:07:05.112 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-09 21:07:05.112 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-09 21:07:05.112 | INFO     | app.config.model_registry:_log:84 - extractor: extractor-small-v1 (registry)
+2026-11-09 21:07:05.112 | INFO     | app.config.model_registry:_log:84 - extractor: off (loaded None)
+2026-11-09 21:07:05.112 | INFO     | app.config.model_registry:_log:84 - verifier: verifier-small-v1 (registry)
+2026-11-09 21:07:05.112 | INFO     | app.config.model_registry:_log:84 - verifier: off (loaded None)
+2026-11-09 21:07:05.112 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents / memories
+_____ test_shipped_pull_list_is_exactly_what_the_launcher_pulled_by_hand ______
+backend\tests\test_model_registry.py:211: in test_shipped_pull_list_is_exactly_what_the_launcher_pulled_by_hand
+    assert ollama_pull_list(registry, overrides) == ["qwen3.5:9b", "qwen3-embedding:0.6b", "glm-ocr:latest"]
+E   AssertionError: assert ['qwen3.5:2b'...m-ocr:eot-v1'] == ['qwen3.5:9b'...m-ocr:latest']
+E     
+E     At index 0 diff: 'qwen3.5:2b' != 'qwen3.5:9b'
+E     Use -v to get more diff
+---------------------------- Captured stderr call -----------------------------
+2026-11-09 21:07:05.153 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\backend\app\config\model_versions.yaml
+_____ test_settings_serves_a_fixture_registry_and_refuses_an_unknown_pin ______
+backend\tests\test_model_registry.py:893: in test_settings_serves_a_fixture_registry_and_refuses_an_unknown_pin
+    assert settings.load_models()["general"]["name"] == "qwen4:9b"
+           ^^^^^^^^^^^^^^^^^^^^^^
+backend\app\config\settings.py:423: in load_models
+    return self.resolve_models().flat_models()
+           ^^^^^^^^^^^^^^^^^^^^^
+backend\app\config\settings.py:413: in resolve_models
+    validate_small_model_routes(self.registry(), overrides)
+backend\app\config\small_model_policy.py:17: in validate_small_model_routes
+    raise ValueError(f"Small-model branch refuses {role}: {record.name!r}; no implicit model fallback")
+E   ValueError: Small-model branch refuses general: 'qwen4:9b'; no implicit model fallback
+---------------------------- Captured stderr call -----------------------------
+2026-11-09 21:07:06.252 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\AppData\Local\Temp\pytest-of-dungbt06\pytest-768\test_settings_serves_a_fixture0\registry.yaml
+___ test_suite_default_boot_serves_every_pointer_unverified_and_reports_ok ____
+backend\tests\test_model_registry_app.py:206: in test_suite_default_boot_serves_every_pointer_unverified_and_reports_ok
+    assert registry["vision"]["status"] == "active" and registry["vision"]["loaded"] == "vision-v1"
+E   AssertionError: assert ('unconfigured' == 'active'
+E     
+E     - active
+E     + unconfigured)
+---------------------------- Captured stderr setup ----------------------------
+2026-11-09 21:07:06.500 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-09 21:07:06.500 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-09 21:07:06.500 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+_______ test_broken_active_reranker_falls_back_and_every_signal_says_so _______
+backend\tests\test_model_registry_app.py:237: in test_broken_active_reranker_falls_back_and_every_signal_says_so
+    assert all(models["registry"][role]["status"] in DELIBERATE for role in ROLES if role != "reranker")
+E   assert False
+E    +  where False = all(<generator object test_broken_active_reranker_falls_back_and_every_signal_says_so.<locals>.<genexpr> at 0x000001FF2B006340>)
+---------------------------- Captured stderr setup ----------------------------
+2026-11-09 21:07:06.812 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\AppData\Local\Temp\pytest-of-dungbt06\pytest-768\test_broken_active_reranker_fa0\model_versions.yaml
+2026-11-09 21:07:06.812 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-09 21:07:06.812 | INFO     | app.config.model_registry:_log:84 - general general-small-v1: tags ok=False tag qwen3.5:2b absent from /api/tags
+2026-11-09 21:07:06.812 | INFO     | app.config.model_registry:_log:84 - general: missing (loaded None)
+2026-11-09 21:07:06.812 | WARNING  | app.config.model_registry:_log:84 - general deviates from its pointer: general-small-v1 tag qwen3.5:2b absent from /api/tags; chain exhausted (general-small-v1)
+2026-11-09 21:07:06.812 | INFO     | app.config.model_registry:_log:84 - condenser: condenser-small-v1 (registry)
+2026-11-09 21:07:06.812 | INFO     | app.config.model_registry:_log:84 - condenser: off (loaded None)
+2026-11-09 21:07:06.812 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-09 21:07:06.812 | INFO     | app.config.model_registry:_log:84 - embedding embedding-v0: collection_count ok=True width and counts agree
+2026-11-09 21:07:06.812 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-09 21:07:06.812 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-09 21:07:06.812 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-09 21:07:06.813 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-small-v1 (registry)
+2026-11-09 21:07:06.813 | INFO     | app.config.model_registry:_log:84 - ocr ocr-small-v1: ocr_stop ok=True read the probe line and stopped
+2026-11-09 21:07:06.813 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-small-v1)
+2026-11-09 21:07:06.813 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-missing-v9 (registry)
+2026-11-09 21:07:06.813 | INFO     | app.config.model_registry:_log:84 - reranker: pending (loaded None)
+2026-11-09 21:07:06.813 | INFO     | app.config.model_registry:_log:84 - extractor: extractor-small-v1 (registry)
+2026-11-09 21:07:06.813 | INFO     | app.config.model_registry:_log:84 - extractor: off (loaded None)
+2026-11-09 21:07:06.813 | INFO     | app.config.model_registry:_log:84 - verifier: verifier-small-v1 (registry)
+2026-11-09 21:07:06.813 | INFO     | app.config.model_registry:_log:84 - verifier: off (loaded None)
+2026-11-09 21:07:06.813 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-09 21:07:07.005 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-09 21:07:07.005 | INFO     | app.services.reranker_service:from_config:146 - Reranker ON (per-machine env override)
+2026-11-09 21:07:07.005 | WARNING  | app.services.reranker_service:_warmup_chain:223 - Reranker version reranker-missing-v9 rejected (load): OSError: C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\data\models\reranker\reranker-missing-v9 is not a local folder and no cached snapshot exists
+2026-11-09 21:07:07.006 | INFO     | app.services.reranker_service:_warmup_chain:240 - Reranker reranker-v0 loaded as fallback in 0ms (probe 0ms)
+2026-11-09 21:07:07.006 | INFO     | app.config.model_registry:_log:84 - reranker resolved: fallback
+2026-11-09 21:07:07.006 | WARNING  | app.config.model_registry:_log:84 - reranker deviates from its pointer: reranker-missing-v9 load: OSError: C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\data\models\reranker\reranker-missing-v9 is not a local folder and no cached snapshot exists; serving reranker-v0
+2026-11-09 21:07:07.007 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+_ test_shipped_registry_with_every_probe_answering_is_all_active_off_or_unconfigured _
+backend\tests\test_model_registry_app.py:291: in test_shipped_registry_with_every_probe_answering_is_all_active_off_or_unconfigured
+    assert {role: row["status"] for role, row in rows.items()} == {
+E   AssertionError: assert {'condenser':...missing', ...} == {'condenser':...'active', ...}
+E     
+E     Omitting 6 identical items, use -vv to show
+E     Differing items:
+E     {'vision': 'unconfigured'} != {'vision': 'active'}
+E     {'general': 'missing'} != {'general': 'active'}
+E     Use -v to get more diff
+---------------------------- Captured stderr setup ----------------------------
+2026-11-09 21:07:08.160 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-09 21:07:08.160 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-09 21:07:08.160 | INFO     | app.config.model_registry:_log:84 - general general-small-v1: tags ok=False tag qwen3.5:2b absent from /api/tags
+2026-11-09 21:07:08.161 | INFO     | app.config.model_registry:_log:84 - general: missing (loaded None)
+2026-11-09 21:07:08.161 | WARNING  | app.config.model_registry:_log:84 - general deviates from its pointer: general-small-v1 tag qwen3.5:2b absent from /api/tags; chain exhausted (general-small-v1)
+2026-11-09 21:07:08.161 | INFO     | app.config.model_registry:_log:84 - condenser: condenser-small-v1 (registry)
+2026-11-09 21:07:08.161 | INFO     | app.config.model_registry:_log:84 - condenser: off (loaded None)
+2026-11-09 21:07:08.161 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-09 21:07:08.161 | INFO     | app.config.model_registry:_log:84 - embedding embedding-v0: collection_count ok=True width and counts agree
+2026-11-09 21:07:08.161 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-09 21:07:08.161 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-09 21:07:08.161 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-09 21:07:08.161 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-small-v1 (registry)
+2026-11-09 21:07:08.161 | INFO     | app.config.model_registry:_log:84 - ocr ocr-small-v1: ocr_stop ok=True read the probe line and stopped
+2026-11-09 21:07:08.161 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-small-v1)
+2026-11-09 21:07:08.161 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-09 21:07:08.161 | INFO     | app.config.model_registry:_log:84 - reranker: pending (loaded None)
+2026-11-09 21:07:08.161 | INFO     | app.config.model_registry:_log:84 - extractor: extractor-small-v1 (registry)
+2026-11-09 21:07:08.161 | INFO     | app.config.model_registry:_log:84 - extractor: off (loaded None)
+2026-11-09 21:07:08.161 | INFO     | app.config.model_registry:_log:84 - verifier: verifier-small-v1 (registry)
+2026-11-09 21:07:08.162 | INFO     | app.config.model_registry:_log:84 - verifier: off (loaded None)
+2026-11-09 21:07:08.162 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-09 21:07:08.358 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-09 21:07:08.359 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-09 21:07:08.359 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-09 21:07:08.359 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+============================== warnings summary ===============================
+backend\tests\test_backup_worker.py:201
+backend\tests\test_backup_worker.py:201
+  C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\backend\tests\test_backup_worker.py:201: DeprecationWarning: invalid escape sequence '\o'
+    assert {entry["path"] for entry in manifest} == {"doc_a\original.md", "doc_b\original.pdf"} or {entry["path"] for entry in manifest} == {"doc_a/original.md", "doc_b/original.pdf"}
+
+..\..\..\..\local-ai-core\.venv\Lib\site-packages\discord\player.py:30
+  C:\Users\dungbt06\local-ai-core\.venv\Lib\site-packages\discord\player.py:30: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13
+    import audioop
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED backend/tests/test_agent_approvals.py::test_the_migration_adds_one_table_with_a_way_back_and_the_row_follows_its_turn
+FAILED backend/tests/test_agent_eval_record.py::test_a_probed_run_is_verified_and_refuses_a_general_model_that_is_not_served
+FAILED backend/tests/test_chat_api.py::test_chat_returns_response_and_model_used
+FAILED backend/tests/test_discord_boundary.py::test_the_discord_settings_fields_sit_in_one_block
+FAILED backend/tests/test_extractor_benchmark_stamp.py::test_version_id_is_stamped_and_check_accepts_the_stamped_report
+FAILED backend/tests/test_extractor_benchmark_stamp.py::test_an_unstamped_report_cannot_promote_a_candidate
+FAILED backend/tests/test_job_queue_routing.py::test_discord_memory_configuration_defaults_are_safe
+FAILED backend/tests/test_model_choice.py::test_models_offers_the_switch_only_on_the_answer_role
+FAILED backend/tests/test_model_choice.py::test_a_pick_waits_for_the_restart_and_leaves_the_registry_alone
+FAILED backend/tests/test_model_choice.py::test_picking_the_default_or_reverting_drops_the_pick
+FAILED backend/tests/test_model_choice.py::test_a_shell_pin_with_no_pick_is_not_shown_as_waiting_for_a_restart
+FAILED backend/tests/test_model_choice.py::test_check_reports_the_shipped_registry_as_valid
+FAILED backend/tests/test_model_choice.py::test_a_pick_is_refused_while_a_document_is_being_read
+FAILED backend/tests/test_model_registry.py::test_shipped_registry_loads_every_role_with_todays_pointers
+FAILED backend/tests/test_model_registry.py::test_flat_models_equals_the_models_yaml_blocks_the_registry_replaced
+FAILED backend/tests/test_model_registry.py::test_shipped_pull_list_is_exactly_what_the_launcher_pulled_by_hand
+FAILED backend/tests/test_model_registry.py::test_settings_serves_a_fixture_registry_and_refuses_an_unknown_pin
+FAILED backend/tests/test_model_registry_app.py::test_suite_default_boot_serves_every_pointer_unverified_and_reports_ok
+FAILED backend/tests/test_model_registry_app.py::test_broken_active_reranker_falls_back_and_every_signal_says_so
+FAILED backend/tests/test_model_registry_app.py::test_shipped_registry_with_every_probe_answering_is_all_active_off_or_unconfigured
+!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 20 failures !!!!!!!!!!!!!!!!!!!!!!!!!!
+20 failed, 1684 passed, 3 warnings in 202.62s (0:03:22)

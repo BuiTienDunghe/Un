@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 
-from app.schemas.ocr_schema import OcrEvaluationRequest
+from app.schemas.ocr_schema import OcrEvaluationRequest, OcrQuestionRequest
 from app.services.ocr_job_service import OcrPromotionError
 from app.services.monitoring_service import system_metrics
 
@@ -34,6 +34,20 @@ def cancel(job_id: str, request: Request):
 def evaluate(job_id: str, payload: OcrEvaluationRequest, request: Request):
     try: return request.app.state.ocr_job_service.evaluate(job_id, payload.ground_truth)
     except KeyError as error: raise HTTPException(404, detail={"error_code":"OCR_JOB_NOT_FOUND", "message":"OCR job was not found"}) from error
+
+
+@router.post("/jobs/{job_id}/ask", dependencies=[Depends(require_api_key), Depends(require_admin)])
+def ask(job_id: str, payload: OcrQuestionRequest, request: Request):
+    try:
+        return request.app.state.ocr_job_service.ask(job_id, payload.question, payload.pages)
+    except KeyError as error:
+        raise HTTPException(404, detail={"error_code": "OCR_JOB_NOT_FOUND", "message": "OCR job was not found"}) from error
+    except OcrPromotionError as error:
+        raise HTTPException(409, detail={"error_code": "OCR_NOT_COMPLETED", "message": str(error)}) from error
+    except ValueError as error:
+        raise HTTPException(422, detail={"error_code": "INVALID_OCR_QUESTION", "message": str(error)}) from error
+    except Exception as error:
+        raise HTTPException(502, detail={"error_code": "OCR_READER_FAILED", "message": "The document reader did not answer."}) from error
 
 @router.post("/jobs/{job_id}/promote", status_code=202, dependencies=[Depends(require_api_key)])
 def promote(job_id: str, request: Request):

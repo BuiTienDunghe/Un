@@ -1,0 +1,66 @@
+from types import SimpleNamespace
+
+import pytest
+
+from app.config.model_registry import Overrides
+from app.config.small_model_policy import validate_small_model_routes
+
+
+def registry(name, provider="ollama"):
+    return SimpleNamespace(roles={"general":object()},
+        chain=lambda role, pin=None: [SimpleNamespace(name=name, provider=provider)])
+
+
+@pytest.mark.parametrize("tag", ["qwen3.5:9b", "un-bare-qwen9b:latest", "renamed-model:latest", "qwen3:8b"])
+def test_large_models_and_unknown_aliases_are_refused(tag):
+    with pytest.raises(ValueError, match="Small-model branch refuses"):
+        validate_small_model_routes(registry(tag), Overrides())
+
+
+def test_only_explicit_small_local_routes_are_allowed():
+    validate_small_model_routes(registry("qwen3.5:2b"), Overrides())
+    validate_small_model_routes(registry("lfm3:1.7b"), Overrides())
+    with pytest.raises(ValueError):
+        validate_small_model_routes(registry("cloud", "anthropic"), Overrides())
+
+
+def test_ovis_route_is_allowed_for_ocr_only():
+    name = "hf.co/prithivMLmods/ATH-MaaS-OvisOCR3-GGUF:Q8_0"
+    ocr = SimpleNamespace(roles={"ocr": object()}, chain=lambda role, pin=None: [SimpleNamespace(name=name, provider="ollama")])
+    validate_small_model_routes(ocr, Overrides())
+    with pytest.raises(ValueError):
+        validate_small_model_routes(registry(name), Overrides())
+
+
+def test_enabled_raw_override_cannot_smuggle_large_model():
+    with pytest.raises(ValueError, match="refuses extractor override"):
+        validate_small_model_routes(registry("qwen3.5:2b"), Overrides(raw_tags={"extractor": "qwen3.5:9b"}))
+
+
+def test_leftover_raw_override_on_a_disabled_role_does_not_block_boot():
+    # The operating .env still carries DISCORD_MEMORY_EXTRACTOR_MODEL from the 9B era;
+    # source memory switches the extractor off, so that tag is never loaded.
+    validate_small_model_routes(registry("qwen3.5:2b"), Overrides(
+        disabled_roles=frozenset({"extractor"}), raw_tags={"extractor": "qwen3.5:9b"}))
+
+
+def test_source_memory_settings_disable_the_extractor_so_its_old_tag_is_ignored():
+    from app.config.model_registry import overrides_from_settings
+    from app.config.settings import Settings
+    settings = Settings(database_url="postgresql+psycopg://x:y@localhost/policy_test", _env_file=None,
+                        source_memory_enabled=True, discord_memory_extractor_model="qwen3.5:9b")
+    overrides = overrides_from_settings(settings)
+    assert "extractor" in overrides.disabled_roles
+    validate_small_model_routes(registry("qwen3.5:2b"), overrides)
+
+
+def test_refusal_happens_before_probe_construction(monkeypatch):
+    from app.config.settings import Settings
+    monkeypatch.setattr(Settings, "registry", lambda self: registry("qwen3.5:9b"))
+    calls = []
+    monkeypatch.setattr("app.config.settings.ProductionProbes", lambda *args: calls.append(args))
+    settings = Settings(database_url="postgresql+psycopg://x:y@localhost/policy_test", _env_file=None,
+                        model_startup_probes=True)
+    with pytest.raises(ValueError):
+        settings.resolve_models()
+    assert calls == []

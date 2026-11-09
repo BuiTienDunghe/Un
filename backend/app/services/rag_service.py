@@ -61,6 +61,8 @@ class RagService:
             return conversation_id, True
         if not self.store.conversation_exists(conversation_id):
             raise ConversationNotFoundError(conversation_id)
+        if getattr(self, "source_memory", None) and self.store.conversation_owner(conversation_id) != user_id:
+            raise ConversationNotFoundError(conversation_id)
         return conversation_id, False
 
     def _persist_turn(self, conversation_id: str | None, question: str, answer: str, model_used: str, sources: list[dict[str, object]] | None = None) -> int | None:
@@ -108,7 +110,13 @@ class RagService:
             return None
         # Three exchanges resolve any realistic pronoun; RAG answers are long,
         # so each message is clipped to keep the prompt-eval cost bounded.
-        history = self.store.get_messages(conversation_id, min(self.history_limit, 6))
+        v2 = getattr(self, "source_memory", None)
+        if v2:
+            from app.services.source_memory import MemoryReader
+            owner = self.store.conversation_owner(conversation_id)
+            history = v2.history(MemoryReader.web(owner), conversation_id, min(self.history_limit, 6))
+        else:
+            history = self.store.get_messages(conversation_id, min(self.history_limit, 6))
         if not history:
             return None
         transcript = "\n".join(
@@ -174,6 +182,11 @@ class RagService:
         return sources, latency_ms
 
     def respond(self, question: str, top_k: int | None, document_id: str | list[str] | None, conversation_id: str | None = None, user_id: str | None = None) -> tuple[str, str, int, list[dict[str, object]], str | None, str | None]:
+        from app.services.source_memory import MemoryReader
+        from contextlib import nullcontext
+        v2 = getattr(self, "source_memory", None)
+        reader = MemoryReader.web(user_id)
+        epoch = v2.snapshot(reader)[0] if v2 else None
         started = perf_counter()
         conversation_id, created = self._resolve_conversation(question, conversation_id, user_id)
         # On follow-up turns the standalone rewrite feeds BOTH retrieval and the
@@ -192,7 +205,11 @@ class RagService:
         usage = consume_usage()
         latency_ms = int((perf_counter() - started) * 1000)
         # The transcript keeps what the user actually typed.
-        message_id = self._persist_turn(conversation_id, question, answer, model_used, sources)
+        with v2.publication(reader, epoch) if v2 else nullcontext(True) as current:
+            if not current:
+                answer = "Ngữ cảnh vừa được sửa hoặc quên. Vui lòng hỏi lại."
+                sources, retrieval_question = [], None
+            message_id = self._persist_turn(conversation_id, question, answer, model_used, sources)
         self.logging_service.log_request("/rag/chat", model_used, latency_ms, "ok", message_id=message_id, tokens_in=usage["tokens_in"], tokens_out=usage["tokens_out"], prompt_hash=self.prompt_hash)
         return answer, model_used, latency_ms, sources, conversation_id, retrieval_question
 
@@ -200,6 +217,15 @@ class RagService:
         # Latency is measured from HERE, not from the first token: the dashboard
         # feeds every row into one percentile, and a row that skips condense +
         # retrieval is a different quantity wearing the same name.
+        if getattr(self, "source_memory", None):
+            answer, model, _, sources, cid, rewrite = self.respond(question, top_k, document_id, conversation_id, user_id)
+            return iter([answer]), model, sources, cid, rewrite
+
+        from app.services.source_memory import MemoryReader
+        from contextlib import nullcontext
+        v2 = getattr(self, "source_memory", None)
+        reader = MemoryReader.web(user_id)
+        epoch = v2.snapshot(reader)[0] if v2 else None
         started = perf_counter()
         conversation_id, created = self._resolve_conversation(question, conversation_id, user_id)
         with turn_call_budget("rag", RAG_CALL_CAP):

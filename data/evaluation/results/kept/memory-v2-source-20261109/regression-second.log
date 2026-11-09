@@ -1,0 +1,188 @@
+........................................................................ [  3%]
+........................................................................ [  6%]
+........................................................................ [  9%]
+........................................................................ [ 13%]
+........................................................................ [ 16%]
+........................................................................ [ 19%]
+........................................................................ [ 23%]
+........................................................................ [ 26%]
+........................................................................ [ 29%]
+........................................................................ [ 32%]
+........................................................................ [ 36%]
+........................................................................ [ 39%]
+........................................................................ [ 42%]
+........................................................................ [ 46%]
+........................................................................ [ 49%]
+........................................................................ [ 52%]
+........................................................................ [ 56%]
+....................................................F................... [ 59%]
+........................................................................ [ 62%]
+........................................................................ [ 65%]
+........................................................................ [ 69%]
+........................................................................ [ 72%]
+........................................................................ [ 75%]
+.................................................F.F.FFF.FF............. [ 79%]
+........................................................................ [ 82%]
+................................................................FF...... [ 85%]
+......F................................................................. [ 89%]
+........................................................................ [ 92%]
+........................................................................ [ 95%]
+...........................................................F
+================================== FAILURES ===================================
+____________ test_operator_stop_api_terminally_cancels_open_turns _____________
+backend\tests\test_discord_session_api.py:267: in test_operator_stop_api_terminally_cancels_open_turns
+    assert response.json() == {"cancelled_turns": 2}
+E   AssertionError: assert {'cancelled_turns': 3} == {'cancelled_turns': 2}
+E     
+E     Differing items:
+E     {'cancelled_turns': 3} != {'cancelled_turns': 2}
+E     Use -v to get more diff
+---------------------------- Captured stderr setup ----------------------------
+2026-11-09 21:18:47.939 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-09 21:18:47.939 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-09 21:18:47.940 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+_______ test_shipped_file_has_no_errors_and_only_grandfathered_warnings _______
+backend\tests\test_model_registry_check.py:41: in test_shipped_file_has_no_errors_and_only_grandfathered_warnings
+    assert {warning.split(" id=")[1].split(":")[0] for warning in warnings} == {"general-v0", "embedding-v0", "reranker-v0", "extractor-v0"}
+E   AssertionError: assert {'embedding-v...'reranker-v0'} == {'embedding-v...'reranker-v0'}
+E     
+E     Extra items in the right set:
+E     'general-v0'
+E     'extractor-v0'
+E     Use -v to get more diff
+---------------------------- Captured stderr call -----------------------------
+2026-11-09 21:19:34.064 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\backend\app\config\model_versions.yaml
+_ test_pull_list_cli_prints_the_launcher_tags_and_create_list_prints_the_ocr_build _
+backend\tests\test_model_registry_check.py:57: in test_pull_list_cli_prints_the_launcher_tags_and_create_list_prints_the_ocr_build
+    assert pull.stdout.split() == ["qwen3.5:9b", "qwen3-embedding:0.6b", "glm-ocr:latest"]
+E   AssertionError: assert ['qwen3.5:2b'...m-ocr:eot-v1'] == ['qwen3.5:9b'...m-ocr:latest']
+E     
+E     At index 0 diff: 'qwen3.5:2b' != 'qwen3.5:9b'
+E     Use -v to get more diff
+_____ test_budget_overrun_and_null_vram_on_the_active_version_are_errors ______
+backend\tests\test_model_registry_check.py:102: in test_budget_overrun_and_null_vram_on_the_active_version_are_errors
+    assert any("need 9920 MiB, budget.vram_mib is 9000" in error for error in _errors(tmp_path, document))
+E   assert False
+E    +  where False = any(<generator object test_budget_overrun_and_null_vram_on_the_active_version_are_errors.<locals>.<genexpr> at 0x000001F88C5F4EE0>)
+---------------------------- Captured stderr call -----------------------------
+2026-11-09 21:19:34.592 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-09 21:19:34.620 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\AppData\Local\Temp\pytest-of-dungbt06\pytest-770\test_budget_overrun_and_null_v0\registry.yaml
+_ test_extractor_sharing_generals_tag_costs_no_budget_but_a_different_tag_does _
+backend\tests\test_model_registry_check.py:115: in test_extractor_sharing_generals_tag_costs_no_budget_but_a_different_tag_does
+    assert any("need 9921 MiB" in error for error in _errors(tmp_path, document))
+E   assert False
+E    +  where False = any(<generator object test_extractor_sharing_generals_tag_costs_no_budget_but_a_different_tag_does.<locals>.<genexpr> at 0x000001F88F759220>)
+---------------------------- Captured stderr call -----------------------------
+2026-11-09 21:19:34.643 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-09 21:19:34.671 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\AppData\Local\Temp\pytest-of-dungbt06\pytest-770\test_extractor_sharing_general0\registry.yaml
+2026-11-09 21:19:34.698 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\AppData\Local\Temp\pytest-of-dungbt06\pytest-770\test_extractor_sharing_general0\registry.yaml
+_____________ test_active_gated_version_needs_an_existing_report ______________
+backend\tests\test_model_registry_check.py:121: in test_active_gated_version_needs_an_existing_report
+    assert any("roles.general id=general-v0 (ACTIVE): needs at least one existing eval.reports path" in error for error in _errors(tmp_path, document))
+E   assert False
+E    +  where False = any(<generator object test_active_gated_version_needs_an_existing_report.<locals>.<genexpr> at 0x000001F884110040>)
+---------------------------- Captured stderr call -----------------------------
+2026-11-09 21:19:34.726 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-09 21:19:34.752 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\AppData\Local\Temp\pytest-of-dungbt06\pytest-770\test_active_gated_version_need0\registry.yaml
+_______ test_benchmark_and_mteb_reports_must_name_the_configured_model ________
+backend\tests\test_model_registry_check.py:145: in test_benchmark_and_mteb_reports_must_name_the_configured_model
+    assert any("names model 'qwen3.5:2b', config.name is 'qwen3.5:9b'" in error for error in _errors(tmp_path, document))
+E   assert False
+E    +  where False = any(<generator object test_benchmark_and_mteb_reports_must_name_the_configured_model.<locals>.<genexpr> at 0x000001F88A47E330>)
+---------------------------- Captured stderr call -----------------------------
+2026-11-09 21:19:34.894 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-09 21:19:34.922 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\AppData\Local\Temp\pytest-of-dungbt06\pytest-770\test_benchmark_and_mteb_report0\registry.yaml
+_____ test_modelfile_versions_in_a_chain_need_the_file_and_the_gguf_hash ______
+backend\tests\test_model_registry_check.py:154: in test_modelfile_versions_in_a_chain_need_the_file_and_the_gguf_hash
+    document["roles"]["extractor"]["versions"][1]["vram_mib"] = 100
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   IndexError: list index out of range
+---------------------------- Captured stderr call -----------------------------
+2026-11-09 21:19:34.950 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\backend\app\config\model_versions.yaml
+___________________ test_the_docs_name_the_newest_migration ___________________
+backend\tests\test_project_facts.py:14: in test_the_docs_name_the_newest_migration
+    assert head in (ROOT / document).read_text(encoding="utf-8"), f"{document} does not name {head}"
+E   AssertionError: README.md does not name 20261109_39
+E   assert '20261109_39' in '# Local AI Core\n\n[![CI](https://github.com/BuiTienDunghe/Un/actions/workflows/ci.yml/badge.svg)](https://github.com...el theo bộ tài liệu thực tế.\n- Chỉ thực hiện legacy Qdrant cleanup sau khi có mapping, evidence và phê duyệt riêng.\n'
+E    +  where '# Local AI Core\n\n[![CI](https://github.com/BuiTienDunghe/Un/actions/workflows/ci.yml/badge.svg)](https://github.com...el theo bộ tài liệu thực tế.\n- Chỉ thực hiện legacy Qdrant cleanup sau khi có mapping, evidence và phê duyệt riêng.\n' = read_text(encoding='utf-8')
+E    +    where read_text = (WindowsPath('C:/Users/dungbt06/.codex/worktrees/tool-state-continuity/local-ai-core') / 'README.md').read_text
+_________________ test_the_results_page_counts_the_migrations _________________
+backend\tests\test_project_facts.py:19: in test_the_results_page_counts_the_migrations
+    assert f"| Schema migrations | {len(MIGRATIONS)}," in text
+E   AssertionError: assert '| Schema migrations | 39,' in '# Results\n\nEvery number quoted about this project — in the README, in a model card, in a CV\nline — resolves to a r...been shown a fabrication it had to catch.\n- Red-team coverage is 7 attacks; the memory end-to-end eval is 21 cases.\n'
+________________________ test_rag_chat_returns_sources ________________________
+backend\tests\test_rag_api.py:11: in test_rag_chat_returns_sources
+    assert body["model_used"] == "qwen3.5:9b"
+E   AssertionError: assert 'qwen3.5:2b' == 'qwen3.5:9b'
+E     
+E     - qwen3.5:9b
+E     ?         ^
+E     + qwen3.5:2b
+E     ?         ^
+---------------------------- Captured stderr setup ----------------------------
+2026-11-09 21:19:51.443 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-09 21:19:51.444 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-09 21:19:51.444 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-09 21:19:51.444 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-09 21:19:51.444 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-09 21:19:51.444 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-09 21:19:51.444 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-09 21:19:51.444 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-09 21:19:51.444 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-09 21:19:51.445 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-small-v1 (registry)
+2026-11-09 21:19:51.445 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-small-v1)
+2026-11-09 21:19:51.445 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-09 21:19:51.445 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-09 21:19:51.445 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-09 21:19:51.445 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-09 21:19:51.445 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-09 21:19:51.446 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-09 21:19:51.446 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-09 21:19:51.632 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-09 21:19:51.632 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-09 21:19:51.632 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-09 21:19:51.632 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-09 21:19:51.874 | INFO     | app.services.logging_service:log_request:149 - request completed
+___________ test_vision_says_when_nothing_serves_and_needs_an_image ___________
+backend\tests\test_ui_and_vision.py:3: in test_vision_says_when_nothing_serves_and_needs_an_image
+    assert response.status_code == 422
+E   assert 501 == 422
+E    +  where 501 = <Response [501 Not Implemented]>.status_code
+---------------------------- Captured stderr setup ----------------------------
+2026-11-09 21:20:43.529 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-09 21:20:43.530 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-09 21:20:43.531 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+============================== warnings summary ===============================
+..\..\..\..\local-ai-core\.venv\Lib\site-packages\discord\player.py:30
+  C:\Users\dungbt06\local-ai-core\.venv\Lib\site-packages\discord\player.py:30: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13
+    import audioop
+
+backend/tests/test_research_api.py::test_member_identity_scopes_projects_but_admin_sees_everything
+  C:\Users\dungbt06\local-ai-core\.venv\Lib\site-packages\jwt\api_jwt.py:147: InsecureKeyLengthWarning: The HMAC key is 11 bytes long, which is below the minimum recommended length of 32 bytes for SHA256. See RFC 7518 Section 3.2.
+    return self._jws.encode(
+
+backend/tests/test_research_api.py::test_member_identity_scopes_projects_but_admin_sees_everything
+  C:\Users\dungbt06\local-ai-core\.venv\Lib\site-packages\jwt\api_jwt.py:368: InsecureKeyLengthWarning: The HMAC key is 11 bytes long, which is below the minimum recommended length of 32 bytes for SHA256. See RFC 7518 Section 3.2.
+    decoded = self.decode_complete(
+
+backend/tests/test_schema_drift.py::test_the_models_and_the_migrated_schema_agree
+  C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\backend\tests\test_schema_drift.py:26: SAWarning: Cannot correctly sort tables; there are unresolvable cycles between tables "discord_memories, discord_memory_candidates", which is usually caused by mutually dependent foreign key constraints.  Foreign key constraints involving these tables will not be considered; this warning may raise an error in a future release.
+    differences = produce_migrations(MigrationContext.configure(connection), Base.metadata)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED backend/tests/test_discord_session_api.py::test_operator_stop_api_terminally_cancels_open_turns
+FAILED backend/tests/test_model_registry_check.py::test_shipped_file_has_no_errors_and_only_grandfathered_warnings
+FAILED backend/tests/test_model_registry_check.py::test_pull_list_cli_prints_the_launcher_tags_and_create_list_prints_the_ocr_build
+FAILED backend/tests/test_model_registry_check.py::test_budget_overrun_and_null_vram_on_the_active_version_are_errors
+FAILED backend/tests/test_model_registry_check.py::test_extractor_sharing_generals_tag_costs_no_budget_but_a_different_tag_does
+FAILED backend/tests/test_model_registry_check.py::test_active_gated_version_needs_an_existing_report
+FAILED backend/tests/test_model_registry_check.py::test_benchmark_and_mteb_reports_must_name_the_configured_model
+FAILED backend/tests/test_model_registry_check.py::test_modelfile_versions_in_a_chain_need_the_file_and_the_gguf_hash
+FAILED backend/tests/test_project_facts.py::test_the_docs_name_the_newest_migration
+FAILED backend/tests/test_project_facts.py::test_the_results_page_counts_the_migrations
+FAILED backend/tests/test_rag_api.py::test_rag_chat_returns_sources - Asserti...
+FAILED backend/tests/test_ui_and_vision.py::test_vision_says_when_nothing_serves_and_needs_an_image
+!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 12 failures !!!!!!!!!!!!!!!!!!!!!!!!!!
+12 failed, 2136 passed, 4 warnings in 259.44s (0:04:19)

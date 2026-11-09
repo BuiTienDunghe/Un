@@ -51,7 +51,7 @@ RESERVED_RECORD_KEYS = frozenset({                                   # a key fro
     "id", "config", "fallback", "vram_mib", "digest", "ollama", "eval", "provenance", "notes",
     "collection_suffix", "hub", "path", "activation", "num_labels", "max_length", "probe",
 })                                                                   # `provider` and `revision` are NOT reserved (they belong in config)
-GATES = ("d1_multidoc", "heldout", "mteb", "extractor_benchmark")
+GATES = ("d1_multidoc", "heldout", "mteb", "extractor_benchmark", "source_memory_smoke")
 GRANDFATHERED_UNSTAMPED = frozenset({"general-v0", "embedding-v0", "reranker-v0", "extractor-v0"})  # reports without a `versions` stamp: WARNING, not error
 
 Status = Literal["active", "fallback", "unverified", "missing", "degraded", "incomplete",
@@ -638,6 +638,8 @@ class ProductionProbes:
         import httpx
 
         num_ctx = options.pop("num_ctx", None)
+        cap = options.pop("probe_max_tokens", OCR_PROBE_MAX_TOKENS)
+        contract = options.pop("output_contract", "text")
         document = fitz.open()
         try:
             page = document.new_page(width=360, height=48)
@@ -649,7 +651,7 @@ class ProductionProbes:
             response = httpx.post(
                 f"{self._settings.ollama_base_url.rstrip('/')}/api/chat",
                 json={"model": model, "stream": False, "keep_alive": "0s", **options,
-                      "options": {"temperature": 0, "num_predict": OCR_PROBE_MAX_TOKENS, **({"num_ctx": num_ctx} if num_ctx else {})},
+                      "options": {"temperature": 0, "num_predict": cap, **({"num_ctx": num_ctx} if num_ctx else {})},
                       "messages": [{"role": "user", "content": prompt, "images": [base64.b64encode(png).decode("ascii")]}]},
                 timeout=OCR_PROBE_TIMEOUT_SECONDS,
             )
@@ -661,7 +663,15 @@ class ProductionProbes:
             return None
         body = response.json()
         content = (body.get("message") or {}).get("content") or ""
-        return body.get("done_reason") == "stop" and "4831" in content
+        if body.get("done_reason") != "stop":
+            return False
+        if contract != "text":
+            from app.services.ocr_evidence import document_text, parse_evidence
+            try:
+                content = document_text(parse_evidence(content, contract))
+            except (ValueError, TypeError, KeyError):
+                return False
+        return "4831" in content
 
     def _qdrant(self) -> Any:
         if self._qdrant_client is None:
@@ -1044,7 +1054,11 @@ class _Walker:
         options: dict[str, Any] = {}
         if isinstance(candidate.config.get("think"), bool):
             options = {"think": candidate.config["think"], "keep_alive": candidate.config.get("keep_alive", "5m"), "num_ctx": candidate.config.get("context")}
-        stops = self.probes.ollama_ocr_stops(str(candidate.config["name"]), str(candidate.config.get("prompt", "Text Recognition:")), **options)
+        from app.services.ocr_profiles import ocr_prompt
+        contract = candidate.config.get("output_contract", "text")
+        if contract != "text":
+            options.update(probe_max_tokens=384, output_contract=contract)
+        stops = self.probes.ollama_ocr_stops(str(candidate.config["name"]), ocr_prompt(dict(candidate.config)), **options)
         if stops is None:
             return "unverified", ProbeOutcome("ocr_stop", None, "probe OCR did not answer", elapsed()), f"{candidate.id}: probe OCR did not answer; pointer kept"
         if not stops:

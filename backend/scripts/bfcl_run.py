@@ -23,9 +23,12 @@ executed from that very text, so the scorer's replay (decode_execute) is the sam
 answer text goes last, as BFCL stores a text-only step; the scorer skips it. A single-turn
 task has the flat list of every call made, or the answer text when none was made.
 
-What the loop is NOT given, and why it is stated here: between turns the model gets the earlier
-turns' user and answer text only, as Ún's chat path hands history to the agent, not the earlier
-tool calls (BFCL's loop would carry them). AGENT_GUIDE is unchanged, so it still names
+By default the loop receives earlier user/answer text only. --bounded-tool-state
+uses the production recorder, schema/budget validation and restoration; it is
+separate from legacy --carry-tool-traffic. BFCL functions explicitly opt into
+observation transport for this evaluation; production unknown/MCP policies stay
+none. BFCL retains its own text context/executor/checker, not the Web/Discord
+transport or document authorization layer. AGENT_GUIDE is unchanged, so it still names
 search_documents, search_history and the others, which are absent in these turns. No persona
 prompt. A single-turn task's tool answers "ok": BFCL does not execute those. For that reason a
 single-turn task's result holds the calls of the FIRST model round only, as BFCL's own result
@@ -55,6 +58,10 @@ from typing import Any
 
 from app.services.agent_service import AGENT_GUIDE, AgentService, AgentTool, ToolRegistry
 from app.services.injection_defense import InjectionDefense
+from app.services.input_metrics import model_input_measurements
+from app.services.tool_state import ToolStateRecorder
+from app.services.tool_state_bridge import continuity_scope, history_budget, restore_history
+from scripts.eval_state_store import MemoryStore
 from scripts.agent_eval import (
     NO_SEED,
     OllamaReloader,
@@ -76,7 +83,7 @@ RESULTS_DIR = PROJECT_ROOT / "data" / "evaluation" / "results" / "bfcl"
 DEFAULT_CLONE = Path(r"C:\Users\dungbt06\tools\gorilla-6ea5797\berkeley-function-call-leaderboard")
 CLONE_COMMIT = "6ea5797"
 # v2 (06/11): calls are recorded as the model wrote them, not where a tool ran; v1 scores do not compare.
-RUNNER_VERSION = "bfcl-run-v2"
+RUNNER_VERSION = "bfcl-run-v3-bounded-state"
 
 # The name BFCL files the results under and the scorer registers; no underscore, because
 # BFCL's runner turns every "_" of a result directory back into "/" to look the model up.
@@ -299,7 +306,7 @@ class TurnLog:
         return taken
 
 
-def make_tool(bfcl: Bfcl, doc: dict[str, Any], *, execute: dict[str, Any] | None) -> AgentTool:
+def make_tool(bfcl: Bfcl, doc: dict[str, Any], *, execute: dict[str, Any] | None, state_policy: str = "none") -> AgentTool:
     """One of the task's functions as a registry tool. `execute` is None in a single-turn task
     (BFCL runs nothing there), else what the multi-turn backends need to run a call."""
     schema = bfcl.to_tool(doc)
@@ -327,7 +334,7 @@ def make_tool(bfcl: Bfcl, doc: dict[str, Any], *, execute: dict[str, Any] | None
             payload = results[0]
         return service._dump(payload), None, None
 
-    return AgentTool(schema, run, label)
+    return AgentTool(schema, run, label, state_policy=state_policy)
 
 
 def drop_instances(bfcl: Bfcl, model_name: str, entry_id: str) -> None:
@@ -352,11 +359,17 @@ def run_entry(
     run_tag: str,
     *,
     carry_tool_traffic: bool = False,
+    bounded_tool_state: bool = False,
+    measure_inputs: bool = False,
 ) -> dict[str, Any]:
     """Every turn of one task through AgentService.run(); returns the line for the result file.
     `make_agent(registry)` builds the service, so a test hands in a scripted model.
-    `carry_tool_traffic` keeps each turn's tool calls and results in the history of the next."""
+    `bounded_tool_state` uses the production recorder/budget/restore path, with
+    explicitly opted-in BFCL observations. It does not classify these functions
+    as safe reads or override production tools' default-none policy."""
     multi = category in MULTI_TURN
+    if bounded_tool_state and (carry_tool_traffic or not multi):
+        raise ValueError("bounded tool state requires multi-turn tasks and excludes legacy carry")
     if multi and not (instance_prefix(run_tag, entry["id"]) + "GorillaFileSystem_instance").isidentifier():
         # Otherwise every call fails at BFCL's eval with a SyntaxError that reaches the model as a
         # plain error string, and the scorer, replaying under its own valid name, still scores it.
@@ -375,11 +388,14 @@ def run_entry(
     )
     registry = ToolRegistry()
     for order, doc in enumerate(entry["function"]):
-        registry.register(make_tool(bfcl, doc, execute=execute), order)
+        registry.register(make_tool(bfcl, doc, execute=execute, state_policy="read" if bounded_tool_state else "none"), order)
     agent = make_agent(registry)
     held_out: dict[str, list[dict[str, Any]]] = entry.get("missed_function", {})
 
     history: list[dict[str, Any]] = []
+    history_rows: list[dict[str, Any]] = []
+    state_store = MemoryStore() if bounded_tool_state else None
+    state_scope = continuity_scope("case", None, None)
     turns: list[list[Any]] = []
     turn_logs: list[dict[str, Any]] = []
     tokens_in: list[list[float]] = []
@@ -395,12 +411,27 @@ def run_entry(
                 # The functions held back appear now, and the user turn is BFCL's fixed sentence
                 # (the data's own turn is empty): BFCL does the same in inference_multi_turn_FC.
                 for position, doc in enumerate(held_out[str(turn_index)]):
-                    registry.register(make_tool(bfcl, doc, execute=execute), len(entry["function"]) + position)
+                    registry.register(make_tool(bfcl, doc, execute=execute, state_policy="read" if bounded_tool_state else "none"), len(entry["function"]) + position)
                 turn_messages = [{"role": "user", "content": bfcl.additional_function_prompt}]
             recording.take()
             log.take()
             started = perf_counter()
-            answer, model, steps = agent.run([*history, *turn_messages])
+            messages = [*history, *turn_messages]
+            recorder = None
+            state_stats = None
+            if bounded_tool_state:
+                recorder = ToolStateRecorder()
+                schemas = agent._offered_schemas()
+                window = getattr(recording.inner, "models", {}).get("general", {}).get("context", 16384)
+                budget = history_budget(messages, schemas, agent.defense.agent_guide(AGENT_GUIDE), window)
+                messages, state_stats = restore_history(state_store, "case", state_scope,
+                    messages, 0, history_rows, None, registry, budget["room"],
+                    allowed_names={schema["function"]["name"] for schema in schemas})
+            with model_input_measurements(measure_inputs) as input_rows:
+                if recorder is not None:
+                    answer, model, steps = agent.run(messages, tool_context={"_tool_recorder": recorder})
+                else:
+                    answer, model, steps = agent.run(messages)
             rounds, by_round = recording.take(), log.take()
             ordered = [by_round[index] for index in sorted(by_round)]
             turns.append([*ordered, answer] if answer else ordered)
@@ -409,6 +440,10 @@ def run_entry(
             all_calls.extend(call for calls in ordered for call in calls)
             answers.append(answer)
             history += [*turn_messages, *(tool_traffic(steps) if carry_tool_traffic else []), {"role": "assistant", "content": answer}]
+            if recorder is not None:
+                message_id = state_store.add_message("case", "assistant", answer)
+                history_rows += [*turn_messages, {"role": "assistant", "content": answer, "message_id": message_id}]
+                state_store.save_tool_state("case", message_id, state_scope, recorder.payload())
             tokens_in.append([float(round_["tokens_in"] or 0) for round_ in rounds])
             tokens_out.append([float(round_["tokens_out"] or 0) for round_ in rounds])
             latency.append([round_["latency_ms"] / 1000 for round_ in rounds])
@@ -419,6 +454,8 @@ def run_entry(
                 "model_rounds": [round_["call"] for round_ in rounds],
                 "stop_reason": next((step.get("stop_reason") for step in reversed(steps) if step["kind"] == "final"), None),
                 "steps": steps,
+                **({"tool_state": state_stats} if bounded_tool_state else {}),
+                **({"input_measurements": input_rows} if measure_inputs else {}),
             })
     except Exception as exc:  # one broken task must not cost the others; a multi-turn one then has too few turns and fails
         error = f"{type(exc).__name__}: {exc}"
@@ -483,6 +520,29 @@ def summarize(lines_by_category: dict[str, list[dict[str, Any]]]) -> dict[str, A
     }
 
 
+def read_results(path: Path, expected_ids: list[str]) -> dict[str, dict[str, Any]]:
+    """Refuse malformed, duplicate or foreign rows; never discard a partial line."""
+    if not path.exists():
+        return {}
+    result = {}
+    for text in path.read_text(encoding="utf-8").splitlines():
+        if not text.strip():
+            raise ValueError(f"blank result row in {path}")
+        row = json.loads(text)
+        if not isinstance(row, dict) or row.get("id") not in expected_ids or row["id"] in result:
+            raise ValueError(f"duplicate or unexpected result ID in {path}")
+        result[row["id"]] = row
+    return result
+
+
+def resume_contract(manifest: dict[str, Any]) -> dict[str, Any]:
+    keys = ("runner", "bfcl_commit", "ids_sha256", "selection", "model", "digest", "ollama_version", "prepared_plan_sha256", "general_config",
+            "temperature", "seed", "think", "num_ctx", "agent_config", "agent_guide_sha256",
+            "carry_tool_traffic", "bounded_tool_state", "measure_inputs", "lookup_check",
+            "unload_between_tasks", "defense_enabled", "source_files", "bfcl_data_files")
+    return {key: manifest.get(key) for key in keys}
+
+
 def run_all(
     bfcl: Bfcl,
     selection: dict[str, list[str]],
@@ -494,25 +554,66 @@ def run_all(
     reloader: Any = None,
     progress: Any = print,
     carry_tool_traffic: bool = False,
+    bounded_tool_state: bool = False,
+    measure_inputs: bool = False,
+    resume: bool = False,
 ) -> dict[str, Any]:
+    # Preflight ALL categories before a reload/model call or mutation.
+    paths = {category: result_path(out_dir, category) for category in selection}
+    for category, path in paths.items():
+        if path.exists() and not resume:
+            raise FileExistsError(f"{path} exists; use a fresh run or explicit --resume")
+        if len(selection[category]) != len(set(selection[category])):
+            raise ValueError("duplicate IDs in selection")
+    existing = {category: read_results(path, selection[category]) for category, path in paths.items()}
+    entries = {category: bfcl.load_entries(category, ids) for category, ids in selection.items()}
+    for category, rows in entries.items():
+        for entry in rows:
+            previous = existing[category].get(entry["id"])
+            if previous is not None and "error" not in previous and category in MULTI_TURN:
+                if len(previous.get("result", [])) != len(entry["question"]):
+                    raise ValueError("completed result has an invalid turn count; refusing silent replay")
     lines_by_category: dict[str, list[dict[str, Any]]] = {}
     for category, ids in selection.items():
-        path = result_path(out_dir, category)
+        path = paths[category]
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("", encoding="utf-8")
-        lines_by_category[category] = []
-        for entry in bfcl.load_entries(category, ids):
+        latest = existing[category]
+        for entry in entries[category]:
+            if entry["id"] in latest and "error" not in latest[entry["id"]]:
+                continue
             reload_ms = reloader.reload() if reloader is not None else None
             started = perf_counter()
-            line = run_entry(bfcl, entry, category, recording, make_agent, run_tag, carry_tool_traffic=carry_tool_traffic)
-            lines_by_category[category].append(line)
-            with path.open("a", encoding="utf-8") as handle:
+            line = run_entry(bfcl, entry, category, recording, make_agent, run_tag,
+                carry_tool_traffic=carry_tool_traffic, bounded_tool_state=bounded_tool_state,
+                measure_inputs=measure_inputs)
+            # Preserve failed attempts separately; the official result has one row/ID.
+            attempts = out_dir / "attempts" / (category + ".jsonl")
+            attempts.parent.mkdir(parents=True, exist_ok=True)
+            with attempts.open("a", encoding="utf-8") as handle:
                 handle.write(json.dumps(line, ensure_ascii=False, default=str) + "\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            replacing = entry["id"] in latest
+            latest[entry["id"]] = line
+            if replacing:
+                temporary = path.with_suffix(".json.tmp")
+                with temporary.open("w", encoding="utf-8") as handle:
+                    for row in latest.values():
+                        handle.write(json.dumps(row, ensure_ascii=False, default=str) + "\n")
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                temporary.replace(path)
+            else:
+                with path.open("a", encoding="utf-8") as handle:
+                    handle.write(json.dumps(line, ensure_ascii=False, default=str) + "\n")
+                    handle.flush()
+                    os.fsync(handle.fileno())
             progress(
                 f"{entry['id']:<28} {perf_counter() - started:6.1f}s"
                 + (f" (nạp {reload_ms / 1000:.1f}s)" if reload_ms is not None else "")
                 + (" ERROR" if "error" in line else "")
             )
+        lines_by_category[category] = list(latest.values())
     summary = summarize(lines_by_category)
     (out_dir / "run_summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     return summary
@@ -548,7 +649,12 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--env-file", type=Path, help="the .env Settings reads (default: this checkout's)")
     parser.add_argument("--gpu-shared", choices=("yes", "no"), help="declare whether another job uses the GPU during this run; recorded, never guessed")
     parser.add_argument("--unload-between-tasks", action="store_true", help="unload and reload the general model before every task (as in agent_eval); otherwise once, before the first")
-    parser.add_argument("--carry-tool-traffic", action="store_true", help="keep each turn's tool calls and results in the next turn's history, as BFCL's own runner does (default: text only, as Ún's chat path)")
+    history = parser.add_mutually_exclusive_group()
+    history.add_argument("--carry-tool-traffic", action="store_true", help="legacy unbounded carry; does NOT test the production state feature")
+    history.add_argument("--bounded-tool-state", action="store_true", help="multi-turn only: production recorder/budget/restore with explicit BFCL observation policy")
+    parser.add_argument("--measure-inputs", action="store_true", help="record logical message/schema character counts for each model call")
+    parser.add_argument("--resume", action="store_true", help="resume a frozen run, retry infrastructure errors, never truncate results")
+    parser.add_argument("--prepared-plan", type=Path, help="validate a frozen public comparison before settings/probes/reload")
     parser.add_argument("--max-steps", type=int, help="tool rounds per turn for this run only (default: agent.max_steps of the config)")
     parser.add_argument("--model", help="another Ollama model in the general role for this run only (default: the registry's)")
     parser.add_argument("--lookup-check", action="store_true", help="the agent's lookup check (harness-fix round); a no-op here, since no BFCL registry holds a lookup tool")
@@ -579,12 +685,32 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     bfcl = Bfcl(args.clone)
     selection = select(load_ids(args.ids), args.only)
+    if args.bounded_tool_state and any(category not in MULTI_TURN for category in selection):
+        raise ValueError("--bounded-tool-state is only valid for multi-turn categories")
+    prepared = None
+    if args.prepared_plan:
+        from scripts.prepare_tool_state_bfcl import validate_prepared
+        prepared = json.loads(args.prepared_plan.read_text(encoding="utf-8"))
+        validate_prepared(prepared, bfcl, args, selection)
     if args.dry_run:
         for category, ids in selection.items():
             for entry in bfcl.load_entries(category, ids):
                 held = sum(len(docs) for docs in entry.get("missed_function", {}).values())
                 print(f"{entry['id']:<28} turns={len(entry['question'])} tools={len(entry['function'])} held_out={held}")
         return 0
+    run_id = args.run_id or default_run_id()
+    out_dir = args.out / run_id
+    if out_dir.exists() and not args.resume:
+        raise FileExistsError("run directory exists; use a new --run-id or explicit --resume")
+    if args.resume and not (out_dir / "manifest.json").is_file():
+        raise ValueError("--resume needs the original manifest")
+    if args.resume:
+        from scripts.tool_state_eval import fingerprint
+        previous = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
+        if previous.get("source_files") != fingerprint(args.ids) or previous.get("selection") != selection:
+            raise ValueError("resume source/selection changed; refusing settings/probes/reload")
+        for category, ids in selection.items():
+            read_results(result_path(out_dir, category), ids)
     settings = build_settings(args.env_file, probe=args.probe)
     loaded_at_start = ollama_loaded(settings.ollama_base_url)
     gpu_at_start = gpu_snapshot()
@@ -620,14 +746,20 @@ def main(argv: list[str] | None = None) -> int:
         "final_reserve_seconds": float(agent_section.get("final_reserve_seconds", FINAL_RESERVE_SECONDS)),
     }
     defense = InjectionDefense.from_config(config.get("rag", {}), enabled_override=settings.rag_injection_defense_enabled)
+    if prepared:
+        expected = prepared["sampling"]
+        actual = {"temperature": general.get("temperature"), "seed": general.get("seed"),
+                  "think": general.get("think"), "context": general.get("context"), "top_p": general.get("top_p")}
+        if expected != actual or not defense.enabled:
+            raise ValueError("sampling/defense differ from the prepared plan")
     recording = UsageRecordingRouter(router)
 
     def make_agent(registry: ToolRegistry) -> AgentService:
         return AgentService(recording, None, None, defense=defense, registry=registry, lookup_check=args.lookup_check, **agent_config)
 
-    run_id = args.run_id or default_run_id()
-    out_dir = args.out / run_id
     out_dir.mkdir(parents=True, exist_ok=True)
+    from scripts.tool_state_eval import fingerprint
+    bfcl_data = [*bfcl.data.glob("BFCL_v4_multi_turn*.json"), * (bfcl.data / "multi_turn_func_doc").glob("*.json")]
     manifest = {
         "run_id": run_id,
         "runner": RUNNER_VERSION,
@@ -637,8 +769,13 @@ def main(argv: list[str] | None = None) -> int:
         "bfcl_expected": CLONE_COMMIT,
         "ids_file": str(args.ids.relative_to(PROJECT_ROOT)) if args.ids.is_relative_to(PROJECT_ROOT) else str(args.ids),
         "ids_sha256": sha256_of(args.ids),
+        "prepared_plan_sha256": sha256_of(args.prepared_plan) if args.prepared_plan else None,
         "tasks": {category: len(ids) for category, ids in selection.items()},
+        "selection": selection,
+        "source_files": fingerprint(args.ids),
+        "bfcl_data_files": {str(path.relative_to(bfcl.root)).replace("\\", "/"): sha256_of(path) for path in sorted(bfcl_data)},
         "model": general.get("name"),
+        "general_config": general,
         **ollama_facts(settings.ollama_base_url, str(general.get("name"))),
         "general_version": {"requested_id": general_role.requested_id, "loaded_id": general_role.loaded_id, "status": general_role.status, "verified": general_role.verified},
         "probed": args.probe,
@@ -650,10 +787,14 @@ def main(argv: list[str] | None = None) -> int:
         "think": general.get("think"),
         "num_ctx": general.get("context"),
         "agent_config": agent_config,
+        "defense_enabled": defense.enabled,
         "agent_guide_sha256": hashlib.sha256(AGENT_GUIDE.encode("utf-8")).hexdigest(),
         "persona_prompt": None,
-        "history_between_turns": "user, tool calls and results, and answer" if args.carry_tool_traffic else "user and answer text only",
+        "history_between_turns": "production bounded observations" if args.bounded_tool_state else "legacy unbounded tool traffic" if args.carry_tool_traffic else "user and answer text only",
         "carry_tool_traffic": args.carry_tool_traffic,
+        "bounded_tool_state": args.bounded_tool_state,
+        "measure_inputs": args.measure_inputs,
+        "bfcl_state_policy": "explicit observation transport, not a read/write classification" if args.bounded_tool_state else None,
         "lookup_check": args.lookup_check,
         "single_turn_scored_calls": "first model round only",
         "unload_between_tasks": args.unload_between_tasks,
@@ -661,12 +802,27 @@ def main(argv: list[str] | None = None) -> int:
         "argv": sys.argv[1:] if argv is None else argv,
     }
     manifest_path = out_dir / "manifest.json"
+    if prepared and not manifest.get("digest"):
+        raise ValueError("prepared measurement requires a verified local model digest")
+    if args.resume:
+        previous = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if resume_contract(previous) != resume_contract(manifest):
+            raise ValueError("resume code/data/model/config differ; use a fresh run")
+        manifest = previous
+        manifest.setdefault("resumed_at", []).append(datetime.now(UTC).isoformat())
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    # Validate progress before the initial model reload as well as per-task reloads.
+    for category, ids in selection.items():
+        path = result_path(out_dir, category)
+        if path.exists() and not args.resume:
+            raise FileExistsError(f"{path} exists")
+        read_results(path, ids)
     if not args.unload_between_tasks:
         reloader.reload()
     summary = run_all(
         bfcl, selection, recording, make_agent, out_dir,
         run_tag=RUN_TAG, reloader=reloader if args.unload_between_tasks else None, carry_tool_traffic=args.carry_tool_traffic,
+        bounded_tool_state=args.bounded_tool_state, measure_inputs=args.measure_inputs, resume=args.resume,
     )
     manifest["finished_at"] = datetime.now(UTC).isoformat()
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")

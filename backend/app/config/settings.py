@@ -130,6 +130,7 @@ class Settings(BaseSettings):
     # review everything by hand. Delete-proposals always wait for a human.
     discord_memory_auto_apply_threshold: float | None = 0.8
     # ── end of the Discord block ──
+    source_memory_enabled: bool = True
     # P4-2: per-machine override of models.yaml rag.contextual_retrieval.enabled.
     # Unset = follow models.yaml (shared, versioned); true/false = this machine
     # decides. Context generation is one general-model call per chunk at INDEX
@@ -212,6 +213,7 @@ class Settings(BaseSettings):
     # Ticket 45: a pasted text past what the window holds is read in parts, one model call each
     # (README.en rule 5's fourth exception). Off by default: the seconds a part takes are not measured.
     agent_long_input_enabled: bool = False
+    agent_tool_state_enabled: bool = False
     # Ticket 36: the local decided service (run-decided.bat). Unset = the labelling worker stays off.
     decided_url: str | None = None
     # Ticket 49: the local speech-to-text service (tools/voice_server.py). Unset = /voice/transcribe says 501.
@@ -278,6 +280,12 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_runtime_database(self) -> "Settings":
+        if self.source_memory_enabled:
+            # V2 authors no facts through an LLM and consumes no legacy recap.
+            self.discord_memory_ingestion_enabled = False
+            self.discord_memory_extractor_enabled = False
+            self.discord_memory_verifier_enabled = False
+            self.discord_condensation_enabled = False
         if self.request_log_retention_days < 1:
             raise ValueError("REQUEST_LOG_RETENTION_DAYS must be positive")
         if not self.database_url:
@@ -401,6 +409,8 @@ class Settings(BaseSettings):
         probes exactly once). Probes run only when MODEL_STARTUP_PROBES is true."""
         if self._resolved is None:
             overrides = overrides_from_settings(self)
+            from app.config.small_model_policy import validate_small_model_routes
+            validate_small_model_routes(self.registry(), overrides)
             if allow_missing_collections:
                 overrides = replace(overrides, allow_missing_collections=True)
             probes = ProductionProbes(self) if self.model_startup_probes else None

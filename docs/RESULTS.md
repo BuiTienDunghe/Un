@@ -534,8 +534,8 @@ unloads the model before every run; the seed has no effect at temperature 0.
 | --- | ---: |
 | Tests | **2,181** collected on 03/11/2026 (1,940 in `backend/tests`, 241 in `tests`), against real PostgreSQL, Redis and Qdrant |
 | CI jobs | 4: static checks, backend tests, retrieval-eval gate, bot/tools tests |
-| Schema migrations | 38, each with a downgrade (four exercised by tests), `alembic check` gated |
-| Alembic head | `20261102_38` |
+| Schema migrations | 39, each with a downgrade (four exercised by tests), `alembic check` gated |
+| Alembic head | `20261109_39` |
 | Backups | automatic, with a quarterly restore rehearsal |
 
 ## Per-question gating

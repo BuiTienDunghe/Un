@@ -65,6 +65,67 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
 - **Trạng thái:** xong.
 - **Bằng chứng:** `data/evaluation/results/kept/c57-compare-20261110/REPORT.md` cùng thư mục; bản thô `data/evaluation/results/c57-compare-20261110/` (chỉ trên máy).
 
+## 09/11/2026 — Memory v2 source-backed trên nhánh tool-state-continuity
+
+- **Câu hỏi:** có thể lưu/đọc/quên có kiểm nguồn mà bỏ hoàn toàn 9B khỏi đường chạy không?
+- **Điều kiện:** baseline 966e6b7, PostgreSQL/Redis/Qdrant disposable; Qwen3.5:2b local, temp 0, seed 424242, context 16384. Không chạy 9B đối chứng hay teacher.
+- **Đăng ký trước:** `data/evaluation/results/kept/memory-v2-source-20261109/PREREGISTER.md`.
+- **Các vòng đầu:** source tests 24/24; hồi quy ban đầu 1684 pass/20 fail; targeted 215 pass/8 fail; hồi quy vòng hai 2136 pass/12 fail. Chi tiết và cả lỗi setup được ghi trong `RUN_HISTORY.md`.
+- **Reader:** sáu ca tổng hợp: ban đầu 3/6 đáp án đầy đủ; chỉnh cách đọc lời tự khai rồi 6/6 trên CÙNG sáu ca. Chấm thủ công, không phải heldout, không chứng minh parity với model cũ.
+- **Kiểm chứng cuối:** backend 2198 passed; bot/launcher 242 passed, 1 skipped; review 179 passed; post-review 85 passed gồm 12 vòng hai luồng. Schema không drift; registry 0 error/2 warning lịch sử. Có JUnit/log cho từng lượt.
+- **Ca mới chưa chỉnh prompt:** 5/6 đúng ý chính, một ca vai trò Redis/PostgreSQL từ chối quá mức dù truy hồi đúng. Giữ nguyên kết quả âm, không chấm lại thành pass.
+- **Kết luận:** lưu nguồn và trả lời là hai tiêu chí riêng. Cơ chế lưu/thu hồi đã kiểm được; reader nhỏ vẫn có giới hạn suy luận và chưa chứng minh parity toàn diện. Hoàn tất trên nhánh thử nghiệm; không triển khai vào dữ liệu thật.
+- **Bằng chứng:** `data/evaluation/results/kept/memory-v2-source-20261109/`.
+
+## 09/11/2026 — Phản biện bộ đo state, thêm đường BFCL và kiểm CPU v2
+
+- **Câu hỏi:** bộ xác nhận có đang đo đúng code state sản phẩm, đủ tách khỏi các bài đã dùng chẩn đoán, và có bảo toàn lần đo dở không?
+- **Điều kiện:** chỉ nhánh `codex/tool-state-continuity`, sau `5fd709a`, implementation `eef0988`; main vẫn `3eac7f6`, không merge/push. Feature OFF, guide/model/max_steps không đổi. Container test tạm, CUDA ẩn, Ollama cổng chết, cloud key trống, guard loopback chặn model; real-reranker test CPU cache offline. Không inference model sinh.
+- **Đăng ký trước:** cập nhật v2 của `.scratch/tool-state-continuity/PREREGISTRATION.md` trước inference. Bộ tự viết là hồi quy; tập xác nhận công khai chọn ID bằng hash, không dùng điểm để chọn.
+- **Kết quả:**
+
+  | Kiểm | Kết quả |
+  | --- | --- |
+  | Nhóm BFCL/state v1; v2 | 95 đạt; 100 đạt, không lỗi/bỏ qua |
+  | Full backend | 2.157 đạt, không lỗi/bỏ qua; 286,4 giây; còn 6 warning cũ |
+  | Cú pháp/schema | 438 tệp Python hợp lệ; không drift |
+  | Checker BFCL, model kịch bản | Oracle đạt, không làm gì trượt; không phải điểm model thật |
+  | Chuẩn bị thực và dry-run | 512 ca, 18 lệnh; không Settings/.env/HTTP |
+  | Provenance checker | 48 tệp code/dữ liệu liên quan trùng clone sau chuẩn hóa xuống dòng |
+  | Script kiểm phụ đầu | FileNotFoundError do đường dẫn tương đối sau chdir; sửa resolve trước chdir, giữ bản ghi lỗi |
+  | Xác nhận BFCL đã prepare | 300 ca/1.303 lượt người dùng mỗi nhánh; 3 loại ngoài multi_turn_base |
+  | Pilot / chẩn đoán tùy chọn | 12 ca / 200 ca mỗi nhánh |
+
+- **Kết luận:** BFCL có đường dùng chung recorder/budget/restore với sản phẩm, giữ executor/checker công khai. Runner không còn xóa trắng, resume không coi lỗi hạ tầng là hoàn tất và giữ attempts. Bộ ứng dụng không bị thổi thành bằng chứng chất lượng tổng quát; chưa có số thắng/thua hay latency GPU.
+- **Trạng thái:** code/test/prepare v2 xong trên nhánh; chưa chạy GPU/model thật, chưa bật feature/chọn model, chưa gộp main. Không sửa dữ liệu timestamp cũ hoặc sổ main đang dở.
+- **Bằng chứng:** `data/evaluation/results/kept/tool-state-validation-v2-2026-11-09/REPORT.md`, checks/XML/ID/verification/snapshot cùng thư mục; raw log `data/logs/tool-state-continuity-2026-11-09/review-*/` (chỉ trên máy). Lần script kiểm phụ lỗi vẫn được giữ.
+
+## 09/11/2026 — Giữ kết quả công cụ qua lượt, kiểm cơ chế và chi phí CPU
+
+- **Câu hỏi:** Web/Discord có giữ lại kết quả công cụ an toàn qua lượt và service restart, với overhead bao nhiêu? Chưa đo chất lượng model.
+- **Điều kiện:** nhánh riêng `codex/tool-state-continuity`, base main `3eac7f6`; không sửa code main. Tính năng mặc định OFF. Giữ nguyên guide, model/registry, max_steps=3 và policy lookup/read-rest. PostgreSQL 16, Redis 7, Qdrant v1.18.2 tạm; CUDA ẩn, Ollama cổng chết, cloud key trống, guard loopback chặn cổng model. Real reranker sẵn có kiểm CPU offline; không chạy model sinh.
+- **Đăng ký trước:** `.scratch/tool-state-continuity/PREREGISTRATION.md` trước inference; CPU là kiểm chức năng/overhead, không phải ngưỡng chất lượng. Chưa chọn model nhỏ, đã prepare cho 9B, LFM3 1.7B và Qwen 2B.
+- **Kết quả:**
+
+  | Lượt | Đạt / hỏng / bỏ qua |
+  | --- | --- |
+  | Small fixes | 65 / 0 / 2 |
+  | State unit đầu | 72 / 1 / 9; sửa ghi envelope rỗng |
+  | Focused v2 | 170 / 1 / 0; sửa fixture timestamp filesystem Windows |
+  | Focused v3; v4 | 197 / 0 / 0; 202 / 0 / 0 |
+  | Full v1 | 2.134 / 0 / 0; có cảnh báo reader thread cp1252 |
+  | Full cuối | 2.139 / 0 / 0, 273,7 giây; còn 6 warning có sẵn |
+  | Runner/grader cuối | 6 / 0 / 0; kiểm thay đổi cuối sau collection full |
+  | Cú pháp/schema | 435 tệp Python hợp lệ; không drift |
+  | Overhead OFF → ON, p50 / p95 | 23,39 → 35,97 ms / 29,68 → 43,10 ms |
+  | SQL trung vị/lượt | 10 → 16 |
+  | Ký tự message / schema, 72 lượt mỗi nhánh | 236.016 → 389.520 / 347.616 → 347.616 |
+  | Lần gọi model giả | 144 → 144, cố định theo kịch bản |
+
+- **Kết luận:** cơ chế giữ state, cô lập quyền, phiên bản tài liệu, receipt và quên dữ liệu đã qua CPU/DB tests. Trong fixture, ON thêm khoảng 12,58 ms ở p50 và 26,3% tổng ký tự message+schema. Không suy ra tăng chất lượng hay nhanh hơn trên model thật. State thêm có giới hạn mỗi conversation, không có migration/framework mới.
+- **Trạng thái:** triển khai/test CPU xong; feature OFF; 26 ca/624 job mới chỉ prepare, chưa chạy inference; chưa ship hoặc thay model. Giữ mọi lượt lỗi.
+- **Bằng chứng:** `data/evaluation/results/kept/tool-state-continuity-2026-11-09/REPORT.md`, checks/benchmark/manifest/XML cùng thư mục. Raw log dưới `data/logs/tool-state-continuity-2026-11-09/` (chỉ trên máy). Không đọc .env.
+
 ## 09/11/2026 — Test sau khi gộp `codex/backend-small-fixes` vào main
 
 - **Câu hỏi:** main sau khi gộp (`3eac7f6`) có qua các test của nhánh, kể cả các bài database mà ba agent duyệt không chạy được?

@@ -9,7 +9,9 @@ with a database name ending in `_test` (for example `local_ai_core_test` or
 runs before the suite imports the application. It rejects production names,
 non-PostgreSQL URLs, and query parameters that can override the selected
 database (`dbname`, `database`, `service`, `servicefile`). Invalid configuration
-fails before any test connection; an absent URL still skips integration tests.
+fails before any test connection. An absent URL still skips integration tests;
+before importing the application, conftest pins DATABASE_URL to a dead localhost
+endpoint so unit tests cannot inherit the operator's database or a .env fallback.
 The suffix is a guard, not proof of isolation: create a dedicated database or
 disposable container and never reuse production credentials/data. Migration
 tests downgrade and re-upgrade this database, so do not share it with another run.

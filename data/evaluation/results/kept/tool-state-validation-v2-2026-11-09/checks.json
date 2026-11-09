@@ -1,0 +1,69 @@
+{
+  "base_branch_commit": "5fd709a",
+  "implementation_commit": "eef09886ac79af78f4113a38a51f4b6da809457d",
+  "main_reference": "3eac7f6",
+  "runs": [
+    {
+      "label": "review-bfcl-v1",
+      "tests": 95,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 40.855,
+      "raw_sha256": "722b9057583763a2d4f688529fb8d76fb64a8779a9ed6fbddf695d14ce31e562",
+      "passed": 95
+    },
+    {
+      "label": "review-bfcl-v2",
+      "tests": 100,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 37.394,
+      "raw_sha256": "76104a17b06780b84483482815bf12e2d384580ca610a78a18631002d8638c3f",
+      "passed": 100
+    },
+    {
+      "label": "review-full-v1",
+      "tests": 2157,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "seconds": 286.355,
+      "raw_sha256": "9e128e1fa925565403ceaad4c094198f65cd78520e117957fe100ed04ca6cfbd",
+      "passed": 2157,
+      "normalized_sha256": "9e128e1fa925565403ceaad4c094198f65cd78520e117957fe100ed04ca6cfbd"
+    }
+  ],
+  "verification_first_attempt": {
+    "status": "failed",
+    "stage": "verification-v1",
+    "error_type": "FileNotFoundError",
+    "cause": "relative output path resolved after chdir to backend",
+    "generation_calls": 0
+  },
+  "generation_models_executed": false,
+  "cuda": "hidden",
+  "network": "loopback only; model ports denied; dead Ollama URL",
+  "schema_drift": false,
+  "python_files_parsed": 438,
+  "syntax_errors": 0,
+  "changed_file_sha256": {
+    ".scratch/tool-state-continuity/PREREGISTRATION.md": "460c34486d6ab936c6c00ab618c20e51e0654f617b0f421c0ac46b0441d6f3a6",
+    ".scratch/tool-state-continuity/run_cpu_checks.py": "f8918152a5263434ff03e91c0dbe5636e25401b330b57f2852a872b35074459a",
+    ".scratch/tool-state-continuity/verify_prepared_bfcl.py": "a0e861f96dea4f30a01cfb97cce07f50cba579cf9128047b4e641d6ac98ecaf7",
+    "backend/app/services/chat_service.py": "bab76fc8370d6cc1bd5ae5d450882f33ff6fdf0f614b421293dbcac1e083d52f",
+    "backend/app/services/tool_state_bridge.py": "fff1fd143e8aea9d3552c6304da50ede57167ea88049d2ee6a8b2f5101ab26e8",
+    "backend/scripts/bfcl_run.py": "3d3c337438501052d064c20f6a43838117dc47a0bdadd0acd88f82acd7d796d6",
+    "backend/scripts/eval_state_store.py": "7f781bd17d72c16d92e84b376e0d754429a56815313880c05d71b3e506e7ac31",
+    "backend/scripts/prepare_tool_state_bfcl.py": "7d416044ec4d098391dae652c3ce410d78dd79e1bcba1ce5b8088a5ed1e6b328",
+    "backend/scripts/tool_state_eval.py": "7a7dc2ef2cd6ee0d84175f61be6437fef4c215defa1120f0c59f14dba24300b1",
+    "backend/tests/test_bfcl_tool_state.py": "052d3689acaee697eb5c0755787cfdced740dcab71002b1ca729268f65423857"
+  },
+  "product_cases": 26,
+  "product_user_turns_per_arm": 37,
+  "product_case_jobs": 624,
+  "product_user_turns_total": 888,
+  "checker_files_equal": 48,
+  "note": "Existing real-reranker test uses cached weights on CPU offline; no generation inference."
+}

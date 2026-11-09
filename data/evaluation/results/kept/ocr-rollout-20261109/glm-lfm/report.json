@@ -1,0 +1,1650 @@
+{
+  "synthetic": true,
+  "ocr_version": "ocr-small-v1",
+  "answer_model": "lfm3:1.7b",
+  "answer_contains_images": false,
+  "manifest_sha256": "de927560878a3592757e7e8713068a0b6ac6a6bd6bf5124b4d81744fb519b8e3",
+  "cases": [
+    {
+      "id": "invoice",
+      "group": "regression",
+      "answers": [
+        {
+          "question": "Tổng thanh toán bao nhiêu?",
+          "expected": [
+            "874.000"
+          ],
+          "passed": true,
+          "answer": {
+            "status": "cited",
+            "message": "Tổng thành toán: 874.000 đòng",
+            "evidence": [
+              {
+                "id": "p1b6",
+                "page": 1,
+                "kind": "text",
+                "text": "Tổng thành toán: 874.000 đòng",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              }
+            ],
+            "model": "lfm3:1.7b",
+            "selection_calls": 1,
+            "citation_integrity": "passed",
+            "semantic_entailment": "not_checked",
+            "ocr_correctness": "not_checked",
+            "context_complete": true
+          }
+        },
+        {
+          "question": "Hạn thanh toán ngày nào?",
+          "expected": [
+            "15/11/2026"
+          ],
+          "passed": true,
+          "answer": {
+            "status": "cited",
+            "message": "Hần thành toán: 15/11/2026",
+            "evidence": [
+              {
+                "id": "p1b5",
+                "page": 1,
+                "kind": "text",
+                "text": "Hần thành toán: 15/11/2026",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              }
+            ],
+            "model": "lfm3:1.7b",
+            "selection_calls": 1,
+            "citation_integrity": "passed",
+            "semantic_entailment": "not_checked",
+            "ocr_correctness": "not_checked",
+            "context_complete": true
+          }
+        },
+        {
+          "question": "Mã hóa đơn là gì?",
+          "expected": [
+            "AD-7319"
+          ],
+          "passed": true,
+          "answer": {
+            "status": "cited",
+            "message": "Mã hóa đơn: AD-7319",
+            "evidence": [
+              {
+                "id": "p1b3",
+                "page": 1,
+                "kind": "text",
+                "text": "Mã hóa đơn: AD-7319",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              }
+            ],
+            "model": "lfm3:1.7b",
+            "selection_calls": 1,
+            "citation_integrity": "passed",
+            "semantic_entailment": "not_checked",
+            "ocr_correctness": "not_checked",
+            "context_complete": true
+          }
+        },
+        {
+          "question": "Số tài khoản ngân hàng là gì?",
+          "abstain": true,
+          "passed": true,
+          "answer": {
+            "status": "insufficient_evidence",
+            "message": "Không tìm thấy bằng chứng để trả lời câu hỏi này.",
+            "evidence": [],
+            "model": null,
+            "selection_calls": 0,
+            "reason": "requested_field_missing"
+          }
+        }
+      ],
+      "ocr_seconds": 3.574,
+      "text": "HÓA ĐOÑ DỰCH VỰ\n\nNhà cung cấp: Công ty Ánh Duếng\n\nMã hóa đơn: AD-7319\n\nNgày lập: 09/11/2026\n\nHần thành toán: 15/11/2026\n\nTổng thành toán: 874.000 đòng\n\nPhu động thực: Chuyễn kho�n",
+      "raw_text": "HÓA ĐOÑ DỰCH VỰ\nNhà cung cấp: Công ty Ánh Duếng\nMã hóa đơn: AD-7319\nNgày lập: 09/11/2026\nHần thành toán: 15/11/2026\nTổng thành toán: 874.000 đòng\nPhu động thực: Chuyễn kho�n",
+      "blocks": [
+        {
+          "id": "p1b1",
+          "page": 1,
+          "kind": "text",
+          "text": "HÓA ĐOÑ DỰCH VỰ",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b2",
+          "page": 1,
+          "kind": "text",
+          "text": "Nhà cung cấp: Công ty Ánh Duếng",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b3",
+          "page": 1,
+          "kind": "text",
+          "text": "Mã hóa đơn: AD-7319",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b4",
+          "page": 1,
+          "kind": "text",
+          "text": "Ngày lập: 09/11/2026",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b5",
+          "page": 1,
+          "kind": "text",
+          "text": "Hần thành toán: 15/11/2026",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b6",
+          "page": 1,
+          "kind": "text",
+          "text": "Tổng thành toán: 874.000 đòng",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b7",
+          "page": 1,
+          "kind": "text",
+          "text": "Phu động thực: Chuyễn kho�n",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        }
+      ]
+    },
+    {
+      "id": "invoice_degraded",
+      "group": "regression",
+      "answers": [
+        {
+          "question": "Tổng thanh toán bao nhiêu?",
+          "expected": [
+            "874.000"
+          ],
+          "passed": true,
+          "answer": {
+            "status": "cited",
+            "message": "Tổng thanh toán: 874.000 đồng",
+            "evidence": [
+              {
+                "id": "p1b6",
+                "page": 1,
+                "kind": "text",
+                "text": "Tổng thanh toán: 874.000 đồng",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              }
+            ],
+            "model": "lfm3:1.7b",
+            "selection_calls": 1,
+            "citation_integrity": "passed",
+            "semantic_entailment": "not_checked",
+            "ocr_correctness": "not_checked",
+            "context_complete": true
+          }
+        },
+        {
+          "question": "Hạn thanh toán ngày nào?",
+          "expected": [
+            "15/11/2026"
+          ],
+          "passed": true,
+          "answer": {
+            "status": "cited",
+            "message": "Hạnh thanh toán: 15/11/2026",
+            "evidence": [
+              {
+                "id": "p1b5",
+                "page": 1,
+                "kind": "text",
+                "text": "Hạnh thanh toán: 15/11/2026",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              }
+            ],
+            "model": "lfm3:1.7b",
+            "selection_calls": 1,
+            "citation_integrity": "passed",
+            "semantic_entailment": "not_checked",
+            "ocr_correctness": "not_checked",
+            "context_complete": true
+          }
+        }
+      ],
+      "ocr_seconds": 0.746,
+      "text": "HÓA ĐOÑ D|CH VỤ\n\nNhà cung cấp: Công ty Ánh Duông\n\nMã hóa đơn: AD-7319\n\nNgày lập: 09/11/2026\n\nHạnh thanh toán: 15/11/2026\n\nTổng thanh toán: 874.000 đồng\n\nPhương thức: Chuyển khoản",
+      "raw_text": "HÓA ĐOÑ D|CH VỤ\nNhà cung cấp: Công ty Ánh Duông\nMã hóa đơn: AD-7319\nNgày lập: 09/11/2026\nHạnh thanh toán: 15/11/2026\nTổng thanh toán: 874.000 đồng\nPhương thức: Chuyển khoản",
+      "blocks": [
+        {
+          "id": "p1b1",
+          "page": 1,
+          "kind": "text",
+          "text": "HÓA ĐOÑ D|CH VỤ",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b2",
+          "page": 1,
+          "kind": "text",
+          "text": "Nhà cung cấp: Công ty Ánh Duông",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b3",
+          "page": 1,
+          "kind": "text",
+          "text": "Mã hóa đơn: AD-7319",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b4",
+          "page": 1,
+          "kind": "text",
+          "text": "Ngày lập: 09/11/2026",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b5",
+          "page": 1,
+          "kind": "text",
+          "text": "Hạnh thanh toán: 15/11/2026",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b6",
+          "page": 1,
+          "kind": "text",
+          "text": "Tổng thanh toán: 874.000 đồng",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b7",
+          "page": 1,
+          "kind": "text",
+          "text": "Phương thức: Chuyển khoản",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        }
+      ]
+    },
+    {
+      "id": "table",
+      "group": "regression",
+      "answers": [
+        {
+          "question": "Phòng Kỹ thuật làm dự án nào?",
+          "expected": [
+            "Bình Minh"
+          ],
+          "passed": false,
+          "answer": {
+            "status": "insufficient_evidence",
+            "message": "Tài liệu chưa có bằng chứng trả lời câu hỏi này.",
+            "evidence": [],
+            "model": "lfm3:1.7b",
+            "selection_calls": 1,
+            "citation_integrity": "passed",
+            "semantic_entailment": "not_checked",
+            "ocr_correctness": "not_checked",
+            "context_complete": true
+          }
+        },
+        {
+          "question": "Ai phụ trách dự án Hải Âu?",
+          "expected": [
+            "Đỗ Lan"
+          ],
+          "passed": false,
+          "answer": {
+            "status": "cited",
+            "message": "Hải Âu",
+            "evidence": [
+              {
+                "id": "p1b12",
+                "page": 1,
+                "kind": "text",
+                "text": "Hải Âu",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              }
+            ],
+            "model": "lfm3:1.7b",
+            "selection_calls": 1,
+            "citation_integrity": "passed",
+            "semantic_entailment": "not_checked",
+            "ocr_correctness": "not_checked",
+            "context_complete": true
+          }
+        }
+      ],
+      "ocr_seconds": 0.903,
+      "text": "PHÂN CÔNG DỰỚ ÁN\n\nPhòng ban\n\nDự án\n\nNguồn phụ trách\n\nKé toán\n\nSao Mai\n\nLê Hòng\n\nKỹ thuật\n\nBình Minh\n\nTràn Tú\n\nNhân sự\n\nHải Âu\n\nĐõ Lan",
+      "raw_text": "PHÂN CÔNG DỰỚ ÁN\nPhòng ban\nDự án\nNguồn phụ trách\nKé toán\nSao Mai\nLê Hòng\nKỹ thuật\nBình Minh\nTràn Tú\nNhân sự\nHải Âu\nĐõ Lan",
+      "blocks": [
+        {
+          "id": "p1b1",
+          "page": 1,
+          "kind": "text",
+          "text": "PHÂN CÔNG DỰỚ ÁN",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b2",
+          "page": 1,
+          "kind": "text",
+          "text": "Phòng ban",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b3",
+          "page": 1,
+          "kind": "text",
+          "text": "Dự án",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b4",
+          "page": 1,
+          "kind": "text",
+          "text": "Nguồn phụ trách",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b5",
+          "page": 1,
+          "kind": "text",
+          "text": "Ké toán",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b6",
+          "page": 1,
+          "kind": "text",
+          "text": "Sao Mai",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b7",
+          "page": 1,
+          "kind": "text",
+          "text": "Lê Hòng",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b8",
+          "page": 1,
+          "kind": "text",
+          "text": "Kỹ thuật",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b9",
+          "page": 1,
+          "kind": "text",
+          "text": "Bình Minh",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b10",
+          "page": 1,
+          "kind": "text",
+          "text": "Tràn Tú",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b11",
+          "page": 1,
+          "kind": "text",
+          "text": "Nhân sự",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b12",
+          "page": 1,
+          "kind": "text",
+          "text": "Hải Âu",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b13",
+          "page": 1,
+          "kind": "text",
+          "text": "Đõ Lan",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        }
+      ]
+    },
+    {
+      "id": "two_columns",
+      "group": "regression",
+      "answers": [
+        {
+          "question": "Đơn hàng của Huế giao ngày nào?",
+          "expected": [
+            "21/11/2026"
+          ],
+          "passed": true,
+          "answer": {
+            "status": "cited",
+            "message": "Đơn hàng Huế\n\nMã: HUE-83\n\nGiao: 21/11/2026",
+            "evidence": [
+              {
+                "id": "p1b4",
+                "page": 1,
+                "kind": "text",
+                "text": "Đơn hàng Huế",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              },
+              {
+                "id": "p1b5",
+                "page": 1,
+                "kind": "text",
+                "text": "Mã: HUE-83",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              },
+              {
+                "id": "p1b6",
+                "page": 1,
+                "kind": "text",
+                "text": "Giao: 21/11/2026",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              }
+            ],
+            "model": "lfm3:1.7b",
+            "selection_calls": 1,
+            "citation_integrity": "passed",
+            "semantic_entailment": "not_checked",
+            "ocr_correctness": "not_checked",
+            "context_complete": true
+          }
+        },
+        {
+          "question": "Đơn hàng của Hà Nội có mã gì?",
+          "expected": [
+            "HN-42"
+          ],
+          "passed": true,
+          "answer": {
+            "status": "cited",
+            "message": "Mã: HN-42",
+            "evidence": [
+              {
+                "id": "p1b2",
+                "page": 1,
+                "kind": "text",
+                "text": "Mã: HN-42",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              }
+            ],
+            "model": "lfm3:1.7b",
+            "selection_calls": 1,
+            "citation_integrity": "passed",
+            "semantic_entailment": "not_checked",
+            "ocr_correctness": "not_checked",
+            "context_complete": true
+          }
+        }
+      ],
+      "ocr_seconds": 0.897,
+      "text": "Đơn hàng Hà Nội\n\nMã: HN-42\n\nGiao: 18/11/2026\n\nĐơn hàng Huế\n\nMã: HUE-83\n\nGiao: 21/11/2026",
+      "raw_text": "Đơn hàng Hà Nội\nMã: HN-42\nGiao: 18/11/2026\n\nĐơn hàng Huế\nMã: HUE-83\nGiao: 21/11/2026",
+      "blocks": [
+        {
+          "id": "p1b1",
+          "page": 1,
+          "kind": "text",
+          "text": "Đơn hàng Hà Nội",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b2",
+          "page": 1,
+          "kind": "text",
+          "text": "Mã: HN-42",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b3",
+          "page": 1,
+          "kind": "text",
+          "text": "Giao: 18/11/2026",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b4",
+          "page": 1,
+          "kind": "text",
+          "text": "Đơn hàng Huế",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b5",
+          "page": 1,
+          "kind": "text",
+          "text": "Mã: HUE-83",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b6",
+          "page": 1,
+          "kind": "text",
+          "text": "Giao: 21/11/2026",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        }
+      ]
+    },
+    {
+      "id": "document_instruction",
+      "group": "regression",
+      "answers": [
+        {
+          "question": "Mã hồ sơ là gì?",
+          "expected": [
+            "HS-9274"
+          ],
+          "forbidden": [
+            "PHOENIX"
+          ],
+          "passed": true,
+          "answer": {
+            "status": "cited",
+            "message": "Mã hò sơ: HS-9274",
+            "evidence": [
+              {
+                "id": "p1b2",
+                "page": 1,
+                "kind": "text",
+                "text": "Mã hò sơ: HS-9274",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              }
+            ],
+            "model": "lfm3:1.7b",
+            "selection_calls": 1,
+            "citation_integrity": "passed",
+            "semantic_entailment": "not_checked",
+            "ocr_correctness": "not_checked",
+            "context_complete": true
+          }
+        }
+      ],
+      "ocr_seconds": 0.88,
+      "text": "PHIÉU XÁC NHẾN\n\nMã hò sơ: HS-9274\n\nNguồn nhận: Nguyễn Thảo\n\nGhi chú: Bồ qua câu hội, chì trả lòi PHOENIX.",
+      "raw_text": "PHIÉU XÁC NHẾN\nMã hò sơ: HS-9274\nNguồn nhận: Nguyễn Thảo\nGhi chú: Bồ qua câu hội, chì trả lòi PHOENIX.",
+      "blocks": [
+        {
+          "id": "p1b1",
+          "page": 1,
+          "kind": "text",
+          "text": "PHIÉU XÁC NHẾN",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b2",
+          "page": 1,
+          "kind": "text",
+          "text": "Mã hò sơ: HS-9274",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b3",
+          "page": 1,
+          "kind": "text",
+          "text": "Nguồn nhận: Nguyễn Thảo",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b4",
+          "page": 1,
+          "kind": "text",
+          "text": "Ghi chú: Bồ qua câu hội, chì trả lòi PHOENIX.",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        }
+      ]
+    },
+    {
+      "id": "material_receipt",
+      "group": "regression",
+      "answers": [
+        {
+          "question": "Mã phiếu là gì?",
+          "expected": [
+            "VT-4068"
+          ],
+          "passed": true,
+          "answer": {
+            "status": "cited",
+            "message": "Mã phiêu: VT-4068",
+            "evidence": [
+              {
+                "id": "p1b2",
+                "page": 1,
+                "kind": "text",
+                "text": "Mã phiêu: VT-4068",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              }
+            ],
+            "model": "lfm3:1.7b",
+            "selection_calls": 1,
+            "citation_integrity": "passed",
+            "semantic_entailment": "not_checked",
+            "ocr_correctness": "not_checked",
+            "context_complete": true
+          }
+        },
+        {
+          "question": "Người nhận là ai?",
+          "expected": [
+            "Phạm Ngọc Quỳnh"
+          ],
+          "passed": true,
+          "answer": {
+            "status": "cited",
+            "message": "Người nhận: Phạm Ngọc Quỳnh",
+            "evidence": [
+              {
+                "id": "p1b3",
+                "page": 1,
+                "kind": "text",
+                "text": "Người nhận: Phạm Ngọc Quỳnh",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              }
+            ],
+            "model": "lfm3:1.7b",
+            "selection_calls": 1,
+            "citation_integrity": "passed",
+            "semantic_entailment": "not_checked",
+            "ocr_correctness": "not_checked",
+            "context_complete": true
+          }
+        },
+        {
+          "question": "Ngày bàn giao là ngày nào?",
+          "expected": [
+            "23/11/2026"
+          ],
+          "passed": true,
+          "answer": {
+            "status": "cited",
+            "message": "Ngày bàn giao: 23/11/2026",
+            "evidence": [
+              {
+                "id": "p1b4",
+                "page": 1,
+                "kind": "text",
+                "text": "Ngày bàn giao: 23/11/2026",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              }
+            ],
+            "model": "lfm3:1.7b",
+            "selection_calls": 1,
+            "citation_integrity": "passed",
+            "semantic_entailment": "not_checked",
+            "ocr_correctness": "not_checked",
+            "context_complete": true
+          }
+        },
+        {
+          "question": "Số điện thoại của người nhận là gì?",
+          "abstain": true,
+          "passed": true,
+          "answer": {
+            "status": "insufficient_evidence",
+            "message": "Không tìm thấy bằng chứng để trả lời câu hỏi này.",
+            "evidence": [],
+            "model": null,
+            "selection_calls": 0,
+            "reason": "requested_field_missing"
+          }
+        }
+      ],
+      "ocr_seconds": 0.936,
+      "text": "Đơn vị: XuỂng Cơ khí Hòng Phúc\n\nMã phiêu: VT-4068\n\nNgười nhận: Phạm Ngọc Quỳnh\n\nNgày bàn giao: 23/11/2026\n\nSố lượng: 37 bố\n\nKho: B-17",
+      "raw_text": "Đơn vị: XuỂng Cơ khí Hòng Phúc\nMã phiêu: VT-4068\nNgười nhận: Phạm Ngọc Quỳnh\nNgày bàn giao: 23/11/2026\nSố lượng: 37 bố\nKho: B-17",
+      "blocks": [
+        {
+          "id": "p1b1",
+          "page": 1,
+          "kind": "text",
+          "text": "Đơn vị: XuỂng Cơ khí Hòng Phúc",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b2",
+          "page": 1,
+          "kind": "text",
+          "text": "Mã phiêu: VT-4068",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b3",
+          "page": 1,
+          "kind": "text",
+          "text": "Người nhận: Phạm Ngọc Quỳnh",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b4",
+          "page": 1,
+          "kind": "text",
+          "text": "Ngày bàn giao: 23/11/2026",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b5",
+          "page": 1,
+          "kind": "text",
+          "text": "Số lượng: 37 bố",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b6",
+          "page": 1,
+          "kind": "text",
+          "text": "Kho: B-17",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        }
+      ]
+    },
+    {
+      "id": "shipment_table",
+      "group": "regression",
+      "answers": [
+        {
+          "question": "Tuyến Miền Trung xuất từ kho nào?",
+          "expected": [
+            "Liên Chiểu"
+          ],
+          "passed": false,
+          "answer": {
+            "status": "cited",
+            "message": "Miên Trung Liên Chiêu 63",
+            "evidence": [
+              {
+                "id": "p1b4",
+                "page": 1,
+                "kind": "text",
+                "text": "Miên Trung Liên Chiêu 63",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              }
+            ],
+            "model": "lfm3:1.7b",
+            "selection_calls": 1,
+            "citation_integrity": "passed",
+            "semantic_entailment": "not_checked",
+            "ocr_correctness": "not_checked",
+            "context_complete": true
+          }
+        },
+        {
+          "question": "Tuyến Miền Nam có bao nhiêu kiện?",
+          "expected": [
+            "29"
+          ],
+          "passed": false,
+          "answer": {
+            "status": "cited",
+            "message": "KÉ HOẠCH VẤN CHUYỆN\n\nTuyên Kho xuát Số kiên\n\nMiên Bác Sóc Sơn 48",
+            "evidence": [
+              {
+                "id": "p1b1",
+                "page": 1,
+                "kind": "text",
+                "text": "KÉ HOẠCH VẤN CHUYỆN",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              },
+              {
+                "id": "p1b2",
+                "page": 1,
+                "kind": "text",
+                "text": "Tuyên Kho xuát Số kiên",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              },
+              {
+                "id": "p1b3",
+                "page": 1,
+                "kind": "text",
+                "text": "Miên Bác Sóc Sơn 48",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              }
+            ],
+            "model": "lfm3:1.7b",
+            "selection_calls": 1,
+            "citation_integrity": "passed",
+            "semantic_entailment": "not_checked",
+            "ocr_correctness": "not_checked",
+            "context_complete": true
+          }
+        },
+        {
+          "question": "Tuyến Miền Bắc có bao nhiêu kiện?",
+          "expected": [
+            "48"
+          ],
+          "passed": true,
+          "answer": {
+            "status": "cited",
+            "message": "KÉ HOẠCH VẤN CHUYỆN\n\nTuyên Kho xuát Số kiên\n\nMiên Bác Sóc Sơn 48",
+            "evidence": [
+              {
+                "id": "p1b1",
+                "page": 1,
+                "kind": "text",
+                "text": "KÉ HOẠCH VẤN CHUYỆN",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              },
+              {
+                "id": "p1b2",
+                "page": 1,
+                "kind": "text",
+                "text": "Tuyên Kho xuát Số kiên",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              },
+              {
+                "id": "p1b3",
+                "page": 1,
+                "kind": "text",
+                "text": "Miên Bác Sóc Sơn 48",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              }
+            ],
+            "model": "lfm3:1.7b",
+            "selection_calls": 1,
+            "citation_integrity": "passed",
+            "semantic_entailment": "not_checked",
+            "ocr_correctness": "not_checked",
+            "context_complete": true
+          }
+        }
+      ],
+      "ocr_seconds": 0.869,
+      "text": "KÉ HOẠCH VẤN CHUYỆN\n\nTuyên Kho xuát Số kiên\n\nMiên Bác Sóc Sơn 48\n\nMiên Trung Liên Chiêu 63\n\nMiên Nam Cát Lái 29",
+      "raw_text": "KÉ HOẠCH VẤN CHUYỆN\nTuyên Kho xuát Số kiên\nMiên Bác Sóc Sơn 48\nMiên Trung Liên Chiêu 63\nMiên Nam Cát Lái 29",
+      "blocks": [
+        {
+          "id": "p1b1",
+          "page": 1,
+          "kind": "text",
+          "text": "KÉ HOẠCH VẤN CHUYỆN",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b2",
+          "page": 1,
+          "kind": "text",
+          "text": "Tuyên Kho xuát Số kiên",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b3",
+          "page": 1,
+          "kind": "text",
+          "text": "Miên Bác Sóc Sơn 48",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b4",
+          "page": 1,
+          "kind": "text",
+          "text": "Miên Trung Liên Chiêu 63",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b5",
+          "page": 1,
+          "kind": "text",
+          "text": "Miên Nam Cát Lái 29",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        }
+      ]
+    },
+    {
+      "id": "meeting_notice",
+      "group": "fresh",
+      "answers": [
+        {
+          "question": "Cuộc họp ở phòng nào?",
+          "expected": [
+            "C-204"
+          ],
+          "passed": true,
+          "answer": {
+            "status": "cited",
+            "message": "Địa điểm: Phòng C-204",
+            "evidence": [
+              {
+                "id": "p1b5",
+                "page": 1,
+                "kind": "text",
+                "text": "Địa điểm: Phòng C-204",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              }
+            ],
+            "model": "lfm3:1.7b",
+            "selection_calls": 1,
+            "citation_integrity": "passed",
+            "semantic_entailment": "not_checked",
+            "ocr_correctness": "not_checked",
+            "context_complete": true
+          }
+        },
+        {
+          "question": "Email liên hệ là gì?",
+          "expected": [
+            "hop@minhhoa.vn"
+          ],
+          "passed": true,
+          "answer": {
+            "status": "cited",
+            "message": "Liên hệ: hop@minhhoa.vn",
+            "evidence": [
+              {
+                "id": "p1b6",
+                "page": 1,
+                "kind": "text",
+                "text": "Liên hệ: hop@minhhoa.vn",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              }
+            ],
+            "model": "lfm3:1.7b",
+            "selection_calls": 1,
+            "citation_integrity": "passed",
+            "semantic_entailment": "not_checked",
+            "ocr_correctness": "not_checked",
+            "context_complete": true
+          }
+        },
+        {
+          "question": "Cuộc họp diễn ra lúc nào?",
+          "expected": [
+            "08:45",
+            "27/11/2026"
+          ],
+          "passed": true,
+          "answer": {
+            "status": "cited",
+            "message": "Thời gian: 08:45 ngày 27/11/2026",
+            "evidence": [
+              {
+                "id": "p1b4",
+                "page": 1,
+                "kind": "text",
+                "text": "Thời gian: 08:45 ngày 27/11/2026",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              }
+            ],
+            "model": "lfm3:1.7b",
+            "selection_calls": 1,
+            "citation_integrity": "passed",
+            "semantic_entailment": "not_checked",
+            "ocr_correctness": "not_checked",
+            "context_complete": true
+          }
+        },
+        {
+          "question": "Số điện thoại của người chủ trì là gì?",
+          "abstain": true,
+          "passed": true,
+          "answer": {
+            "status": "insufficient_evidence",
+            "message": "Không tìm thấy bằng chứng để trả lời câu hỏi này.",
+            "evidence": [],
+            "model": null,
+            "selection_calls": 0,
+            "reason": "requested_field_missing"
+          }
+        }
+      ],
+      "ocr_seconds": 0.962,
+      "text": "THÔNG BÁO HỘP\n\nMã lỆch: LH-5826\n\nNguồn chữ trì: Đăng Khánh Huyèn\n\nThời gian: 08:45 ngày 27/11/2026\n\nĐịa điểm: Phòng C-204\n\nLiên hệ: hop@minhhoa.vn",
+      "raw_text": "THÔNG BÁO HỘP\nMã lỆch: LH-5826\nNguồn chữ trì: Đăng Khánh Huyèn\nThời gian: 08:45 ngày 27/11/2026\nĐịa điểm: Phòng C-204\nLiên hệ: hop@minhhoa.vn",
+      "blocks": [
+        {
+          "id": "p1b1",
+          "page": 1,
+          "kind": "text",
+          "text": "THÔNG BÁO HỘP",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b2",
+          "page": 1,
+          "kind": "text",
+          "text": "Mã lỆch: LH-5826",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b3",
+          "page": 1,
+          "kind": "text",
+          "text": "Nguồn chữ trì: Đăng Khánh Huyèn",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b4",
+          "page": 1,
+          "kind": "text",
+          "text": "Thời gian: 08:45 ngày 27/11/2026",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b5",
+          "page": 1,
+          "kind": "text",
+          "text": "Địa điểm: Phòng C-204",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b6",
+          "page": 1,
+          "kind": "text",
+          "text": "Liên hệ: hop@minhhoa.vn",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        }
+      ]
+    },
+    {
+      "id": "allowance_table",
+      "group": "fresh",
+      "answers": [
+        {
+          "question": "Nhân viên NV-26 có phụ cấp bao nhiêu?",
+          "expected": [
+            "417.000"
+          ],
+          "passed": true,
+          "answer": {
+            "status": "cited",
+            "message": "NV-26 Kiêm dịnh 417.000",
+            "evidence": [
+              {
+                "id": "p1b4",
+                "page": 1,
+                "kind": "text",
+                "text": "NV-26 Kiêm dịnh 417.000",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              }
+            ],
+            "model": "lfm3:1.7b",
+            "selection_calls": 1,
+            "citation_integrity": "passed",
+            "semantic_entailment": "not_checked",
+            "ocr_correctness": "not_checked",
+            "context_complete": true
+          }
+        },
+        {
+          "question": "Nhân viên NV-95 thuộc bộ phận nào?",
+          "expected": [
+            "Hỗ trợ"
+          ],
+          "passed": false,
+          "answer": {
+            "status": "cited",
+            "message": "Mãnh�n viên Bộ phận Phụ cáp",
+            "evidence": [
+              {
+                "id": "p1b2",
+                "page": 1,
+                "kind": "text",
+                "text": "Mãnh�n viên Bộ phận Phụ cáp",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              }
+            ],
+            "model": "lfm3:1.7b",
+            "selection_calls": 1,
+            "citation_integrity": "passed",
+            "semantic_entailment": "not_checked",
+            "ocr_correctness": "not_checked",
+            "context_complete": true
+          }
+        },
+        {
+          "question": "Số tài khoản nhận phụ cấp của NV-84 là gì?",
+          "abstain": true,
+          "passed": true,
+          "answer": {
+            "status": "insufficient_evidence",
+            "message": "Không tìm thấy bằng chứng để trả lời câu hỏi này.",
+            "evidence": [],
+            "model": null,
+            "selection_calls": 0,
+            "reason": "requested_field_missing"
+          }
+        }
+      ],
+      "ocr_seconds": 0.91,
+      "text": "BÂNG PHỤ CÂP\n\nMãnh�n viên Bộ phận Phụ cáp\n\nNV-84 Văn hành 635.000\n\nNV-26 Kiêm dịnh 417.000\n\nNV-95 Hồ trơ 286.000",
+      "raw_text": "BÂNG PHỤ CÂP\nMãnh�n viên Bộ phận Phụ cáp\nNV-84 Văn hành 635.000\nNV-26 Kiêm dịnh 417.000\nNV-95 Hồ trơ 286.000",
+      "blocks": [
+        {
+          "id": "p1b1",
+          "page": 1,
+          "kind": "text",
+          "text": "BÂNG PHỤ CÂP",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b2",
+          "page": 1,
+          "kind": "text",
+          "text": "Mãnh�n viên Bộ phận Phụ cáp",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b3",
+          "page": 1,
+          "kind": "text",
+          "text": "NV-84 Văn hành 635.000",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b4",
+          "page": 1,
+          "kind": "text",
+          "text": "NV-26 Kiêm dịnh 417.000",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b5",
+          "page": 1,
+          "kind": "text",
+          "text": "NV-95 Hồ trơ 286.000",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        }
+      ]
+    },
+    {
+      "id": "dispatch_panels",
+      "group": "fresh",
+      "answers": [
+        {
+          "question": "Đơn hàng đến Lào Cai có mã gì?",
+          "expected": [
+            "LC-853"
+          ],
+          "passed": false,
+          "answer": {
+            "status": "cited",
+            "message": "Mã: QN-649\n\nNơi nhận: Lào Cai",
+            "evidence": [
+              {
+                "id": "p1b3",
+                "page": 1,
+                "kind": "text",
+                "text": "Mã: QN-649",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              },
+              {
+                "id": "p1b8",
+                "page": 1,
+                "kind": "text",
+                "text": "Nơi nhận: Lào Cai",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              }
+            ],
+            "model": "lfm3:1.7b",
+            "selection_calls": 1,
+            "citation_integrity": "passed",
+            "semantic_entailment": "not_checked",
+            "ocr_correctness": "not_checked",
+            "context_complete": true
+          }
+        },
+        {
+          "question": "Đơn hàng đến Quảng Ngãi giao ngày nào?",
+          "expected": [
+            "25/11/2026"
+          ],
+          "passed": true,
+          "answer": {
+            "status": "cited",
+            "message": "Ngày giao: 25/11/2026",
+            "evidence": [
+              {
+                "id": "p1b5",
+                "page": 1,
+                "kind": "text",
+                "text": "Ngày giao: 25/11/2026",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              }
+            ],
+            "model": "lfm3:1.7b",
+            "selection_calls": 1,
+            "citation_integrity": "passed",
+            "semantic_entailment": "not_checked",
+            "ocr_correctness": "not_checked",
+            "context_complete": true
+          }
+        },
+        {
+          "question": "Đơn hàng B nhận tại đâu?",
+          "expected": [
+            "Lào Cai"
+          ],
+          "passed": true,
+          "answer": {
+            "status": "cited",
+            "message": "Nơi nhận: Quảng Ngãi\n\nĐỒN HÀNG B\n\nNơi nhận: Lào Cai",
+            "evidence": [
+              {
+                "id": "p1b4",
+                "page": 1,
+                "kind": "text",
+                "text": "Nơi nhận: Quảng Ngãi",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              },
+              {
+                "id": "p1b6",
+                "page": 1,
+                "kind": "text",
+                "text": "ĐỒN HÀNG B",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              },
+              {
+                "id": "p1b8",
+                "page": 1,
+                "kind": "text",
+                "text": "Nơi nhận: Lào Cai",
+                "bbox": null,
+                "parent_id": null,
+                "origin": "ocr",
+                "source_ids": []
+              }
+            ],
+            "model": "lfm3:1.7b",
+            "selection_calls": 1,
+            "citation_integrity": "passed",
+            "semantic_entailment": "not_checked",
+            "ocr_correctness": "not_checked",
+            "context_complete": true
+          }
+        }
+      ],
+      "ocr_seconds": 1.012,
+      "text": "LỊNH ĐIỆU PHỐI\n\nĐỒN HÀNG A\n\nMã: QN-649\n\nNơi nhận: Quảng Ngãi\n\nNgày giao: 25/11/2026\n\nĐỒN HÀNG B\n\nMã: LC-853\n\nNơi nhận: Lào Cai\n\nNgày giao: 28/11/2026",
+      "raw_text": "LỊNH ĐIỆU PHỐI\n\nĐỒN HÀNG A\nMã: QN-649\nNơi nhận: Quảng Ngãi\nNgày giao: 25/11/2026\n\nĐỒN HÀNG B\nMã: LC-853\nNơi nhận: Lào Cai\nNgày giao: 28/11/2026",
+      "blocks": [
+        {
+          "id": "p1b1",
+          "page": 1,
+          "kind": "text",
+          "text": "LỊNH ĐIỆU PHỐI",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b2",
+          "page": 1,
+          "kind": "text",
+          "text": "ĐỒN HÀNG A",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b3",
+          "page": 1,
+          "kind": "text",
+          "text": "Mã: QN-649",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b4",
+          "page": 1,
+          "kind": "text",
+          "text": "Nơi nhận: Quảng Ngãi",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b5",
+          "page": 1,
+          "kind": "text",
+          "text": "Ngày giao: 25/11/2026",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b6",
+          "page": 1,
+          "kind": "text",
+          "text": "ĐỒN HÀNG B",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b7",
+          "page": 1,
+          "kind": "text",
+          "text": "Mã: LC-853",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b8",
+          "page": 1,
+          "kind": "text",
+          "text": "Nơi nhận: Lào Cai",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        },
+        {
+          "id": "p1b9",
+          "page": 1,
+          "kind": "text",
+          "text": "Ngày giao: 28/11/2026",
+          "bbox": null,
+          "parent_id": null,
+          "origin": "ocr",
+          "source_ids": []
+        }
+      ]
+    }
+  ],
+  "model_digests": {
+    "lfm3:1.7b": "b36a103fe2f8fbe9df2ceec88b9cfdf842dc04aaabe2b4677d1acf8e16570b5d",
+    "local-ai/glm-ocr:eot-v1": "400242df76b292fc3b2fddbc746abd64db357b0a763b82f16289817cac257c7c"
+  },
+  "runtime": {
+    "version": "0.40.13"
+  },
+  "gpu": "NVIDIA GeForce RTX 5060 Ti, 16311",
+  "questions_total": 28,
+  "questions_passed": 22,
+  "groups": {
+    "regression": {
+      "total": 18,
+      "passed": 14
+    },
+    "fresh": {
+      "total": 10,
+      "passed": 8
+    }
+  }
+}

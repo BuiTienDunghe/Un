@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 class SmartParser:
-    """Native parsing with a GLM-OCR fallback for PDF pages lacking readable text."""
+    """Native parsing with the configured OCR evidence pipeline for scanned PDF pages."""
 
     def __init__(self, ocr_service: OCRService | None = None) -> None:
         self.parsers: dict[str, BaseParser] = {

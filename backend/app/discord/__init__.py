@@ -99,12 +99,20 @@ def register_services(app: Any, settings: Any, postgres_sessions: Any, *, projec
     state.discord_history_service = DiscordHistoryService(postgres_sessions)
     # The agent's search_history tool, plugged into the running agent's registry at the
     # place it always had in the tool list (C4): the core declares no Discord tool.
-    agent_tools.register(state.agent_service.registry, state.discord_history_service)
+    v2 = getattr(state, "source_memory_service", None)
+    if v2:
+        from app.discord.source_memory import register_tools
+        register_tools(state.agent_service.registry, v2, state.discord_history_service, postgres_sessions)
+        state.discord_history_service.source_memory = v2
+    else:
+        agent_tools.register(state.agent_service.registry, state.discord_history_service)
     # Ticket 35: remember, through the same approval path as every memory.
-    remember_tool.register(state.agent_service.registry, postgres_sessions, state.memory_review_service)
+    if not v2:
+        remember_tool.register(state.agent_service.registry, postgres_sessions, state.memory_review_service)
     # Ticket 36: decided's suggestions, and the jokes a person approved.
     state.message_label_service = MessageLabelService(postgres_sessions)
-    agent_tools.register_jokes(state.agent_service.registry, state.message_label_service)
+    if not v2:
+        agent_tools.register_jokes(state.agent_service.registry, state.message_label_service)
     state.discord_turn_service.message_labels = state.message_label_service
     # Ticket 48: reminders. The service always exists, so the routes answer REMINDERS_DISABLED instead
     # of failing; the tool is offered only when switched on, so the default tool list is unchanged.

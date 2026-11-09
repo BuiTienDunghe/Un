@@ -1440,7 +1440,7 @@
      ══════════════════════════════════════════════════════════════ */
   async function generateSummary(id) {
     const d = detailOf(id);
-    if (d.sumBusy) return;
+    if (d.sumBusy || !canRetryApiError(d.sumError)) return;
     d.sumBusy = true;
     d.sumError = null;
     d.sumTried = true;
@@ -1509,8 +1509,9 @@
           edgeLine(t, 16, 8), h("strong", null, shortOf(other)), h("span", null, t.label), h("small", null, "mở →"));
       }))));
     }
+    if (d.sumError) body.append(errorState(d.sumError));
     body.append(h("div", { class: "rs-sum-meta" }, [d.data.summary_model, d.data.summary_at ? fmtRelative(d.data.summary_at) : null].filter(Boolean).join(" · "),
-      h("button", { type: "button", class: "btn-link", disabled: d.sumBusy, onClick: () => generateSummary(cp.id) }, d.sumBusy ? "Đang tạo lại…" : "Tạo lại")));
+      h("button", { type: "button", class: "btn-link", disabled: d.sumBusy || !canRetryApiError(d.sumError), onClick: () => generateSummary(cp.id) }, d.sumBusy ? "Đang tạo lại…" : "Tạo lại")));
     return { el: body };
   }
 
@@ -1964,7 +1965,7 @@
      TỔNG QUAN
      ══════════════════════════════════════════════════════════════ */
   async function generateInsights() {
-    if (S.insightsBusy || !S.pid) return;
+    if (S.insightsBusy || !S.pid || !canRetryApiError(S.insightsError)) return;
     S.insightsBusy = true;
     S.insightsError = null;
     renderBody();
@@ -2010,14 +2011,15 @@
         h("div", { class: "rs-insights-side" },
           ...[["Paper trung tâm:", ins.central, "var(--accent)"], ["Xu hướng:", ins.trend, "var(--c4)"], ["Khoảng trống:", ins.gap, "var(--c5)"]].filter(([, v]) => v).map(([k, v, color]) =>
             h("div", { class: "rs-insight" }, h("span", { class: "rs-dot", style: { background: color } }), h("span", null, h("strong", null, k), " ", ...richText(v))))),
-        h("div", { class: "rs-insights-foot" }, proj.insights_at ? `phân tích ${fmtRelative(proj.insights_at)}` : "", h("button", { type: "button", class: "btn-link", disabled: S.insightsBusy, onClick: generateInsights }, S.insightsBusy ? "Đang phân tích lại…" : "Phân tích lại")));
+        h("div", { class: "rs-insights-foot" }, proj.insights_at ? `phân tích ${fmtRelative(proj.insights_at)}` : "", h("button", { type: "button", class: "btn-link", disabled: S.insightsBusy || !canRetryApiError(S.insightsError), onClick: generateInsights }, S.insightsBusy ? "Đang phân tích lại…" : "Phân tích lại")),
+        S.insightsError ? errorState(S.insightsError) : null);
     } else {
       let inner;
       if (S.insightsBusy) inner = h("div", { class: "rs-insights-empty" }, h("span", null, h("div", { class: "rs-sum-wait-text" }, icon("spark", { size: 14 }), "AI đang đọc tóm tắt của các paper trong kho… (30–120 giây)")), skeleton({ w: 180, h: 12 }));
       else if (S.insightsError) {
         const missing = routeMissing(S.insightsError);
         inner = h("div", { class: "rs-insights-empty" }, h("span", { style: missing ? null : { color: "var(--danger)" } }, missing ? "Máy chủ chưa hỗ trợ phân tích kho (POST /research/projects/{id}/insights)." : say(S.insightsError, "Không phân tích được.")),
-          missing ? null : h("button", { type: "button", class: "rs-btn", onClick: generateInsights }, icon("retry", { size: 13 }), "Thử lại"));
+          missing || !canRetryApiError(S.insightsError) ? null : h("button", { type: "button", class: "rs-btn", onClick: generateInsights }, icon("retry", { size: 13 }), "Thử lại"));
       } else if (!rows.length) inner = h("div", { class: "rs-insights-empty" }, h("span", null, "Thêm paper vào kho rồi AI sẽ đọc tóm tắt của chúng để rút ra dòng chính, paper trung tâm, xu hướng và khoảng trống."));
       else if (!hasSummary) inner = h("div", { class: "rs-insights-empty" }, h("span", null, "Chưa paper nào có tóm tắt AI, nên chưa có gì để phân tích. Mở một paper → Tóm tắt AI (tạo một lần, lưu lại), rồi quay lại đây."), h("button", { type: "button", class: "rs-btn", disabled: true }, icon("spark", { size: 13 }), "Phân tích kho"));
       else inner = h("div", { class: "rs-insights-empty" }, h("span", null, `AI sẽ đọc tóm tắt của ${rows.filter((p) => p.has_summary).length}/${rows.length} paper để rút ra dòng chính, paper trung tâm, xu hướng và khoảng trống.`), h("button", { type: "button", class: "rs-btn is-primary", onClick: generateInsights }, icon("spark", { size: 13 }), "Phân tích kho"));

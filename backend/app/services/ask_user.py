@@ -43,4 +43,4 @@ def _ask_user(agent: Any, arguments: dict[str, Any], tool_context: dict[str, Any
 
 
 def register(registry: ToolRegistry) -> None:
-    registry.register(AgentTool(ASK_USER_SCHEMA, _ask_user, "Đang chuẩn bị câu hỏi…", ends_turn=True), ORDER)
+    registry.register(AgentTool(ASK_USER_SCHEMA, _ask_user, "Đang chuẩn bị câu hỏi…", ends_turn=True, state_policy="receipt"), ORDER)

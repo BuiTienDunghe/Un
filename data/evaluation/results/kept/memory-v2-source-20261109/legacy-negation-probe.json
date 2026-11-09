@@ -1,0 +1,7 @@
+{
+  "source": "Hãy nhớ tôi không thích cà phê đen",
+  "model_proposed_false_fact": "Tôi thích cà phê đen",
+  "legacy_lexical_gate_accepts": true,
+  "v2_write_contract": "Never stores the model proposed fact; retains the exact source including không.",
+  "comparison": "mechanism comparison only, no old-model inference"
+}

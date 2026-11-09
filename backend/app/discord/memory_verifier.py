@@ -64,7 +64,7 @@ class DiscordMemoryVerifierAdapter:
         self,
         *,
         base_url: str,
-        model: str = "qwen3.5:9b",
+        model: str = "qwen3.5:2b",
         num_ctx: int = 2048,
         temperature: float = 0.0,
         timeout_seconds: float = 90.0,

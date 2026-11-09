@@ -36,8 +36,9 @@ V0 = next(record for record in SHIPPED["roles"]["reranker"]["versions"] if recor
 BROKEN_ID = "reranker-missing-v9"
 BROKEN_DIR = PROJECT_ROOT / "data" / "models" / "reranker" / BROKEN_ID
 # Every Ollama tag the shipped file names, present with an arbitrary digest.
-TAGS = {"qwen3.5:9b": "sha256:general", "qwen3-embedding:0.6b": "sha256:embedding", "glm-ocr:latest": "sha256:ocr",
-        "local-ai/glm-ocr:eot-v1": "sha256:ocr-v1"}
+TAGS = {"qwen3.5:2b": "sha256:general", "qwen3-embedding:0.6b": "sha256:embedding", "glm-ocr:latest": "sha256:ocr",
+        "local-ai/glm-ocr:eot-v1": "sha256:ocr-v1",
+        "hf.co/prithivMLmods/ATH-MaaS-OvisOCR3-GGUF:Q8_0": "5c3b084e81d574957c584d058d895b5670ddb2df1a0f8ff111f779a5603b2d06"}
 # The states that are a decision, never a deviation (RoleResolution.deviates).
 DELIBERATE = {"active", "off", "unconfigured"}
 
@@ -203,9 +204,9 @@ def test_suite_default_boot_serves_every_pointer_unverified_and_reports_ok(mock_
     # every other role can only come from the file.
     assert all(registry[role]["source"] == "registry" for role in ("general", "condenser", "embedding", "vision", "ocr", "reranker"))
     assert registry["reranker"]["status"] == "off", "RAG_RERANKER_ENABLED=false in the suite is a decision, not a deviation"
-    assert registry["vision"]["status"] == "active" and registry["vision"]["loaded"] == "vision-v1"
+    assert registry["vision"]["status"] == "unconfigured" and registry["vision"]["loaded"] is None
     assert registry["embedding"]["collections"] == {"documents": "documents_test", "memories": "memories_test"}
-    assert models["models"]["vision"]["name"] == "qwen3.5:9b" and models["models"]["embedding"]["name"] == "qwen3-embedding:0.6b"
+    assert "vision" not in models["models"] and models["models"]["embedding"]["name"] == "qwen3-embedding:0.6b"
     assert models["rag"]["contextual_retrieval"] is False and models["rag"]["reranker"] is False
     assert models["rag"]["retrieval_mode"] in {"dense", "bm25", "hybrid"}
     assert health["status"] == "ok" and health["model_fallback"] == "ok"
@@ -289,12 +290,12 @@ def test_shipped_registry_with_every_probe_answering_is_all_active_off_or_unconf
 
     assert set(rows) == set(ROLES) and len(rows) == 8
     assert {role: row["status"] for role, row in rows.items()} == {
-        "general": "active", "condenser": "off", "embedding": "active", "vision": "active",
-        "ocr": "active", "reranker": "off", "extractor": "off", "verifier": "off",
+        "general": "active", "condenser": "unconfigured", "embedding": "active", "vision": "unconfigured",
+        "ocr": "active", "reranker": "off", "extractor": "unconfigured", "verifier": "unconfigured",
     }
     assert all(row["fallback"] is False and row["source"] == "registry" for row in rows.values())
-    assert [role for role, row in rows.items() if row["verified"]] == ["general", "embedding", "vision", "ocr"]
-    assert {role: row["loaded"] for role, row in rows.items() if row["loaded"]} == {"general": "general-v0", "embedding": "embedding-v0", "vision": "vision-v1", "ocr": "ocr-v2"}
+    assert [role for role, row in rows.items() if row["verified"]] == ["general", "embedding", "ocr"]
+    assert {role: row["loaded"] for role, row in rows.items() if row["loaded"]} == {"general": "general-small-v1", "embedding": "embedding-v0", "ocr": "ocr-ovis-v1"}
     assert health["status"] == "ok" and health["model_fallback"] == "ok"
     assert not marker_path().exists(), "a stale marker is removed by a boot in which nothing deviates"
     assert events_named(registry_events, "model_version_fallback") == []

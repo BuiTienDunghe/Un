@@ -1,0 +1,75 @@
+{
+  "model": "qwen3.5:2b",
+  "versions": {
+    "general": "general-small-v1"
+  },
+  "cases": [
+    {
+      "case": "conditional",
+      "question": "Bình thường tôi đi taxi phải không?",
+      "expected": "Không; bình thường xe buýt, taxi có điều kiện mưa.",
+      "answer": "Theo lời bạn đã lưu, bình thường tôi đi xe buýt chứ không phải taxi.",
+      "wall_ms": 7185.56,
+      "done_reason": "stop",
+      "retrieved": [
+        "Hãy nhớ nếu trời mưa tôi mới đi taxi, bình thường tôi đi xe buýt."
+      ]
+    },
+    {
+      "case": "different_people",
+      "question": "Hà có dùng Windows không? Còn tôi?",
+      "expected": "Hà không dùng Windows, dùng Linux; người nói dùng Windows.",
+      "answer": "Theo lời bạn đã lưu, Hà không dùng Windows; tôi dùng Windows.",
+      "wall_ms": 227.84,
+      "done_reason": "stop",
+      "retrieved": [
+        "Hãy nhớ Hà không dùng Windows; tôi dùng Windows, Hà dùng Linux."
+      ]
+    },
+    {
+      "case": "plan_not_event",
+      "question": "Tôi đã từng đến Nhật chưa?",
+      "expected": "Chưa từng; đi tháng sau chỉ là dự định.",
+      "answer": "Theo lời bạn đã lưu, tôi chưa từng đến Nhật.",
+      "wall_ms": 238.71,
+      "done_reason": "stop",
+      "retrieved": [
+        "Hãy nhớ tháng sau tôi dự định đến Nhật; tôi chưa từng đến Nhật.",
+        "Hãy nhớ tôi chưa xác nhận ngày họp; đề xuất là 12/12."
+      ]
+    },
+    {
+      "case": "component_roles",
+      "question": "Redis có phải nơi lưu dữ liệu chính của Lumen không?",
+      "expected": "Không; PostgreSQL chính, Redis cache.",
+      "answer": "Theo lời bạn đã lưu, người đang hỏi chưa biết. Các nguồn cung cấp chỉ nói rằng Redis dùng để cache và PostgreSQL lưu dữ liệu chính, nhưng không xác nhận rõ vai trò cụ thể của Redis trong việc lưu trữ dữ liệu chính hay là nơi cache cho Lumen.",
+      "wall_ms": 589.11,
+      "done_reason": "stop",
+      "retrieved": [
+        "Hãy nhớ dự án Lumen chỉ dùng Redis để cache, PostgreSQL lưu dữ liệu chính.",
+        "Hãy nhớ tháng sau tôi dự định đến Nhật; tôi chưa từng đến Nhật."
+      ]
+    },
+    {
+      "case": "proposal_not_decision",
+      "question": "Cuộc họp đã chốt ngày 12/12 chưa?",
+      "expected": "Chưa xác nhận; chỉ đề xuất.",
+      "answer": "Theo lời bạn đã lưu, đề xuất là 12/12 nhưng người đang hỏi chưa xác nhận ngày họp.",
+      "wall_ms": 341.37,
+      "done_reason": "stop",
+      "retrieved": [
+        "Hãy nhớ tôi chưa xác nhận ngày họp; đề xuất là 12/12.",
+        "Hãy nhớ tháng sau tôi dự định đến Nhật; tôi chưa từng đến Nhật."
+      ]
+    },
+    {
+      "case": "missing",
+      "question": "Tên con mèo tôi là gì?",
+      "expected": "Chưa biết, không có nguồn.",
+      "answer": "Chưa biết. Tôi không có thông tin về tên của bạn hoặc con mèo của bạn từ các nguồn được cấp.",
+      "wall_ms": 259.25,
+      "done_reason": "stop",
+      "retrieved": []
+    }
+  ]
+}

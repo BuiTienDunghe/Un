@@ -1,0 +1,1465 @@
+{
+  "scope": "synthetic scripted client, real PostgreSQL; not model quality or inference latency",
+  "summary": {
+    "False": {
+      "turns": 72,
+      "p50_ms": 23.394300020299852,
+      "p95_ms": 29.682899941690266,
+      "model_calls": 144,
+      "message_chars": 236016,
+      "schema_chars": 347616,
+      "median_sql_statements": 10.0
+    },
+    "True": {
+      "turns": 72,
+      "p50_ms": 35.97359999548644,
+      "p95_ms": 43.10180002357811,
+      "model_calls": 144,
+      "message_chars": 389520,
+      "schema_chars": 347616,
+      "median_sql_statements": 16.0
+    }
+  },
+  "rows": [
+    {
+      "enabled": false,
+      "repeat": 0,
+      "turn": 0,
+      "latency_ms": 50.85709993727505,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2183,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 0,
+      "turn": 1,
+      "latency_ms": 29.682899941690266,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2385,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 0,
+      "turn": 2,
+      "latency_ms": 27.912600082345307,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2587,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 0,
+      "turn": 3,
+      "latency_ms": 27.448600041680038,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2789,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 0,
+      "turn": 4,
+      "latency_ms": 28.833099990151823,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2991,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 0,
+      "turn": 5,
+      "latency_ms": 29.259300092235208,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 3193,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 0,
+      "turn": 6,
+      "latency_ms": 32.157399924471974,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 3395,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 0,
+      "turn": 7,
+      "latency_ms": 30.77269997447729,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 3597,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 0,
+      "turn": 8,
+      "latency_ms": 27.393899974413216,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 3800,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 0,
+      "turn": 9,
+      "latency_ms": 27.29110000655055,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 4004,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 0,
+      "turn": 10,
+      "latency_ms": 27.404599939472973,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 4206,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 0,
+      "turn": 11,
+      "latency_ms": 25.1309999730438,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 4206,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 0,
+      "turn": 0,
+      "latency_ms": 35.734299919568,
+      "sql_statements": 15,
+      "model_calls": 2,
+      "message_chars": 2183,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 0,
+      "turn": 1,
+      "latency_ms": 36.08930006157607,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 2811,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 0,
+      "turn": 2,
+      "latency_ms": 33.788900007493794,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 3439,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 0,
+      "turn": 3,
+      "latency_ms": 33.69780001230538,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 4067,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 0,
+      "turn": 4,
+      "latency_ms": 36.17810003925115,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 4695,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 0,
+      "turn": 5,
+      "latency_ms": 34.27119995467365,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 5323,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 0,
+      "turn": 6,
+      "latency_ms": 35.05659999791533,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 5951,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 0,
+      "turn": 7,
+      "latency_ms": 35.587499965913594,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 6579,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 0,
+      "turn": 8,
+      "latency_ms": 35.226000007241964,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 7208,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 0,
+      "turn": 9,
+      "latency_ms": 38.524100091308355,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 7414,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 0,
+      "turn": 10,
+      "latency_ms": 40.175699978135526,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 7622,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 0,
+      "turn": 11,
+      "latency_ms": 39.37959996983409,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 7628,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 1,
+      "turn": 0,
+      "latency_ms": 36.9215999962762,
+      "sql_statements": 15,
+      "model_calls": 2,
+      "message_chars": 2183,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 1,
+      "turn": 1,
+      "latency_ms": 47.98070003744215,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 2811,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 1,
+      "turn": 2,
+      "latency_ms": 36.26720001921058,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 3439,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 1,
+      "turn": 3,
+      "latency_ms": 39.50600000098348,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 4067,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 1,
+      "turn": 4,
+      "latency_ms": 40.247100056149065,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 4695,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 1,
+      "turn": 5,
+      "latency_ms": 40.5846000649035,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 5323,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 1,
+      "turn": 6,
+      "latency_ms": 45.213600038550794,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 5951,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 1,
+      "turn": 7,
+      "latency_ms": 47.96819994226098,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 6579,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 1,
+      "turn": 8,
+      "latency_ms": 41.17609991226345,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 7208,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 1,
+      "turn": 9,
+      "latency_ms": 42.34539996832609,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 7414,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 1,
+      "turn": 10,
+      "latency_ms": 36.62939998321235,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 7622,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 1,
+      "turn": 11,
+      "latency_ms": 35.822800011374056,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 7628,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 1,
+      "turn": 0,
+      "latency_ms": 22.722099907696247,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2183,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 1,
+      "turn": 1,
+      "latency_ms": 22.494700038805604,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2385,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 1,
+      "turn": 2,
+      "latency_ms": 21.50260005146265,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2587,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 1,
+      "turn": 3,
+      "latency_ms": 24.99589999206364,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2789,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 1,
+      "turn": 4,
+      "latency_ms": 23.801399976946414,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2991,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 1,
+      "turn": 5,
+      "latency_ms": 22.199700004421175,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 3193,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 1,
+      "turn": 6,
+      "latency_ms": 22.525699925608933,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 3395,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 1,
+      "turn": 7,
+      "latency_ms": 21.80610003415495,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 3597,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 1,
+      "turn": 8,
+      "latency_ms": 21.688700071536005,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 3800,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 1,
+      "turn": 9,
+      "latency_ms": 21.12940000370145,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 4004,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 1,
+      "turn": 10,
+      "latency_ms": 21.491799969226122,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 4206,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 1,
+      "turn": 11,
+      "latency_ms": 21.45050000399351,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 4206,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 2,
+      "turn": 0,
+      "latency_ms": 21.52149996254593,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2183,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 2,
+      "turn": 1,
+      "latency_ms": 21.727000013925135,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2385,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 2,
+      "turn": 2,
+      "latency_ms": 23.662500083446503,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2587,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 2,
+      "turn": 3,
+      "latency_ms": 23.631100077182055,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2789,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 2,
+      "turn": 4,
+      "latency_ms": 21.2850000243634,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2991,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 2,
+      "turn": 5,
+      "latency_ms": 21.58539998345077,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 3193,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 2,
+      "turn": 6,
+      "latency_ms": 22.410100093111396,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 3395,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 2,
+      "turn": 7,
+      "latency_ms": 22.937800036743283,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 3597,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 2,
+      "turn": 8,
+      "latency_ms": 21.812000079080462,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 3800,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 2,
+      "turn": 9,
+      "latency_ms": 22.53240009304136,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 4004,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 2,
+      "turn": 10,
+      "latency_ms": 21.780500072054565,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 4206,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 2,
+      "turn": 11,
+      "latency_ms": 22.240100079216063,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 4206,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 2,
+      "turn": 0,
+      "latency_ms": 32.424099976196885,
+      "sql_statements": 15,
+      "model_calls": 2,
+      "message_chars": 2183,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 2,
+      "turn": 1,
+      "latency_ms": 34.45740009192377,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 2811,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 2,
+      "turn": 2,
+      "latency_ms": 35.9674000646919,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 3439,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 2,
+      "turn": 3,
+      "latency_ms": 34.39450007863343,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 4067,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 2,
+      "turn": 4,
+      "latency_ms": 33.89820002485067,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 4695,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 2,
+      "turn": 5,
+      "latency_ms": 34.42229994107038,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 5323,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 2,
+      "turn": 6,
+      "latency_ms": 34.95679993648082,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 5951,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 2,
+      "turn": 7,
+      "latency_ms": 36.154899979010224,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 6579,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 2,
+      "turn": 8,
+      "latency_ms": 35.979799926280975,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 7208,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 2,
+      "turn": 9,
+      "latency_ms": 38.00780000165105,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 7414,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 2,
+      "turn": 10,
+      "latency_ms": 38.09720010031015,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 7622,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 2,
+      "turn": 11,
+      "latency_ms": 43.10180002357811,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 7628,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 3,
+      "turn": 0,
+      "latency_ms": 32.441999996080995,
+      "sql_statements": 15,
+      "model_calls": 2,
+      "message_chars": 2183,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 3,
+      "turn": 1,
+      "latency_ms": 34.89320003427565,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 2811,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 3,
+      "turn": 2,
+      "latency_ms": 35.84889997728169,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 3439,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 3,
+      "turn": 3,
+      "latency_ms": 40.01019999850541,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 4067,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 3,
+      "turn": 4,
+      "latency_ms": 36.13190003670752,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 4695,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 3,
+      "turn": 5,
+      "latency_ms": 36.41589998733252,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 5323,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 3,
+      "turn": 6,
+      "latency_ms": 36.18190006818622,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 5951,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 3,
+      "turn": 7,
+      "latency_ms": 35.45610001310706,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 6579,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 3,
+      "turn": 8,
+      "latency_ms": 36.82519996073097,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 7208,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 3,
+      "turn": 9,
+      "latency_ms": 35.78619996551424,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 7414,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 3,
+      "turn": 10,
+      "latency_ms": 34.22170004341751,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 7622,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 3,
+      "turn": 11,
+      "latency_ms": 35.07139999419451,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 7628,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 3,
+      "turn": 0,
+      "latency_ms": 22.27030007634312,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2183,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 3,
+      "turn": 1,
+      "latency_ms": 21.855900064110756,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2385,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 3,
+      "turn": 2,
+      "latency_ms": 22.506400011479855,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2587,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 3,
+      "turn": 3,
+      "latency_ms": 22.816200042143464,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2789,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 3,
+      "turn": 4,
+      "latency_ms": 22.08060002885759,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2991,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 3,
+      "turn": 5,
+      "latency_ms": 22.674200008623302,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 3193,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 3,
+      "turn": 6,
+      "latency_ms": 23.34690000861883,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 3395,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 3,
+      "turn": 7,
+      "latency_ms": 23.5116999829188,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 3597,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 3,
+      "turn": 8,
+      "latency_ms": 22.907999926246703,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 3800,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 3,
+      "turn": 9,
+      "latency_ms": 23.826499935239553,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 4004,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 3,
+      "turn": 10,
+      "latency_ms": 23.707399959675968,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 4206,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 3,
+      "turn": 11,
+      "latency_ms": 26.337599963881075,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 4206,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 4,
+      "turn": 0,
+      "latency_ms": 23.343399981968105,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2183,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 4,
+      "turn": 1,
+      "latency_ms": 23.54720002040267,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2385,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 4,
+      "turn": 2,
+      "latency_ms": 22.967400029301643,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2587,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 4,
+      "turn": 3,
+      "latency_ms": 23.119299905374646,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2789,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 4,
+      "turn": 4,
+      "latency_ms": 26.24339994508773,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2991,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 4,
+      "turn": 5,
+      "latency_ms": 23.206699988804758,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 3193,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 4,
+      "turn": 6,
+      "latency_ms": 23.143299971707165,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 3395,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 4,
+      "turn": 7,
+      "latency_ms": 25.007199961692095,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 3597,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 4,
+      "turn": 8,
+      "latency_ms": 23.66249996703118,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 3800,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 4,
+      "turn": 9,
+      "latency_ms": 25.489000021480024,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 4004,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 4,
+      "turn": 10,
+      "latency_ms": 25.640600011684,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 4206,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 4,
+      "turn": 11,
+      "latency_ms": 26.05410001706332,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 4206,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 4,
+      "turn": 0,
+      "latency_ms": 32.379599986597896,
+      "sql_statements": 15,
+      "model_calls": 2,
+      "message_chars": 2183,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 4,
+      "turn": 1,
+      "latency_ms": 33.07840006891638,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 2811,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 4,
+      "turn": 2,
+      "latency_ms": 37.134600104764104,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 3439,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 4,
+      "turn": 3,
+      "latency_ms": 34.34690006542951,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 4067,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 4,
+      "turn": 4,
+      "latency_ms": 35.68030009046197,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 4695,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 4,
+      "turn": 5,
+      "latency_ms": 36.64589999243617,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 5323,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 4,
+      "turn": 6,
+      "latency_ms": 34.62829999625683,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 5951,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 4,
+      "turn": 7,
+      "latency_ms": 33.111399970948696,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 6579,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 4,
+      "turn": 8,
+      "latency_ms": 35.71510000620037,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 7208,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 4,
+      "turn": 9,
+      "latency_ms": 37.86260006017983,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 7414,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 4,
+      "turn": 10,
+      "latency_ms": 33.85449992492795,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 7622,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 4,
+      "turn": 11,
+      "latency_ms": 38.21929998230189,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 7628,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 5,
+      "turn": 0,
+      "latency_ms": 30.79499991144985,
+      "sql_statements": 15,
+      "model_calls": 2,
+      "message_chars": 2183,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 5,
+      "turn": 1,
+      "latency_ms": 34.82830000575632,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 2811,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 5,
+      "turn": 2,
+      "latency_ms": 32.79989992734045,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 3439,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 5,
+      "turn": 3,
+      "latency_ms": 37.4864999903366,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 4067,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 5,
+      "turn": 4,
+      "latency_ms": 37.06270002294332,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 4695,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 5,
+      "turn": 5,
+      "latency_ms": 36.82080004364252,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 5323,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 5,
+      "turn": 6,
+      "latency_ms": 35.17780010588467,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 5951,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 5,
+      "turn": 7,
+      "latency_ms": 35.3766999905929,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 6579,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 5,
+      "turn": 8,
+      "latency_ms": 38.43289997894317,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 7208,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 5,
+      "turn": 9,
+      "latency_ms": 37.54990000743419,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 7414,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 5,
+      "turn": 10,
+      "latency_ms": 35.2480000583455,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 7622,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": true,
+      "repeat": 5,
+      "turn": 11,
+      "latency_ms": 36.794799962081015,
+      "sql_statements": 16,
+      "model_calls": 2,
+      "message_chars": 7628,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 5,
+      "turn": 0,
+      "latency_ms": 22.748199990019202,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2183,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 5,
+      "turn": 1,
+      "latency_ms": 23.441700031980872,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2385,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 5,
+      "turn": 2,
+      "latency_ms": 23.016999941319227,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2587,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 5,
+      "turn": 3,
+      "latency_ms": 22.991799982264638,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2789,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 5,
+      "turn": 4,
+      "latency_ms": 23.493600077927113,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 2991,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 5,
+      "turn": 5,
+      "latency_ms": 23.765900055877864,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 3193,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 5,
+      "turn": 6,
+      "latency_ms": 24.636600050143898,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 3395,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 5,
+      "turn": 7,
+      "latency_ms": 24.79439997114241,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 3597,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 5,
+      "turn": 8,
+      "latency_ms": 23.746200022287667,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 3800,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 5,
+      "turn": 9,
+      "latency_ms": 25.891599943861365,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 4004,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 5,
+      "turn": 10,
+      "latency_ms": 24.00350000243634,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 4206,
+      "schema_chars": 4828
+    },
+    {
+      "enabled": false,
+      "repeat": 5,
+      "turn": 11,
+      "latency_ms": 23.92940002027899,
+      "sql_statements": 10,
+      "model_calls": 2,
+      "message_chars": 4206,
+      "schema_chars": 4828
+    }
+  ]
+}

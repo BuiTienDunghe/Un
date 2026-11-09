@@ -1,0 +1,6 @@
+conditional Theo lời bạn đã lưu, bình thường tôi đi xe buýt chứ không phải taxi.
+different_people Theo lời bạn đã lưu, Hà không dùng Windows; tôi dùng Windows.
+plan_not_event Theo lời bạn đã lưu, tôi chưa từng đến Nhật.
+component_roles Theo lời bạn đã lưu, người đang hỏi chưa biết. Các nguồn cung cấp chỉ nói rằng Redis dùng để cache và PostgreSQL lưu dữ liệu chính, nhưng không xác nhận rõ vai trò cụ thể của Redis trong việc lưu trữ dữ liệu chính hay là nơi cache cho Lumen.
+proposal_not_decision Theo lời bạn đã lưu, đề xuất là 12/12 nhưng người đang hỏi chưa xác nhận ngày họp.
+missing Chưa biết. Tôi không có thông tin về tên của bạn hoặc con mèo của bạn từ các nguồn được cấp.

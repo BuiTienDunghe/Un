@@ -130,4 +130,4 @@ class Remember:
 
 
 def register(registry: ToolRegistry, sessions: sessionmaker, review_service: DiscordMemoryReviewService) -> None:
-    registry.register(AgentTool(REMEMBER_SCHEMA, Remember(sessions, review_service), "Đang ghi nhớ…"), ORDER)
+    registry.register(AgentTool(REMEMBER_SCHEMA, Remember(sessions, review_service), "Đang ghi nhớ…", state_policy="receipt"), ORDER)
