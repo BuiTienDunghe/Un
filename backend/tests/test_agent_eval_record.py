@@ -47,7 +47,7 @@ class FakeProbes:
 def test_a_probed_run_is_verified_and_refuses_a_general_model_that_is_not_served():
     settings = build_settings(None, probe=False)
 
-    served = resolve_registry(settings, FakeProbes({"qwen3.5:9b": "sha256:d"})).roles["general"]
+    served = resolve_registry(settings, FakeProbes({"qwen3.5:2b": "sha256:d"})).roles["general"]
     assert served.verified is True and probe_refusal(served, probed=True) is None
 
     missing = resolve_registry(settings, FakeProbes({})).roles["general"]
@@ -137,7 +137,7 @@ def fake_api(answers: dict[str, list[dict]], fail_on: str | None = None, documen
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/models":
-            return httpx.Response(200, json={"models": {"embedding": {"name": "qwen3-embedding:0.6b"}, "general": {"name": "qwen3.5:9b"}}, "registry": {}, "rag": {"reranker": True, "retrieval_mode": "hybrid", "contextual_retrieval": True}})
+            return httpx.Response(200, json={"models": {"embedding": {"name": "qwen3-embedding:0.6b"}, "general": {"name": "qwen3.5:2b"}}, "registry": {}, "rag": {"reranker": True, "retrieval_mode": "hybrid", "contextual_retrieval": True}})
         if request.url.path == "/documents/doc-1/chunks":
             chunks = [{"chunk_index": i, "content": c, "page_start": None, "page_end": None} for i, c in enumerate(document)]
             return httpx.Response(200, json={"document_id": "doc-1", "filename": "backup_restore.md", "total_chunks": len(chunks), "chunks": chunks})

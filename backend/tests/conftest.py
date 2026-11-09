@@ -42,6 +42,7 @@ os.environ["RAG_RERANKER_ENABLED"] = "false"
 # probe (one /api/embed, collection width, Postgres counts) would contradict the
 # 1024-d record and mark the embedding role degraded on every boot.
 os.environ["MODEL_STARTUP_PROBES"] = "false"
+os.environ["SOURCE_MEMORY_ENABLED"] = "false"
 # P3-1 accounts stay off in tests: an operator's .env with auth enabled must
 # not flip every open-access assertion. Auth tests enable it explicitly on
 # their own app settings instance.

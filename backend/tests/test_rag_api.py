@@ -8,7 +8,7 @@ def test_rag_chat_returns_sources(client, mock_ollama, monkeypatch):
 
     assert response.status_code == 200
     body = response.json()
-    assert body["model_used"] == "qwen3.5:9b"
+    assert body["model_used"] == "qwen3.5:2b"
     assert body["sources"][0]["document_id"] == "doc_demo"
 
 

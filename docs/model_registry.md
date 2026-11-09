@@ -1,3 +1,6 @@
+> Experimental branch profile: see [source_memory_runtime.md](source_memory_runtime.md).
+> The role history/runbooks below include older experiments. Current startup checks permit only known small local routes; 9B pins and unknown aliases fail before probes. Extractor/verifier/condenser are inactive. No teacher or automatic cloud fallback.
+
 # Model version registry — runbook
 
 Date: 07/09/2026 · Decision: `docs/adr/0001-model-version-registry.md` · Acceptance rules:
@@ -47,7 +50,7 @@ Rules that matter when you edit it:
 | `embedding` records carry `collection_suffix` **outside** `config` (`""` for v0, `[a-z0-9_]*`, unique) | it changes *where* vectors are stored, not what they are; two versions can never share a collection |
 | `query_prefix` / `passage_prefix` live **inside** the embedding `config` | a prefix change produces different vectors, so it must re-key the cache — which means a query-only prefix change is a new version with a new suffix and a full re-embed |
 | `vram_mib` must be non-null on the ACTIVE version of general / embedding / reranker / extractor; `0` = shares a resident tag; `null` = "measure before promotion" | `--check` sums the resident set against `budget.vram_mib` |
-| `eval.reports: {gate: path}` with gates `d1_multidoc`, `heldout`, `mteb`, `extractor_benchmark`; the ACTIVE version of those four roles needs at least one existing report whose `versions.<role>` stamp equals the id | invariant #4: a served RAG-quality version must be able to point at the report that earned it. The four v0 records are grandfathered (their reports predate the stamp: a warning, not an error) |
+| `eval.reports: {gate: path}` with gates `d1_multidoc`, `heldout`, `mteb`, `extractor_benchmark`, `source_memory_smoke` (experimental memory branch only; not a D1 or heldout quality result); the ACTIVE version of those four roles needs at least one existing report whose `versions.<role>` stamp equals the id | invariant #4: a served RAG-quality version must be able to point at the report that earned it. The four v0 records are grandfathered (their reports predate the stamp: a warning, not an error) |
 | reranker: exactly one of `hub` (+ `revision`) or `path` (repo-relative directory); `activation` is `identity`, `sigmoid` or null; `probe.pairs/scores/tolerance/max_ms`; `path` versions also `digest: {file, sha256}` | a checkpoint saved by sentence-transformers 5.x loads on the production 3.4.1 but defaults to Sigmoid and saturates; the loader forces the record's activation and probe-pair parity catches a mismatch or a random head |
 | ollama `ollama: {source, modelfile, gguf_sha256}` with `source` `hub` (default) or `modelfile` | a tag built with `ollama create` cannot be pulled; the launcher needs to know which is which |
 | ollama `digest:` (string from `GET /api/tags`) pins a mutable tag such as `glm-ocr:latest` | "loadable" then means "these bytes" |
@@ -172,11 +175,11 @@ role and id; warnings are printed and do not fail.
 | every `ollama.source: modelfile` version that is active or in a chain: `Modelfile` exists, `gguf_sha256` non-null | error (candidates after the active one are not checked) |
 | `.github/workflows/ci.yml`: the `~/.ollama` cache key equals `ollama-` + the active embedding `config.revision` | error (a stale key would serve old weights under a new revision) |
 
-On the shipped file today: 0 errors, 4 warnings (the four v0 reports carry no stamp).
+On this experimental branch: 0 errors, 2 legacy report-stamp warnings (embedding and reranker). General has a source_memory_smoke report; it is not a D1/heldout qualification.
 
 Other modes: `--ollama-pull-list` (one hub tag per line — the launcher pulls these: the
 requested tag plus every fallback tag of every Ollama role that is not off; on the shipped
-file exactly `qwen3.5:9b`, `qwen3-embedding:0.6b`, `glm-ocr:latest`), `--ollama-create-list`
+file exactly `qwen3.5:2b`, `qwen3-embedding:0.6b`; OCR is create-built, not a hub pull), `--ollama-create-list`
 (`tag<TAB>modelfile` for create-built tags; on the shipped file exactly
 `local-ai/glm-ocr:eot-v1` with `data/models/ocr/ocr-v1/Modelfile`), `--record-probe <id>` (hub reranker
 versions only: score `probe.pairs` on this runtime and print the `scores:` line to paste).

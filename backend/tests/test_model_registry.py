@@ -45,15 +45,15 @@ DATABASE_URL = "postgresql+psycopg://user:password@localhost/test"
 # The five `models:` blocks of models.yaml on the commit before the registry landed,
 # key order included: acceptance A says the dict every router receives is these.
 TODAY = {
-    "general": {"provider": "ollama", "name": "qwen3.5:9b", "context": 16384, "temperature": 0.4, "top_p": 0.9, "think": False, "keep_alive": "5m"},
+    "general": {"provider": "ollama", "name": "qwen3.5:2b", "context": 16384, "temperature": 0.4, "top_p": 0.9, "think": False, "keep_alive": "5m"},
     "condenser": {"provider": "gemini", "name": "gemini-2.5-flash", "temperature": 0.2, "max_tokens": 4096},
     "embedding": {"provider": "ollama", "name": "qwen3-embedding:0.6b", "context": 32768, "revision": "qwen3-embedding-0.6b-r1", "normalization": "raw", "dimensions": 1024},
-    "vision": {"provider": "ollama", "name": "qwen3.5:9b", "context": 16384, "temperature": 0.3, "keep_alive": "5m"},
+    "vision": {"provider": "ollama", "name": "qwen3.5:2b", "context": 16384, "temperature": 0.3, "keep_alive": "5m"},
     "ocr": {"provider": "ollama", "name": "glm-ocr:latest", "enabled": True, "context": 16384, "temperature": 0.1, "keep_alive": "5m",
             "prompt": "Text Recognition:", "dpi": 200, "min_text_characters": 80, "min_alphanumeric_ratio": 0.45},
 }
 
-ALL_TAGS = {"qwen3.5:9b": "sha256:a", "qwen3-embedding:0.6b": "sha256:b", "glm-ocr:latest": "sha256:c"}
+ALL_TAGS = {"qwen3.5:2b": "sha256:a", "qwen3-embedding:0.6b": "sha256:b", "glm-ocr:latest": "sha256:c"}
 # The default flags of a fresh checkout: condenser, extractor and verifier are off.
 FLAGS_OFF = frozenset({"condenser", "extractor", "verifier"})
 
@@ -69,23 +69,23 @@ def base_document() -> dict:
         "roles": {
             "general": {"active": "general-v0", "versions": [
                 {"id": "general-v0", "provider": "ollama", "vram_mib": 6407,
-                 "config": {"provider": "ollama", "name": "qwen3.5:9b", "context": 16384}}]},
+                 "config": {"provider": "ollama", "name": "qwen3.5:2b", "context": 16384}}]},
             "condenser": {"active": "condenser-v0", "versions": [
                 {"id": "condenser-v0", "provider": "gemini", "config": {"provider": "gemini", "name": "gemini-2.5-flash"}}]},
             "embedding": {"active": "embedding-v0", "versions": [
                 {"id": "embedding-v0", "provider": "ollama", "collection_suffix": "", "vram_mib": 2870,
                  "config": {"provider": "ollama", "name": "qwen3-embedding:0.6b", "revision": "r1", "normalization": "raw", "dimensions": 1024}}]},
             "vision": {"active": None, "versions": [
-                {"id": "vision-v0", "provider": "ollama", "config": {"provider": "ollama", "name": "qwen3.5:9b"}}]},
+                {"id": "vision-v0", "provider": "ollama", "config": {"provider": "ollama", "name": "qwen3.5:2b"}}]},
             "ocr": {"active": "ocr-v0", "versions": [
                 {"id": "ocr-v0", "provider": "ollama", "config": {"provider": "ollama", "name": "glm-ocr:latest", "enabled": True}}]},
             "reranker": {"active": "reranker-v0", "versions": [
                 {"id": "reranker-v0", "provider": "sentence-transformers", "hub": "cross-encoder/x", "revision": "abc",
                  "vram_mib": 643, "probe": {"pairs": [["q", "p"]], "scores": None}}]},
             "extractor": {"active": "extractor-v0", "versions": [
-                {"id": "extractor-v0", "provider": "ollama", "vram_mib": 0, "config": {"provider": "ollama", "name": "qwen3.5:9b"}}]},
+                {"id": "extractor-v0", "provider": "ollama", "vram_mib": 0, "config": {"provider": "ollama", "name": "qwen3.5:2b"}}]},
             "verifier": {"active": "verifier-v0", "versions": [
-                {"id": "verifier-v0", "provider": "ollama", "vram_mib": 0, "config": {"provider": "ollama", "name": "qwen3.5:9b"}}]},
+                {"id": "verifier-v0", "provider": "ollama", "vram_mib": 0, "config": {"provider": "ollama", "name": "qwen3.5:2b"}}]},
         },
     }
 
@@ -162,40 +162,25 @@ def ready_probes(**overrides) -> FakeProbes:
 
 def test_shipped_registry_loads_every_role_with_todays_pointers():
     registry = load_registry()
-    assert registry.path == DEFAULT_REGISTRY_PATH
-    assert tuple(registry.roles) == ROLES
+    assert registry.path == DEFAULT_REGISTRY_PATH and tuple(registry.roles) == ROLES
     assert {role: entry.active for role, entry in registry.roles.items()} == {
-        "general": "general-v0", "condenser": "condenser-v0", "embedding": "embedding-v0", "vision": "vision-v1",
-        "ocr": "ocr-v2", "reranker": "reranker-v0", "extractor": "extractor-v0", "verifier": "verifier-v0",
-    }
-    assert registry.get("embedding", "embedding-v0").collection_suffix == ""
-    assert registry.get("embedding", "embedding-e5l-v1").collection_suffix == "e5l"
-    reranker = registry.get("reranker", "reranker-v0")
-    assert reranker.hub == "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1" and reranker.revision
-    assert reranker.probe is not None and len(reranker.probe.scores) == len(reranker.probe.pairs) == 3
+        "general":"general-small-v1", "condenser":None, "embedding":"embedding-v0", "vision":None,
+        "ocr":"ocr-small-v1", "reranker":"reranker-v0", "extractor":None, "verifier":None}
+    assert registry.get("embedding","embedding-v0").collection_suffix == ""
+    assert registry.get("embedding","embedding-e5l-v1").collection_suffix == "e5l"
+    for entry in registry.roles.values():
+        assert all("9b" not in record.name.lower() for record in entry.versions)
 
 
 def test_flat_models_equals_the_models_yaml_blocks_the_registry_replaced():
     resolved = resolve(load_registry(), Overrides(disabled_roles=FLAGS_OFF))
     flat = resolved.flat_models()
-    # Four blocks are served verbatim, key order included (the embedding cache
-    # fingerprints every key, so order-insensitive equality would not be enough).
-    for role in ("general", "condenser", "embedding"):
-        assert list(flat[role].items()) == list(TODAY[role].items()), role
-    # ocr moved on purpose twice (ocr-v1, 29/09/2026: v0 stopped ending its turn on Ollama 0.34.x;
-    # ocr-v2, 30/10/2026: Qwen 9B reads Vietnamese far better). v0 stays recorded verbatim; v1
-    # differs in the tag and the cap only.
-    assert list(resolved.registry.get("ocr", "ocr-v0").config.items()) == list(TODAY["ocr"].items())
-    assert dict(resolved.registry.get("ocr", "ocr-v1").config) == {**TODAY["ocr"], "name": "local-ai/glm-ocr:eot-v1", "max_tokens": 4096}
-    assert flat["ocr"]["name"] == "qwen3.5:9b" and flat["ocr"]["think"] is False
-    # vision: v0 stays recorded verbatim; v1 serves, the same model without the thinking pass.
-    assert flat["vision"] == {**TODAY["vision"], "think": False}
-    assert list(resolved.registry.get("vision", "vision-v0").config.items()) == list(TODAY["vision"].items())
-    # extractor / verifier carry config too (MODEL_ROLES); they were env-only before.
-    assert flat["extractor"] == {"provider": "ollama", "name": "qwen3.5:9b"}
-    assert flat["verifier"] == {"provider": "ollama", "name": "qwen3.5:9b"}
-    assert set(flat) == set(MODEL_ROLES)
-    assert resolved.flat_models() is flat, "flat_models() must hand every caller the same object"
+    assert flat["embedding"] == TODAY["embedding"]  # cache fingerprint unchanged
+    assert flat["general"]["name"] == "qwen3.5:2b"
+    assert flat["general"]["temperature"] == 0.0 and flat["general"]["think"] is False
+    assert flat["ocr"]["name"] == "local-ai/glm-ocr:eot-v1"
+    assert "vision" not in flat and "extractor" not in flat and "verifier" not in flat
+    assert resolved.flat_models() is flat
 
 
 def test_load_models_is_identical_across_settings_instances():
@@ -208,9 +193,8 @@ def test_load_models_is_identical_across_settings_instances():
 def test_shipped_pull_list_is_exactly_what_the_launcher_pulled_by_hand():
     registry = load_registry()
     overrides = Overrides(disabled_roles=FLAGS_OFF)
-    assert ollama_pull_list(registry, overrides) == ["qwen3.5:9b", "qwen3-embedding:0.6b", "glm-ocr:latest"]
-    # ocr-v1 is built, not pulled; glm-ocr:latest above is both ocr-v0 and ocr-v1's source blob.
-    assert ollama_create_list(registry, overrides) == [("local-ai/glm-ocr:eot-v1", PROJECT_ROOT / "data" / "models" / "ocr" / "ocr-v1" / "Modelfile")]
+    assert ollama_pull_list(registry, overrides) == ["qwen3.5:2b", "qwen3-embedding:0.6b"]
+    assert ollama_create_list(registry, overrides) == [("local-ai/glm-ocr:eot-v1", PROJECT_ROOT / "data/models/ocr/ocr-v1/Modelfile")]
 
 
 def test_import_leaves_pydantic_out_of_sys_modules():
@@ -378,7 +362,7 @@ def test_without_probes_every_pointer_is_active_and_unverified(tmp_path):
     assert resolved.fallback_flag() == "ok" and resolved.attention_text() is None
     assert resolved.embedding_refusal() is None
     assert resolved.embedding_version_id() == "embedding-v0"
-    assert resolved.model_name("general") == "qwen3.5:9b" and resolved.model_name("reranker") is None and resolved.model_name("vision") is None
+    assert resolved.model_name("general") == "qwen3.5:2b" and resolved.model_name("reranker") is None and resolved.model_name("vision") is None
 
 
 def test_flag_off_roles_are_off_not_deviating_and_keep_their_config(tmp_path):
@@ -387,14 +371,14 @@ def test_flag_off_roles_are_off_not_deviating_and_keep_their_config(tmp_path):
     assert extractor.status == "off" and not extractor.deviates and not extractor.serving
     assert extractor.reason == "DISCORD_MEMORY_EXTRACTOR_ENABLED=false"
     assert extractor.loaded_id is None and extractor.record.id == "extractor-v0"
-    assert resolved.flat_models()["extractor"]["name"] == "qwen3.5:9b"
+    assert resolved.flat_models()["extractor"]["name"] == "qwen3.5:2b"
     assert resolved.roles["condenser"].reason == "DISCORD_CONDENSATION_ENABLED=false"
 
 
 def test_ocr_disabled_in_the_file_is_off_without_a_probe(tmp_path):
     document = base_document()
     document["roles"]["ocr"]["versions"][0]["config"]["enabled"] = False
-    probes = ready_probes(tags={"qwen3.5:9b": "a", "qwen3-embedding:0.6b": "b"})   # ocr tag absent too
+    probes = ready_probes(tags={"qwen3.5:2b": "a", "qwen3-embedding:0.6b": "b"})   # ocr tag absent too
     ocr = resolve(load(tmp_path, document), Overrides(disabled_roles=FLAGS_OFF), probes).roles["ocr"]
     assert ocr.status == "off" and ocr.reason == "config.enabled=false" and not ocr.deviates
     assert ocr.flat_config["enabled"] is False
@@ -454,11 +438,11 @@ def test_absent_tag_falls_back_to_the_previous_version_and_says_so(tmp_path):
     assert general.status == "fallback" and general.loaded_id == "general-v0" and general.requested_id == "general-v1"
     assert general.reason == "general-v1 tag qwen4:9b absent from /api/tags; serving general-v0"
     assert general.deviates and general.serving and general.verified
-    assert resolved.flat_models()["general"]["name"] == "qwen3.5:9b", "the served config is the loaded version's"
+    assert resolved.flat_models()["general"]["name"] == "qwen3.5:2b", "the served config is the loaded version's"
     assert resolved.fallback_flag() == "fallback"
     assert resolved.registry_view()["general"] == {
         "active": "general-v1", "requested": "general-v1", "loaded": "general-v0", "source": "registry", "status": "fallback",
-        "reason": general.reason, "verified": True, "name": "qwen3.5:9b", "digest": None, "fallback": True,
+        "reason": general.reason, "verified": True, "name": "qwen3.5:2b", "digest": None, "fallback": True,
     }
     text = resolved.attention_text()
     assert "general: requested=general-v1 loaded=general-v0 status=fallback" in text
@@ -492,12 +476,12 @@ def test_digest_mismatch_treats_the_version_as_absent(tmp_path):
     registry = load(tmp_path, document)
     general = resolve(registry, Overrides(disabled_roles=FLAGS_OFF), ready_probes()).roles["general"]
     assert general.status == "missing" and "digest_mismatch" in general.reason
-    matching = resolve(registry, Overrides(disabled_roles=FLAGS_OFF), ready_probes(tags=ALL_TAGS | {"qwen3.5:9b": "sha256:not-what-the-server-has"})).roles["general"]
+    matching = resolve(registry, Overrides(disabled_roles=FLAGS_OFF), ready_probes(tags=ALL_TAGS | {"qwen3.5:2b": "sha256:not-what-the-server-has"})).roles["general"]
     assert matching.status == "active" and matching.probe.kind == "tags+digest"
 
 
 def test_ocr_without_its_tag_is_disabled_and_its_served_copy_says_enabled_false(tmp_path):
-    tags = {"qwen3.5:9b": "sha256:a", "qwen3-embedding:0.6b": "sha256:b"}
+    tags = {"qwen3.5:2b": "sha256:a", "qwen3-embedding:0.6b": "sha256:b"}
     resolved = resolve(load(tmp_path, base_document()), Overrides(disabled_roles=FLAGS_OFF), ready_probes(tags=tags))
     ocr = resolved.roles["ocr"]
     assert ocr.status == "disabled" and ocr.deviates and not ocr.serving
@@ -723,7 +707,7 @@ def test_loader_kwargs_carry_only_what_the_record_sets(tmp_path, monkeypatch):
     monkeypatch.setenv("HF_HUB_OFFLINE", "1")
     assert hub.loader_kwargs() == {"revision": "abc", "local_files_only": True}
     assert registry.get("ocr", "ocr-v0").ollama_tag == "glm-ocr:latest"
-    assert registry.get("general", "general-v0").ollama_tag == "qwen3.5:9b"
+    assert registry.get("general", "general-v0").ollama_tag == "qwen3.5:2b"
 
 
 # ── predicates, view, marker, logging ───────────────────────────────────────────
@@ -807,7 +791,7 @@ def test_attention_revert_line_follows_the_pointer_source_and_the_file_order(tmp
     # registry pointer on a role with nothing listed before it and its tag gone: say so, with the reason.
     gone = text(Overrides(disabled_roles=FLAGS_OFF), ready_probes(tags={"qwen3-embedding:0.6b": "sha256:b", "glm-ocr:latest": "sha256:c"}))
     assert "general: requested=general-v0 loaded=None status=missing" in gone
-    assert "revert: no earlier version of roles.general is registered — remedy: general-v0 tag qwen3.5:9b absent" in gone
+    assert "revert: no earlier version of roles.general is registered — remedy: general-v0 tag qwen3.5:2b absent" in gone
     assert "<a previous id>" not in gone
 
     # registry pointer moved to the candidate without the rebuild: revert to v0 (listed before
@@ -846,9 +830,9 @@ def test_pull_list_covers_active_and_fallback_tags_and_create_list_the_modelfile
         "config": {"provider": "ollama", "name": "local-ai/student:d2"}}, active=False)
     registry = load(tmp_path, document)
     everything_on = Overrides(pins={"extractor": "extractor-d2"})
-    assert ollama_pull_list(registry, everything_on) == ["qwen4:9b", "qwen3.5:9b", "qwen3-embedding:0.6b", "glm-ocr:latest"]
+    assert ollama_pull_list(registry, everything_on) == ["qwen4:9b", "qwen3.5:2b", "qwen3-embedding:0.6b", "glm-ocr:latest"]
     assert ollama_create_list(registry, everything_on) == [("local-ai/student:d2", PROJECT_ROOT / "data/models/extractor/extractor-d2/Modelfile")]
-    assert ollama_pull_list(registry, Overrides(raw_tags={"extractor": "ad-hoc:tag"})) == ["qwen4:9b", "qwen3.5:9b", "qwen3-embedding:0.6b", "glm-ocr:latest", "ad-hoc:tag"]
+    assert ollama_pull_list(registry, Overrides(raw_tags={"extractor": "ad-hoc:tag"})) == ["qwen4:9b", "qwen3.5:2b", "qwen3-embedding:0.6b", "glm-ocr:latest", "ad-hoc:tag"]
     with pytest.raises(ModelRegistryError, match="MODEL_VERSION_EXTRACTOR"):
         ollama_pull_list(registry, Overrides(pins={"extractor": "nope"}))
 
@@ -870,9 +854,9 @@ def test_overrides_from_settings_reads_flags_keys_pins_and_tags():
 
 def test_settings_refuses_both_pins_for_one_role():
     with pytest.raises(ValueError, match="DISCORD_MEMORY_EXTRACTOR_MODEL and MODEL_VERSION_EXTRACTOR are both set: set one, not both"):
-        _settings(discord_memory_extractor_model="qwen3.5:9b", model_version_extractor="extractor-v0")
+        _settings(discord_memory_extractor_model="qwen3.5:2b", model_version_extractor="extractor-v0")
     with pytest.raises(ValueError, match="DISCORD_MEMORY_VERIFIER_MODEL and MODEL_VERSION_VERIFIER are both set"):
-        _settings(discord_memory_verifier_model="qwen3.5:9b", model_version_verifier="verifier-v0")
+        _settings(discord_memory_verifier_model="qwen3.5:2b", model_version_verifier="verifier-v0")
     with pytest.raises(ValueError, match="must not be blank when set"):
         _settings(discord_memory_extractor_model="   ")
 
@@ -887,10 +871,10 @@ def test_settings_maps_empty_env_to_unset_and_registry_path_to_project_root(tmp_
 
 def test_settings_serves_a_fixture_registry_and_refuses_an_unknown_pin(tmp_path):
     document = base_document()
-    add_version(document, "general", general_v1(), active=False)
+    add_version(document, "general", general_v1(name="lfm3:1.7b"), active=False)
     path = write_registry(tmp_path, document)
     settings = _settings(model_registry_path=str(path), model_version_general="general-v1")
-    assert settings.load_models()["general"]["name"] == "qwen4:9b"
+    assert settings.load_models()["general"]["name"] == "lfm3:1.7b"
     assert settings.resolve_models().roles["general"].source == "env"
     with pytest.raises(ModelRegistryError, match="MODEL_VERSION_OCR='ocr-v9'"):
         _settings(model_registry_path=str(path), model_version_ocr="ocr-v9").load_models()

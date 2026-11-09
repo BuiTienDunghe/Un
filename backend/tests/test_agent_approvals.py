@@ -504,7 +504,7 @@ def test_the_migration_adds_one_table_with_a_way_back_and_the_row_follows_its_tu
     (key,) = DiscordApproval.__table__.c.source_turn_id.foreign_keys
     assert key.target_fullname == "discord_session_turns.id" and key.ondelete == "CASCADE"
     heads = [p.name for p in path.parent.glob("2026*.py") if p.name > path.name]
-    assert heads == [], "another migration was added after this one: recheck down_revision"
+    assert heads == ["20261109_39_source_memory.py"], "recheck the migration chain"
 
 
 # ---- forgetting a member ----

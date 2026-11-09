@@ -18,8 +18,8 @@ from scripts import benchmark_discord_memory_extractor as benchmark
 
 BACKEND = Path(__file__).resolve().parents[1]
 FIXTURE = BACKEND / "tests" / "fixtures" / "discord_memory_extractor_benchmark_v1.json"
-STUDENT_TAG = "local-ai/extractor-student:d2"
-STUDENT_ID = "extractor-d2-student-v1"
+STUDENT_TAG = "qwen3.5:2b"
+STUDENT_ID = "extractor-small-v1"
 
 
 def run_benchmark(monkeypatch, tmp_path: Path, *extra: str) -> dict:

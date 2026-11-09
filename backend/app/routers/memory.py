@@ -8,11 +8,43 @@ from app.stores.qdrant_store import QdrantUnavailableError
 from app.security.api_key import require_api_key
 from app.security.auth import require_admin
 
+from app.services.source_memory import MemoryReader, MemoryConflict, SourceMemoryNotFound
+from app.security.auth import resolve_identity
+
+
+def _v2(request):
+    return getattr(request.app.state, "source_memory_service", None)
+
+
+def _reader(request):
+    return MemoryReader.web(resolve_identity(request).user_id)
+
+
+def _legacy_admin(request: Request):
+    if not _v2(request):
+        require_admin(request)
+
+
 router = APIRouter(prefix="/memory", tags=["memory"])
+
+
+@router.get("/notes", response_model=list[MemoryResponse])
+def list_source_notes(request: Request, limit: int = 50):
+    if not _v2(request):
+        raise HTTPException(404, detail="Source memory is disabled")
+    return _v2(request).list_notes(_reader(request), limit)
+
+
+@router.get("/status")
+def memory_status(request: Request):
+    return {"mode": "source-v2" if _v2(request) else "legacy", "scope": "owner-private"}
 
 
 @router.post("/add", response_model=MemoryResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_api_key)])
 def add_memory(payload: MemoryCreateRequest, request: Request) -> MemoryResponse:
+    if _v2(request):
+        return MemoryResponse(**_v2(request).save(_reader(request), payload.content,
+            memory_type=payload.memory_type, importance=payload.importance))
     try:
         return MemoryResponse(**request.app.state.memory_service.add(payload.content, payload.memory_type, payload.importance))
     except (OllamaModelNotLoadedError, OllamaTimeoutError, OllamaUnavailableError, QdrantUnavailableError) as error:
@@ -21,14 +53,26 @@ def add_memory(payload: MemoryCreateRequest, request: Request) -> MemoryResponse
 
 @router.post("/search", response_model=list[MemorySearchResult])
 def search_memory(payload: MemorySearchRequest, request: Request) -> list[MemorySearchResult]:
+    if _v2(request):
+        return [MemorySearchResult(**item) for item in _v2(request).search(_reader(request), payload.query, payload.top_k)]
     try:
         return [MemorySearchResult(**item) for item in request.app.state.memory_service.search(payload.query, payload.top_k)]
     except (OllamaModelNotLoadedError, OllamaTimeoutError, OllamaUnavailableError, QdrantUnavailableError) as error:
         raise _service_error(error) from error
 
 
-@router.put("/{memory_id}", response_model=MemoryResponse, dependencies=[Depends(require_api_key), Depends(require_admin)])
+@router.put("/{memory_id}", response_model=MemoryResponse, dependencies=[Depends(require_api_key), Depends(_legacy_admin)])
 def update_memory(memory_id: str, payload: MemoryUpdateRequest, request: Request) -> MemoryResponse:
+    if _v2(request):
+        if payload.expected_revision is None:
+            raise HTTPException(409, detail="expected_revision is required for source memory")
+        try:
+            return MemoryResponse(**_v2(request).update(_reader(request), memory_id, payload.content,
+                expected_revision=payload.expected_revision, memory_type=payload.memory_type, importance=payload.importance))
+        except SourceMemoryNotFound:
+            raise HTTPException(404, detail="Memory not found")
+        except MemoryConflict as error:
+            raise HTTPException(409, detail=str(error))
     try:
         return MemoryResponse(**request.app.state.memory_service.update(memory_id, payload.content, payload.memory_type, payload.importance))
     except MemoryNotFoundError as error:
@@ -37,8 +81,14 @@ def update_memory(memory_id: str, payload: MemoryUpdateRequest, request: Request
         raise _service_error(error) from error
 
 
-@router.delete("/{memory_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_api_key), Depends(require_admin)])
+@router.delete("/{memory_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_api_key), Depends(_legacy_admin)])
 def delete_memory(memory_id: str, request: Request) -> None:
+    if _v2(request):
+        try:
+            _v2(request).retract(_reader(request), memory_id)
+            return
+        except SourceMemoryNotFound:
+            raise HTTPException(404, detail="Memory not found")
     try:
         request.app.state.memory_service.delete(memory_id)
     except MemoryNotFoundError as error:

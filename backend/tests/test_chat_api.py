@@ -3,8 +3,8 @@ def test_chat_returns_response_and_model_used(client, mock_ollama):
 
     assert response.status_code == 200
     body = response.json()
-    assert body["answer"] == "Mock response from qwen3.5:9b"
-    assert body["model_used"] == "qwen3.5:9b"
+    assert body["answer"] == "Mock response from qwen3.5:2b"
+    assert body["model_used"] == "qwen3.5:2b"
     assert body["conversation_id"]
     assert isinstance(body["latency_ms"], int)
 
@@ -38,7 +38,7 @@ def test_chat_uses_relevant_memory_when_requested(client, mock_ollama, monkeypat
 
     def capture_chat(self, model, messages, options, keep_alive, think=None):
         captured_messages.extend(messages)
-        return "Mock response from qwen3.5:9b"
+        return "Mock response from qwen3.5:2b"
 
     monkeypatch.setattr("app.llm_clients.ollama_client.OllamaClient.chat", capture_chat)
     response = client.post("/chat", json={"message": "Hello", "use_memory": True})

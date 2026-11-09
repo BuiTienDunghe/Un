@@ -1,4 +1,5 @@
 def test_vision_says_when_nothing_serves_and_needs_an_image(client, monkeypatch):
+    monkeypatch.setitem(client.app.state.model_router.models, "vision", {"provider":"ollama", "name":"qwen3.5:2b"})
     response = client.post("/vision/chat", json={"message": "Describe this image"})
     assert response.status_code == 422
     assert response.json()["error_code"] == "IMAGE_REQUIRED"

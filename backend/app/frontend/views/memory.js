@@ -1170,7 +1170,18 @@
     return { panel, part };
   }
 
-  function mount(ctx) {
+  async function mount(ctx) {
+    try {
+      const mode = await Shell.api("/memory/status", { signal: ctx.signal });
+      if (ctx.signal.aborted) return;
+      if (mode.mode === "source-v2") { mountSources(ctx); return; }
+    } catch (error) {
+      if (ctx.signal.aborted) return;
+      ctx.setHeader("Ghi nhớ", "Chưa đọc được ghi nhớ");
+      ctx.root.append(h("p", { role: "alert" }, "Chưa đọc được ghi nhớ. Hãy thử tải lại."));
+      return;
+    }
+
     ctx.setHeader("Ghi nhớ", "Điều agent nhớ và dùng ở cả web lẫn Discord");
     const role = isAdmin() ? "admin" : "member";
     if (S.role !== role) {
@@ -1287,6 +1298,7 @@
   /* #/memory?tab=… đổi tab tại chỗ, không mount lại. Cùng hash (Router.go lại) → làm mới. */
   function update(ctx, info) {
     if (!V || V.ctx !== ctx) return false;
+    if (V.sources) { V.reload(); return true; }
     const tab = pickTab(ctx.query);
     if (tab !== S.tab) {
       S.tab = tab;
@@ -1299,6 +1311,76 @@
     if (info && info.same) refreshAll();
     render();
     return true;
+  }
+
+  function mountSources(ctx) {
+    ctx.setHeader("Ghi nhớ", "Những câu bạn đã yêu cầu lưu");
+    let editing = null;
+    let sequence = 0;
+    const status = h("p", { role: "status" });
+    const text = h("textarea", { rows: 4, maxlength: 10000, "aria-label": "Nội dung nguyên văn",
+      placeholder: "Nhập điều bạn muốn lưu…", style: "width:100%;box-sizing:border-box" });
+    const query = h("input", { type: "search", maxlength: 10000, "aria-label": "Từ khóa tìm ghi nhớ",
+      placeholder: "Tìm theo từ khóa…" });
+    const list = h("div", { class: "mv-list" });
+    const save = h("button", { type: "button", onClick: async () => {
+      if (!text.value.trim()) { status.textContent = "Hãy nhập nội dung cần lưu."; return; }
+      save.disabled = true;
+      try {
+        const payload = { content: text.value, memory_type: "source_note" };
+        if (editing) payload.expected_revision = editing.revision;
+        await Shell.api(editing ? `/memory/${enc(editing.id)}` : "/memory/add", {
+          method: editing ? "PUT" : "POST", headers: JSON_HEADERS, body: JSON.stringify(payload), signal: ctx.signal });
+        if (!V || V.ctx !== ctx) return;
+        editing = null; text.value = ""; save.textContent = "Lưu nguyên văn";
+        await reload();
+      } catch (error) { if (!ctx.signal.aborted) status.textContent = error.message || "Chưa lưu được."; }
+      finally { save.disabled = false; }
+    } }, "Lưu nguyên văn");
+    const cancel = h("button", { type: "button", onClick: () => {
+      editing = null; text.value = ""; save.textContent = "Lưu nguyên văn";
+    } }, "Hủy sửa");
+    async function reload() {
+      const current = ++sequence;
+      status.textContent = "Đang đọc ghi nhớ…";
+      try {
+        const q = query.value.trim();
+        const rows = await Shell.api(q ? "/memory/search" : "/memory/notes?limit=50", q ? {
+          method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ query: q, top_k: 20 }), signal: ctx.signal,
+        } : { signal: ctx.signal });
+        if (!V || V.ctx !== ctx || current !== sequence) return;
+        list.replaceChildren();
+        for (const row of rows) {
+          const key = row.id || row.memory_id;
+          const editButton = h("button", { type: "button", onClick: () => {
+            editing = { id: key, revision: row.revision }; text.value = row.content;
+            save.textContent = "Lưu bản sửa"; text.focus();
+          } }, "Sửa");
+          const forget = h("button", { type: "button", onClick: async () => {
+            forget.disabled = true;
+            try {
+              await Shell.api(`/memory/${enc(key)}`, { method: "DELETE", signal: ctx.signal });
+              if (editing && editing.id === key) { editing = null; text.value = ""; save.textContent = "Lưu nguyên văn"; }
+              await reload();
+            } catch (error) { if (!ctx.signal.aborted) status.textContent = error.message || "Chưa quên được."; }
+            finally { forget.disabled = false; }
+          } }, "Quên");
+          list.append(h("article", { class: "card", style: "padding:16px;margin-bottom:12px" },
+            h("p", { style: "white-space:pre-wrap;overflow-wrap:anywhere" }, row.content),
+            h("p", { class: "mv-row-meta", style: "overflow-wrap:anywhere" }, `Bản ${row.revision} · ${key}`),
+            editButton, " ", forget));
+        }
+        status.textContent = rows.length ? `${rows.length} ghi nhớ${!q && rows.length === 50 ? " mới nhất — tìm từ khóa để xem thêm" : ""}.` : "Chưa có ghi nhớ khớp.";
+      } catch (error) { if (!ctx.signal.aborted) status.textContent = error.message || "Chưa đọc được ghi nhớ."; }
+    }
+    const search = h("button", { type: "button", onClick: reload }, "Tìm / làm mới");
+    const page = h("div", { class: "page mv-page" }, h("div", { class: "page-inner w-980" },
+      h("p", null, "Ghi nhớ ở đây thuộc tài khoản này. Trong Discord, ghi nhớ thuộc từng kênh và luồng trò chuyện."),
+      h("div", { class: "card", style: "padding:16px;margin-bottom:16px" }, text, save, " ", cancel),
+      query, " ", search, status, list));
+    ctx.root.append(page);
+    V = { ctx, page, sources: true, reload };
+    reload();
   }
 
   function unmount() {

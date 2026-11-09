@@ -1,0 +1,4 @@
+2026-11-09 22:00:26.084 | INFO     | __main__:_log:84 - Model registry loaded from C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\backend\app\config\model_versions.yaml
+WARNING: roles.embedding id=embedding-v0: eval.reports.d1_multidoc C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\data\evaluation\rag_multidoc_baseline.json carries no versions.embedding stamp
+WARNING: roles.reranker id=reranker-v0: eval.reports.d1_multidoc C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\data\evaluation\rag_multidoc_baseline.json carries no versions.reranker stamp
+C:\Users\dungbt06\.codex\worktrees\tool-state-continuity\local-ai-core\backend\app\config\model_versions.yaml: 0 error(s), 2 warning(s)

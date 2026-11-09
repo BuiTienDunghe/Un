@@ -51,7 +51,7 @@ RESERVED_RECORD_KEYS = frozenset({                                   # a key fro
     "id", "config", "fallback", "vram_mib", "digest", "ollama", "eval", "provenance", "notes",
     "collection_suffix", "hub", "path", "activation", "num_labels", "max_length", "probe",
 })                                                                   # `provider` and `revision` are NOT reserved (they belong in config)
-GATES = ("d1_multidoc", "heldout", "mteb", "extractor_benchmark")
+GATES = ("d1_multidoc", "heldout", "mteb", "extractor_benchmark", "source_memory_smoke")
 GRANDFATHERED_UNSTAMPED = frozenset({"general-v0", "embedding-v0", "reranker-v0", "extractor-v0"})  # reports without a `versions` stamp: WARNING, not error
 
 Status = Literal["active", "fallback", "unverified", "missing", "degraded", "incomplete",

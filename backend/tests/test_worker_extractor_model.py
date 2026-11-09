@@ -14,7 +14,7 @@ from app.config.settings import Settings
 from app.discord import memory_tasks
 DATABASE_URL = "postgresql+psycopg://user:password@localhost/test"
 # roles.extractor.active = extractor-v0 and roles.verifier.active = verifier-v0 both name it.
-SHIPPED_TAG = "qwen3.5:9b"
+SHIPPED_TAG = "qwen3.5:2b"
 
 
 class Recorder:
@@ -30,7 +30,12 @@ class Recorder:
 
 def settings(**overrides) -> Settings:
     """Init kwargs outrank the env pins conftest sets, so each test states its own flags."""
-    defaults = dict(database_url=DATABASE_URL, _env_file=None, model_startup_probes=False, discord_memory_auto_apply_threshold=None)
+    defaults = dict(database_url=DATABASE_URL, _env_file=None, model_startup_probes=False, discord_memory_auto_apply_threshold=None,
+                    source_memory_enabled=False, model_version_extractor="extractor-small-v1", model_version_verifier="verifier-small-v1")
+    if overrides.get("discord_memory_extractor_model"):
+        defaults["model_version_extractor"] = None
+    if overrides.get("discord_memory_verifier_model"):
+        defaults["model_version_verifier"] = None
     defaults.update(overrides)
     return Settings(**defaults)
 
@@ -80,7 +85,7 @@ def test_worker_receives_the_resolvers_extractor_name_when_the_env_var_is_unset(
     built = run_worker(config)
 
     role = config.resolve_models().roles["extractor"]
-    assert (role.requested_id, role.source, role.status, role.serving) == ("extractor-v0", "registry", "active", True)
+    assert (role.requested_id, role.source, role.status, role.serving) == ("extractor-small-v1", "env", "active", True)
     assert [adapter.kwargs["model"] for adapter in built.extractors] == [SHIPPED_TAG]
     assert built.worker["extractor_enabled"] is True and built.worker["extractor_model"] == SHIPPED_TAG
     assert built.worker["extractor"] is built.extractors[0]

@@ -70,6 +70,12 @@ class DiscordHistoryHit:
 class DiscordHistoryService:
     def __init__(self, sessions: sessionmaker) -> None:
         self.sessions = sessions
+        self.source_memory = None
+
+    @staticmethod
+    def _memory_reader(row):
+        from app.services.source_memory import MemoryReader
+        return MemoryReader.discord(row.guild_id, row.channel_id, row.thread_id, row.author_id)
 
     def record_message(
         self,
@@ -179,6 +185,8 @@ class DiscordHistoryService:
                 .with_for_update()
             )
             if row is None or row.deleted_at is not None:
+                if self.source_memory:
+                    self.source_memory.invalidate_in(database, f"discord:{discord_message_id}")
                 return False
             if (
                 source_edited_at is not None
@@ -186,6 +194,8 @@ class DiscordHistoryService:
                 and source_edited_at <= row.source_edited_at
             ):
                 return False
+            if self.source_memory:
+                self.source_memory.invalidate_in(database, f"discord:{discord_message_id}", reader=self._memory_reader(row))
             if row.content_original is None:
                 row.content_original = row.content
             row.content = content
@@ -196,55 +206,43 @@ class DiscordHistoryService:
         return True
 
     def record_delete(
-        self,
-        *,
-        discord_message_id: str,
-        guild_id: str | None = None,
+        self, *, discord_message_id: str, guild_id: str | None = None,
         channel_id: str | None = None,
     ) -> bool:
-        """§9.5 minimal deletion: honor the Discord delete immediately —
-        clear both texts and the index entry, keep the row skeleton for
-        audit. Per-person hard delete stays a plain DELETE by author_id.
+        """Lock raw row before source locks, matching edit's lock order.
 
-        A delete that arrives BEFORE the fire-and-forget insert leaves a
-        TOMBSTONE (when the event carries guild+channel): the racing insert
-        then dies on the unique message id and the deleted text is never
-        stored (review finding 28/08)."""
+        UPSERT the tombstone when record and delete arrive concurrently: a
+        unique-key race must not roll back the source revocation.
+        """
+        from sqlalchemy.dialects.postgresql import insert
         with self.sessions.begin() as database:
-            row = database.scalar(
-                select(DiscordChannelMessage).where(
-                    DiscordChannelMessage.discord_message_id
-                    == discord_message_id
-                )
-            )
+            row = database.scalar(select(DiscordChannelMessage).where(
+                DiscordChannelMessage.discord_message_id == discord_message_id).with_for_update())
             if row is None:
                 if not guild_id or not channel_id:
+                    if self.source_memory:
+                        self.source_memory.invalidate_in(database, f"discord:{discord_message_id}")
                     return False
                 try:
                     sent_at = snowflake_to_datetime(discord_message_id)
                 except (ValueError, OverflowError, OSError):
+                    if self.source_memory:
+                        self.source_memory.invalidate_in(database, f"discord:{discord_message_id}")
                     return False
-                database.add(
-                    DiscordChannelMessage(
-                        guild_id=guild_id,
-                        channel_id=channel_id,
-                        thread_id=None,
-                        discord_message_id=discord_message_id,
-                        author_id="",
-                        author_display_name="",
-                        is_bot=False,
-                        content=None,
-                        content_original=None,
-                        content_tokens=None,
-                        sent_at=sent_at,
-                        deleted_at=datetime.now(UTC),
-                    )
-                )
-                return True
-            row.content = None
-            row.content_original = None
-            row.content_tokens = None
-            row.deleted_at = datetime.now(UTC)
+                stamp = datetime.now(UTC)
+                statement = insert(DiscordChannelMessage).values(guild_id=guild_id,
+                    channel_id=channel_id, thread_id=None, discord_message_id=discord_message_id,
+                    author_id="", author_display_name="", is_bot=False, content=None,
+                    content_original=None, content_tokens=None, sent_at=sent_at, deleted_at=stamp)
+                row = database.scalar(statement.on_conflict_do_update(
+                    index_elements=[DiscordChannelMessage.discord_message_id],
+                    set_={"content":None, "content_original":None, "content_tokens":None, "deleted_at":stamp}
+                ).returning(DiscordChannelMessage))
+            else:
+                row.content = row.content_original = row.content_tokens = None
+                row.deleted_at = datetime.now(UTC)
+            if self.source_memory:
+                self.source_memory.invalidate_in(database, f"discord:{discord_message_id}", reader=self._memory_reader(row))
         return True
 
     def search(

@@ -39,6 +39,7 @@ class ChatService:
         self.history_limit = history_limit
         self.memory_service = memory_service
         self.tool_state_enabled = tool_state_enabled
+        self.source_memory = None
         # Assigned by the composition root after the retrieval stack exists
         # (the agent needs services that are built later than this one).
         # None keeps every `use_tools` request on the plain-chat path.
@@ -114,6 +115,15 @@ class ChatService:
         user_id: str | None = None,
         on_step: Callable[[dict[str, object]], None] | None = None,
     ) -> tuple[str, str, str, int, list[dict[str, object]] | None]:
+        from app.services.source_memory import MemoryReader
+        from contextlib import nullcontext
+        v2 = self.source_memory
+        reader = (tool_context or {}).get("_memory_reader") or MemoryReader.web(user_id)
+        epoch, barrier = v2.snapshot(reader) if v2 else (None, None)
+        if v2 and "_memory_epoch" in (tool_context or {}):
+            epoch = tool_context["_memory_epoch"]
+        if v2:
+            tool_context = {**(tool_context or {}), "_memory_reader": reader, "_memory_epoch": epoch}
         is_new = conversation_id is None
         request_started = perf_counter()
         state_request_id = str((tool_context or {}).get("turn_id") or uuid4()) if self.tool_state_enabled else None
@@ -121,6 +131,8 @@ class ChatService:
             conversation_id = str(uuid4())
             self.store.create_conversation(conversation_id, derive_conversation_title(message), user_id)
         elif not self.store.conversation_exists(conversation_id):
+            raise ConversationNotFoundError(conversation_id)
+        elif v2 and model_history is None and self.store.conversation_owner(conversation_id) != user_id:
             raise ConversationNotFoundError(conversation_id)
 
         try:
@@ -132,21 +144,57 @@ class ChatService:
                 if model_history is None
                 else model_history
             )
+            if v2 and model_history is None:
+                history = v2.history(reader, conversation_id, self.history_limit)
+            receipt = ""
+            if v2 and model_history is None:
+                from app.services.source_memory import explicit_remember, explicit_forget
+                if explicit_forget(message):
+                    count = v2.forget_actor(reader.tenant, reader.actor)
+                    epoch, barrier = v2.snapshot(reader)
+                    history = v2.history(reader, conversation_id, self.history_limit)
+                    tool_context["_memory_epoch"] = epoch
+                    receipt = f"Backend đã quên {count} nguồn về người dùng."
+                elif explicit_remember(message) and len(message) <= 10000:
+                    from app.services.source_memory import MemoryConflict
+                    try:
+                        saved = v2.save(reader, message, source_id=f"web-turn:{uuid4()}", expected_epoch=epoch)
+                        receipt = f"Backend đã lưu nguyên văn source_id={saved['id']} revision={saved['revision']}."
+                    except MemoryConflict:
+                        receipt = "Chưa lưu: ngữ cảnh vừa bị sửa hoặc quên."
+                elif explicit_remember(message):
+                    receipt = "Chưa lưu: câu nguồn vượt giới hạn 10000 ký tự."
             agent_mode = use_tools and self.agent_service is not None
             if not agent_mode:
                 # A paste from an earlier tool-mode turn: plain chat cannot open its slip,
                 # so it gets a one-line note instead of the whole text (ticket 20 #3).
                 history = shorten_pastes(history)
             messages = [{"role": "system", "content": system_prompt or self.system_prompt}]
+            if receipt:
+                messages.append({"role": "system", "content": receipt})
             if context_system_prompt:
                 messages.append({"role": "system", "content": context_system_prompt})
-            if use_memory and self.memory_service is not None:
+            if v2 and use_memory:
+                context = v2.context(reader, search_text(message))
+                if context:
+                    messages.append({"role": "system", "content": context})
+            if not v2 and use_memory and self.memory_service is not None:
                 memories = self.memory_service.search(search_text(message), top_k=5)
                 if memories:
                     context = "\n".join(f"- {memory['content']}" for memory in memories)
                     messages.append({"role": "system", "content": f"{self.memory_prompt}\n\nRelevant memories:\n{context}"})
+            if v2:
+                from app.services.source_memory import bound_history
+                offered = self.agent_service._offered_schemas() if agent_mode else []
+                guide = self.agent_service.defense.agent_guide(AGENT_GUIDE) if agent_mode else ""
+                base = [*messages, current_model_message or {"role":"user", "content":message}]
+                room = history_budget(base, offered, guide, int(self.router.models.get("general", {}).get("context",16384)))["room"]
+                history, index_map = bound_history(history, min(12000, room))
+                if "_state_anchors" in tool_context:
+                    tool_context["_state_anchors"] = [{**a, "index":index_map[a["index"]]}
+                        for a in tool_context["_state_anchors"] if a["index"] in index_map]
             history_rows = history
-            history = [{key: value for key, value in row.items() if key != "message_id"} for row in history_rows] if state_on else history_rows
+            history = [{key: value for key, value in row.items() if key != "message_id"} for row in history_rows]
             history_prefix = len(messages)
             messages.extend(
                 [
@@ -201,21 +249,25 @@ class ChatService:
         # lookup is a different quantity wearing the same name.
         latency_ms = int((perf_counter() - request_started) * 1000)
         usage = consume_usage()
-        self.store.add_message(conversation_id, "user", message)
-        assistant_message_id = self.store.add_message(conversation_id, "assistant", answer, model_used)
-        if agent_steps:
-            # Trace rows attach to the persisted answer they explain (P2-2).
-            # Discord turns are the ones that carry their guild; the web's do not.
-            source = "discord" if (tool_context or {}).get("guild_id") else "web"
-            self.store.add_agent_traces(conversation_id, assistant_message_id, agent_steps, source=source)
-            if recorder is not None and state_scope is not None:
-                try:
-                    payload = recorder.payload()
-                    if payload.get("groups"):
-                        self.store.save_tool_state(conversation_id, assistant_message_id, state_scope, payload,
-                                                   origin=(tool_context or {}).get("turn_id"))
-                except Exception as error:
-                    logger.bind(event="tool_state_save_failed", error_type=type(error).__name__).warning("Answer saved but tool history unavailable")
+        with v2.publication(reader, epoch) if v2 else nullcontext(True) as current:
+            if not current:
+                answer = "Nguồn trí nhớ vừa được sửa hoặc quên. Vui lòng hỏi lại để dùng dữ liệu hiện tại."
+                agent_steps, recorder = None, None
+            self.store.add_message(conversation_id, "user", message)
+            assistant_message_id = self.store.add_message(conversation_id, "assistant", answer, model_used)
+            if agent_steps:
+                # Trace rows attach to the persisted answer they explain (P2-2).
+                # Discord turns are the ones that carry their guild; the web's do not.
+                source = "discord" if (tool_context or {}).get("guild_id") else "web"
+                self.store.add_agent_traces(conversation_id, assistant_message_id, agent_steps, source=source)
+                if recorder is not None and state_scope is not None:
+                    try:
+                        payload = recorder.payload()
+                        if payload.get("groups"):
+                            self.store.save_tool_state(conversation_id, assistant_message_id, state_scope, payload,
+                                                       origin=(tool_context or {}).get("turn_id"))
+                    except Exception as error:
+                        logger.bind(event="tool_state_save_failed", error_type=type(error).__name__).warning("Answer saved but tool history unavailable")
         # Ticket 16: a turn that ran out of time replied with a fixed sentence, not an
         # answer; the dashboard counts it as an error, under its own code.
         out_of_time = bool(agent_steps) and agent_steps[-1].get("stop_reason") == STOP_TURN_BUDGET_EXHAUSTED
@@ -237,6 +289,10 @@ class ChatService:
         return answer, model_used, conversation_id, latency_ms, agent_steps
 
     def stream_response(self, message: str, conversation_id: str | None, use_memory: bool = False, system_prompt: str | None = None, user_id: str | None = None) -> tuple[Iterator[str], str, str]:
+        if self.source_memory:
+            # Buffer until the generation check succeeds; never stream revoked context.
+            answer, model, cid, _, _ = self.respond(message, conversation_id, use_memory, system_prompt, user_id=user_id)
+            return iter([answer]), model, cid
         is_new = conversation_id is None
         if conversation_id is None:
             conversation_id = str(uuid4())

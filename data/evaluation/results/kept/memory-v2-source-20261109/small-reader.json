@@ -1,0 +1,88 @@
+{
+  "versions": {
+    "general": "general-small-v1"
+  },
+  "model": "qwen3.5:2b",
+  "scope": "six fixed synthetic source-memory cases; not D1 promotion, throughput or blind heldout benchmark",
+  "cases": [
+    {
+      "case": "negation",
+      "question": "Tôi có thích cà phê đen không?",
+      "expected": "Không; nguồn nêu thích trà xanh.",
+      "retrieved": [
+        "Hãy nhớ tôi không thích cà phê đen, tôi thích trà xanh."
+      ],
+      "answer": "Theo lời bạn đã lưu, tôi không thích cà phê đen, tôi thích trà xanh.",
+      "lookup_ms": 9.46,
+      "wall_ms": 385.42,
+      "eval_count": 19,
+      "done_reason": "stop"
+    },
+    {
+      "case": "subject",
+      "question": "Ai được nói là dị ứng tôm? Có thể khẳng định tôi dị ứng không?",
+      "expected": "Nam; không đủ nguồn để kết luận người nói dị ứng.",
+      "retrieved": [
+        "Hãy nhớ Nam dị ứng tôm, còn tôi chưa từng nói mình dị ứng tôm."
+      ],
+      "answer": "Theo lời bạn đã lưu, Nam dị ứng tôm còn tôi chưa từng nói mình dị ứng tôm. Không thể khẳng định điều đó vì nguồn chỉ ghi lại quan điểm của tác giả chứ không có bằng chứng bên ngoài xác minh.",
+      "lookup_ms": 7.86,
+      "wall_ms": 395.4,
+      "eval_count": 47,
+      "done_reason": "stop"
+    },
+    {
+      "case": "temporal",
+      "question": "Hiện tại tôi sống ở đâu, Huế hay Đà Nẵng?",
+      "expected": "Hiện Đà Nẵng; Huế năm 2020.",
+      "retrieved": [
+        "Hãy nhớ năm 2020 tôi sống ở Huế, hiện tại tôi sống ở Đà Nẵng."
+      ],
+      "answer": "Theo lời bạn đã lưu, hiện tại tôi sống ở Đà Nẵng.",
+      "lookup_ms": 7.41,
+      "wall_ms": 185.4,
+      "eval_count": 15,
+      "done_reason": "stop"
+    },
+    {
+      "case": "project",
+      "question": "Cổng dự án Atlas và Beacon khác nhau thế nào?",
+      "expected": "Atlas 5432; Beacon 6432.",
+      "retrieved": [
+        "Hãy nhớ dự án Atlas dùng cổng 5432, dự án Beacon dùng cổng 6432."
+      ],
+      "answer": "Theo lời bạn đã lưu, dự án Atlas dùng cổng 5432, trong khi dự án Beacon dùng cổng 6432.",
+      "lookup_ms": 7.4,
+      "wall_ms": 267.08,
+      "eval_count": 31,
+      "done_reason": "stop"
+    },
+    {
+      "case": "qualified",
+      "question": "Hiện tôi đã chốt chọn trà xanh chưa?",
+      "expected": "Chưa chốt; không coi sở thích cũ là quyết định hiện tại.",
+      "retrieved": [
+        "Hãy nhớ hiện tôi chưa chốt chọn trà xanh hay trà ô long.",
+        "Hãy nhớ trước đây tôi uống trà xanh.",
+        "Hãy nhớ tôi không thích cà phê đen, tôi thích trà xanh.",
+        "Hãy nhớ Nam dị ứng tôm, còn tôi chưa từng nói mình dị ứng tôm."
+      ],
+      "answer": "Theo lời bạn đã lưu, hiện tôi chưa chốt chọn trà xanh hay trà ô long.",
+      "lookup_ms": 7.79,
+      "wall_ms": 279.61,
+      "eval_count": 19,
+      "done_reason": "stop"
+    },
+    {
+      "case": "unknown",
+      "question": "Sinh nhật tôi là ngày nào?",
+      "expected": "Không biết; không có nguồn.",
+      "retrieved": [],
+      "answer": "Chưa biết. Tôi không có thông tin về ngày sinh của bạn. Vui lòng cung cấp thêm chi tiết để tôi hỗ trợ tốt hơn.",
+      "lookup_ms": 6.72,
+      "wall_ms": 264.8,
+      "eval_count": 30,
+      "done_reason": "stop"
+    }
+  ]
+}

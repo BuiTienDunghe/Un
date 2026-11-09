@@ -90,9 +90,12 @@ async def lifespan(app: FastAPI):
     app.state.settings = settings
     app.state.qdrant_store = qdrant_store
     app.state.logging_service = logging_service
+    from app.services.source_memory import SourceMemoryService
+    app.state.source_memory_service = SourceMemoryService(postgres_sessions) if settings.source_memory_enabled else None
     app.state.memory_service = MemoryService(auxiliary_store, qdrant_store, router, logging_service)
     app.state.chat_service = ChatService(auxiliary_store, router, logging_service, settings.conversation_history_limit, app.state.memory_service,
                                          tool_state_enabled=settings.agent_tool_state_enabled)
+    app.state.chat_service.source_memory = app.state.source_memory_service
     ocr_service = OCRService(router, auxiliary_store)
     queue = (
         JobQueueService(
@@ -192,6 +195,7 @@ async def lifespan(app: FastAPI):
         condense_enabled=bool(rag_config.get("condense_enabled", True)),
         defense=injection_defense,
     )
+    app.state.rag_service.source_memory = app.state.source_memory_service
     # Không gian Nghiên cứu: paper = Document sẵn có; tóm tắt gọi Ollama ra JSON với
     # model vai trò general; hỏi paper đi qua rag_service.stream_response.
     app.state.research_service = ResearchService(postgres_sessions, app.state.document_service, ollama_base_url=settings.ollama_base_url, model_router=router, conversation_store=auxiliary_store)

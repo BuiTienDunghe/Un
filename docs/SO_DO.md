@@ -4,6 +4,18 @@ Mọi lần đo của dự án được ghi ở đây, kể cả những lần h
 
 Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng chi tiết. `docs/RESULTS.md` chỉ chép lại những số đủ chắc để đưa ra ngoài (README, CV), và mỗi số ở đó phải có mục tương ứng ở đây.
 
+## 09/11/2026 — Memory v2 source-backed trên nhánh tool-state-continuity
+
+- **Câu hỏi:** có thể lưu/đọc/quên có kiểm nguồn mà bỏ hoàn toàn 9B khỏi đường chạy không?
+- **Điều kiện:** baseline 966e6b7, PostgreSQL/Redis/Qdrant disposable; Qwen3.5:2b local, temp 0, seed 424242, context 16384. Không chạy 9B đối chứng hay teacher.
+- **Đăng ký trước:** `data/evaluation/results/kept/memory-v2-source-20261109/PREREGISTER.md`.
+- **Các vòng đầu:** source tests 24/24; hồi quy ban đầu 1684 pass/20 fail; targeted 215 pass/8 fail; hồi quy vòng hai 2136 pass/12 fail. Chi tiết và cả lỗi setup được ghi trong `RUN_HISTORY.md`.
+- **Reader:** sáu ca tổng hợp: ban đầu 3/6 đáp án đầy đủ; chỉnh cách đọc lời tự khai rồi 6/6 trên CÙNG sáu ca. Chấm thủ công, không phải heldout, không chứng minh parity với model cũ.
+- **Kiểm chứng cuối:** backend 2198 passed; bot/launcher 242 passed, 1 skipped; review 179 passed; post-review 85 passed gồm 12 vòng hai luồng. Schema không drift; registry 0 error/2 warning lịch sử. Có JUnit/log cho từng lượt.
+- **Ca mới chưa chỉnh prompt:** 5/6 đúng ý chính, một ca vai trò Redis/PostgreSQL từ chối quá mức dù truy hồi đúng. Giữ nguyên kết quả âm, không chấm lại thành pass.
+- **Kết luận:** lưu nguồn và trả lời là hai tiêu chí riêng. Cơ chế lưu/thu hồi đã kiểm được; reader nhỏ vẫn có giới hạn suy luận và chưa chứng minh parity toàn diện. Hoàn tất trên nhánh thử nghiệm; không triển khai vào dữ liệu thật.
+- **Bằng chứng:** `data/evaluation/results/kept/memory-v2-source-20261109/`.
+
 ## Mẫu một mục
 
 ```

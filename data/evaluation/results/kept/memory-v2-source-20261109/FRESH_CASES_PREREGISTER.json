@@ -1,0 +1,43 @@
+{
+  "rule": "Fixed before model execution. Use existing context() and reader options unchanged. Retain failures; no tuning on these cases.",
+  "scope": "small unseen synthetic examples, manual scoring; not a production benchmark",
+  "sources": [
+    "Hãy nhớ nếu trời mưa tôi mới đi taxi, bình thường tôi đi xe buýt.",
+    "Hãy nhớ Hà không dùng Windows; tôi dùng Windows, Hà dùng Linux.",
+    "Hãy nhớ tháng sau tôi dự định đến Nhật; tôi chưa từng đến Nhật.",
+    "Hãy nhớ dự án Lumen chỉ dùng Redis để cache, PostgreSQL lưu dữ liệu chính.",
+    "Hãy nhớ tôi chưa xác nhận ngày họp; đề xuất là 12/12."
+  ],
+  "cases": [
+    [
+      "conditional",
+      "Bình thường tôi đi taxi phải không?",
+      "Không; bình thường xe buýt, taxi có điều kiện mưa."
+    ],
+    [
+      "different_people",
+      "Hà có dùng Windows không? Còn tôi?",
+      "Hà không dùng Windows, dùng Linux; người nói dùng Windows."
+    ],
+    [
+      "plan_not_event",
+      "Tôi đã từng đến Nhật chưa?",
+      "Chưa từng; đi tháng sau chỉ là dự định."
+    ],
+    [
+      "component_roles",
+      "Redis có phải nơi lưu dữ liệu chính của Lumen không?",
+      "Không; PostgreSQL chính, Redis cache."
+    ],
+    [
+      "proposal_not_decision",
+      "Cuộc họp đã chốt ngày 12/12 chưa?",
+      "Chưa xác nhận; chỉ đề xuất."
+    ],
+    [
+      "missing",
+      "Tên con mèo tôi là gì?",
+      "Chưa biết, không có nguồn."
+    ]
+  ]
+}

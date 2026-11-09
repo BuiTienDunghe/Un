@@ -104,7 +104,7 @@ Ngoài ra còn hai công tắc: màn **Bot Discord** trên web bật/tắt cùng
 - Thay thế tài liệu không ghi đè version đang hoạt động trước khi version mới hoàn tất.
 - SQLite archive lịch sử chỉ dành cho migration/audit read-only, không được đưa lại vào runtime path.
 
-Alembic head hiện tại là `20261102_38` (`20261102_38_discord_approvals.py`).
+Alembic head hiện tại là `20261109_39` (`20261109_39_source_memory.py`).
 
 ## Model mặc định
 
@@ -117,17 +117,18 @@ Cách promote, demote, revert và rebuild collection: `docs/model_registry.md`.
 
 | Vai trò | Phiên bản active | Model |
 | --- | --- | --- |
-| Chat tổng quát và RAG (`general`) | `general-v0` | qwen3.5:9b |
-| Embedding (`embedding`) | `embedding-v0` | qwen3-embedding:0.6b — collection `documents` / `memories` |
-| OCR (`ocr`) | `ocr-v2` | qwen3.5:9b đọc thẳng ảnh trang; không dùng được thì lùi về `ocr-v1` (local-ai/glm-ocr:eot-v1) |
+| Chat tổng quát và RAG (`general`) | `general-small-v1` | qwen3.5:2b; không có fallback tự động |
+| Embedding (`embedding`) | `embedding-v0` | qwen3-embedding:0.6b cho tài liệu; memory v2 dùng PostgreSQL FTS |
+| OCR (`ocr`) | `ocr-small-v1` | local-ai/glm-ocr:eot-v1, giữ recipe build từ glm-ocr:latest |
 | Reranker (`reranker`) | `reranker-v0` | cross-encoder/mmarco-mMiniLMv2-L12-H384-v1 |
-| Extractor / verifier trí nhớ Discord | `extractor-v0` / `verifier-v0` | qwen3.5:9b (cả hai tắt mặc định: `DISCORD_MEMORY_EXTRACTOR_ENABLED` / `_VERIFIER_ENABLED`) |
-| Condenser (Gemini, tắt mặc định) | `condenser-v0` | gemini-2.5-flash |
-| Vision | `vision-v1` — qwen3.5:9b đọc ảnh trên máy: `/vision/chat` và ảnh đính kèm khi gọi `@Ún` | — |
+| Extractor / verifier / condenser memory | `null` | Không có model viết fact trên pipeline mới |
+| Vision | `null` | Tắt trong profile thử nghiệm này |
 
-Ứng viên đám mây cho `general`: `general-haiku-v1` (claude-haiku-5-5) nằm sau v0 nên không bao
-giờ tự phục vụ; dùng thử trên một máy bằng `MODEL_VERSION_GENERAL=general-haiku-v1` trong shell
-với `ANTHROPIC_API_KEY` trong `.env`. Chạy được cả lượt công cụ của agent.
+Nhánh `codex/tool-state-continuity` thử nghiệm memory lưu nguồn nguyên văn, phân quyền theo
+tài khoản/kênh/luồng và thu hồi bằng epoch. Không chạy 9B, teacher hay cloud fallback.
+LFM3:1.7b là lựa chọn chủ động `general-lfm-small-v1`, không tự phục vụ khi Qwen lỗi.
+Pipeline, ví dụ và đánh đổi: [docs/source_memory_runtime.md](docs/source_memory_runtime.md).
+Đây là profile thử nghiệm, chưa chứng minh parity cho toàn bộ RAG hay OCR.
 
 `cd backend && python -m app.config.model_registry --check` kiểm tra file (CI chạy mỗi commit);
 `--show` in ra máy này sẽ phục vụ phiên bản nào.

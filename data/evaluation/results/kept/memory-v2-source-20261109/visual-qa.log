@@ -1,0 +1,1 @@
+PASS: 36 scenario states, previous/next, active stage and state restore. DOM logic only; no browser layout claim.

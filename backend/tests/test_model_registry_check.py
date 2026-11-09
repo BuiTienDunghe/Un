@@ -38,7 +38,7 @@ def test_shipped_file_has_no_errors_and_only_grandfathered_warnings():
     assert errors == []
     # v0 reports predate the `versions` stamp: a warning each, never an error.
     assert all("carries no versions." in warning for warning in warnings), warnings
-    assert {warning.split(" id=")[1].split(":")[0] for warning in warnings} == {"general-v0", "embedding-v0", "reranker-v0", "extractor-v0"}
+    assert {warning.split(" id=")[1].split(":")[0] for warning in warnings} == {"embedding-v0", "reranker-v0"}
 
 
 def test_ci_ollama_cache_key_equals_the_active_embedding_revision():
@@ -54,12 +54,10 @@ def test_pull_list_cli_prints_the_launcher_tags_and_create_list_prints_the_ocr_b
     env = {**ENV, "DATABASE_URL": os.environ.get("DATABASE_URL") or "postgresql+psycopg://x:y@localhost/x"}
     pull = subprocess.run([sys.executable, "-m", "app.config.model_registry", "--ollama-pull-list"], cwd=BACKEND, capture_output=True, text=True, env=env, check=False)
     assert pull.returncode == 0, pull.stderr
-    assert pull.stdout.split() == ["qwen3.5:9b", "qwen3-embedding:0.6b", "glm-ocr:latest"]
+    assert pull.stdout.split() == ["qwen3.5:2b", "qwen3-embedding:0.6b"]
     create = subprocess.run([sys.executable, "-m", "app.config.model_registry", "--ollama-create-list"], cwd=BACKEND, capture_output=True, text=True, env=env, check=False)
     assert create.returncode == 0, create.stderr
-    # glm-ocr:latest stays in the pull list: it is ocr-v1's source blob as well as ocr-v0.
-    assert [line.split("	") for line in create.stdout.strip().splitlines()] == [
-        ["local-ai/glm-ocr:eot-v1", str(PROJECT_ROOT / "data" / "models" / "ocr" / "ocr-v1" / "Modelfile")]]
+    assert [line.split("\t") for line in create.stdout.strip().splitlines()] == [["local-ai/glm-ocr:eot-v1", str(PROJECT_ROOT / "data/models/ocr/ocr-v1/Modelfile")]]
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="git not on PATH")
@@ -98,31 +96,34 @@ def _errors(tmp_path: Path, document: dict) -> list[str]:
 
 def test_budget_overrun_and_null_vram_on_the_active_version_are_errors(tmp_path):
     document = _shipped_document()
-    document["budget"]["vram_mib"] = 9000
-    assert any("need 9920 MiB, budget.vram_mib is 9000" in error for error in _errors(tmp_path, document))
+    document["budget"]["vram_mib"] = 7608
+    assert any("need 7609 MiB, budget.vram_mib is 7608" in error for error in _errors(tmp_path, document))
     document = _shipped_document()
     document["roles"]["general"]["versions"][0]["vram_mib"] = None
-    assert any("roles.general id=general-v0 (ACTIVE): vram_mib is null" in error for error in _errors(tmp_path, document))
+    assert any("roles.general id=general-small-v1 (ACTIVE): vram_mib is null" in error for error in _errors(tmp_path, document))
 
 
 def test_extractor_sharing_generals_tag_costs_no_budget_but_a_different_tag_does(tmp_path):
     document = _shipped_document()
-    document["budget"]["vram_mib"] = 9920          # exactly general + embedding + reranker
+    document["budget"]["vram_mib"] = 7609
+    extractor = document["roles"]["extractor"]
+    extractor["active"] = "extractor-small-v1"
+    record = extractor["versions"][0]
+    record["eval"]["reports"]["extractor_benchmark"] = _report(tmp_path, "bench.json", {"model":"qwen3.5:2b", "versions":{"extractor":"extractor-small-v1"}})
     assert _errors(tmp_path, document) == []
-    document["roles"]["extractor"]["versions"][0]["config"]["name"] = "other:1b"
-    document["roles"]["extractor"]["versions"][0]["vram_mib"] = 1
-    document["roles"]["extractor"]["versions"][0]["eval"]["reports"]["extractor_benchmark"] = _report(tmp_path, "bench.json", {"model": "other:1b", "versions": {"extractor": "extractor-v0"}})
-    assert any("need 9921 MiB" in error for error in _errors(tmp_path, document))
+    record["config"]["name"] = "other:1b"
+    record["vram_mib"] = 1
+    record["eval"]["reports"]["extractor_benchmark"] = _report(tmp_path, "bench.json", {"model":"other:1b", "versions":{"extractor":"extractor-small-v1"}})
+    assert any("need 7610 MiB" in error for error in _errors(tmp_path, document))
 
 
 def test_active_gated_version_needs_an_existing_report(tmp_path):
     document = _shipped_document()
-    document["roles"]["general"]["versions"][0]["eval"]["reports"]["d1_multidoc"] = None
-    assert any("roles.general id=general-v0 (ACTIVE): needs at least one existing eval.reports path" in error for error in _errors(tmp_path, document))
-    document = _shipped_document()
-    document["roles"]["general"]["versions"][0]["eval"]["reports"]["d1_multidoc"] = "data/evaluation/does_not_exist.json"
+    document["roles"]["general"]["versions"][0]["eval"]["reports"] = {"heldout":None}
+    assert any("roles.general id=general-small-v1 (ACTIVE): needs at least one existing eval.reports path" in error for error in _errors(tmp_path, document))
+    document["roles"]["general"]["versions"][0]["eval"]["reports"]["heldout"] = "data/evaluation/does_not_exist.json"
     errors = _errors(tmp_path, document)
-    assert any("eval.reports.d1_multidoc" in error and "does not exist" in error for error in errors)
+    assert any("eval.reports.heldout" in error and "does not exist" in error for error in errors)
     assert any("(ACTIVE): needs at least one existing" in error for error in errors)
 
 
@@ -141,8 +142,8 @@ def test_report_stamp_must_name_the_version_unless_grandfathered(tmp_path):
 
 def test_benchmark_and_mteb_reports_must_name_the_configured_model(tmp_path):
     document = _shipped_document()
-    document["roles"]["extractor"]["versions"][0]["eval"]["reports"]["extractor_benchmark"] = _report(tmp_path, "bench.json", {"model": "qwen3.5:2b"})
-    assert any("names model 'qwen3.5:2b', config.name is 'qwen3.5:9b'" in error for error in _errors(tmp_path, document))
+    document["roles"]["extractor"]["versions"][0]["eval"]["reports"]["extractor_benchmark"] = _report(tmp_path, "bench.json", {"model": "other:1b"})
+    assert any("names model 'other:1b', config.name is 'qwen3.5:2b'" in error for error in _errors(tmp_path, document))
     document = _shipped_document()
     document["roles"]["embedding"]["versions"][0]["eval"]["reports"]["mteb"] = _report(tmp_path, "mteb.json", {"model": "qwen3-embedding:0.6b", "versions": {"embedding": "embedding-v0"}})
     assert _errors(tmp_path, document) == []
@@ -150,15 +151,19 @@ def test_benchmark_and_mteb_reports_must_name_the_configured_model(tmp_path):
 
 def test_modelfile_versions_in_a_chain_need_the_file_and_the_gguf_hash(tmp_path):
     document = _shipped_document()
-    document["roles"]["extractor"]["active"] = "extractor-d2-student-v1"
-    document["roles"]["extractor"]["versions"][1]["vram_mib"] = 100
-    document["roles"]["extractor"]["versions"][1]["eval"]["reports"]["extractor_benchmark"] = _report(
-        tmp_path, "student.json", {"model": "local-ai/extractor-student:d2", "versions": {"extractor": "extractor-d2-student-v1"}})
+    extractor = document["roles"]["extractor"]
+    candidate = {"id":"extractor-contract-test", "provider":"ollama", "vram_mib":100,
+        "config":{"provider":"ollama", "name":"local-ai/contract-test:tiny"},
+        "ollama":{"source":"modelfile", "modelfile":str(tmp_path/"missing"), "gguf_sha256":None},
+        "eval":{"reports":{"extractor_benchmark":_report(tmp_path,"student.json",{
+            "model":"local-ai/contract-test:tiny", "versions":{"extractor":"extractor-contract-test"}})}}}
+    extractor["versions"].append(candidate)
+    extractor["active"] = candidate["id"]
     errors = _errors(tmp_path, document)
     assert any("ollama.modelfile" in error and "does not exist" in error for error in errors)
     assert any("ollama.gguf_sha256 is null" in error for error in errors)
-    # As a candidate (listed after the active version) the same record is not checked.
-    assert not any("extractor-d2-student-v1" in error for error in _errors(tmp_path, _shipped_document()))
+    extractor["active"] = None
+    assert not any("extractor-contract-test" in error for error in _errors(tmp_path, document))
 
 
 def test_active_path_reranker_needs_digest_scores_and_a_matching_export(tmp_path):

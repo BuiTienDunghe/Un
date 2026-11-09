@@ -1,0 +1,132 @@
+<div id="source-memory-runtime">
+  <style>
+    #source-memory-runtime { display: grid; gap: calc(var(--font-size-base) * 1); color: var(--foreground); }
+    #source-memory-runtime .memory-path { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: calc(var(--font-size-base) * .75); margin: 0; padding: 0; list-style: none; }
+    #source-memory-runtime .memory-path li { padding: calc(var(--font-size-base) * .5); border-left: 2px solid var(--border); overflow-wrap: anywhere; }
+    #source-memory-runtime .memory-path li[aria-current="step"] { border-color: var(--viz-series-1); background: color-mix(in srgb, var(--viz-series-1) 9%, transparent); }
+    #source-memory-runtime .memory-detail { display: grid; gap: calc(var(--font-size-base) * .5); overflow-wrap: anywhere; }
+    #source-memory-runtime pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; font: inherit; }
+    #source-memory-runtime .memory-controls { display: flex; flex-wrap: wrap; gap: calc(var(--font-size-base) * .5); align-items: center; }
+    #source-memory-runtime .memory-choice { min-width: 0; max-width: 100%; }
+  </style>
+  <h3>Memory theo từng câu</h3>
+  <div class="viz-controls">
+    <label class="form-label memory-choice">Trường hợp
+      <select class="form-select" id="source-memory-case">
+        <option value="0">Lưu câu có phủ định</option>
+        <option value="1">Hỏi lại điều đã lưu</option>
+        <option value="2">Hỏi từ kênh khác</option>
+        <option value="3">Quên và chống lưu lại bản cũ</option>
+        <option value="4">Quên khi model đang trả lời</option>
+        <option value="5">Câu thông thường</option>
+      </select>
+    </label>
+  </div>
+  <ol class="memory-path" aria-label="Các bước của pipeline" id="source-memory-path"></ol>
+  <div class="card">
+    <div class="memory-detail" aria-live="polite">
+      <strong id="source-memory-stage"></strong>
+      <pre id="source-memory-data"></pre>
+    </div>
+  </div>
+  <div class="memory-controls">
+    <button class="btn" type="button" id="source-memory-prev">← Bước trước</button>
+    <span class="tabular-nums" id="source-memory-position"></span>
+    <button class="btn btn-primary" type="button" id="source-memory-next">Bước tiếp →</button>
+  </div>
+  <script>
+    (() => {
+      const root = document.getElementById("source-memory-runtime");
+      const get = (id) => root.querySelector(`#source-memory-${id}`);
+      const cases = [
+        { label: "Lưu phủ định", stages: [
+          ["Nhận câu nguồn", "Alice: Hãy nhớ tôi không thích cà phê đen, tôi thích trà xanh."],
+          ["Xác minh yêu cầu", "Backend lấy author_id, guild, channel, thread từ lượt đã lưu. Câu mở đầu bằng ‘Hãy nhớ’. arguments.fact của model không có quyền thay câu nguồn."],
+          ["Ghi PostgreSQL", "Khóa phiên bản phạm vi + khóa source_id. Lưu TOÀN BỘ câu, revision=1, hash và chỉ mục FTS trong cùng giao dịch."],
+          ["Chuẩn bị ngữ cảnh", "Câu vẫn chứa ‘không’. Kèm tác giả, source_id và revision; không được đổi thành ‘Alice thích cà phê đen’."],
+          ["Qwen 2B đọc", "Theo lời bạn đã lưu, bạn không thích cà phê đen; bạn thích trà xanh."],
+          ["Kiểm tra trước khi trả", "Epoch còn khớp → lưu câu trả lời và trả biên nhận. Không có extractor, verifier hay teacher 9B."]
+        ]},
+        { label: "Hỏi lại", stages: [
+          ["Nhận câu hỏi", "Alice: Tôi có thích cà phê đen không?"],
+          ["Chốt phạm vi", "Discord: đúng guild + channel + thread. Web: đúng tài khoản. Model không tự chọn phạm vi."],
+          ["Tìm nguồn còn hiệu lực", "SQL lọc phạm vi và status=active trước khi xếp hạng FTS. Chỉ đọc nội dung chuẩn trong PostgreSQL."],
+          ["Đóng gói nguồn", "Tối đa 5 kết quả / 4.800 ký tự; giữ trọn câu. Lịch sử giữ trọn lượt; trạng thái công cụ phải khớp epoch."],
+          ["Qwen 2B trả lời", "Theo lời bạn đã lưu: không thích cà phê đen. Phủ định thuộc chính Alice; không suy từ lời của người khác."],
+          ["Kiểm tra phiên bản", "Nguồn chưa bị sửa/quên trong lúc suy luận → xuất bản. Có thay đổi → yêu cầu hỏi lại."]
+        ]},
+        { label: "Khác kênh", stages: [
+          ["Nguồn ban đầu", "Alice đã lưu câu trong kênh A, luồng X."],
+          ["Câu hỏi mới", "Bob hỏi cùng nội dung từ kênh B hoặc luồng Y."],
+          ["Lọc quyền trong SQL", "audience(B/Y) ≠ audience(A/X) → nguồn bị loại trước xếp hạng."],
+          ["Lọc các đường phụ", "search_history cũng chỉ đọc kênh/luồng hiện tại. Không chèn lại memory cũ, nhãn đã duyệt hay recap cũ."],
+          ["Không có nguồn", "Trong phạm vi cuộc trò chuyện này, chưa có nguồn để trả lời."],
+          ["Không đổi model", "Không gọi model lớn hay dùng fallback để đoán thông tin bị thiếu."]
+        ]},
+        { label: "Quên", stages: [
+          ["Yêu cầu trực tiếp", "Alice: Hãy quên toàn bộ trí nhớ về tôi. Hoặc bấm Quên một ghi nhớ trên web."],
+          ["Khóa và thu hồi", "Chỉ backend xác định chủ thể. Nguồn bị thu hồi: status=retracted, content rỗng, tokens rỗng, revision tăng."],
+          ["Giữ dấu chặn", "source_id + hash được giữ làm tombstone. Một lần gửi lặp không được biến nguồn thành active."],
+          ["Vô hiệu hóa ngữ cảnh", "Epoch và barrier tăng. Không dùng lịch sử trước mốc; không khôi phục trạng thái công cụ cũ. Quên toàn bộ dùng mốc chung của tenant."],
+          ["Chặn tác vụ đến muộn", "Lượt đang chờ lưu mang expected_epoch cũ → từ chối. Delete đến trước record vẫn tạo tombstone."],
+          ["Hỏi lại", "FTS không có nguồn đã quên; thực thi lại lượt Discord cũ không được phát lại nội dung bị thu hồi. Đây là thu hồi sử dụng, không phải xóa bản sao đã gửi ra ngoài."]
+        ]},
+        { label: "Quên trong lúc trả lời", stages: [
+          ["Chụp phiên bản", "Lượt hỏi bắt đầu với epoch=(0,2). Gói nguồn có câu đã lưu."],
+          ["Model đang đọc", "Qwen 2B tạo một câu trả lời từ gói nguồn của epoch=(0,2)."],
+          ["Alice yêu cầu quên", "Backend thu hồi nguồn và đổi epoch sang phiên bản mới."],
+          ["Kiểm tra xuất bản", "Khóa phạm vi ngắn rồi so epoch hiện tại với (0,2). Hai giá trị không khớp."],
+          ["Bỏ kết quả cũ", "Không ghi câu trả lời cũ hoặc trace/tool state của nó. SSE được đệm để không phát trước nội dung bị thu hồi."],
+          ["Trả thông báo", "Nguồn trí nhớ vừa được sửa hoặc quên. Vui lòng hỏi lại để dùng dữ liệu hiện tại."]
+        ]},
+        { label: "Câu thông thường", stages: [
+          ["Nhận câu", "Alice: Hôm nay trời đẹp quá."],
+          ["Không có yêu cầu lưu", "Không khớp yêu cầu ghi nhớ trực tiếp → không tạo source note."],
+          ["Lịch sử ngắn hạn", "Câu nằm trong lịch sử cuộc trò chuyện theo cơ chế hiện có, có giới hạn ngữ cảnh."],
+          ["Không tự suy diễn", "Không tự biến thành ‘Alice thích thời tiết nắng’ và không tạo một sở thích lâu dài."],
+          ["Câu hỏi chưa có nguồn", "Alice hỏi: Sinh nhật tôi ngày nào? → FTS không có câu nguồn liên quan."],
+          ["Trả lời trung thực", "Chưa biết. Không có nguồn về sinh nhật đã được lưu."]
+        ]}
+      ];
+      let selected = 0, step = 0;
+      function restore(saved) {
+        const state = saved && (saved.privateContent || saved);
+        if (state && Number.isInteger(state.selected) && state.selected >= 0 && state.selected < cases.length) {
+          selected = state.selected;
+          step = Number.isInteger(state.step) ? Math.max(0, Math.min(state.step, cases[selected].stages.length - 1)) : 0;
+        }
+      }
+      function render() {
+        const stages = cases[selected].stages;
+        get("case").value = String(selected);
+        const nodes = stages.map((stage, i) => {
+          const li = document.createElement("li");
+          li.textContent = `${i + 1}. ${stage[0]}`;
+          if (i === step) li.setAttribute("aria-current", "step");
+          return li;
+        });
+        get("path").replaceChildren(...nodes);
+        get("stage").textContent = stages[step][0];
+        get("data").textContent = stages[step][1];
+        get("position").textContent = `${step + 1} / ${stages.length}`;
+        get("prev").disabled = step === 0;
+        get("next").disabled = step === stages.length - 1;
+      }
+      function changed() {
+        render();
+        if (window.openai && window.openai.setWidgetState) {
+          window.openai.setWidgetState({modelContent: {scenario: cases[selected].label}, privateContent: {selected, step}}).catch(() => {});
+        }
+      }
+      get("case").onchange = () => { selected = Number(get("case").value); step = 0; changed(); };
+      get("prev").onclick = () => { step = Math.max(0, step - 1); changed(); };
+      get("next").onclick = () => { step = Math.min(cases[selected].stages.length - 1, step + 1); changed(); };
+      restore(window.openai && window.openai.widgetState);
+      window.addEventListener("openai:set_globals", (event) => {
+        const saved = event.detail && event.detail.globals && event.detail.globals.widgetState;
+        if (saved) { restore(saved); render(); }
+      });
+      render();
+    })();
+  </script>
+</div>

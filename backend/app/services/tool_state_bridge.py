@@ -14,6 +14,9 @@ def history_budget(messages, schemas, guide, window):
 
 def continuity_scope(conversation_id, user_id, context):
     context = context or {}
+    epoch = context.get("_memory_epoch")
+    if epoch is not None:
+        conversation_id = f"{conversation_id}:memory-epoch:{epoch}"
     if context.get("guild_id"):
         if not context.get("actor_id"):
             return None

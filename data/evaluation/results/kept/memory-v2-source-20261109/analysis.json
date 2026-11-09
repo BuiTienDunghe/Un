@@ -1,0 +1,70 @@
+{
+  "manual_grading": {
+    "initial_fully_useful": 3,
+    "tuned_fully_useful": 6,
+    "cases": 6,
+    "limits": "same synthetic cases after tuning; not heldout; direct reader + real retrieval, not a full live Discord agent eval"
+  },
+  "tuned_lookup_twice_ms_median": 7.6,
+  "tuned_generation_wall_ms_median": 273.35,
+  "tuned_generation_wall_ms_range": [
+    185.4,
+    395.4
+  ],
+  "cold_initial_first_generation_ms": 6311.11,
+  "reader_model": "qwen3.5:2b",
+  "temperature": 0.0,
+  "seed": 424242,
+  "context": 16384,
+  "cases": [
+    {
+      "case": "negation",
+      "retrieval_expected": true,
+      "answer_expected": true,
+      "review": "Matches stated semantic expectation; wording is not a claim of independent world verification."
+    },
+    {
+      "case": "subject",
+      "retrieval_expected": true,
+      "answer_expected": true,
+      "review": "Matches stated semantic expectation; wording is not a claim of independent world verification."
+    },
+    {
+      "case": "temporal",
+      "retrieval_expected": true,
+      "answer_expected": true,
+      "review": "Matches stated semantic expectation; wording is not a claim of independent world verification."
+    },
+    {
+      "case": "project",
+      "retrieval_expected": true,
+      "answer_expected": true,
+      "review": "Matches stated semantic expectation; wording is not a claim of independent world verification."
+    },
+    {
+      "case": "qualified",
+      "retrieval_expected": true,
+      "answer_expected": true,
+      "review": "Matches stated semantic expectation; wording is not a claim of independent world verification."
+    },
+    {
+      "case": "unknown",
+      "retrieval_expected": true,
+      "answer_expected": true,
+      "review": "Matches stated semantic expectation; wording is not a claim of independent world verification."
+    }
+  ],
+  "fresh_manual_review": {
+    "fully_useful": 5,
+    "total": 6,
+    "prompt_retuned_after_cases": false,
+    "limits": "six fixed new synthetic cases; direct reader + canonical retrieval, manual scoring; not a production benchmark",
+    "failed_cases": [
+      {
+        "case": "component_roles",
+        "reason": "Over-abstains despite retrieving the explicit Redis-cache/PostgreSQL-primary source."
+      }
+    ],
+    "retrieval_expectations_met": 6
+  }
+}

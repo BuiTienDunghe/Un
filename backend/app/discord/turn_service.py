@@ -539,13 +539,27 @@ class DiscordTurnService:
             replacement_turn_id=replacement.turn_id,
         )
 
+    def _safe_replay(self, result):
+        from dataclasses import replace
+        v2 = getattr(self.chat_service, "source_memory", None)
+        if v2 and result.answer:
+            with self.sessions() as database:
+                turn = database.get(DiscordSessionTurn, result.turn_id)
+                session = database.get(DiscordConversationSession, turn.session_id) if turn else None
+                if session:
+                    from app.discord.source_memory import reader_for
+                    _, barrier = v2.snapshot(reader_for(session, turn))
+                    if barrier and turn.created_at <= barrier:
+                        return replace(result, answer="Nguồn trí nhớ đã được sửa hoặc quên. Vui lòng hỏi lại.")
+        return result
+
     def execute(self, turn_id: UUID) -> DiscordTurnResult:
         # Recovery is its own short transaction. Claim commits before any model
         # call, and completion/failure happens in a later transaction.
         self.recover_stale()
         claimed = self.claim(turn_id)
         if claimed.status != "running" or claimed.execution_token is None:
-            return claimed
+            return self._safe_replay(claimed)
 
         execution_token = claimed.execution_token
         with self.sessions() as database:
@@ -560,6 +574,13 @@ class DiscordTurnService:
             if session is None:
                 raise DiscordTurnNotFoundError(str(turn.session_id))
             conversation_id = str(session.backend_conversation_id)
+            v2 = getattr(self.chat_service, "source_memory", None)
+            reader, receipt = (None, "")
+            epoch, barrier = (None, None)
+            if v2:
+                from app.discord.source_memory import prepare_turn
+                reader, receipt = prepare_turn(v2, session, turn)
+                epoch, barrier = v2.snapshot(reader)
             use_tools_for_turn = self._tools_allowed_for_guild(session.guild_id)
             repository = DiscordSessionRepository(database)
             previous_turns = repository.context_turns(
@@ -567,13 +588,20 @@ class DiscordTurnService:
                 turn.sequence_number,
                 limit=self.history_turn_limit,
             )
+            if barrier:
+                previous_turns = [previous for previous in previous_turns if previous.created_at > barrier]
             reply_target = self._resolve_reply_target(repository, turn)
+            if barrier and reply_target is not None and reply_target.created_at <= barrier:
+                reply_target = None
             speaker_context = build_discord_speaker_context(
                 previous_turns,
                 turn,
                 reply_target=reply_target,
             )
             tool_context = self._agent_tool_context(session.guild_id, turn, previous_turns)
+            if v2:
+                tool_context.update({"_memory_reader": reader, "_memory_epoch": epoch,
+                    "channel_id": session.channel_id, "thread_id": session.thread_id, "actor_id": turn.author_id})
             model_history = [*speaker_context.history]
             if speaker_context.reply_target_message is not None:
                 model_history.append(speaker_context.reply_target_message)
@@ -589,7 +617,7 @@ class DiscordTurnService:
             # against the speaker labels in the history. Ordering is a
             # MEASURED variable (§13.7): the history-usage rules must be the
             # LAST system content, so the memory block goes in the middle.
-            active_memories = DiscordMemoryRepository(database).list_active_context_memories(
+            active_memories = [] if v2 else DiscordMemoryRepository(database).list_active_context_memories(
                 guild_id=session.guild_id,
                 subject_id=None,
                 all_members=True,
@@ -607,13 +635,17 @@ class DiscordTurnService:
                 )
                 for memory in active_memories
             )
+            if v2:
+                memory_lines = "\n".join(filter(None, [receipt, v2.context(reader, request_text)]))
+                if barrier and response_text is not None and turn.created_at <= barrier:
+                    response_text = "Nguồn trí nhớ đã được sửa hoặc quên. Vui lòng hỏi lại."
             guild_id = session.guild_id
             channel_id = session.channel_id
             base_instruction = speaker_context.system_instruction
             queue_wait_ms = self._elapsed_ms(getattr(turn, "created_at", None), getattr(turn, "started_at", None) or datetime.now(UTC))
         self._state_event("tool_state_turn_started", turn_id, queue_wait_ms=queue_wait_ms)
         # Ticket 36: what a person approved from decided's suggestions. Its own short read.
-        if self.message_labels is not None:
+        if not v2 and self.message_labels is not None:
             try:
                 memory_lines = "\n".join(line for line in (memory_lines, *self.message_labels.memory_lines(guild_id)) if line)
             except Exception:
@@ -622,10 +654,12 @@ class DiscordTurnService:
         # Tier 3 read path (§9.4 — the section that refused to let tier 3 ship
         # write-only). Its own short transaction, outside the one above, and
         # still zero model calls on the answer path.
-        recap_lines = self._recap_lines(guild_id, channel_id)
+        recap_lines = "" if v2 else self._recap_lines(guild_id, channel_id)
 
         blocks: list[str] = [DISCORD_SPEAKER_ATTRIBUTION_RULES]
-        if memory_lines:
+        if v2 and memory_lines:
+            blocks.append(memory_lines)
+        elif memory_lines:
             blocks.append(
                 "Trí nhớ dài hạn đã được xác nhận về server và thành viên "
                 "(chỉ dùng khi câu hỏi thật sự liên quan):\n"

@@ -11,8 +11,8 @@ from app.services import model_choice
 
 REPO = Path(__file__).resolve().parents[2]
 REGISTRY = REPO / "backend" / "app" / "config" / "model_versions.yaml"
-HAIKU = "general-haiku-v1"
-QWEN = "general-v0"
+LFM = "general-lfm-small-v1"
+QWEN = "general-small-v1"
 
 
 @pytest.fixture
@@ -32,9 +32,9 @@ def test_nothing_picked_reads_empty(tmp_path) -> None:
 
 def test_a_pick_round_trips_and_can_be_dropped(tmp_path) -> None:
     path = tmp_path / "data" / "model_choice.env"
-    model_choice.save_choice(path, "general", HAIKU)
-    assert path.read_bytes() == b"MODEL_VERSION_GENERAL=general-haiku-v1\r\n"
-    assert model_choice.read_choices(path) == {"general": HAIKU}
+    model_choice.save_choice(path, "general", LFM)
+    assert path.read_bytes() == b"MODEL_VERSION_GENERAL=general-lfm-small-v1\r\n"
+    assert model_choice.read_choices(path) == {"general": LFM}
     model_choice.save_choice(path, "general", None)
     assert path.read_bytes() == b"MODEL_VERSION_GENERAL=\r\n"
     assert model_choice.read_choices(path) == {"general": ""}
@@ -46,35 +46,35 @@ def test_models_offers_the_switch_only_on_the_answer_role(mock_ollama, client, c
     assert registry["general"]["chosen"] == QWEN
     versions = versions_by_id(registry["general"])
     assert versions[QWEN]["status"] == "active" and versions[QWEN]["cloud"] is False
-    assert versions[HAIKU]["status"] == "candidate" and versions[HAIKU]["cloud"] is True
+    assert versions[LFM]["status"] == "candidate" and versions[LFM]["cloud"] is False
     assert registry["ocr"]["switchable"] is True and registry["vision"]["switchable"] is True
-    assert "vision-v1" in versions_by_id(registry["vision"])
+    assert "vision-disabled-v1" in versions_by_id(registry["vision"])
     for role in ("embedding", "reranker", "extractor"):
         assert "switchable" not in registry[role] and "versions" not in registry[role]
 
 
 def test_a_pick_waits_for_the_restart_and_leaves_the_registry_alone(mock_ollama, client, choice_file) -> None:
     before = REGISTRY.read_bytes()
-    response = client.post("/models/general/promote", json={"version": HAIKU})
+    response = client.post("/models/general/promote", json={"version": LFM})
     assert response.status_code == 200
-    assert model_choice.read_choices(choice_file) == {"general": HAIKU}
+    assert model_choice.read_choices(choice_file) == {"general": LFM}
     assert REGISTRY.read_bytes() == before
     row = response.json()
-    assert row["chosen"] == HAIKU and row["loaded"] == QWEN
+    assert row["chosen"] == LFM and row["loaded"] == QWEN
     versions = versions_by_id(row)
-    assert versions[HAIKU]["status"] == "pending"
+    assert versions[LFM]["status"] == "pending"
     assert versions[QWEN]["status"] == "serving"
     # The pick survives into the next read of the screen.
-    assert client.get("/models").json()["registry"]["general"]["chosen"] == HAIKU
+    assert client.get("/models").json()["registry"]["general"]["chosen"] == LFM
     # What this process serves does not change before the restart.
-    assert client.get("/models").json()["models"]["general"]["name"] != "claude-haiku-5-5"
+    assert client.get("/models").json()["models"]["general"]["name"] != "lfm3:1.7b"
 
 
 def test_picking_the_default_or_reverting_drops_the_pick(mock_ollama, client, choice_file) -> None:
-    client.post("/models/general/promote", json={"version": HAIKU})
+    client.post("/models/general/promote", json={"version": LFM})
     assert client.post("/models/general/promote", json={"version": QWEN}).status_code == 200
     assert model_choice.read_choices(choice_file) == {"general": ""}
-    client.post("/models/general/promote", json={"version": HAIKU})
+    client.post("/models/general/promote", json={"version": LFM})
     row = client.post("/models/general/revert").json()
     assert model_choice.read_choices(choice_file) == {"general": ""}
     assert row["chosen"] == QWEN
@@ -82,11 +82,11 @@ def test_picking_the_default_or_reverting_drops_the_pick(mock_ollama, client, ch
 
 def test_a_shell_pin_with_no_pick_is_not_shown_as_waiting_for_a_restart(mock_ollama, client, choice_file, monkeypatch) -> None:
     view = client.app.state.model_registry.registry_view()
-    view["general"].update(active=QWEN, requested=HAIKU, loaded=HAIKU, source="env", fallback=False)
+    view["general"].update(active=QWEN, requested=LFM, loaded=LFM, source="env", fallback=False)
     monkeypatch.setattr(client.app.state.model_registry, "registry_view", lambda: view)
     row = client.get("/models").json()["registry"]["general"]
-    assert row["chosen"] == HAIKU
-    assert versions_by_id(row)[HAIKU]["status"] == "active"
+    assert row["chosen"] == LFM
+    assert versions_by_id(row)[LFM]["status"] == "active"
     assert versions_by_id(row)[QWEN]["status"] == "candidate"
 
 
@@ -108,7 +108,7 @@ def test_a_bad_pick_changes_nothing(mock_ollama, client, choice_file, role, vers
 
 def test_a_pick_needs_the_api_key_when_one_is_set(mock_ollama, client, choice_file, monkeypatch) -> None:
     monkeypatch.setattr(get_settings(), "local_ai_api_key", "secret-key-for-this-test")
-    assert client.post("/models/general/promote", json={"version": HAIKU}).status_code == 401
+    assert client.post("/models/general/promote", json={"version": LFM}).status_code == 401
     assert client.post("/models/general/revert").status_code == 401
     assert client.get("/models/check").status_code == 401
     assert not choice_file.exists()

@@ -1,0 +1,11 @@
+........................................................................ [ 29%]
+........................................................................ [ 59%]
+............................................................s........... [ 88%]
+...........................                                              [100%]
+============================== warnings summary ===============================
+..\..\..\..\local-ai-core\.venv\Lib\site-packages\discord\player.py:30
+  C:\Users\dungbt06\local-ai-core\.venv\Lib\site-packages\discord\player.py:30: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13
+    import audioop
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+242 passed, 1 skipped, 1 warning in 25.15s

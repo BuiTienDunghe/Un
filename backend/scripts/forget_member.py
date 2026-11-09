@@ -101,7 +101,10 @@ def _scope(model, guild_id: str | None) -> list:
 
 def _member_guilds(database, author_id: str) -> list[str]:
     """Every guild where the member has something this script deletes."""
+    from app.postgres.models import SourceMemory
     queries = [
+        select(func.substr(SourceMemory.tenant, 9)).where(
+            SourceMemory.tenant.like("discord:%"), SourceMemory.actor == author_id),
         select(DiscordChannelMessage.guild_id).where(DiscordChannelMessage.author_id == author_id),
         select(DiscordConversationSession.guild_id)
         .join(DiscordSessionTurn, DiscordSessionTurn.session_id == DiscordConversationSession.id)
@@ -236,7 +239,13 @@ def _counts(database, guild_id: str | None, author_id: str) -> dict[str, int]:
             or 0
         )
 
+    from app.postgres.models import SourceMemory
+    source_conditions = [SourceMemory.tenant.like("discord:%"), SourceMemory.actor == author_id,
+                         SourceMemory.status == "active"]
+    if guild_id is not None:
+        source_conditions.append(SourceMemory.tenant == f"discord:{guild_id}")
     return {
+        "source_notes": int(database.scalar(select(func.count()).select_from(SourceMemory).where(*source_conditions)) or 0),
         "channel_messages": count(
             DiscordChannelMessage,
             DiscordChannelMessage.author_id == author_id,
@@ -309,6 +318,12 @@ def forget(guild_id: str, author_id: str, *, apply: bool, all_guilds: bool = Fal
     if not apply:
         payload["side_effects"] = False
         return payload
+
+    # V2 has no vector mirror: revoke canonical notes and all old channel
+    # context before touching legacy copies. A later legacy failure stays safe.
+    from app.services.source_memory import SourceMemoryService
+    payload["source_memory_retracted"] = sum(
+        SourceMemoryService(factory).forget_actor(f"discord:{guild}", author_id) for guild in guilds)
 
     # 1. Vectors first: a Postgres-only delete would leave them searchable.
     removed_vectors = 0
