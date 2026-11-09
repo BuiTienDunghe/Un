@@ -20,6 +20,57 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
 
 ---
 
+## 10/11/2026 — Test cho bốn sửa theo bản nhận xét (quên trên Web, lượt Discord cũ, bảng OCR, bộ đo OCR)
+
+- **Câu hỏi:** các test mới có tái hiện lỗi trên code cũ, và bản sửa có giữ xanh đủ bộ?
+- **Điều kiện:** code sửa chưa commit trên `a5b653e`. Container `postgres:16-alpine`/`redis:7-alpine`/`qdrant:v1.18.2` dùng một lần (55441/56381/56334, có `REDIS_URL`), Ollama cổng chết, CUDA ẩn. Lượt "code cũ": `git stash` riêng 9 tệp nguồn, giữ test mới.
+- **Đăng ký trước:** không; kiểm thử hồi quy.
+- **Kết quả:**
+
+  | Lượt | Kết quả |
+  |---|---|
+  | Test mới trên code cũ | hỏng hết: Web 1/1, bảng OCR 4/4 (gồm test TSV cũ đổi kỳ vọng), Discord 3/3. Discord hỏng một phần vì code cũ chưa có câu trả lời cố định để test nhập, nên bằng chứng chính cho lỗi Discord là đọc code |
+  | Nhóm trí nhớ, code mới | 38 đạt (lần đầu 4 hỏng do test của tôi: mã người dùng không có trong bảng `users`, lượt cũ chưa đóng; và lộ thêm lỗi lịch sử giữ lời cũ của tin đã sửa, đã sửa luôn) |
+  | Backend đủ bộ | 2.227 đạt, 0 hỏng (05:02) |
+  | Bộ gốc | 242 đạt, 1 bỏ qua |
+- **Kết luận:** test mới bắt đúng lỗi và đủ bộ xanh.
+- **Trạng thái:** xong.
+- **Bằng chứng:** chỉ dòng tổng kết trong phiên; JUnit ở scratchpad phiên (không giữ).
+
+## 10/11/2026 — Hỏi đáp OCR sau khi sửa cách gắn nhãn bảng (cùng chữ OCR, phát lại)
+
+- **Câu hỏi:** đổi luật tiêu đề bảng (chỉ nhận `<thead>`/`<th>`/`|---|`; bảng không chắc thì giữ bảng gốc làm bằng chứng) có làm 28 câu hỏi OCR kém đi với người chọn 2B?
+- **Điều kiện:** code sửa chưa commit trên `a5b653e`; `scripts.ocr_evidence_eval --replay` lấy nguyên chữ OCR của lượt 2B ngay dưới (03:4x), nên chỉ phần dựng bằng chứng và lần chọn của 2B chạy lại; người chọn mặc định giờ là `general` (`qwen3.5:2b`). Ollama 0.40.13.
+- **Đăng ký trước:** mục này, viết trước khi chạy. Dự đoán 27/28 như lượt gốc (câu trượt do OCR đọc "Liên Chiếu", phát lại vẫn giữ lỗi đó); bảng Ovis có `<thead>` nên hàng nay mang nhãn cột thay vì trần. Kém hơn 27/28 thì không gộp phần bảng mà báo lại.
+- **Kết quả:**
+
+  | Lượt, cùng chữ OCR | Đạt | Hồi quy | Mới |
+  |---|---:|---:|---:|
+  | Luật bảng cũ, 2B (03:4x) | 27/28 | 17/18 | 10/10 |
+  | Luật bảng mới, 2B, phát lại (04:3x) | 27/28 | 17/18 | 10/10 |
+
+  Câu trượt vẫn là "Tuyến Miền Trung xuất từ kho nào?": hàng được chọn đúng và nay mang nhãn ("Tuyên: Miền Trung | Kho xuất: Liên Chiếu | Số kiện: 63"), lỗi dấu là của OCR.
+- **Kết luận:** dự đoán đúng; luật bảng mới không làm bộ này kém đi. Bộ ảnh không có bảng không tiêu đề hay nhiều tầng tiêu đề, nên lợi của bản sửa chỉ được kiểm bằng test đơn vị, không bằng số đo này.
+- **Trạng thái:** xong.
+- **Bằng chứng:** `data/evaluation/results/c57-compare-20261110/ocr/ocr-tablefix-2b-replay/report.json` (chỉ trên máy).
+
+## 10/11/2026 — Hỏi đáp OCR với model mặc định của API (Qwen 2B) thay vì LFM3
+
+- **Câu hỏi:** 28 câu hỏi trên 10 ảnh OCR có còn đạt khi người chọn bằng chứng là `general` mặc định (`qwen3.5:2b`) như API `ocr_job_service.ask`, thay vì LFM3 mà `ocr_evidence_eval` dùng mặc định?
+- **Điều kiện:** main `a5b653e`, `scripts.ocr_evidence_eval --answer-model qwen3.5:2b`, OCR `ocr-ovis-v1` chạy lại cùng lúc, cùng manifest `data/benchmarks/ocr_evidence/v1`; Ollama 0.40.13; đối chứng là lượt LFM3 cùng ngày (28/28, mục 10/11 bên dưới).
+- **Đăng ký trước:** mục này, viết trước khi chạy, sau khi một bản nhận xét chỉ ra API dùng `general` chứ không phải LFM3. Dự đoán: 2B đạt 25–28/28; CHANGELOG v1.6.0 ghi "LFM3 trả lời" là sai với cấu hình mặc định bất kể kết quả.
+- **Kết quả:**
+
+  | Người chọn bằng chứng | Đạt | Hồi quy | Mới |
+  |---|---:|---:|---:|
+  | LFM3 (lượt 02:2x cùng đêm) | 28/28 | 18/18 | 10/10 |
+  | Qwen 2B, mặc định API (03:4x) | 27/28 | 17/18 | 10/10 |
+
+  Câu trượt: "Tuyến Miền Trung xuất từ kho nào?" — 2B chọn đúng hàng, nhưng lần OCR này Ovis đọc "Liên Chiếu" (lượt OCR trước cùng đêm đọc đúng "Liên Chiểu"). Lỗi ở OCR, không ở người chọn; Ovis không cho cùng chữ giữa hai lần chạy cùng ảnh.
+- **Kết luận:** dự đoán đúng; 2B chọn bằng chứng ngang LFM3 trên bộ này. CHANGELOG v1.6.0 nói "LFM3 trả lời câu hỏi về ảnh" là sai: API dùng `general` (2B). Bộ ảnh do Codex viết, chỉ là kiểm hồi quy.
+- **Trạng thái:** xong.
+- **Bằng chứng:** `data/evaluation/results/c57-compare-20261110/ocr/ocr-new-evidence-2b/report.json` (chỉ trên máy).
+
 ## 10/11/2026 — Test sau khi gộp nhánh model nhỏ vào main, và migration database thật
 
 - **Câu hỏi:** main sau khi gộp `c57aa3e` + sửa chốt chặn `5dc1407` (merge `4a57dfe`) có qua đủ bộ test, và database thật lên `20261109_39` có giữ nguyên dữ liệu cũ?

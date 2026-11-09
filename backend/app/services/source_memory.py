@@ -167,6 +167,21 @@ class SourceMemoryService:
                 self._tombstone(row)
                 self._invalidate(database, state)
 
+    def is_retracted(self, key) -> bool:
+        """True once key was tombstoned: forgotten, or its Discord message edited or deleted.
+
+        A delete of a message nobody saved files its tombstone under "__deleted__",
+        not the guild, so a queued turn must ask about its own message id too."""
+        return key in self.retracted({key})
+
+    def retracted(self, keys) -> set:
+        """The subset of keys that are tombstoned, in one query."""
+        if not keys:
+            return set()
+        with self.sessions() as database:
+            return set(database.scalars(select(SourceMemory.id).where(
+                SourceMemory.id.in_(list(keys)), SourceMemory.status == "retracted")))
+
     def invalidate_source(self, key):
         """Used inside the raw-ledger edit/delete transaction via invalidate_in()."""
         with self.sessions.begin() as database:

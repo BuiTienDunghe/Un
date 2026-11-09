@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 from hashlib import sha256
 from time import perf_counter
@@ -65,10 +66,12 @@ class RagService:
             raise ConversationNotFoundError(conversation_id)
         return conversation_id, False
 
-    def _persist_turn(self, conversation_id: str | None, question: str, answer: str, model_used: str, sources: list[dict[str, object]] | None = None) -> int | None:
+    def _persist_turn(self, conversation_id: str | None, question: str, answer: str, model_used: str, sources: list[dict[str, object]] | None = None, *, sent_at: datetime | None = None) -> int | None:
         if self.store is None or conversation_id is None:
             return None
-        self.store.add_message(conversation_id, "user", question)
+        # sent_at (source memory on): the question keeps its send time, so a forget
+        # raised while the answer was being written filters it from later history.
+        self.store.add_message(conversation_id, "user", question, **({"created_at": sent_at} if sent_at else {}))
         # The id was always returned by add_message and discarded one line
         # before log_request — which is why 19% of question rows in production
         # were joinable to their answer only by a timestamp 19 ms apart.
@@ -186,6 +189,7 @@ class RagService:
         from contextlib import nullcontext
         v2 = getattr(self, "source_memory", None)
         reader = MemoryReader.web(user_id)
+        sent_at = datetime.now(UTC) if v2 else None
         epoch = v2.snapshot(reader)[0] if v2 else None
         started = perf_counter()
         conversation_id, created = self._resolve_conversation(question, conversation_id, user_id)
@@ -209,7 +213,7 @@ class RagService:
             if not current:
                 answer = "Ngữ cảnh vừa được sửa hoặc quên. Vui lòng hỏi lại."
                 sources, retrieval_question = [], None
-            message_id = self._persist_turn(conversation_id, question, answer, model_used, sources)
+            message_id = self._persist_turn(conversation_id, question, answer, model_used, sources, sent_at=sent_at)
         self.logging_service.log_request("/rag/chat", model_used, latency_ms, "ok", message_id=message_id, tokens_in=usage["tokens_in"], tokens_out=usage["tokens_out"], prompt_hash=self.prompt_hash)
         return answer, model_used, latency_ms, sources, conversation_id, retrieval_question
 

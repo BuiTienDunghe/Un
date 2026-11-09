@@ -577,9 +577,12 @@ class DiscordTurnService:
             v2 = getattr(self.chat_service, "source_memory", None)
             reader, receipt = (None, "")
             epoch, barrier = (None, None)
+            stale = False
             if v2:
-                from app.discord.source_memory import prepare_turn
+                from app.discord.source_memory import STALE_TURN, prepare_turn
                 reader, receipt = prepare_turn(v2, session, turn)
+                # Decided before this turn's own forget (if any) moves the barrier.
+                stale = receipt == STALE_TURN
                 epoch, barrier = v2.snapshot(reader)
             use_tools_for_turn = self._tools_allowed_for_guild(session.guild_id)
             repository = DiscordSessionRepository(database)
@@ -590,6 +593,12 @@ class DiscordTurnService:
             )
             if barrier:
                 previous_turns = [previous for previous in previous_turns if previous.created_at > barrier]
+            if v2 and previous_turns:
+                # An edited or deleted message is no longer evidence (search_history already
+                # skips it); its old words must not come back as history either.
+                gone = v2.retracted({f"discord:{previous.discord_message_id}" for previous in previous_turns})
+                previous_turns = [previous for previous in previous_turns
+                                  if f"discord:{previous.discord_message_id}" not in gone]
             reply_target = self._resolve_reply_target(repository, turn)
             if barrier and reply_target is not None and reply_target.created_at <= barrier:
                 reply_target = None
@@ -678,6 +687,22 @@ class DiscordTurnService:
             # The history-usage rules stay LAST — measured §13.7.
             blocks.append(DISCORD_HISTORY_USAGE_RULES)
             context_system_prompt = "\n".join(blocks)
+
+        # Review 10/11 (P1): a turn whose message was deleted or edited, or whose memory was
+        # forgotten, while it waited never reaches a model; it ends on one fixed sentence.
+        if stale and response_text is None:
+            from app.discord.source_memory import STALE_TURN_REPLY
+            with self.sessions.begin() as database:
+                saved = DiscordSessionRepository(database).save_response(
+                    turn_id, execution_token, STALE_TURN_REPLY, "none", lease_seconds=self.lease_seconds)
+                if not saved:
+                    raise DiscordTurnOwnershipError(
+                        "Turn ownership was lost before the response could be persisted.")
+                turn = database.get(DiscordSessionTurn, turn_id)
+                assert turn is not None
+                result = self._result(turn, execution_token=execution_token)
+            self._state_event("tool_state_response_saved", turn_id)
+            return result
 
         # A delivery retry reuses the stored response and never calls the model
         # a second time.

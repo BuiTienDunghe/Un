@@ -70,13 +70,15 @@ class PostgresAuxiliaryStore:
             conversation.title = title
             return True
 
-    def add_message(self, conversation_id: str, role: str, content: str, model_used: str | None = None, sources: list[dict[str, object]] | None = None) -> int:
+    def add_message(self, conversation_id: str, role: str, content: str, model_used: str | None = None, sources: list[dict[str, object]] | None = None, *, created_at: datetime | None = None) -> int:
         """Store one message and, in the same transaction, the sources it cited.
 
         Keeping both writes in one transaction is the point: a persisted answer
         must never appear later without the citations it was grounded in.
+        `created_at` lets a caller stamp a user message with the moment it was
+        sent, so a source-memory barrier raised during the turn filters it.
         """
-        now = _utc_now()
+        now = created_at or _utc_now()
         with self._sessions.begin() as session:
             message = Message(conversation_id=conversation_id, role=role, content=content, model_used=model_used, created_at=now)
             session.add(message)

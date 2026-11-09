@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 from hashlib import sha256
 from time import perf_counter
@@ -119,6 +120,9 @@ class ChatService:
         from contextlib import nullcontext
         v2 = self.source_memory
         reader = (tool_context or {}).get("_memory_reader") or MemoryReader.web(user_id)
+        # Stamped before the epoch snapshot: if the user forgets during this turn, the
+        # barrier lands after this moment and the history filter drops the message.
+        sent_at = datetime.now(UTC)
         epoch, barrier = v2.snapshot(reader) if v2 else (None, None)
         if v2 and "_memory_epoch" in (tool_context or {}):
             epoch = tool_context["_memory_epoch"]
@@ -253,7 +257,9 @@ class ChatService:
             if not current:
                 answer = "Nguồn trí nhớ vừa được sửa hoặc quên. Vui lòng hỏi lại để dùng dữ liệu hiện tại."
                 agent_steps, recorder = None, None
-            self.store.add_message(conversation_id, "user", message)
+            # A revoked turn keeps the user's words on screen, but stamped at send time
+            # (before the barrier) so they never come back as model history.
+            self.store.add_message(conversation_id, "user", message, **({"created_at": sent_at} if v2 else {}))
             assistant_message_id = self.store.add_message(conversation_id, "assistant", answer, model_used)
             if agent_steps:
                 # Trace rows attach to the persisted answer they explain (P2-2).

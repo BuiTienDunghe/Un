@@ -12,6 +12,12 @@ from app.discord.history_service import _hit, _or_query_text
 def reader_for(session, turn):
     return MemoryReader.discord(session.guild_id, session.channel_id, session.thread_id, turn.author_id or "")
 
+# prepare_turn's answer for a turn queued before a barrier (its message deleted or edited,
+# or its memory forgotten): the turn service stops on it and never calls the model.
+STALE_TURN = "Lượt cũ đã bị vô hiệu hóa; không phát lại thao tác ghi/quên."
+STALE_TURN_REPLY = ("Tin này đã bị xoá, sửa hoặc trí nhớ vừa được quên trước khi Ún kịp trả lời, "
+                    "nên Ún không xử lý nó. Bạn gửi lại nếu vẫn cần nhé.")
+
 
 def prepare_turn(memory, session, turn):
     reader = reader_for(session, turn)
@@ -20,8 +26,8 @@ def prepare_turn(memory, session, turn):
     text = turn.request_text.split(IMAGE_NOTE, 1)[0]
     receipt = ""
     epoch, barrier = memory.snapshot(reader)
-    if barrier and turn.created_at <= barrier:
-        return reader, "Lượt cũ đã bị vô hiệu hóa; không phát lại thao tác ghi/quên."
+    if (barrier and turn.created_at <= barrier) or memory.is_retracted(f"discord:{turn.discord_message_id}"):
+        return reader, STALE_TURN
     if explicit_forget(text):
         count = memory.forget_actor(reader.tenant, reader.actor)
         receipt = f"Backend đã quên {count} nguồn được lưu về người đang nói."

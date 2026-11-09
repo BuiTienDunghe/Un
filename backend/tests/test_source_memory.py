@@ -217,6 +217,28 @@ def test_forget_during_generation_never_publishes_old_answer(memory):
     assert "sentinel-012" not in answer and steps is None
 
 
+def test_forget_during_a_turn_keeps_its_words_out_of_later_history(memory):
+    # Review 10/11 (P1): the revoked turn's own message was stored after the
+    # barrier, so the next turn sent the forgotten words back to the model.
+    user = None  # conversations.user_id must name a real user; "local" is the no-auth owner
+    reader = MemoryReader.web(user)
+    store = PostgresAuxiliaryStore(memory.sessions)
+    captured = []
+    def generate(role, messages):
+        captured.append(messages)
+        if len(captured) == 1:
+            memory.forget_actor(reader.tenant, reader.actor)
+        return "Đã ghi nhận.", "stub-small"
+    chat = ChatService(store, SimpleNamespace(chat=generate, models={"general": {"context": 16384}}), Log(), 12)
+    chat.source_memory = memory
+    answer, _, cid, _, _ = chat.respond("Hãy nhớ mã riêng sentinel-forgot-41", None, use_memory=True, user_id=user)
+    assert "sentinel-forgot-41" not in answer
+    chat.respond("Bạn còn nhớ gì về tôi?", cid, use_memory=True, user_id=user)
+    assert "sentinel-forgot-41" not in json.dumps(captured[-1], ensure_ascii=False)
+    # The user's words stay in the transcript on screen.
+    assert any("sentinel-forgot-41" in row["content"] for row in store.get_messages(cid, 10))
+
+
 def test_real_tool_state_survives_restart_then_revokes_with_memory(memory):
     from tests.test_tool_state_chat import service
     store, calls = PostgresAuxiliaryStore(memory.sessions), []

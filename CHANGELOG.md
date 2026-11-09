@@ -11,11 +11,17 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
 
 ## [Unreleased]
 
+### Fixed (10/11, theo một bản nhận xét)
+- **Tin vừa quên không còn quay lại lịch sử Web.** Khi người dùng bấm quên trong lúc Ún đang trả lời, tin của lượt đó được lưu với giờ gửi (trước mốc quên), nên vẫn hiện trên màn hình nhưng không còn được gửi cho model ở lượt sau. Áp dụng cho chat và hỏi tài liệu.
+- **Discord không trả lời tin đã bị xoá, sửa hoặc quên trong lúc chờ.** Lượt như vậy dừng trước khi gọi model và trả một câu cố định. Trước đây code chỉ thêm một dòng thông báo vào prompt rồi vẫn gửi yêu cầu cũ cho model; riêng tin bị xoá còn không được nhận ra, vì dấu xoá không gắn với server.
+- **Bảng OCR không còn lấy hàng dữ liệu đầu làm tên cột.** Chỉ coi là tiêu đề khi bảng tự đánh dấu (`<thead>`, ô `<th>`, dòng `|---|`); bảng tách bằng tab, bảng nhiều tầng tiêu đề hoặc có hàng lệch cột thì các hàng không gắn nhãn và bảng gốc vẫn được giữ làm bằng chứng.
+- **Bộ đo OCR dùng đúng model của API.** `ocr_evidence_eval` mặc định đọc `general` đang active thay vì LFM3.
+
 ## [1.6.0] - 2026-11-10
 
 ### Changed (10/11, chỉ model nhỏ)
 - **Bỏ hẳn model 9B, chỉ chạy model nhỏ** (quyết định của chủ dự án, nhánh `codex/tool-state-continuity` gộp ở `4a57dfe`). `general` là Qwen3.5 2B (`general-small-v1`), chọn được LFM3 1.7B (`general-lfm-small-v1`); OCR là OvisOCR3 Q8 (`ocr-ovis-v1`, 1,0 GB, bản chuyển đổi cộng đồng ghim trong registry), GLM-OCR làm bản lùi; `vision`, `condenser`, `extractor`, `verifier` tắt. Khi khởi động, `small_model_policy.py` từ chối mọi tag ngoài danh sách cho phép; tag cũ của một vai đang tắt (như `DISCORD_MEMORY_EXTRACTOR_MODEL` còn trong `.env`) được bỏ qua. Đo cùng đêm 10/11, Agent Eval v0 66 bài, nhiệt độ 0: 9B 57 → 2B 47 (code cũ và mới trên 2B giống nhau từng bài), trung vị 4,4 → 2,0 s/bài, VRAM đỉnh 6.950 → 3.376 MiB. 2B gọi công cụ cả ở bài không được gọi (nt-01, nt-02). Thay cho các mục `ocr-v2` và `vision-v1` (Qwen 9B) bên dưới.
-- **OCR trả khối có cấu trúc cho model chỉ đọc chữ.** Ovis trả từng khối chữ và bảng kèm vị trí; LFM3 trả lời câu hỏi về ảnh từ khối bằng chứng và từ chối khi ảnh không có thông tin. Trên 10 ảnh tiếng Việt tự tạo (7 ảnh có văn bản chuẩn): sai chữ và số 2/887 (9B 0/887, GLM 83/887), 1,79 s/ảnh, 1.658 MiB; 28/28 câu hỏi (đường cũ xấp xỉ 27/28). Bộ ảnh do người làm viết: kiểm hồi quy, chưa đo scan thật hay chữ viết tay.
+- **OCR trả khối có cấu trúc cho model chỉ đọc chữ.** Ovis trả từng khối chữ và bảng kèm vị trí; model `general` (Qwen 2B) chọn khối bằng chứng trả lời câu hỏi về ảnh và từ chối khi ảnh không có thông tin. Trên 10 ảnh tiếng Việt tự tạo (7 ảnh có văn bản chuẩn): sai chữ và số 2/887 (9B 0/887, GLM 83/887), 1,79 s/ảnh, 1.658 MiB; câu hỏi 27/28 với 2B, 28/28 với LFM3 (đường cũ xấp xỉ 27/28). *Đính chính 10/11: bản đầu ghi "LFM3 trả lời"; LFM3 chỉ là mặc định của bộ đo, API dùng `general`.* Bộ ảnh do người làm viết: kiểm hồi quy, chưa đo scan thật hay chữ viết tay.
 - **Trí nhớ v2 lưu nguyên câu người dùng** (`SOURCE_MEMORY_ENABLED`, bật mặc định, migration `20261109_39`). Lưu nguyên văn, người nói, thời điểm và phạm vi (web theo tài khoản, Discord theo kênh hoặc luồng); sửa theo bản, quên có thu hồi khỏi ngữ cảnh; model không còn tự viết dữ kiện. Bật thì tắt luồng rút dữ kiện, duyệt và tóm tắt của Discord cũ; dữ kiện cũ không được chuyển sang, và lịch sử trò chuyện trước lúc nâng cấp không vào ngữ cảnh của v2. Tìm bằng full-text nên yếu khi người dùng diễn đạt khác. Reader 2B đúng 5/6 ca mới khoá trước khi chạy.
 
 ### Added (09/11)

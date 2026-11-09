@@ -88,3 +88,40 @@ def test_web_auto_capture_and_forget(v2client):
     assert forgotten.status_code == 200, forgotten.text
     client.post('/chat', json={'message':'Tôi có lưu điều gì?', 'conversation_id':cid, 'use_memory':True})
     assert 'sentinel-web-633' not in json.dumps(captured[-1], ensure_ascii=False)
+
+
+def queue(client, guild, channel, text, author='alice'):
+    session = client.post('/api/discord/sessions/resolve', json={
+        'guild_id':guild, 'channel_id':channel, 'thread_id':None}).json()['session_id']
+    message_id = str(((int(time.time()*1000)-1420070400000)<<22) + int(uuid4().hex[:5],16))
+    created = client.post(f'/api/discord/sessions/{session}/turns', json={
+        'discord_message_id':message_id, 'message':text, 'author_id':author, 'author_display_name':author})
+    assert created.status_code in (200, 201), created.text
+    return message_id, created.json()['turn_id']
+
+
+@pytest.mark.parametrize('revoke', ['delete', 'edit', 'forget'])
+def test_a_turn_revoked_while_queued_never_reaches_the_model(v2client, revoke):
+    # Review 10/11 (P1): prepare_turn noticed the stale turn, but execute still sent
+    # the old request to the model. It now ends on one fixed sentence.
+    from app.discord.source_memory import STALE_TURN_REPLY
+    client, captured, guild = v2client
+    message_id, turn_id = queue(client, guild, 'one', 'Hãy nhớ mã riêng sentinel-queued-57.')
+    if revoke == 'delete':
+        client.post(f'/api/discord/history/messages/{message_id}/delete', json={'guild_id':guild, 'channel_id':'one'})
+    elif revoke == 'edit':
+        client.post(f'/api/discord/history/messages/{message_id}/edit', json={'content':'đã sửa'})
+    else:
+        client.app.state.source_memory_service.forget_actor(f'discord:{guild}', 'alice')
+    calls = len(captured)
+    executed = client.post(f'/api/discord/sessions/turns/{turn_id}/execute')
+    assert executed.status_code == 200, executed.text
+    assert executed.json()['answer'] == STALE_TURN_REPLY
+    assert len(captured) == calls
+    completed = client.post(f'/api/discord/sessions/turns/{turn_id}/complete', json={
+        'execution_token':executed.json()['execution_token'], 'discord_response_message_ids':['response-'+uuid4().hex]})
+    assert completed.status_code == 200, completed.text
+    # The next, fresh turn still answers normally and never sees the revoked words.
+    send(client, guild, 'one', 'Mã riêng của tôi là gì?')
+    assert len(captured) == calls + 1
+    assert 'sentinel-queued-57' not in json.dumps(captured[-1], ensure_ascii=False)

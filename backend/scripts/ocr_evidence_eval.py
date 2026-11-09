@@ -34,15 +34,19 @@ def main():
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--ocr-version")
-    parser.add_argument("--answer-model", default="lfm3:1.7b")
+    # Default: the registry's active general version, the model /ocr/jobs/{id}/ask uses
+    # (review 10/11, P2: the default used to be lfm3:1.7b while the API asks general).
+    parser.add_argument("--answer-model", help="another Ollama tag as the evidence reader (default: active general)")
     parser.add_argument("--replay", type=Path, help="Reuse raw OCR from another report to measure reader/evidence changes")
     args = parser.parse_args()
     registry = load_registry()
     version = registry.get("ocr", args.ocr_version or registry.roles["ocr"].active)
+    general = dict(registry.get("general", registry.roles["general"].active).config)
+    if args.answer_model:
+        general.update(name=args.answer_model)
+    args.answer_model = general["name"]
     client = OllamaClient("http://127.0.0.1:11434", chat_timeout=150, health_timeout=3, retry_count=0)
-    router = ModelRouter({"ollama": client}, {"ocr": dict(version.config), "general": {
-        "provider": "ollama", "name": args.answer_model, "think": False,
-        "context": 16384, "temperature": 0, "keep_alive": "2m"}})
+    router = ModelRouter({"ollama": client}, {"ocr": dict(version.config), "general": general})
     service = OCRService(router)
     replay = {case["id"]: case for case in json.loads(args.replay.read_text(encoding="utf-8"))["cases"]} if args.replay else None
     manifest = json.loads(args.manifest.read_text(encoding="utf-8"))

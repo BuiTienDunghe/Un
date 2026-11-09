@@ -35,8 +35,10 @@ def test_invalid_coordinates_are_rejected(bbox):
 def test_native_grounding_and_plain_tsv_keep_distinct_contracts():
     blocks = parse_evidence("![text](10, 20, 900, 200)\nMã: AB-71", "lighton_grounding")
     assert blocks[0].bbox == (10, 20, 900, 200)
+    # A TSV carries no header mark (review 10/11, P2): rows stay plain, the table stays evidence.
     tsv = parse_evidence("Phòng\tSố tiền\nKế toán\t750.000")
-    assert tsv[1].text == "Phòng: Kế toán | Số tiền: 750.000"
+    assert [block.text for block in tsv[1:]] == ["Phòng | Số tiền", "Kế toán | 750.000"]
+    assert {block.origin for block in tsv[1:]} == {"table_rows_unlabeled"}
     assert parse_evidence("Nội dung", "text")[0].bbox is None
     with pytest.raises(ValueError):
         parse_evidence("unlocated text", "lighton_grounding")
@@ -136,3 +138,43 @@ def test_headerless_table_keeps_first_data_row_without_inventing_column_names():
     blocks = parse_evidence('<table><tr><td>Mã</td><td>PX-19</td></tr><tr><td>Tổng</td><td>500.000</td></tr></table>')
     assert blocks[1].text == "Mã | PX-19"
     assert blocks[2].text == "Tổng | 500.000"
+
+
+def _offered(blocks):
+    seen = []
+    class Router:
+        def chat_structured(self, mode, messages, schema, **kwargs):
+            seen.append(schema["properties"]["block_ids"]["items"]["enum"])
+            return '{"block_ids":[]}', "text-only"
+    read_evidence(Router(), "Ai phụ trách dự án Sao Mai?", [block.payload() for block in blocks])
+    return set(seen[0])
+
+
+def test_headerless_tsv_keeps_its_first_row_and_the_table_as_evidence():
+    # Review 10/11 (P2): the first data row became the column names ("Kế toán: Kỹ thuật")
+    # and the table itself was dropped, so "Sao Mai" survived only as a label.
+    blocks = parse_evidence("Danh sách\n\nKế toán\tSao Mai\tLê Hồng\nKỹ thuật\tBình Minh\tTrần Tú")
+    rows = [block for block in blocks if block.kind == "table_row"]
+    assert [row.text for row in rows] == ["Kế toán | Sao Mai | Lê Hồng", "Kỹ thuật | Bình Minh | Trần Tú"]
+    table = next(block for block in blocks if block.kind == "table")
+    assert table.id in _offered(blocks)
+
+
+def test_two_header_rows_leave_rows_unlabeled_and_keep_the_table():
+    raw = json.dumps([{"category": "table", "bbox": [0, 0, 500, 200], "content":
+        "<table><tr><th>Tuyến</th><th colspan=2>Hàng</th></tr><tr><th></th><th>Kho</th><th>Số kiện</th></tr>"
+        "<tr><td>Bắc</td><td>Sóc Sơn</td><td>48</td></tr></table>"}])
+    blocks = parse_evidence(raw, "ovis_json")
+    rows = [block for block in blocks if block.kind == "table_row"]
+    assert "Bắc | Sóc Sơn | 48" in [row.text for row in rows] and not any("Hàng: Sóc Sơn" in row.text for row in rows)
+    assert "p1b1" in _offered(blocks)
+
+
+def test_one_explicit_header_labels_rows_and_rows_stand_in_for_the_table():
+    # Ovis writes <thead> rows with <td> cells; that is still an explicit header.
+    raw = json.dumps([{"category": "table", "bbox": [0, 0, 500, 200], "content":
+        "<table><thead><tr><td>Phòng ban</td><td>Dự án</td></tr></thead>"
+        "<tbody><tr><td>Kế toán</td><td>Sao Mai</td></tr></tbody></table>"}])
+    blocks = parse_evidence(raw, "ovis_json")
+    assert blocks[1].text == "Phòng ban: Kế toán | Dự án: Sao Mai" and blocks[1].origin == "table_structure"
+    assert _offered(blocks) == {"p1b1r1"}

@@ -129,9 +129,35 @@ def table_rows(text: str) -> list[list[str]]:
     return rows if len(rows[0]) > 1 and all(len(row) == len(rows[0]) for row in rows) else []
 
 
+MARKDOWN_RULE = re.compile(r"\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?")
+
+
+def table_header_rows(text: str) -> int:
+    """How many leading rows the table itself marks as its header.
+
+    Only explicit marks count: HTML <thead> or leading rows of <th> cells, and a
+    Markdown |---| rule under the first line. A TSV carries no mark, so it has none
+    (review 10/11, P2: its first DATA row used to become the column names)."""
+    if "<table" in text.lower():
+        head = re.search(r"<thead\b[^>]*>(.*?)</thead>", text, re.I | re.S)
+        if head:
+            return len(re.findall(r"<tr\b", head[1], re.I))
+        count = 0
+        for row in re.findall(r"<tr\b[^>]*>(.*?)</tr>", text, re.I | re.S):
+            if re.search(r"<th\b", row, re.I) and not re.search(r"<td\b", row, re.I):
+                count += 1
+            else:
+                break
+        return count
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    return 1 if len(lines) >= 2 and "|" in lines[0] and MARKDOWN_RULE.fullmatch(lines[1]) else 0
+
+
 def table_has_header(text: str) -> bool:
+    """Page-text layout only (document_text): a TSV/Markdown first line is printed as the
+    Markdown header line. Evidence labels use table_header_rows, which is stricter."""
     if "<table" not in text.lower():
-        return True  # TSV/Markdown adapters use their first line as the header.
+        return True
     first = re.search(r"<tr\b[^>]*>(.*?)</tr>", text, re.I | re.S)
     return bool(first and re.search(r"<th\b", first[1], re.I))
 
@@ -145,14 +171,17 @@ def _with_rows(blocks: list[OcrBlock]) -> tuple[OcrBlock, ...]:
         rows = table_rows(block.text)
         if len(rows) < 2:
             continue
-        header = rows[0] if table_has_header(block.text) else None
+        header = rows[0] if table_header_rows(block.text) == 1 else None
+        if header and any(len(row) != len(header) for row in rows[1:]):
+            header = None  # a row the header does not fit: no labels rather than wrong ones
+        # "table_structure": one explicit header labels every row, so a row can stand in
+        # for the table. Otherwise the rows are plain and the reader keeps the table too.
+        origin = "table_structure" if header else "table_rows_unlabeled"
         for index, row in enumerate(rows[1:] if header else rows, 1):
-            if header and len(row) != len(header):
-                continue
             result.append(OcrBlock(f"{block.id}r{index}", block.page, "table_row",
                 " | ".join(f"{key or 'Cột ' + str(column + 1)}: {value}" for column, (key, value)
                            in enumerate(zip(header, row))) if header else " | ".join(row),
-                           None, block.id, "table_structure"))
+                           None, block.id, origin))
     # Keep aligned text columns together for readers without vision. No inferred
     # coordinates: every group points back to the actual source blocks.
     clusters = []
