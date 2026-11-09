@@ -20,6 +20,32 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
 
 ---
 
+## 09/11/2026 — Giữ kết quả công cụ qua lượt, kiểm cơ chế và chi phí CPU
+
+- **Câu hỏi:** Web/Discord có giữ lại kết quả công cụ an toàn qua lượt và service restart, với overhead bao nhiêu? Chưa đo chất lượng model.
+- **Điều kiện:** nhánh riêng `codex/tool-state-continuity`, base main `3eac7f6`; không sửa code main. Tính năng mặc định OFF. Giữ nguyên guide, model/registry, max_steps=3 và policy lookup/read-rest. PostgreSQL 16, Redis 7, Qdrant v1.18.2 tạm; CUDA ẩn, Ollama cổng chết, cloud key trống, guard loopback chặn cổng model. Real reranker sẵn có kiểm CPU offline; không chạy model sinh.
+- **Đăng ký trước:** `.scratch/tool-state-continuity/PREREGISTRATION.md` trước inference; CPU là kiểm chức năng/overhead, không phải ngưỡng chất lượng. Chưa chọn model nhỏ, đã prepare cho 9B, LFM3 1.7B và Qwen 2B.
+- **Kết quả:**
+
+  | Lượt | Đạt / hỏng / bỏ qua |
+  | --- | --- |
+  | Small fixes | 65 / 0 / 2 |
+  | State unit đầu | 72 / 1 / 9; sửa ghi envelope rỗng |
+  | Focused v2 | 170 / 1 / 0; sửa fixture timestamp filesystem Windows |
+  | Focused v3; v4 | 197 / 0 / 0; 202 / 0 / 0 |
+  | Full v1 | 2.134 / 0 / 0; có cảnh báo reader thread cp1252 |
+  | Full cuối | 2.139 / 0 / 0, 273,7 giây; còn 6 warning có sẵn |
+  | Runner/grader cuối | 6 / 0 / 0; kiểm thay đổi cuối sau collection full |
+  | Cú pháp/schema | 435 tệp Python hợp lệ; không drift |
+  | Overhead OFF → ON, p50 / p95 | 23,39 → 35,97 ms / 29,68 → 43,10 ms |
+  | SQL trung vị/lượt | 10 → 16 |
+  | Ký tự message / schema, 72 lượt mỗi nhánh | 236.016 → 389.520 / 347.616 → 347.616 |
+  | Lần gọi model giả | 144 → 144, cố định theo kịch bản |
+
+- **Kết luận:** cơ chế giữ state, cô lập quyền, phiên bản tài liệu, receipt và quên dữ liệu đã qua CPU/DB tests. Trong fixture, ON thêm khoảng 12,58 ms ở p50 và 26,3% tổng ký tự message+schema. Không suy ra tăng chất lượng hay nhanh hơn trên model thật. State thêm có giới hạn mỗi conversation, không có migration/framework mới.
+- **Trạng thái:** triển khai/test CPU xong; feature OFF; 26 ca/624 job mới chỉ prepare, chưa chạy inference; chưa ship hoặc thay model. Giữ mọi lượt lỗi.
+- **Bằng chứng:** `data/evaluation/results/kept/tool-state-continuity-2026-11-09/REPORT.md`, checks/benchmark/manifest/XML cùng thư mục. Raw log dưới `data/logs/tool-state-continuity-2026-11-09/` (chỉ trên máy). Không đọc .env.
+
 ## 08/11/2026 — Cải tiến backend trên nhánh và xác nhận bằng CPU
 
 - **Câu hỏi:** sửa cache số trang, bỏ SQL lặp khi liệt kê paper và phân loại lỗi index có giữ hồi quy, có hiệu quả so với base/main không?

@@ -1,0 +1,4551 @@
+{
+  "created_at": "2026-11-09T06:48:23.726605+00:00",
+  "plan_hash": "6966a01b3045ced1f9ba391996d92c396bb68e8a179ae7641b1b8ae2a806b7ca",
+  "plan": {
+    "version": 1,
+    "files": {
+      "backend/app/__init__.py": "5850a02a7ad50d82c576b911ea6a2f198c51f35af12089e45d81465952ffacc4",
+      "backend/app/config/__init__.py": "b9a092e1c42e7eddac7411ac96d40c3e2d2d46eaa7b5e53cf2840ca97973cd0f",
+      "backend/app/config/model_registry.py": "e52ef93134901df65ba00196e42f5d94f949c047e8b9ffba9fc39d8008e7ea9c",
+      "backend/app/config/model_versions.yaml": "2a192cce3ab005cef683e475f02b4c8d6c53a0c3ee27d35819e537cec4b2e881",
+      "backend/app/config/models.yaml": "191a7966875abc93fe9e7ee00fd1fa8f0d7a13c26a779bb578d7921622cad0aa",
+      "backend/app/config/settings.py": "44670a46cd723ec682918f224f9cd2198817d12ef978d4d55e6c2c807f43914c",
+      "backend/app/discord/__init__.py": "9018155f3a69c402da6aa0866781e61d4be6d0d80d2c8f5acc608af693de9cbc",
+      "backend/app/discord/agent_tools.py": "6490dbe4e3826318f81a977a70b513c7569fc9159d72b4ec3459c4fc5f473446",
+      "backend/app/discord/approvals.py": "b5349f1edba387d14cac23432e2fc40f99c2a1b18059c99b321e81ae9a2c2143",
+      "backend/app/discord/bot_control_service.py": "da751420cf4502e61765fb554f8cf21f9beda37a99c3cd538555383ac271339b",
+      "backend/app/discord/condensation_service.py": "a6b7926f6169f8c6e0d8ed223dc0c2f616f8c73418c4b77d8e293f019d9b5fac",
+      "backend/app/discord/history_schema.py": "ec5599c8e199a9078c676282e453428abb67721acafa58c5bd8cf4a8173bd672",
+      "backend/app/discord/history_service.py": "de3deb6aa7bc5e300084a3afaeabdbef0431e46a26ef609d12300982abb79bce",
+      "backend/app/discord/member_redaction.py": "9fb933fd41408e9352c3efdc013bcb7a8271070b15fa0a41b71a1e6bed6b0931",
+      "backend/app/discord/memory_completion_service.py": "013282f30ac8862a46afc8e1d78f5f04507e901d1002ef68a1b6ef7865bf4cd9",
+      "backend/app/discord/memory_extractor.py": "21df8c51fda59bc71f26397bd04c568bb7bc28ef590e47f0f656fcf1a5cc2847",
+      "backend/app/discord/memory_guard.py": "cb74f51aff09b6ec2df4cb05fef54337ffe54a20cc5b8dc40367ec7678e5ccdf",
+      "backend/app/discord/memory_job_repository.py": "aaba1dc79d378356324f48a9bb4448d9b1645b388de0e380bb906c9f27d7267f",
+      "backend/app/discord/memory_recovery_service.py": "37bed2913e9579a7f9b136851801f9d604043a196d061d0f64c9378cd187b41d",
+      "backend/app/discord/memory_repositories.py": "ecfe835b2230749593a39cdb4a1e1320a09db0942ce5e060cfe9d0099dbca3e5",
+      "backend/app/discord/memory_review_service.py": "9eb9ccb1fef3142a4fba6f05ad3f082857fc53c1638e818f4072e09f04b08f16",
+      "backend/app/discord/memory_rule_filter.py": "dc2b7f88d818cda8eeb2c6e8d26755268ed36b332a9d01377a46d5661a3d0c2e",
+      "backend/app/discord/memory_tasks.py": "ee23610e3d2a495ebc7ba78886818c9eb9d612602477c9cb278c1c28f8e5f9d2",
+      "backend/app/discord/memory_verifier.py": "e4aaa3e8c888936942ff360e9ca7b0e184e11e8e708634d459065d62d203007f",
+      "backend/app/discord/memory_worker_service.py": "0cafc6de5d8094ae2176632a1c00f24cc3acea7853775ecb99fe0fa9ade05c1d",
+      "backend/app/discord/message_labels.py": "5c7a7ff2f92fa2627b132adea07d8b856035728a446ab40fcf30b676443e1105",
+      "backend/app/discord/remember_tool.py": "dbe58466b071fa987c4ca7fb1303c62b053b079d17424b2e26b3a620281fa56d",
+      "backend/app/discord/remind_tool.py": "579ab97369c322da6dc820dafdcfd4e38438b4534954cf44d9e4d0e3d5ef4cdc",
+      "backend/app/discord/reminders.py": "ebdcd28d4c042a2c3674d925e1d6682097c532052d3afbb0d38482f546c6870b",
+      "backend/app/discord/repositories.py": "3977e5407d2f0927d039a348c295e59e92794c63fdfcb251229476f4f20c591c",
+      "backend/app/discord/routers/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "backend/app/discord/routers/approvals.py": "9f0ddee9fcb79735f0123a77d9f69a698343dd29f691d4a27af23ae928f908f1",
+      "backend/app/discord/routers/bot.py": "f6cdbc30cc12a17afe44c2d78c7457e423341de4090357b881dab9329d01f898",
+      "backend/app/discord/routers/condensations.py": "abde3d39e3e1760bc16637f6a832c312e551ff0e28f14c68137cda1a0ca7a468",
+      "backend/app/discord/routers/history.py": "916277b7d956d8093277be904c3267af6f84e296eb9e3aa5df2324f899ef7e6f",
+      "backend/app/discord/routers/memory_review.py": "b18b28e0e3f59d9a6b25647919128271c6d82eedaf28749ff3a3edcc4079054f",
+      "backend/app/discord/routers/message_labels.py": "28f4664c750bbb8153fc8d132d5c9029ace1600a9dee013bf3caf78b0db28fc4",
+      "backend/app/discord/routers/reminders.py": "e7e0d33f07e2b09b6bc19451c58df41bbeaad638e57ddb556b983e391302f886",
+      "backend/app/discord/routers/sessions.py": "3f452c3b20538a4b13be86be216a3c1c51bddc17aaa1ff2a58b8c7dbe7b06df1",
+      "backend/app/discord/schema.py": "22166fc6ecef2d816a83637e4ba3783e5a94dc8c7bbf3aca96d3e8927680b52b",
+      "backend/app/discord/session_service.py": "4dc5a9fb1ef1188268e7e9c33f34d2aadfd3ebe864c5c0c19839e2bc8f024486",
+      "backend/app/discord/speaker_context.py": "1658ed4d6a07a1505c35c3a866139a2282c332862acb2483c59bff12887b4b0f",
+      "backend/app/discord/turn_progress.py": "5ce1d992819aa11a5eaaa35348be74d119a9254c0ebf4b106c092a525ed62d8c",
+      "backend/app/discord/turn_service.py": "e75752eef0cf026e9b31526eafce9c58dab243bd0ed183031a788181f024a5d0",
+      "backend/app/jobs/__init__.py": "ea8d17c4295c3686539eb03174443786f1c9dd96ec6f393dc5bc705edf44e20e",
+      "backend/app/jobs/retry.py": "3a70e4c10d9cc2ff925bfe44549d8f3c310bead3ef03a7f3ab8811347907676f",
+      "backend/app/jobs/routing.py": "77c25bceb6057f5f32a1a6baf5a78f9fc6e9cc36eb4e8f368da905a00c6847df",
+      "backend/app/llm_clients/__init__.py": "74d8a0835ffc3b59e2d0a0992147de467aa76d58bf23771db2767a6be04206cd",
+      "backend/app/llm_clients/anthropic_client.py": "6ca3b5343e5be189a6e15ce79bd8dbcfe9e8f011d0411b89a6fc33fdc1c084d6",
+      "backend/app/llm_clients/deadline.py": "5cfb78c79e5d19c5226c4839e2197e7171a64cf12864af177599d1e882609e5b",
+      "backend/app/llm_clients/deepseek_client.py": "01181009ee825e1327aeade12029164bae3f74164019d65351a605c1d0ef1dd1",
+      "backend/app/llm_clients/factory.py": "379d33d9eec4829d8aed092ef312e36fa9f79ac43c3092f8f04aa8d3d89a1f20",
+      "backend/app/llm_clients/gemini_client.py": "008a2674ba75ec051fdfffc74a6283f46801dfa281f4d017d5d70a9b6cc08c9c",
+      "backend/app/llm_clients/ollama_client.py": "d31c75709024e65d79f971fb6b00f3f94248cface426b330005b89b51e414cd8",
+      "backend/app/llm_clients/usage.py": "0784cad0ed848fd76c34fc6fe799098c9d580acd29246e73bc541f3d02ed5e45",
+      "backend/app/main.py": "58b3ad57be202fd9b6e7384dc65b258068e0f77cd1557b58526e5db292a5b31e",
+      "backend/app/parsers/__init__.py": "017bfe2f43e5db1d0ab3ee1f427fb3cecb6b32a51d708c0b05a50ac91048aeb6",
+      "backend/app/parsers/base_parser.py": "4670d5f0559fceb9bd3457bc7d96b8409cbaec972a8280ae7efe04c101242657",
+      "backend/app/parsers/docx_parser.py": "fae7eeddf882a725b9e498cf5281dc673b35fca3c0cc390bbac8cd3cfd3b5377",
+      "backend/app/parsers/ocr_parser.py": "f2a3a05014e45d998b0e9a5993dd943039671e58eb3944d08980f28f8f10fa57",
+      "backend/app/parsers/plain_text_parser.py": "bc3869a83fa6c8c746f1ee05b463d9f9ede857027d7003f3795303eeebfae9e4",
+      "backend/app/parsers/pymupdf_parser.py": "3c79fe33ef284dc72eca4b9ee86403847b06b02400c89e52507be03340cae407",
+      "backend/app/parsers/smart_parser.py": "b6478e15005acc16323c303948478b8aa3f84d6da3d7d479534bb54736b32ba0",
+      "backend/app/postgres/__init__.py": "055eb716d0f59bb9a939b8757b4348b7f694a4f76b9d357db5fc73c4ffce9180",
+      "backend/app/postgres/database.py": "b9f0998d6691a389469a77b0516668e570d5c40638e20bee1a59f0e2b71f5bfa",
+      "backend/app/postgres/discord_memory_constants.py": "f33763463d3129b5c264ea399b49099f37d642d8906e0a264b6573e0b78a2d47",
+      "backend/app/postgres/models.py": "1b7511bd971bdde31352c380c681b5c7c43d4f7c3df7d366f9ecf0e104386d8a",
+      "backend/app/postgres/repositories.py": "781ff737cae58d8615babd89e07a9999453b3f26d98b3f52b2bb4ee80b5c6adf",
+      "backend/app/prompts/general_system.md": "1e5556f87c1887bd31f466145a320c2ebdb9df97045302ffa3a1acd334536a12",
+      "backend/app/prompts/memory_system.md": "cf312ac4ca5ef00ba125eb3f478edcf78dccca20f61ab7909ebcc24fdf52a6a4",
+      "backend/app/prompts/rag_condense.md": "7d3881d78a374ef601155c538e9f59147c63333f3bc2d2ff124d6052d2408ea7",
+      "backend/app/prompts/rag_system.md": "6a01d9aaaeba07b050f627769820bfb10d94bd7d89dbc881693c459b41b7b1d6",
+      "backend/app/prompts/vision_system.md": "9e687189e5f6cc2aaeb4d98ac2fb87a3181727007a9a6b7b1d5ae4f7d55ea7f6",
+      "backend/app/routers/__init__.py": "5420f769255222a276580534861e900ad8345f0c2afb23b437f060ac9aa560a4",
+      "backend/app/routers/agent.py": "3cdb2555e7b7b89b953720d66171746880c32484856c2cd00497004d19f064ee",
+      "backend/app/routers/auth.py": "aa79b4e17e0d9d9ee206bd4b662e45bda5ad607ffdf67ecc928d224177e8457a",
+      "backend/app/routers/chat.py": "1afc62eb038c764cc87fe5c168cb7ba743b71592b1f9b72b23e9a3acc3500931",
+      "backend/app/routers/conversations.py": "c0c624f6477a341e22f18da55c7e5b7a253643d4390498a1c543feeb04c27545",
+      "backend/app/routers/dashboard.py": "f8d5e721b3db1071251c27c8a421417b9b9a87258d8a4a695abccda159baf714",
+      "backend/app/routers/documents.py": "6462a2667c4a29784e4ca700224057703b26529b0d9a7aa150a16491674beb62",
+      "backend/app/routers/health.py": "a7863f64e3e3250ecf0e12ac45f70ed1568f4d34d4bdb04dea1ed1b6c4763e1a",
+      "backend/app/routers/memory.py": "680e7fa7cc6e704fbacf3f7002d81c65ed55bf0fbd077a64a45928119318607f",
+      "backend/app/routers/models.py": "a4a9178ea5c1c90cd1972d77e05fc76d6205c9351a51e8701ff0cdcf7d93ae70",
+      "backend/app/routers/ocr.py": "ca3ca0c6d60080d0189bfa5a9caad9bb65e7e20f39db5c29e37f7a9a71f6d432",
+      "backend/app/routers/rag.py": "8348bb216096e9a2a076b0f0fab05a70d6037753926e931e8c0ecd3705b4baac",
+      "backend/app/routers/research.py": "28f612b6ab3ab5c9dd40ef1d2b4c17dc31b44a21a3d6d670fda3def860a8a3cd",
+      "backend/app/routers/vision.py": "1a6a5fdbb38b1e3391b32ae67206e64b86da23ff18075ee2498bf1303b9bce3d",
+      "backend/app/routers/voice.py": "bbfbf528b4277141278b2e04639519af09bee4d17636998d1b5c62b0d2989f57",
+      "backend/app/schemas/__init__.py": "ddbb9995a2901415d47b647afce5c7f39de69fb8aed3107ff6a3dea6a4f4a558",
+      "backend/app/schemas/auth_schema.py": "8163c5c8b023a2bf7ab9728aa87e2f0bb0efa2aa9e42ca77f5fd9dce4ac9a882",
+      "backend/app/schemas/chat_schema.py": "3638d156cf4c9f63b4da102241686e82cf6c0da9d36c23bfe8666009fbd68af0",
+      "backend/app/schemas/conversation_schema.py": "dc8815ce30367271feafdf36fbb1c39caaec1e4dd554d05293c5234419b5b637",
+      "backend/app/schemas/dashboard_schema.py": "938166f9ce1c98478a255ac33da57ef8bbafa67bcaae1dcee4ddf99ae41bc5db",
+      "backend/app/schemas/document_schema.py": "1356632344818af422827fdb550396fe5b5be6f1c175731e4c960bacca57c32f",
+      "backend/app/schemas/memory_schema.py": "d169c27a2f27a80c53f03f1bef17412b5c24bd5eb2e4c0f52ad6e4c14f18212d",
+      "backend/app/schemas/model_schema.py": "f6eeddcecdd25be1a1ebf6c35aa6fd84b21344b72d63652738d68ec7485b9244",
+      "backend/app/schemas/ocr_schema.py": "6e5a52bd8b52efca75267ce9fd0cb99df9f724bebba6cf05d1ea7f8b32c51a9b",
+      "backend/app/schemas/rag_schema.py": "d3855edf045c23c8e66d03c9a8fd47770bd45a952905068241d59cf582327a37",
+      "backend/app/schemas/research_schema.py": "d8a30282ea0597c244332d7ae7e01335bbedc7aa391e37912e5acec3465e2429",
+      "backend/app/schemas/vision_schema.py": "6fb27967cb47db4411ba057111beb0d7599061623194264a3f7837ad0376a969",
+      "backend/app/schemas/voice_schema.py": "84bf514d2913ec66b645adb30ecf00d5bbee773d9e7083c8c5ae8089528e2d9a",
+      "backend/app/security/__init__.py": "2888be1783ce5af51de4e74814927617a962080aa06ea2c0be3bb074f377c708",
+      "backend/app/security/api_key.py": "8ca3d00c720e7e5374e5aa26b52e7ae1c50e9b4f9bc2b0f9ccbff1ab1efd6d55",
+      "backend/app/security/api_key_client.py": "a7b95995d95e84a77e060067478514aeffc815de9824656697625cc2220f68bd",
+      "backend/app/security/auth.py": "dffbbd86f9034fdb6e5bb0b0a3b574b07a5560ca328861c377741e4f5f991300",
+      "backend/app/services/__init__.py": "415c396134ed5194a6c44463fe8b2bd46985107a0d4271370460c997c0dfc2ed",
+      "backend/app/services/agent_service.py": "4b50e5bb23d08c93fd7beb3c9b7a57e10636d2798fb206b06f885b869bed82ef",
+      "backend/app/services/answer_figures.py": "2cfcb8345a76745739252176f9e59555bf16b3e386e865b553df3fb81260da2d",
+      "backend/app/services/answer_grounding.py": "ba8d2e528607c00f14db124c59782ac6ec6d50545170ef13b9154afb77a13e65",
+      "backend/app/services/approvals.py": "aa2188599fecfd2b493d84976121cec7e99e9ceede0afe3da69fc9f1f1eff4c9",
+      "backend/app/services/ask_user.py": "70cc8b8fa1d5456b686c2c5666806d33fd606b4a21f8111553159412b45d30b1",
+      "backend/app/services/auth_service.py": "842b815c528c25683348e93804a91503faac662f2c955f592160e00e4a2e6e69",
+      "backend/app/services/calculator.py": "ae514a03a8e764fae73b3e14734089727097d311a11a7016dde68bc0ed428e4c",
+      "backend/app/services/call_budget.py": "aedb29b1b06c0e825303ff01aedabb253f0cc3c1a05832a158ded460599959db",
+      "backend/app/services/chat_service.py": "6cf3b346b515cd764b4352df10494a4005b219d8d17ee0c5b0bbcd4ed279e7f7",
+      "backend/app/services/chunk_context_service.py": "a4054cbbb6f56658a513329f03f0812f308ddefac9620285653577ed97d22389",
+      "backend/app/services/chunk_inspection_service.py": "b03f0f7382b803ec7c9fa6c5fefbea9300be59a32ad29967887fa21162ea1350",
+      "backend/app/services/context_budget.py": "674273b816d332f45a0eded8e136bc1271ea21d0b2ef61d26d6922957bcd4952",
+      "backend/app/services/dashboard_service.py": "c46eb20a57fd1800f5f89df367fe22d05d7a93ef9879c7ca7734f04cb326231c",
+      "backend/app/services/document_pages.py": "247c2fe6f91da0eec8e6af96bcc0393c638230afdd9920d144f395537912b697",
+      "backend/app/services/document_reading.py": "aa58e6f6e808c8548d71e0c1dcc6833e8660d16316baf1c6a6867228930bdce3",
+      "backend/app/services/injection_defense.py": "815d2d3eaa32813c7a1c6d628b2a116ab1257a88d8568a1861fed094caef79c3",
+      "backend/app/services/input_metrics.py": "1b5b210464bb69142cae5f5c300e0abd5306a599d11e7aaa950cacb8685d648d",
+      "backend/app/services/job_queue_service.py": "84f62232a80871f4d3ec18e6554f1281d863a9e5f98e9bf990a35813c42303b2",
+      "backend/app/services/job_recovery_service.py": "9945f1f02fcbdb82f4c98acc7496157ef6daa273f572b8a09f05e9c99b75ab7f",
+      "backend/app/services/logging_service.py": "c5ae6a47be6ddc7d0a6cfda63a2712bf9e8e19b9810c296062100e7d5d611c35",
+      "backend/app/services/long_input.py": "28cc6426b73bcc5998552579418626100ba518a8313abfe0408be641f5420021",
+      "backend/app/services/mcp_tools.py": "e8dd03fdd9f629747d282d5af12f250c48e6ce656c8fa3891accb55cfd7609f2",
+      "backend/app/services/memory_service.py": "55f710562409f03da9873f994a79bbb06b5507a1646cb13c2330a63fa4634f20",
+      "backend/app/services/model_choice.py": "ff79751b82dc029c3cbaf0eae95cc47d0fca5f295792bfeaf4d1e7f5a6a8c7e8",
+      "backend/app/services/model_router.py": "532c0efc584e3873abdea0473364c7753bfbbb64c17709d61cfe139f91df7a17",
+      "backend/app/services/monitoring_service.py": "4b98ff6afb8439da56052b36734701298de95f9f457851296cc7d660dabbf22f",
+      "backend/app/services/ocr_job_service.py": "e8567d502feec2817840039e64bfdab6d813ebeaf419fa3c32cb4fc52e5b047b",
+      "backend/app/services/ocr_metrics_service.py": "58fccfffcc081fdda9b392e5f5edf1e69239323e2598e598bdcd91dfce71875d",
+      "backend/app/services/ocr_service.py": "6c697d54f6a953bdc211883e30165082051e090372c2dfb0453ecf8770c5ad9c",
+      "backend/app/services/operational_service.py": "c33040fee8a7808c9aa8258c6da087a73ba1ac0c239ab57ffd67c43946ff362c",
+      "backend/app/services/outbox_dispatcher_service.py": "ff401d4516665530b1d140e48e322598e5b07274ee373fed66a694e2d551ebc9",
+      "backend/app/services/pastes.py": "4b609266c8cf310f630494023af0cdef84993d5b949835a7155afaca0d281fcd",
+      "backend/app/services/postgres_bm25_service.py": "649a5c90b93f050e40ba3f5142f0f0c8583c5523ca140e34b66a5da2efcbf143",
+      "backend/app/services/postgres_cleanup_planner.py": "6a78de5b0661c90af4f2e554e103a234c5209550b8e721c8984fcf36d27c8933",
+      "backend/app/services/postgres_cleanup_service.py": "b90554e682ce4c5ebc989ebccc93ef8c6c20798cd9e843043a93a7e16ad4073a",
+      "backend/app/services/postgres_document_service.py": "4b134f3f3fb49062add732bbf0160a58b7ba2afc9a900bc64d879b37e057dca6",
+      "backend/app/services/postgres_retrieval_service.py": "6fd636c97bdc765862385e16fde26fdd25ec9a3d358cc102ffef2fdd9c1d2cc7",
+      "backend/app/services/rag_service.py": "71f0794e1877a8b88b880b26f42e47ced729f4c5829375aba2a5251cb677e0d8",
+      "backend/app/services/reranker_service.py": "0276d7c30b58cb0aa896df2ed41c8a05a29001de997682e21a8a35a3a48cd8dd",
+      "backend/app/services/research_service.py": "d03c34a2a3c56b9482063cb45ad8f5b2a5cc022e63e57fa8367bd6b5fb171d19",
+      "backend/app/services/source_page_counts.py": "2f6e599d6884272751ac191389513f9d2a19b143d7297aa40bdf6c58df54af63",
+      "backend/app/services/tool_state.py": "414dfbc5b2ca512eb8f2be9c6cc1c0866f07014b141816f9a03a26a0a99e7ac4",
+      "backend/app/services/tool_state_bridge.py": "69b8d92fa7475c7955b0faeab7fe54e226f6ec6259b3afe1343dd18ed5622cd5",
+      "backend/app/services/web_tools.py": "93d08ee145be4733c38ba7e7d6fa24ede00ca185c0f216abb7ddd15e00de78e3",
+      "backend/app/stores/__init__.py": "c938c39f76b4908944f252eb659bb735dc3b71b51eddb2b7332431a0ec360582",
+      "backend/app/stores/auxiliary_store.py": "bb9a94e858091461917bd8a3ff2b332788af74a823bf58d67ef6336d02ab17c5",
+      "backend/app/stores/embedding_cache_store.py": "bd546dab3bdc55e6ac9abfb5563da9d178d73b1ac7a61788c413239792bfdc52",
+      "backend/app/stores/postgres_auxiliary_store.py": "da517337f8b647c4870ffb31d357374161394da2a6dda2c81f056e0d55a8571a",
+      "backend/app/stores/qdrant_store.py": "ea46ab90f5715e3d01e79c6a4ebf114cbc68b41257252cb5f1bcc94da0d4f2e7",
+      "backend/app/utils/__init__.py": "a0e1d68bf939222f77e7f2aa7f2286c899594eddb8fe53dc912722e7cb3e5505",
+      "backend/app/utils/chunking.py": "20a93dafb6b36b2e525436f0f9c43b6aff79ba32b49ddcbbfd5d9e2038dbfaff",
+      "backend/app/utils/file_utils.py": "12eb6bdeea424f011cc810faf4f21cd4a51aa13a627acbf3bccb46b677540f99",
+      "backend/app/utils/sse.py": "283e4538419e3a6f03fa48d8cb32d26c865afc3bba0561b0d58335c1668a4d9d",
+      "backend/app/utils/vi_text.py": "472ca0831f90540bbbfab0046fc8df633eda1123489c2e1143f3e8c3d75bafe0",
+      "backend/app/utils/vi_tokenizer.py": "6960d61e604a252792164df691532e18a175fa543f6fe9766b497c0b121b3fef",
+      "backend/app/workers/__init__.py": "ff4e53aadb559fe54fa2948b30828cc160e7447eac469d58e1c3bfe31b08ca79",
+      "backend/app/workers/tasks.py": "86b748d64c555846b37e6ed9c6f26bfb28c13200a2c9e2833707d9394178948c",
+      "backend/scripts/tool_state_eval.py": "6141f44faef183feea4c21adeb4b89cc067e2ae4c52fb960b8ba04b5c7c8841c",
+      "cases": "92848cc97bd84c0569a123ae2448c355eadc42511fa0e172ba61b7a0dac972ff"
+    },
+    "jobs": [
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-01",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-01",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-02",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-02",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-03",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-03",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-04",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-04",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-05",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-05",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-06",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-06",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-07",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-07",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-08",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-08",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-09",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-09",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-10",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-10",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-11",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-11",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-12",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-12",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-13",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-13",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-14",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-14",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-15",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-15",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-16",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-16",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "recall-code-web",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "recall-code-web",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "recall-date-discord",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "recall-date-discord",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "recall-value-web",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "recall-value-web",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "recall-place-discord",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "recall-place-discord",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "changed-source",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "changed-source",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "deleted-source",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "deleted-source",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "receipt-without-repeating",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "receipt-without-repeating",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "explicit-second-reminder",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "explicit-second-reminder",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "pending-approval-web",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "pending-approval-web",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "pending-approval-discord",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "pending-approval-discord",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-01",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-01",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-02",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-02",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-03",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-03",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-04",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-04",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-05",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-05",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-06",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-06",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-07",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-07",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-08",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-08",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-09",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-09",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-10",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-10",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-11",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-11",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-12",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-12",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-13",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-13",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-14",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-14",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-15",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-15",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-16",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-16",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "recall-code-web",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "recall-code-web",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "recall-date-discord",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "recall-date-discord",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "recall-value-web",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "recall-value-web",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "recall-place-discord",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "recall-place-discord",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "changed-source",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "changed-source",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "deleted-source",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "deleted-source",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "receipt-without-repeating",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "receipt-without-repeating",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "explicit-second-reminder",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "explicit-second-reminder",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "pending-approval-web",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "pending-approval-web",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "pending-approval-discord",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "pending-approval-discord",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-01",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-01",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-02",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-02",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-03",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-03",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-04",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-04",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-05",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-05",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-06",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-06",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-07",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-07",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-08",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-08",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-09",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-09",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-10",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-10",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-11",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-11",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-12",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-12",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-13",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-13",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-14",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-14",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-15",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-15",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-16",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-16",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "recall-code-web",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "recall-code-web",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "recall-date-discord",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "recall-date-discord",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "recall-value-web",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "recall-value-web",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "recall-place-discord",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "recall-place-discord",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "changed-source",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "changed-source",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "deleted-source",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "deleted-source",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "receipt-without-repeating",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "receipt-without-repeating",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "explicit-second-reminder",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "explicit-second-reminder",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "pending-approval-web",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "pending-approval-web",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "pending-approval-discord",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "pending-approval-discord",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-01",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-01",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-02",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-02",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-03",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-03",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-04",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-04",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-05",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-05",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-06",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-06",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-07",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-07",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-08",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-08",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-09",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-09",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-10",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-10",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-11",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-11",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-12",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-12",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-13",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-13",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-14",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-14",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-15",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-15",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-16",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-16",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "recall-code-web",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "recall-code-web",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "recall-date-discord",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "recall-date-discord",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "recall-value-web",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "recall-value-web",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "recall-place-discord",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "recall-place-discord",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "changed-source",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "changed-source",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "deleted-source",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "deleted-source",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "receipt-without-repeating",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "receipt-without-repeating",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "explicit-second-reminder",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "explicit-second-reminder",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "pending-approval-web",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "pending-approval-web",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "pending-approval-discord",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:9b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "pending-approval-discord",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-01",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-01",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-02",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-02",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-03",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-03",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-04",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-04",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-05",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-05",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-06",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-06",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-07",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-07",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-08",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-08",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-09",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-09",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-10",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-10",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-11",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-11",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-12",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-12",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-13",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-13",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-14",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-14",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-15",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-15",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-16",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-16",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "recall-code-web",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "recall-code-web",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "recall-date-discord",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "recall-date-discord",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "recall-value-web",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "recall-value-web",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "recall-place-discord",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "recall-place-discord",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "changed-source",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "changed-source",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "deleted-source",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "deleted-source",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "receipt-without-repeating",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "receipt-without-repeating",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "explicit-second-reminder",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "explicit-second-reminder",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "pending-approval-web",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "pending-approval-web",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "pending-approval-discord",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "pending-approval-discord",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-01",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-01",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-02",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-02",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-03",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-03",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-04",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-04",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-05",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-05",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-06",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-06",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-07",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-07",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-08",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-08",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-09",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-09",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-10",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-10",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-11",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-11",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-12",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-12",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-13",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-13",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-14",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-14",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-15",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-15",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-16",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-16",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "recall-code-web",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "recall-code-web",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "recall-date-discord",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "recall-date-discord",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "recall-value-web",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "recall-value-web",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "recall-place-discord",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "recall-place-discord",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "changed-source",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "changed-source",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "deleted-source",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "deleted-source",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "receipt-without-repeating",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "receipt-without-repeating",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "explicit-second-reminder",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "explicit-second-reminder",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "pending-approval-web",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "pending-approval-web",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "pending-approval-discord",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "pending-approval-discord",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-01",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-01",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-02",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-02",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-03",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-03",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-04",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-04",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-05",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-05",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-06",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-06",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-07",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-07",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-08",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-08",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-09",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-09",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-10",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-10",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-11",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-11",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-12",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-12",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-13",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-13",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-14",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-14",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-15",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-15",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-16",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-16",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "recall-code-web",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "recall-code-web",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "recall-date-discord",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "recall-date-discord",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "recall-value-web",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "recall-value-web",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "recall-place-discord",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "recall-place-discord",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "changed-source",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "changed-source",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "deleted-source",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "deleted-source",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "receipt-without-repeating",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "receipt-without-repeating",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "explicit-second-reminder",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "explicit-second-reminder",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "pending-approval-web",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "pending-approval-web",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "pending-approval-discord",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "pending-approval-discord",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-01",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-01",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-02",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-02",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-03",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-03",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-04",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-04",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-05",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-05",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-06",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-06",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-07",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-07",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-08",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-08",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-09",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-09",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-10",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-10",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-11",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-11",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-12",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-12",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-13",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-13",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-14",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-14",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-15",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-15",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-16",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-16",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "recall-code-web",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "recall-code-web",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "recall-date-discord",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "recall-date-discord",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "recall-value-web",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "recall-value-web",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "recall-place-discord",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "recall-place-discord",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "changed-source",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "changed-source",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "deleted-source",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "deleted-source",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "receipt-without-repeating",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "receipt-without-repeating",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "explicit-second-reminder",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "explicit-second-reminder",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "pending-approval-web",
+        "enabled": false
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "pending-approval-web",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "pending-approval-discord",
+        "enabled": true
+      },
+      {
+        "model": "lfm3:1.7b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "pending-approval-discord",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-01",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-01",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-02",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-02",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-03",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-03",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-04",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-04",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-05",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-05",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-06",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-06",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-07",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-07",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-08",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-08",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-09",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-09",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-10",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-10",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-11",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-11",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-12",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-12",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-13",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-13",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-14",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-14",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-15",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-15",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-16",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "chat-16",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "recall-code-web",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "recall-code-web",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "recall-date-discord",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "recall-date-discord",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "recall-value-web",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "recall-value-web",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "recall-place-discord",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "recall-place-discord",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "changed-source",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "changed-source",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "deleted-source",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "deleted-source",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "receipt-without-repeating",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "receipt-without-repeating",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "explicit-second-reminder",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "explicit-second-reminder",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "pending-approval-web",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "pending-approval-web",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "pending-approval-discord",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0,
+        "seed": 42,
+        "case_id": "pending-approval-discord",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-01",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-01",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-02",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-02",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-03",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-03",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-04",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-04",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-05",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-05",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-06",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-06",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-07",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-07",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-08",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-08",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-09",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-09",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-10",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-10",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-11",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-11",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-12",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-12",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-13",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-13",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-14",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-14",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-15",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-15",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-16",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "chat-16",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "recall-code-web",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "recall-code-web",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "recall-date-discord",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "recall-date-discord",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "recall-value-web",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "recall-value-web",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "recall-place-discord",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "recall-place-discord",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "changed-source",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "changed-source",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "deleted-source",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "deleted-source",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "receipt-without-repeating",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "receipt-without-repeating",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "explicit-second-reminder",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "explicit-second-reminder",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "pending-approval-web",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "pending-approval-web",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "pending-approval-discord",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 42,
+        "case_id": "pending-approval-discord",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-01",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-01",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-02",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-02",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-03",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-03",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-04",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-04",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-05",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-05",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-06",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-06",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-07",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-07",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-08",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-08",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-09",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-09",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-10",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-10",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-11",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-11",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-12",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-12",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-13",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-13",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-14",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-14",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-15",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-15",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-16",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "chat-16",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "recall-code-web",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "recall-code-web",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "recall-date-discord",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "recall-date-discord",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "recall-value-web",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "recall-value-web",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "recall-place-discord",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "recall-place-discord",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "changed-source",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "changed-source",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "deleted-source",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "deleted-source",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "receipt-without-repeating",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "receipt-without-repeating",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "explicit-second-reminder",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "explicit-second-reminder",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "pending-approval-web",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "pending-approval-web",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "pending-approval-discord",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 43,
+        "case_id": "pending-approval-discord",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-01",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-01",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-02",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-02",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-03",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-03",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-04",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-04",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-05",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-05",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-06",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-06",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-07",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-07",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-08",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-08",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-09",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-09",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-10",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-10",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-11",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-11",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-12",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-12",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-13",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-13",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-14",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-14",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-15",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-15",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-16",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "chat-16",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "recall-code-web",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "recall-code-web",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "recall-date-discord",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "recall-date-discord",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "recall-value-web",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "recall-value-web",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "recall-place-discord",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "recall-place-discord",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "changed-source",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "changed-source",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "deleted-source",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "deleted-source",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "receipt-without-repeating",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "receipt-without-repeating",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "explicit-second-reminder",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "explicit-second-reminder",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "pending-approval-web",
+        "enabled": false
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "pending-approval-web",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "pending-approval-discord",
+        "enabled": true
+      },
+      {
+        "model": "qwen3.5:2b",
+        "temperature": 0.4,
+        "seed": 44,
+        "case_id": "pending-approval-discord",
+        "enabled": false
+      }
+    ],
+    "max_steps": 3,
+    "context": 16384,
+    "think": false,
+    "defense": true,
+    "ollama": "http://127.0.0.1:11434",
+    "fixture": "isolated external tools; real ChatService/AgentService"
+  },
+  "executed": false
+}

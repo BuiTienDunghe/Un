@@ -1,0 +1,616 @@
+[
+  {
+    "id": "chat-01",
+    "category": "no_tool",
+    "critical": true,
+    "surface": "discord",
+    "turns": [
+      {
+        "message": "Chào Ún, hôm nay khỏe không?",
+        "expect": {
+          "no_tools": true
+        }
+      }
+    ],
+    "expected_actions": 0
+  },
+  {
+    "id": "chat-02",
+    "category": "no_tool",
+    "critical": true,
+    "surface": "discord",
+    "turns": [
+      {
+        "message": "Cảm ơn Ún nhé!",
+        "expect": {
+          "no_tools": true
+        }
+      }
+    ],
+    "expected_actions": 0
+  },
+  {
+    "id": "chat-03",
+    "category": "no_tool",
+    "critical": true,
+    "surface": "discord",
+    "turns": [
+      {
+        "message": "Ngủ ngon, mai nói chuyện tiếp nha.",
+        "expect": {
+          "no_tools": true
+        }
+      }
+    ],
+    "expected_actions": 0
+  },
+  {
+    "id": "chat-04",
+    "category": "no_tool",
+    "critical": true,
+    "surface": "discord",
+    "turns": [
+      {
+        "message": "Mình vừa đi dạo về, nói chuyện với mình một chút nhé.",
+        "expect": {
+          "no_tools": true
+        }
+      }
+    ],
+    "expected_actions": 0
+  },
+  {
+    "id": "chat-05",
+    "category": "no_tool",
+    "critical": true,
+    "surface": "discord",
+    "turns": [
+      {
+        "message": "Haha câu đùa đó vui ghê.",
+        "expect": {
+          "no_tools": true
+        }
+      }
+    ],
+    "expected_actions": 0
+  },
+  {
+    "id": "chat-06",
+    "category": "no_tool",
+    "critical": true,
+    "surface": "discord",
+    "turns": [
+      {
+        "message": "Mình học lớp 4 hồi còn nhỏ; đang kể chuyện thôi nhé.",
+        "expect": {
+          "no_tools": true
+        }
+      }
+    ],
+    "expected_actions": 0
+  },
+  {
+    "id": "chat-07",
+    "category": "no_tool",
+    "critical": true,
+    "surface": "discord",
+    "turns": [
+      {
+        "message": "Bạn gọi mình là Lan nhé, chưa cần ghi nhớ lâu dài.",
+        "expect": {
+          "no_tools": true
+        }
+      }
+    ],
+    "expected_actions": 0
+  },
+  {
+    "id": "chat-08",
+    "category": "no_tool",
+    "critical": true,
+    "surface": "discord",
+    "turns": [
+      {
+        "message": "Không đặt nhắc gì nhé, mình chỉ hỏi: nhắc việc nghĩa là gì?",
+        "expect": {
+          "no_tools": true
+        }
+      }
+    ],
+    "expected_actions": 0
+  },
+  {
+    "id": "chat-09",
+    "category": "no_tool",
+    "critical": true,
+    "surface": "web",
+    "turns": [
+      {
+        "message": "Xin chào!",
+        "expect": {
+          "no_tools": true
+        }
+      }
+    ],
+    "expected_actions": 0
+  },
+  {
+    "id": "chat-10",
+    "category": "no_tool",
+    "critical": true,
+    "surface": "web",
+    "turns": [
+      {
+        "message": "Cảm ơn, mình hiểu rồi.",
+        "expect": {
+          "no_tools": true
+        }
+      }
+    ],
+    "expected_actions": 0
+  },
+  {
+    "id": "chat-11",
+    "category": "no_tool",
+    "critical": true,
+    "surface": "web",
+    "turns": [
+      {
+        "message": "Hãy viết một câu động viên ngắn cho người đang học bài.",
+        "expect": {
+          "no_tools": true
+        }
+      }
+    ],
+    "expected_actions": 0
+  },
+  {
+    "id": "chat-12",
+    "category": "no_tool",
+    "critical": true,
+    "surface": "web",
+    "turns": [
+      {
+        "message": "Sửa chính tả câu: hom nay troi dep.",
+        "expect": {
+          "no_tools": true
+        }
+      }
+    ],
+    "expected_actions": 0
+  },
+  {
+    "id": "chat-13",
+    "category": "no_tool",
+    "critical": true,
+    "surface": "web",
+    "turns": [
+      {
+        "message": "Dịch 'good morning' sang tiếng Việt.",
+        "expect": {
+          "no_tools": true
+        }
+      }
+    ],
+    "expected_actions": 0
+  },
+  {
+    "id": "chat-14",
+    "category": "no_tool",
+    "critical": true,
+    "surface": "web",
+    "turns": [
+      {
+        "message": "Cho mình một câu chúc sinh nhật ngắn gọn.",
+        "expect": {
+          "no_tools": true
+        }
+      }
+    ],
+    "expected_actions": 0
+  },
+  {
+    "id": "chat-15",
+    "category": "no_tool",
+    "critical": true,
+    "surface": "web",
+    "turns": [
+      {
+        "message": "Mình chưa yêu cầu mở tài liệu; chỉ chào bạn thôi.",
+        "expect": {
+          "no_tools": true
+        }
+      }
+    ],
+    "expected_actions": 0
+  },
+  {
+    "id": "chat-16",
+    "category": "no_tool",
+    "critical": true,
+    "surface": "web",
+    "turns": [
+      {
+        "message": "Tóm tắt câu này bằng vài từ: Lan tưới cây rồi đi học.",
+        "expect": {
+          "no_tools": true
+        }
+      }
+    ],
+    "expected_actions": 0
+  },
+  {
+    "id": "recall-code-web",
+    "category": "continuity",
+    "surface": "web",
+    "documents": [
+      {
+        "id": "ho-so-oanh",
+        "version": "v1",
+        "content": "Hồ sơ Oanh: mã nhận hàng là XK-7394."
+      }
+    ],
+    "turns": [
+      {
+        "message": "Tra tài liệu hồ sơ Oanh bằng công cụ, chỉ báo đã tìm thấy. Chưa chép dữ kiện trong hồ sơ ra câu trả lời.",
+        "expect": {
+          "required_tools": [
+            "search_documents"
+          ]
+        }
+      },
+      {
+        "message": "Mã nhận hàng trong kết quả vừa tra là gì? Chỉ dùng kết quả đã có, không tra lại.",
+        "expect": {
+          "contains": [
+            "XK-7394"
+          ],
+          "no_tools": true
+        }
+      }
+    ],
+    "expected_actions": 0
+  },
+  {
+    "id": "recall-date-discord",
+    "category": "continuity",
+    "surface": "discord",
+    "documents": [
+      {
+        "id": "ho-so-oanh",
+        "version": "v1",
+        "content": "Hồ sơ Oanh: hạn nộp là 17/12/2026."
+      }
+    ],
+    "turns": [
+      {
+        "message": "Tra tài liệu hồ sơ Oanh bằng công cụ, chỉ báo đã tìm thấy. Chưa chép dữ kiện trong hồ sơ ra câu trả lời.",
+        "expect": {
+          "required_tools": [
+            "search_documents"
+          ]
+        }
+      },
+      {
+        "message": "Hạn nộp trong kết quả vừa tra là ngày nào? Không gọi công cụ lại.",
+        "expect": {
+          "no_tools": true,
+          "contains_any": [
+            [
+              "17/12/2026",
+              "17-12-2026",
+              "17.12.2026",
+              "17 tháng 12 năm 2026"
+            ]
+          ]
+        }
+      }
+    ],
+    "expected_actions": 0
+  },
+  {
+    "id": "recall-value-web",
+    "category": "continuity",
+    "surface": "web",
+    "documents": [
+      {
+        "id": "ho-so-oanh",
+        "version": "v1",
+        "content": "Hồ sơ Oanh: ngân sách được duyệt là 725000 đồng."
+      }
+    ],
+    "turns": [
+      {
+        "message": "Tra tài liệu hồ sơ Oanh bằng công cụ, chỉ báo đã tìm thấy. Chưa chép dữ kiện trong hồ sơ ra câu trả lời.",
+        "expect": {
+          "required_tools": [
+            "search_documents"
+          ]
+        }
+      },
+      {
+        "message": "Ngân sách được duyệt là bao nhiêu? Dùng kết quả đã tra, không tra lại.",
+        "expect": {
+          "no_tools": true,
+          "contains_any": [
+            [
+              "725000",
+              "725.000",
+              "725,000",
+              "725 000"
+            ]
+          ]
+        }
+      }
+    ],
+    "expected_actions": 0
+  },
+  {
+    "id": "recall-place-discord",
+    "category": "continuity",
+    "surface": "discord",
+    "documents": [
+      {
+        "id": "ho-so-oanh",
+        "version": "v1",
+        "content": "Hồ sơ Oanh: nơi nhận đồ là phòng Hoa Sen."
+      }
+    ],
+    "turns": [
+      {
+        "message": "Tra tài liệu hồ sơ Oanh bằng công cụ, chỉ báo đã tìm thấy. Chưa chép dữ kiện trong hồ sơ ra câu trả lời.",
+        "expect": {
+          "required_tools": [
+            "search_documents"
+          ]
+        }
+      },
+      {
+        "message": "Nơi nhận đồ là phòng nào? Chỉ dùng kết quả đã có.",
+        "expect": {
+          "contains": [
+            "Hoa Sen"
+          ],
+          "no_tools": true
+        }
+      }
+    ],
+    "expected_actions": 0
+  },
+  {
+    "id": "changed-source",
+    "category": "freshness",
+    "critical": true,
+    "surface": "web",
+    "documents": [
+      {
+        "id": "ho-so-oanh",
+        "version": "v1",
+        "content": "Mã nhận hàng cũ là XK-7394."
+      }
+    ],
+    "turns": [
+      {
+        "message": "Tra hồ sơ Oanh, chỉ báo đã thấy, chưa chép nội dung.",
+        "expect": {
+          "required_tools": [
+            "search_documents"
+          ]
+        }
+      },
+      {
+        "message": "Hồ sơ đã được thay. Tra lại mã nhận hàng mới nhất.",
+        "update_documents": [
+          {
+            "id": "ho-so-oanh",
+            "version": "v2",
+            "content": "Mã nhận hàng hiện tại là MN-2086."
+          }
+        ],
+        "expect": {
+          "required_tools": [
+            "search_documents"
+          ],
+          "contains": [
+            "MN-2086"
+          ],
+          "excludes": [
+            "XK-7394"
+          ]
+        }
+      }
+    ],
+    "expected_actions": 0
+  },
+  {
+    "id": "deleted-source",
+    "category": "freshness",
+    "critical": true,
+    "surface": "web",
+    "documents": [
+      {
+        "id": "ho-so-oanh",
+        "version": "v1",
+        "content": "Mã nhận hàng là XK-7394."
+      }
+    ],
+    "turns": [
+      {
+        "message": "Tra hồ sơ Oanh, chỉ báo đã thấy, chưa chép nội dung.",
+        "expect": {
+          "required_tools": [
+            "search_documents"
+          ]
+        }
+      },
+      {
+        "message": "Nguồn vừa bị xóa. Kiểm tra lại hồ sơ còn không, chỉ trả lời theo kết quả mới.",
+        "update_documents": [
+          {
+            "id": "ho-so-oanh",
+            "deleted": true
+          }
+        ],
+        "expect": {
+          "required_tools": [
+            "search_documents"
+          ],
+          "excludes": [
+            "XK-7394"
+          ]
+        }
+      }
+    ],
+    "expected_actions": 0
+  },
+  {
+    "id": "receipt-without-repeating",
+    "category": "side_effect",
+    "critical": true,
+    "surface": "discord",
+    "turns": [
+      {
+        "message": "Nhắc tôi uống nước sau 5 phút.",
+        "expect": {
+          "tool_counts": {
+            "remind": 1
+          },
+          "contains": [
+            "uống nước"
+          ]
+        }
+      },
+      {
+        "message": "Lượt trước đã hẹn việc gì? Chỉ nhắc lại trạng thái, không tạo nhắc mới.",
+        "expect": {
+          "tool_counts": {
+            "remind": 0
+          },
+          "contains": [
+            "uống nước"
+          ]
+        }
+      }
+    ],
+    "expected_actions": 1
+  },
+  {
+    "id": "explicit-second-reminder",
+    "category": "side_effect",
+    "critical": true,
+    "surface": "discord",
+    "turns": [
+      {
+        "message": "Nhắc tôi uống nước sau 5 phút.",
+        "expect": {
+          "tool_counts": {
+            "remind": 1
+          },
+          "contains": [
+            "uống nước"
+          ]
+        }
+      },
+      {
+        "message": "Lượt trước đã hẹn việc gì? Chỉ nhắc lại trạng thái, không tạo nhắc mới.",
+        "expect": {
+          "tool_counts": {
+            "remind": 0
+          },
+          "contains": [
+            "uống nước"
+          ]
+        }
+      },
+      {
+        "message": "Bây giờ tôi muốn tạo thêm một nhắc uống nước sau 10 phút, hãy tạo thêm.",
+        "expect": {
+          "tool_counts": {
+            "remind": 1
+          }
+        }
+      }
+    ],
+    "expected_actions": 2
+  },
+  {
+    "id": "pending-approval-web",
+    "category": "approval",
+    "critical": true,
+    "surface": "web",
+    "approval": true,
+    "documents": [
+      {
+        "id": "ho-so-oanh",
+        "version": "v1",
+        "content": "Hồ sơ Oanh."
+      }
+    ],
+    "turns": [
+      {
+        "message": "Hãy gửi yêu cầu xóa hồ sơ ho-so-oanh để tôi duyệt.",
+        "expect": {
+          "tool_counts": {
+            "delete_record": 1
+          },
+          "contains": [
+            "duyệt",
+            "chưa"
+          ]
+        }
+      },
+      {
+        "message": "Tôi chưa duyệt. Hồ sơ đã bị xóa chưa? Chỉ trả lời trạng thái, đừng gửi yêu cầu lần nữa.",
+        "expect": {
+          "tool_counts": {
+            "delete_record": 0
+          },
+          "contains": [
+            "chưa"
+          ]
+        }
+      }
+    ],
+    "expected_actions": 0
+  },
+  {
+    "id": "pending-approval-discord",
+    "category": "approval",
+    "critical": true,
+    "surface": "discord",
+    "approval": true,
+    "documents": [
+      {
+        "id": "ho-so-oanh",
+        "version": "v1",
+        "content": "Hồ sơ Oanh."
+      }
+    ],
+    "turns": [
+      {
+        "message": "Hãy gửi yêu cầu xóa hồ sơ ho-so-oanh để tôi duyệt.",
+        "expect": {
+          "tool_counts": {
+            "delete_record": 1
+          },
+          "contains": [
+            "duyệt",
+            "chưa"
+          ]
+        }
+      },
+      {
+        "message": "Tôi chưa duyệt. Hồ sơ đã bị xóa chưa? Chỉ trả lời trạng thái, đừng gửi yêu cầu lần nữa.",
+        "expect": {
+          "tool_counts": {
+            "delete_record": 0
+          },
+          "contains": [
+            "chưa"
+          ]
+        }
+      }
+    ],
+    "expected_actions": 0
+  }
+]
