@@ -11,7 +11,7 @@ p = argparse.ArgumentParser()
 p.add_argument('--database', required=True)
 p.add_argument('--redis', required=True)
 p.add_argument('--qdrant', required=True)
-p.add_argument('--phase', choices=['focused', 'full', 'eval'], default='focused')
+p.add_argument('--phase', choices=['focused', 'full', 'eval', 'bfcl'], default='focused')
 p.add_argument('--label', required=True)
 a = p.parse_args()
 repo = Path(__file__).resolve().parents[2]
@@ -45,7 +45,9 @@ if run('cpu-guard', ['-c', probe], repo / 'backend'):
     sys.exit(2)
 if run('migration', ['-m', 'alembic', 'upgrade', 'head'], repo):
     sys.exit(3)
-tests = ['tests/test_tool_state_eval.py'] if a.phase == 'eval' else ['tests'] if a.phase == 'full' else [
+tests = (['tests/test_bfcl_tool_state.py', 'tests/test_bfcl_run.py', 'tests/test_tool_state_chat.py',
+          'tests/test_tool_state.py', 'tests/test_tool_state_eval.py', 'tests/test_input_metrics.py']
+         if a.phase == 'bfcl' else ['tests/test_tool_state_eval.py'] if a.phase == 'eval' else ['tests'] if a.phase == 'full' else [
     'tests/test_tool_state.py', 'tests/test_tool_state_chat.py', 'tests/test_tool_state_store.py',
     'tests/test_input_metrics.py', 'tests/test_agent_promise_check.py',
     'tests/test_tool_state_eval.py',
@@ -53,7 +55,7 @@ tests = ['tests/test_tool_state_eval.py'] if a.phase == 'eval' else ['tests'] if
     'tests/test_agent_service.py', 'tests/test_context_budget.py',
     'tests/test_source_page_counts.py', 'tests/test_batched_document_listing.py',
     'tests/test_database_url_contract.py', 'tests/test_frontend_error_contract.py',
-]
+])
 code = run('pytest', ['-m', 'pytest', *tests, '-q', '-p', 'no:cacheprovider', '--tb=short', '--junitxml=' + str(out / 'pytest.xml')], repo / 'backend')
 schema = run('schema-check', ['-m', 'alembic', 'check'], repo)
 sys.exit(code or schema)

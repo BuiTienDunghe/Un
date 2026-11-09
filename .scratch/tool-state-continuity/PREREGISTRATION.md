@@ -1,5 +1,8 @@
 # Đăng ký trước — giữ kết quả công cụ qua lượt
 
+**Bổ sung v2 ở cuối tệp thay vai trò của bộ tự viết và phép đo chính.**
+Các manifest v1 được giữ làm bằng chứng lịch sử, không resume sau khi code đổi.
+
 Ngày 09/11/2026. Chưa chạy inference. Chủ dự án chưa chọn model nhỏ:
 chuẩn bị riêng cho `qwen3.5:9b`, `lfm3:1.7b`, `qwen3.5:2b`.
 
@@ -85,3 +88,100 @@ dịch vụ thao tác. Kết quả read-rest sinh bằng model, web/MCP không c
 riêng, giờ hiện tại và trạng thái hệ thống không được lưu qua lượt. Receipt chờ
 duyệt thể hiện trạng thái tại thời điểm ghi, không tự biết một lần duyệt về sau.
 Metadata PDF đã bị updated_at làm bẩn trước bản sửa không được tự hồi phục.
+
+## Cập nhật v2 — sau phản biện, trước mọi inference mới
+
+Bộ tự viết kiểm được việc mang dữ liệu qua lượt và các rào chặn, nhưng chưa đủ
+để biết trợ lý làm việc tốt hơn trên nhiều loại việc. Phép xác nhận chính chuyển
+sang bài công khai có công cụ thực thi và bộ chấm sẵn có. Không thêm nhiều bản
+đổi tên của cùng một bài rồi coi là bằng chứng độc lập.
+
+### Vai trò và lựa chọn bài
+
+Giữ nguyên bộ product v1 làm hồi quy Web/Discord, không dùng các ca nhớ dữ kiện
+trong đó làm ngưỡng chính để tuyên bố model nhỏ tăng chất lượng. Oracle chat vẫn
+cần đọc tay che nhãn cấu hình. Không chọn một model nhỏ thay chủ dự án.
+
+BFCL lấy từ checkout công khai đã ghim, không đọc điểm cũ hoặc ground truth để
+chọn bài. Sắp ID bằng SHA-256 của `SPLIT_SEED + ":" + ID`, seed nằm trong
+`scripts.prepare_tool_state_bfcl`. Lấy tập xác nhận và pilot không giao nhau.
+Nhóm base từng dùng chẩn đoán được giữ riêng, không cộng vào tập xác nhận.
+Đây là tách khỏi tập chẩn đoán của đợt trước, không phải khẳng định benchmark
+chưa từng xuất hiện trong dữ liệu huấn luyện hoặc chưa ai từng đo.
+
+| Nhóm | Bài mỗi nhánh | Lượt người dùng mỗi nhánh | Vai trò |
+| --- | ---: | ---: | --- |
+| Pilot | 12 | 56 | Ước chi phí và phát hiện lỗi chạy; không chọn prompt |
+| Xác nhận | 300 | 1.303 | miss_func, miss_param, long_context; mỗi loại 100 bài |
+| Chẩn đoán tùy chọn | 200 | 734 | multi_turn_base đã dùng trước; giải thích nguyên nhân |
+| Product v1 | 26 | 37 | Hồi quy ứng dụng, không phải benchmark xác nhận chính |
+
+Mỗi nhóm BFCL có ba model × OFF/ON, nhiệt độ 0, seed 42. Tập xác nhận tương ứng
+1.800 lượt chạy ca, không phải 1.800 lượt hội thoại; có tổng 7.818 lượt người
+dùng. Product vẫn có 624 lượt chạy ca ở các sampling đã đặt, tương ứng 888 lượt
+người dùng. Không cộng các seed lặp thành bài độc lập. Chưa chạy bất kỳ model
+sinh nào trong đợt chuẩn bị này.
+
+### Đường code được đo và giới hạn suy luận
+
+`--bounded-tool-state` dùng ToolStateRecorder, history_budget và restore_history
+đang dùng ở sản phẩm; lấy kết quả qua hook AgentService, không dựng lại từ trace
+bằng tool_traffic cũ. OFF/ON có cùng schema, lời dặn và số vòng; không bật legacy
+carry cùng lúc. Dùng cùng giới hạn nhóm/ký tự/tuổi state. Store in-memory mỗi ca
+có TTL/retention; test PostgreSQL vẫn là bằng chứng cho adapter production.
+
+Các hàm BFCL được opt-in kiểu observation rõ ràng chỉ trong evaluator. Nhãn
+`read` ở adapter là cách mang nguyên kết quả, không phải khẳng định mọi hàm BFCL
+không có tác dụng phụ. Không đổi policy none mặc định của công cụ sản phẩm/MCP.
+BFCL không kiểm quyền tài liệu, actor Discord hay receipt nhắc việc của Ún;
+các phần đó vẫn phải qua bộ ứng dụng. Không gọi đây là phép đo toàn bộ ChatService.
+
+Sửa câu ở bản đầu: giữ dataset/executor/checker BFCL; runner inference của dự án
+được thêm chế độ state. Không thay cách chấm, không tự viết backend cho câu
+một lượt, không sửa clone BFCL. Bài một lượt vẫn chấm vòng model đầu tiên.
+Checker chính thức được kiểm bằng ca oracle đạt và ca không làm gì trượt, đều
+trên CPU. Điểm BFCL của cấu hình harness này không tự trở thành điểm leaderboard.
+
+### Trình tự và luật đọc kết quả
+
+1. Chỉ sau khi được phép dùng model, chạy pilot cùng ngày theo từng model.
+   Ước thời gian còn lại từ thời gian thật theo loại bài, tách reload khỏi xử lý;
+   không suy GPU-time từ CPU fake-client. Nếu phải sửa lỗi vận hành, ghi bổ sung
+   và tạo manifest mới trước khi chạy xác nhận.
+2. Chạy OFF/ON của mỗi model trong cùng ngày, cùng server/digest/config. Khai báo
+   GPU dùng chung bằng `--gpu-shared`; nếu không khai báo hoặc có tải khác, không
+   coi chênh thời gian là kết luận hiệu suất. Thứ tự nhánh đảo theo model trong
+   plan; chưa có randomization theo từng bài, nên vẫn báo hạn chế warmup/nhiệt.
+3. Chấm bằng `scripts.bfcl_score` với môi trường có BFCL chính thức cho từng thư
+   mục run. Chỉ phân tích đủ ID, không có lỗi hạ tầng chưa xử lý. Báo số được
+   cứu/mất theo cặp và từng loại bài, không chỉ tổng hoặc p-value.
+4. 9B không giảm tổng bài đạt ON so với OFF. Model nhỏ cần tăng trên tập xác nhận
+   công khai, không dựa vào bộ product tự viết. Báo exact McNemar một phía;
+   ngưỡng bằng chứng cho mỗi model nhỏ là p < 0,025 để xét hai model. Nếu chưa
+   đủ bằng chứng thì kết luận chưa rõ, không chọn lại bài/ngưỡng sau khi thấy điểm.
+5. Giữ mọi rào chặn product đã đặt. Khi chưa qua chat đọc tay, quyền và thao tác
+   chờ duyệt, không bật tính năng dù BFCL tăng. Agent Eval vẫn chạy cô lập từng
+   bài cùng ngày trên các model. Chưa đo model trần cùng ngày thì không tuyên bố
+   harness hơn model trần. Không tự ship hoặc đổi model sau phép đo.
+
+### Chuẩn bị và bảo toàn kết quả
+
+```powershell
+# Từ backend; lệnh chỉ đọc BFCL và ghi plan/ID/lệnh tương lai, không model/.env:
+python -B -m scripts.prepare_tool_state_bfcl --out ../data/evaluation/results/tool_state_continuity/bfcl-prepared-v2
+```
+
+Plan ghim toàn bộ code backend/script, ID, dữ liệu BFCL, cấu hình sampling và số
+vòng; runner kiểm `--prepared-plan` trước Settings/probe/reload. Lệnh thực thi nằm
+trong plan cho cả hai trạng thái, chỉ dùng khi được phép inference. Dùng đúng
+môi trường có BFCL khi chấm; scorer không tự tải package hoặc model.
+
+Runner từ chối thư mục/tệp có sẵn nếu thiếu `--resume`. Resume ghim code/data/
+selection/model digest/Ollama/config, chỉ bỏ ca hoàn tất; lỗi hạ tầng được thử
+lại và giữ trong attempts. Result chính có một hàng mỗi ID; thay hàng lỗi bằng
+ghi tệp tạm rồi replace. JSONL bị cắt, ID trùng/lạ hoặc manifest cũ thiếu thông
+tin khiến runner dừng bảo toàn dữ liệu. Không chuyển đổi hay ghi vào các lần
+đo cũ, không hỗ trợ hai tiến trình đồng thời cùng run directory.
+
+Main và sổ đo main giữ nguyên. Xung đột tài liệu chỉ được ghép khi chủ dự án cho
+phép gộp; không cần commit hộ phần đang sửa trên main lúc này.

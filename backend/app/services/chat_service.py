@@ -5,14 +5,13 @@ from hashlib import sha256
 from time import perf_counter
 from uuid import uuid4
 from collections.abc import Callable, Iterator
-import json
 
 from loguru import logger
 
 from app.llm_clients.usage import consume_usage
 from app.services.agent_service import AGENT_GUIDE, STOP_TURN_BUDGET_EXHAUSTED, clock_note
 from app.services.tool_state import ToolStateRecorder
-from app.services.tool_state_bridge import continuity_scope, restore_history
+from app.services.tool_state_bridge import continuity_scope, history_budget, restore_history
 from app.services.input_metrics import model_input_measurements
 from app.services.call_budget import CHAT_CALL_CAP, turn_call_budget
 from app.services.logging_service import LoggingService
@@ -166,14 +165,12 @@ class ChatService:
                 schemas = self.agent_service._offered_schemas()
                 # Conservative character budget, including the actual schemas
                 # and guide. This is an estimate, not a tokenizer guarantee.
-                base_chars = len(json.dumps(messages, ensure_ascii=False))
-                schema_chars = len(json.dumps(schemas, ensure_ascii=False))
-                guide_chars = len(self.agent_service.defense.agent_guide(AGENT_GUIDE))
                 window = int(self.router.models.get("general", {}).get("context", 16384))
-                room = max(0, window * 2 - base_chars - schema_chars - guide_chars - 4096)
+                budget = history_budget(messages, schemas, self.agent_service.defense.agent_guide(AGENT_GUIDE), window)
+                base_chars, schema_chars = budget["base_chars"], budget["schema_chars"]
                 try:
                     messages, state_stats = restore_history(self.store, conversation_id, state_scope, messages,
-                        history_prefix, history_rows, tool_context, self.agent_service.registry, room,
+                        history_prefix, history_rows, tool_context, self.agent_service.registry, budget["room"],
                         allowed_names={schema["function"]["name"] for schema in schemas})
                 except Exception as error:
                     logger.bind(event="tool_state_load_failed", error_type=type(error).__name__).warning("Tool history unavailable; using text history")

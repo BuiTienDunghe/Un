@@ -28,8 +28,8 @@ from app.services.chat_service import ChatService
 from app.services.context_budget import context_budget_from_config
 from app.services.injection_defense import InjectionDefense
 from app.services.model_router import ModelRouter
-from app.services.tool_state import ToolStateLimits
 from app.services.pastes import inline_ceiling
+from scripts.eval_state_store import MemoryStore
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CASES = ROOT / "data/benchmarks/tool_state/v1/cases.json"
@@ -43,35 +43,9 @@ def encoded(value):
 def fingerprint(cases):
     app = ROOT / "backend/app"
     files = sorted(set(app.rglob("*.py")) | set((app / "prompts").glob("*.md")) |
-                   set((app / "config").glob("*.yaml")) | {Path(__file__).resolve()})
+                   set((app / "config").glob("*.yaml")) | set((ROOT / "backend/scripts").glob("*.py")))
     return {str(path.relative_to(ROOT)).replace("\\", "/"): hashlib.sha256(path.read_bytes()).hexdigest() for path in files} | {
         "cases": hashlib.sha256(cases.read_bytes()).hexdigest()}
-
-
-class MemoryStore:
-    """Disposable per-case state. Production PostgreSQL is covered separately."""
-    def __init__(self, documents):
-        self.messages, self.states, self.documents = [], [], documents
-    def conversation_exists(self, key):
-        return key == "case"
-    def get_messages(self, key, limit):
-        return [{k: row[k] for k in ("role", "content")} for row in self.messages[-limit:]]
-    def get_agent_history(self, key, limit):
-        return copy.deepcopy(self.messages[-limit:])
-    def add_message(self, key, role, content, *args):
-        ident = len(self.messages) + 1
-        self.messages.append({"message_id": ident, "role": role, "content": content})
-        return ident
-    def add_agent_traces(self, *args, **kwargs):
-        pass
-    def save_tool_state(self, key, ident, scope, payload, origin=None):
-        self.states.append({"message_id": ident, "scope": scope, "origin": origin, "payload": copy.deepcopy(payload)})
-        self.states = self.states[-ToolStateLimits().max_envelopes:]
-    def load_tool_states(self, key, scope, *, message_ids=None, origins=None):
-        return [copy.deepcopy(row) for row in reversed(self.states) if row["scope"] == scope and
-                (row["message_id"] in (message_ids or []) or row["origin"] in (origins or []))]
-    def state_document_versions(self, ids):
-        return {ident: doc["version"] for ident, doc in self.documents.items() if ident in ids}
 
 
 class FixtureDocuments:

@@ -4,6 +4,14 @@ import json
 from app.services.tool_state import ToolStateLimits, parse_payload, render_group, scope_key
 
 
+def history_budget(messages, schemas, guide, window):
+    """Conservative character allowance shared by chat and evaluation adapters."""
+    base_chars = len(json.dumps(messages, ensure_ascii=False))
+    schema_chars = len(json.dumps(schemas, ensure_ascii=False))
+    return {"base_chars": base_chars, "schema_chars": schema_chars,
+            "room": max(0, int(window) * 2 - base_chars - schema_chars - len(guide) - 4096)}
+
+
 def continuity_scope(conversation_id, user_id, context):
     context = context or {}
     if context.get("guild_id"):
