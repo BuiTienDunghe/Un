@@ -1,0 +1,7 @@
+{
+  "status": "failed",
+  "stage": "verification-v1",
+  "error_type": "FileNotFoundError",
+  "cause": "relative output path resolved after chdir to backend",
+  "generation_calls": 0
+}

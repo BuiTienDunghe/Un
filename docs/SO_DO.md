@@ -20,6 +20,29 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
 
 ---
 
+## 09/11/2026 — Phản biện bộ đo state, thêm đường BFCL và kiểm CPU v2
+
+- **Câu hỏi:** bộ xác nhận có đang đo đúng code state sản phẩm, đủ tách khỏi các bài đã dùng chẩn đoán, và có bảo toàn lần đo dở không?
+- **Điều kiện:** chỉ nhánh `codex/tool-state-continuity`, sau `5fd709a`, implementation `eef0988`; main vẫn `3eac7f6`, không merge/push. Feature OFF, guide/model/max_steps không đổi. Container test tạm, CUDA ẩn, Ollama cổng chết, cloud key trống, guard loopback chặn model; real-reranker test CPU cache offline. Không inference model sinh.
+- **Đăng ký trước:** cập nhật v2 của `.scratch/tool-state-continuity/PREREGISTRATION.md` trước inference. Bộ tự viết là hồi quy; tập xác nhận công khai chọn ID bằng hash, không dùng điểm để chọn.
+- **Kết quả:**
+
+  | Kiểm | Kết quả |
+  | --- | --- |
+  | Nhóm BFCL/state v1; v2 | 95 đạt; 100 đạt, không lỗi/bỏ qua |
+  | Full backend | 2.157 đạt, không lỗi/bỏ qua; 286,4 giây; còn 6 warning cũ |
+  | Cú pháp/schema | 438 tệp Python hợp lệ; không drift |
+  | Checker BFCL, model kịch bản | Oracle đạt, không làm gì trượt; không phải điểm model thật |
+  | Chuẩn bị thực và dry-run | 512 ca, 18 lệnh; không Settings/.env/HTTP |
+  | Provenance checker | 48 tệp code/dữ liệu liên quan trùng clone sau chuẩn hóa xuống dòng |
+  | Script kiểm phụ đầu | FileNotFoundError do đường dẫn tương đối sau chdir; sửa resolve trước chdir, giữ bản ghi lỗi |
+  | Xác nhận BFCL đã prepare | 300 ca/1.303 lượt người dùng mỗi nhánh; 3 loại ngoài multi_turn_base |
+  | Pilot / chẩn đoán tùy chọn | 12 ca / 200 ca mỗi nhánh |
+
+- **Kết luận:** BFCL có đường dùng chung recorder/budget/restore với sản phẩm, giữ executor/checker công khai. Runner không còn xóa trắng, resume không coi lỗi hạ tầng là hoàn tất và giữ attempts. Bộ ứng dụng không bị thổi thành bằng chứng chất lượng tổng quát; chưa có số thắng/thua hay latency GPU.
+- **Trạng thái:** code/test/prepare v2 xong trên nhánh; chưa chạy GPU/model thật, chưa bật feature/chọn model, chưa gộp main. Không sửa dữ liệu timestamp cũ hoặc sổ main đang dở.
+- **Bằng chứng:** `data/evaluation/results/kept/tool-state-validation-v2-2026-11-09/REPORT.md`, checks/XML/ID/verification/snapshot cùng thư mục; raw log `data/logs/tool-state-continuity-2026-11-09/review-*/` (chỉ trên máy). Lần script kiểm phụ lỗi vẫn được giữ.
+
 ## 09/11/2026 — Giữ kết quả công cụ qua lượt, kiểm cơ chế và chi phí CPU
 
 - **Câu hỏi:** Web/Discord có giữ lại kết quả công cụ an toàn qua lượt và service restart, với overhead bao nhiêu? Chưa đo chất lượng model.
