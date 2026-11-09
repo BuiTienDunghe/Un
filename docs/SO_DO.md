@@ -20,6 +20,24 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
 
 ---
 
+## 10/11/2026 — Test sau khi gộp nhánh model nhỏ vào main, và migration database thật
+
+- **Câu hỏi:** main sau khi gộp `c57aa3e` + sửa chốt chặn `5dc1407` (merge `4a57dfe`) có qua đủ bộ test, và database thật lên `20261109_39` có giữ nguyên dữ liệu cũ?
+- **Điều kiện:** checkout chính tại `4a57dfe`. Test: container `postgres:16-alpine`/`redis:7-alpine`/`qdrant:v1.18.2` dùng một lần (cổng 55441/56381/56334), lần này đặt cả `REDIS_URL`; Ollama cổng chết, CUDA ẩn, migration tới head trên database trống. Database thật: sao lưu bằng `scripts.backup_worker --once --force` trước, rồi `alembic upgrade head` theo `.env`; Postgres thật bật rồi tắt lại, API/bot không khởi động.
+- **Đăng ký trước:** không; kiểm thử hồi quy sau khi gộp.
+- **Kết quả:**
+
+  | Kiểm | Kết quả |
+  |---|---|
+  | Backend đủ bộ | 2.220 đạt, 0 hỏng (02:42–02:48) |
+  | Bộ gốc | 242 đạt, 1 bỏ qua |
+  | Chốt chặn với `.env` thật, không gọi mạng | qua; general `general-small-v1`, OCR `ocr-ovis-v1`, extractor tắt |
+  | Bản sao lưu `local-ai-20261109-194042.dump` | 5,6 MB, 40 bảng có dữ liệu (`pg_restore --list`); bộ xoay vòng tự xoá bản 21/10 như thường lệ |
+  | Database thật sau migration | `20261109_39`; 3 dòng mốc `source_memory_states`, 0 `source_memories`; giữ 24 `documents`, 3 `discord_memories`, 3 `memories` |
+- **Kết luận:** gộp xanh; database thật đã lên phiên bản mới và còn nguyên dữ liệu cũ.
+- **Trạng thái:** xong; chưa push, chưa khởi động API/bot bằng bản mới.
+- **Bằng chứng:** `data/evaluation/results/kept/c57-compare-20261110/tests/main-backend-full.xml`, `main-root.xml`.
+
 ## 10/11/2026 — Bản cũ (main, 9B) so với bản mới của Codex (`c57aa3e`, chỉ model nhỏ)
 
 - **Câu hỏi:** nhánh `codex/tool-state-continuity` (`c57aa3e`, đã push lên nhánh cùng tên) cải thiện được gì so với main `3eac7f6`, tách phần do đổi model khỏi phần do code?
