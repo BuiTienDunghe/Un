@@ -403,6 +403,8 @@ def test_the_bare_arm_keeps_the_9b_names_and_gives_another_model_a_folder_bfcl_c
     assert bfcl_bare.names_for("qwen3.5:2b") != bfcl_bare.names_for("qwen3.5:9b")
 
 
+@needs_clone
+@needs_scorer
 def test_the_scorer_scores_the_bare_arms_folder_when_told_its_name(tmp_path):
     bfcl = bfcl_run.Bfcl(CLONE)
     plan = {"simple_python": ["simple_python_6"], "irrelevance": ["irrelevance_0"]}
