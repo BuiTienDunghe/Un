@@ -121,9 +121,16 @@ const ERROR_HINTS = {
   DOCUMENT_TOO_LARGE: "Tệp vượt quá giới hạn 50 MB.",
   UNSUPPORTED_FILE_TYPE: "Chỉ hỗ trợ PDF, DOCX, TXT và Markdown.",
   DOCUMENT_ALREADY_INDEXING: "Tài liệu đang được lập chỉ mục. Vui lòng chờ hoàn tất.",
+  DOCUMENT_INDEX_REQUEST_FAILED: "Chưa xác nhận được yêu cầu lập chỉ mục. Kiểm tra trạng thái tài liệu trước khi gửi lại yêu cầu.",
+  RESEARCH_PROVIDER_UNSUPPORTED: "Tóm tắt và phân tích kho hiện cần mô hình Ollama. Nhờ quản trị viên đổi mô hình rồi tải lại trang.",
   API_KEY_REQUIRED: "Máy chủ này yêu cầu khóa truy cập. Mở Cài đặt → Bảo mật để nhập khóa.",
   API_KEY_INVALID: "Khóa truy cập không đúng. Kiểm tra lại trong Cài đặt → Bảo mật.",
 };
+
+/* Các lỗi này cần đổi cấu hình hoặc đối soát trạng thái, không gửi lại mù. */
+function canRetryApiError(error) {
+  return !(error && (error.retryable === false || error.code === "RESEARCH_PROVIDER_UNSUPPORTED" || error.code === "DOCUMENT_INDEX_REQUEST_FAILED"));
+}
 
 /* Một lần gửi, không tự xử lý 401 — dành cho trang muốn tự quyết
    (app.js hiện overlay đăng nhập thay vì chuyển trang). */
@@ -136,9 +143,14 @@ async function sendJson(path, options = {}) {
   }
   const data = response.status === 204 ? {} : await response.json().catch(() => ({}));
   if (!response.ok) {
-    const error = new Error(ERROR_HINTS[data.error_code] || data.message || `Yêu cầu thất bại (${response.status}).`);
+    const receipt = data.detail && data.detail.error_id;
+    const errorId = typeof receipt === "string" && /^[0-9a-f]{32}$/i.test(receipt) ? receipt : null;
+    const message = ERROR_HINTS[data.error_code] || data.message || `Yêu cầu thất bại (${response.status}).`;
+    const error = new Error(message + (errorId ? ` Mã tra cứu: ${errorId}.` : ""));
     error.code = data.error_code;
     error.status = response.status;
+    error.errorId = errorId;
+    error.retryable = canRetryApiError(error);
     throw error;
   }
   return data;

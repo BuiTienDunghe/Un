@@ -1,13 +1,25 @@
 """One explicit PostgreSQL test-database contract, checked before any connection.
 
 The name guard cannot prove isolation: operators must still supply a dedicated
-database. It prevents the normal suite from falling back to DATABASE_URL/.env
-or accepting a production name, including libpq query overrides of that name.
+database. The validator refuses unsafe explicit URLs; configure_test_database()
+also pins DATABASE_URL to a dead endpoint when no integration URL is supplied.
 """
 from __future__ import annotations
 
+from collections.abc import MutableMapping
+
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import ArgumentError
+
+DISABLED_TEST_DATABASE_URL = "postgresql+psycopg://test:test@127.0.0.1:1/unconfigured_test"
+
+
+def configure_test_database(environment: MutableMapping[str, str]) -> str:
+    """Isolate app imports from the operator's DATABASE_URL and project .env."""
+    explicit = environment.get("POSTGRES_TEST_URL")
+    selected = validate_postgres_test_url(explicit) if explicit else DISABLED_TEST_DATABASE_URL
+    environment["DATABASE_URL"] = selected
+    return selected
 
 
 def validate_postgres_test_url(value: str | None) -> str:

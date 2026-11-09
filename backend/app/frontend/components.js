@@ -704,7 +704,7 @@ function errorState(error, onRetry) {
   const message = (error && error.message) || (error ? String(error) : "Đã xảy ra lỗi không xác định.");
   const node = emptyState({
     icon: "alert", tone: "danger", title: "Không tải được dữ liệu", text: message,
-    action: typeof onRetry === "function" ? { label: "Thử lại", icon: "retry", onClick: onRetry } : null,
+    action: typeof onRetry === "function" && canRetryApiError(error) ? { label: "Thử lại", icon: "retry", onClick: onRetry } : null,
   });
   node.classList.add("is-error");
   node.setAttribute("role", "alert");

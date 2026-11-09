@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from uuid import uuid4
 
-from tests.database_support import validate_postgres_test_url
+from tests.database_support import configure_test_database, validate_postgres_test_url
 
 os.environ["LOG_DIR"] = str(Path(__file__).parent / "test_logs")
 # Settings reads the project .env, so an operator who configures a real API key
@@ -47,10 +47,10 @@ os.environ["MODEL_STARTUP_PROBES"] = "false"
 # their own app settings instance.
 os.environ["LOCAL_AI_AUTH_ENABLED"] = "false"
 os.environ["LOCAL_AI_JWT_SECRET"] = ""
-if os.getenv("POSTGRES_TEST_URL"):
-    # Normal API tests use the isolated PostgreSQL database, never a local
-    # SQLite file or the runtime PostgreSQL database.
-    os.environ["DATABASE_URL"] = validate_postgres_test_url(os.environ["POSTGRES_TEST_URL"])
+# Before importing the app: an absent integration URL must not leave the
+# operator's DATABASE_URL or project .env database available to unit tests.
+# Integration fixtures still skip when POSTGRES_TEST_URL is absent.
+configure_test_database(os.environ)
 
 import pytest
 from fastapi.testclient import TestClient

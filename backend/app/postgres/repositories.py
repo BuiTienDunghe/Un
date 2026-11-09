@@ -292,7 +292,14 @@ class PostgresDocumentRepository:
 
     def touch_documents(self, document_ids: set[str]) -> None:
         if document_ids:
-            self.session.execute(update(Document).where(Document.id.in_(document_ids), Document.status == "indexed").values(last_accessed_at=datetime.now(UTC)))
+            # An access receipt is not a source/metadata edit. Explicitly keep
+            # the column so SQLAlchemy's updated_at onupdate does not make a
+            # successful ingestion look older than the document after RAG reads.
+            self.session.execute(
+                update(Document)
+                .where(Document.id.in_(document_ids), Document.status == "indexed")
+                .values(last_accessed_at=datetime.now(UTC), updated_at=Document.updated_at)
+            )
 
     def create_job(self, job_type: str, document_id: str, version_id: str, run_id: str, max_attempts: int) -> Job:
         key = f"{job_type}:{version_id}:{run_id}"

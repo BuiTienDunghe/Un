@@ -191,3 +191,54 @@ def test_non_pdf_keeps_parser_pages_after_metadata_only_update(tmp_path, suffix)
                    updated_at=datetime.now(UTC), content_hash="unchanged")
     run = IngestionRun(total_pages=3, version_id="v1", completed_at=old)
     assert service._total_pages(doc, run) == 3
+
+
+def test_unchanged_cached_pdf_survives_unreadable_loader_after_metadata_edit(tmp_path):
+    path = tmp_path / "source.pdf"
+    path.write_bytes(pdf_bytes(8))
+    class Source:
+        def source_file(self, document_id):
+            return path, path.name
+    research = ResearchService(None, Source(), ollama_base_url="http://127.0.0.1:1")
+    doc = Document(id="doc", status="indexed", active_version_id="v1", content_hash="same-source",
+                   updated_at=datetime.now(UTC))
+    run = IngestionRun(total_pages=8, version_id="v1", completed_at=datetime(2000, 1, 1, tzinfo=UTC))
+    assert research._total_pages(doc, run) == 8  # Count the actual PDF once.
+    research._page_counts._loader = lambda _: None
+    doc.updated_at = datetime.now(UTC)
+    # A cached count with the exact current revision/fingerprint is proof.
+    assert research._total_pages(doc, run) == 8
+
+
+def test_cold_uncertain_pdf_does_not_guess_historical_count(tmp_path):
+    path = tmp_path / "source.pdf"
+    path.write_bytes(pdf_bytes(8))
+    class Source:
+        def source_file(self, document_id):
+            return path, path.name
+    research = ResearchService(None, Source(), ollama_base_url="http://127.0.0.1:1")
+    research._page_counts = SourcePageCounts(loader=lambda _: None)
+    doc = Document(id="doc", status="indexed", active_version_id="v1", content_hash="current",
+                   updated_at=datetime.now(UTC))
+    run = IngestionRun(total_pages=8, version_id="v1", completed_at=datetime(2000, 1, 1, tzinfo=UTC))
+    # Without a cached fingerprint or covered metadata, a metadata-only edit
+    # cannot be distinguished from a replaced source using this schema alone.
+    assert research._total_pages(doc, run) is None
+
+
+@pytest.mark.parametrize("status", ["processing", "indexed", "uploaded"])
+def test_unreadable_changed_pdf_does_not_fall_back_to_old_run(tmp_path, status):
+    path = tmp_path / "source.pdf"
+    path.write_bytes(pdf_bytes(8))
+    class Source:
+        def source_file(self, document_id):
+            return path, path.name
+    research = ResearchService(None, Source(), ollama_base_url="http://127.0.0.1:1")
+    doc = Document(id="doc", status=status, active_version_id="v1", content_hash="old",
+                   updated_at=datetime.now(UTC))
+    run = IngestionRun(total_pages=8, version_id="v1", completed_at=datetime(2000, 1, 1, tzinfo=UTC))
+    assert research._total_pages(doc, run) == 8
+    path.write_bytes(b"changed PDF cannot be decoded")
+    doc.content_hash = "replacement"
+    doc.updated_at = datetime.now(UTC)
+    assert research._total_pages(doc, run) is None
