@@ -1,0 +1,1058 @@
+.FFF..FF.FFFFF..FFFFFFFFFFFFFF.FFFFF..                                   [100%]
+================================== FAILURES ===================================
+_ test_a3_a_bot_returning_after_its_lease_ran_out_gets_the_saved_answer_without_a_second_model_call _
+
+r2 = namespace(client=<starlette.testclient.TestClient object at 0x000001F81DFB5450>, guild='source-v2-250ff38797', model=<...ce object at 0x000001F81E10E550>, memory=<app.services.source_memory.SourceMemoryService object at 0x000001F81D988D50>)
+
+    def test_a3_a_bot_returning_after_its_lease_ran_out_gets_the_saved_answer_without_a_second_model_call(r2):  # noqa: F811
+        client, guild = r2.client, r2.guild
+        r2.model.rules.append(("sentinel-a3", "Đáp án đã lưu sentinel-a3."))
+        _, turn_id = enqueue(client, guild, "one", "Câu hỏi sentinel-a3.")
+        first = execute(client, turn_id)
+        assert first.status_code == 200 and first.json()["status"] == "running", first.text
+        expire_lease(client, turn_id)
+        calls = len(r2.model.calls)
+        again = execute(client, turn_id)
+        assert again.status_code == 200, again.text
+        assert again.json()["status"] == "running" and again.json()["answer"] == "Đáp án đã lưu sentinel-a3."
+>       assert len(r2.model.calls) == calls
+E       AssertionError: assert 2 == 1
+E        +  where 2 = len([[{'content': 'You are a helpful local AI assistant. Be accurate, concise, and state uncertainty when needed.\n', 'rol....', 'role': 'system'}, {'content': '[Người đang hỏi: Alice | author_id=alice]\nCâu hỏi sentinel-a3.', 'role': 'user'}]])
+E        +    where [[{'content': 'You are a helpful local AI assistant. Be accurate, concise, and state uncertainty when needed.\n', 'rol....', 'role': 'system'}, {'content': '[Người đang hỏi: Alice | author_id=alice]\nCâu hỏi sentinel-a3.', 'role': 'user'}]] = <review2_support.FakeModel object at 0x000001F81F4DD290>.calls
+E        +      where <review2_support.FakeModel object at 0x000001F81F4DD290> = namespace(client=<starlette.testclient.TestClient object at 0x000001F81DFB5450>, guild='source-v2-250ff38797', model=<...ce object at 0x000001F81E10E550>, memory=<app.services.source_memory.SourceMemoryService object at 0x000001F81D988D50>).model
+
+tests\test_review2_discord_turns.py:294: AssertionError
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 19:08:40.645 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 19:08:40.645 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 19:08:40.645 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 19:08:40.646 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 19:08:40.646 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 19:08:40.646 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 19:08:40.646 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 19:08:40.646 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 19:08:40.646 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 19:08:40.646 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 19:08:40.646 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 19:08:40.646 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 19:08:40.646 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 19:08:40.646 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 19:08:40.646 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 19:08:40.646 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 19:08:40.646 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 19:08:40.646 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 19:08:40.842 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 19:08:40.842 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 19:08:40.842 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 19:08:40.842 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 19:08:41.186 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 19:08:41.282 | INFO     | app.services.logging_service:log_request:149 - request completed
+_______ test_n4_4_retrying_a_remember_turn_saves_one_source_and_says_so _______
+
+r2 = namespace(client=<starlette.testclient.TestClient object at 0x000001F81F617010>, guild='source-v2-fd72697ba0', model=<...ce object at 0x000001F81F5978D0>, memory=<app.services.source_memory.SourceMemoryService object at 0x000001F81F63BF50>)
+
+    def test_n4_4_retrying_a_remember_turn_saves_one_source_and_says_so(r2):  # noqa: F811
+        client, guild = r2.client, r2.guild
+        r2.model.failures = 1
+        _, turn_id = enqueue(client, guild, "one", "Hãy nhớ mã riêng sentinel-n4-4.")
+        first = execute(client, turn_id)
+        assert first.status_code == 200 and first.json()["status"] == "queued", first.text
+        calls = len(r2.model.calls)
+        again = execute(client, turn_id)
+        assert again.status_code == 200 and again.json()["answer"], again.text
+>       assert re.search(r"(?<!bạn )đã lưu", r2.model.prompts_since(calls)), "no 'saved' receipt reached the model"
+E       AssertionError: no 'saved' receipt reached the model
+E       assert None
+E        +  where None = <function search at 0x000001F850DA8E00>('(?<!bạn )đã lưu', '[{"role": "system", "content": "You are a helpful local AI assistant. Be accurate, concise, and state uncertainty whe...ệt Nam."}, {"role": "user", "content": "[Người đang hỏi: Alice | author_id=alice]\\nHãy nhớ mã riêng sentinel-n4-4."}]')
+E        +    where <function search at 0x000001F850DA8E00> = re.search
+E        +    and   '[{"role": "system", "content": "You are a helpful local AI assistant. Be accurate, concise, and state uncertainty whe...ệt Nam."}, {"role": "user", "content": "[Người đang hỏi: Alice | author_id=alice]\\nHãy nhớ mã riêng sentinel-n4-4."}]' = prompts_since(1)
+E        +      where prompts_since = <review2_support.FakeModel object at 0x000001F81E2F2590>.prompts_since
+E        +        where <review2_support.FakeModel object at 0x000001F81E2F2590> = namespace(client=<starlette.testclient.TestClient object at 0x000001F81F617010>, guild='source-v2-fd72697ba0', model=<...ce object at 0x000001F81F5978D0>, memory=<app.services.source_memory.SourceMemoryService object at 0x000001F81F63BF50>).model
+
+tests\test_review2_discord_turns.py:259: AssertionError
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 19:08:41.943 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 19:08:41.943 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 19:08:41.943 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 19:08:41.943 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 19:08:41.943 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 19:08:41.944 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 19:08:41.944 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 19:08:41.944 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 19:08:41.944 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 19:08:41.944 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 19:08:41.944 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 19:08:41.944 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 19:08:41.944 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 19:08:41.944 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 19:08:41.944 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 19:08:41.944 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 19:08:41.944 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 19:08:41.944 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 19:08:42.160 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 19:08:42.161 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 19:08:42.161 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 19:08:42.161 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 19:08:42.599 | INFO     | app.services.logging_service:log_request:149 - request completed
+________ test_r1_3_without_a_barrier_a_reply_is_answered[same_session] ________
+
+r2 = namespace(client=<starlette.testclient.TestClient object at 0x000001F81F95C1D0>, guild='source-v2-7ae2a4f4f7', model=<...ce object at 0x000001F81F97ED50>, memory=<app.services.source_memory.SourceMemoryService object at 0x000001F81FA13C10>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001F81DB11DD0>
+target = 'same_session'
+
+    @pytest.mark.parametrize("target", ["same_session", "other_session", "not_found"])
+    def test_r1_3_without_a_barrier_a_reply_is_answered(r2, monkeypatch, target):  # noqa: F811
+        client, guild = r2.client, r2.guild
+        monkeypatch.setattr(r2.turns, "history_turn_limit", 1)
+        here = finished_turn(client, guild, "one", "Câu gốc sentinel-r1-here.")
+        there = finished_turn(client, guild, "two", "Câu ở kênh khác sentinel-r1-there.")
+        finished_turn(client, guild, "one", "Một tin chen giữa.")
+        reply_to = {"same_session": here.message_id, "other_session": there.message_id, "not_found": snowflake()}[target]
+        _, turn_id = enqueue(client, guild, "one", "Trả lời tin kia giúp mình.", reply_to=reply_to)
+        calls = len(r2.model.calls)
+        response = execute(client, turn_id)
+        assert response.status_code == 200, response.text
+        assert len(r2.model.calls) == calls + 1
+        prompt = r2.model.prompts_since(calls)
+        if target == "same_session":
+>           assert "sentinel-r1-here" in prompt
+E           assert 'sentinel-r1-here' in '[{"role": "system", "content": "You are a helpful local AI assistant. Be accurate, concise, and state uncertainty whe...i đang hỏi: Alice | author_id=alice | reply_to_discord_message_id=1569685233547595564]\\nTrả lời tin kia giúp mình."}]'
+
+tests\test_review2_discord_turns.py:75: AssertionError
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 19:08:42.652 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 19:08:42.653 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 19:08:42.653 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 19:08:42.653 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 19:08:42.653 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 19:08:42.653 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 19:08:42.653 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 19:08:42.653 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 19:08:42.653 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 19:08:42.654 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 19:08:42.654 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 19:08:42.654 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 19:08:42.654 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 19:08:42.654 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 19:08:42.654 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 19:08:42.654 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 19:08:42.654 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 19:08:42.654 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 19:08:42.846 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 19:08:42.846 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 19:08:42.846 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 19:08:42.846 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 19:08:43.181 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 19:08:43.298 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 19:08:43.406 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 19:08:43.505 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_r3_3_resending_after_the_channel_barrier_moved_does_not_return_the_old_answer[remembered_then_edited] _
+
+r2 = namespace(client=<starlette.testclient.TestClient object at 0x000001F81FA68290>, guild='source-v2-52516f9ec7', model=<...ce object at 0x000001F81F8DB910>, memory=<app.services.source_memory.SourceMemoryService object at 0x000001F81FAF5D50>)
+change = 'remembered_then_edited'
+
+    @pytest.mark.parametrize("change", ["remembered_then_edited", "deleted_with_its_channel"])
+    def test_r3_3_resending_after_the_channel_barrier_moved_does_not_return_the_old_answer(r2, change):  # noqa: F811
+        client, guild = r2.client, r2.guild
+        r2.model.rules.append(("sentinel-r3", OLD_ANSWER))
+        body = "Hãy nhớ câu hỏi sentinel-r3." if change == "remembered_then_edited" else "Câu hỏi sentinel-r3."
+        message_id, turn_id = enqueue(client, guild, "one", body)
+        first = execute(client, turn_id)
+        assert first.status_code == 200 and first.json()["answer"] == OLD_ANSWER, first.text
+        assert fail_delivery(client, turn_id, first.json()["execution_token"]) == "queued"
+        before = channel_barrier(client, guild, "one")
+        if change == "remembered_then_edited":
+            client.post(f"/api/discord/history/messages/{message_id}/edit", json={"content": "đã sửa"})
+        else:
+            client.post(f"/api/discord/history/messages/{message_id}/delete", json={"guild_id": guild, "channel_id": "one"})
+        assert channel_barrier(client, guild, "one") != before
+        again = execute(client, turn_id)
+        assert again.status_code == 200, again.text
+>       assert "sentinel-r3-old" not in answer_of(again)
+E       AssertionError: assert 'sentinel-r3-old' not in 'Đáp án cũ sentinel-r3-old.'
+E         
+E         'sentinel-r3-old' is contained here:
+E           Đáp án cũ sentinel-r3-old.
+
+tests\test_review2_discord_turns.py:182: AssertionError
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 19:08:45.477 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 19:08:45.477 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 19:08:45.477 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 19:08:45.478 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 19:08:45.478 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 19:08:45.478 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 19:08:45.478 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 19:08:45.478 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 19:08:45.478 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 19:08:45.478 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 19:08:45.478 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 19:08:45.478 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 19:08:45.478 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 19:08:45.478 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 19:08:45.478 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 19:08:45.478 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 19:08:45.478 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 19:08:45.479 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 19:08:45.696 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 19:08:45.697 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 19:08:45.697 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 19:08:45.697 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 19:08:46.017 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_r3_3_resending_after_the_channel_barrier_moved_does_not_return_the_old_answer[deleted_with_its_channel] _
+
+r2 = namespace(client=<starlette.testclient.TestClient object at 0x000001F81FCA7810>, guild='source-v2-648f2c236c', model=<...ce object at 0x000001F81F8D9FD0>, memory=<app.services.source_memory.SourceMemoryService object at 0x000001F81F4F0110>)
+change = 'deleted_with_its_channel'
+
+    @pytest.mark.parametrize("change", ["remembered_then_edited", "deleted_with_its_channel"])
+    def test_r3_3_resending_after_the_channel_barrier_moved_does_not_return_the_old_answer(r2, change):  # noqa: F811
+        client, guild = r2.client, r2.guild
+        r2.model.rules.append(("sentinel-r3", OLD_ANSWER))
+        body = "Hãy nhớ câu hỏi sentinel-r3." if change == "remembered_then_edited" else "Câu hỏi sentinel-r3."
+        message_id, turn_id = enqueue(client, guild, "one", body)
+        first = execute(client, turn_id)
+        assert first.status_code == 200 and first.json()["answer"] == OLD_ANSWER, first.text
+        assert fail_delivery(client, turn_id, first.json()["execution_token"]) == "queued"
+        before = channel_barrier(client, guild, "one")
+        if change == "remembered_then_edited":
+            client.post(f"/api/discord/history/messages/{message_id}/edit", json={"content": "đã sửa"})
+        else:
+            client.post(f"/api/discord/history/messages/{message_id}/delete", json={"guild_id": guild, "channel_id": "one"})
+        assert channel_barrier(client, guild, "one") != before
+        again = execute(client, turn_id)
+        assert again.status_code == 200, again.text
+>       assert "sentinel-r3-old" not in answer_of(again)
+E       AssertionError: assert 'sentinel-r3-old' not in 'Đáp án cũ sentinel-r3-old.'
+E         
+E         'sentinel-r3-old' is contained here:
+E           Đáp án cũ sentinel-r3-old.
+
+tests\test_review2_discord_turns.py:182: AssertionError
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 19:08:46.143 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 19:08:46.144 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 19:08:46.144 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 19:08:46.144 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 19:08:46.144 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 19:08:46.144 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 19:08:46.144 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 19:08:46.144 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 19:08:46.144 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 19:08:46.144 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 19:08:46.144 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 19:08:46.144 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 19:08:46.144 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 19:08:46.144 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 19:08:46.145 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 19:08:46.145 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 19:08:46.145 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 19:08:46.145 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 19:08:46.336 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 19:08:46.336 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 19:08:46.336 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 19:08:46.336 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 19:08:46.645 | INFO     | app.services.logging_service:log_request:149 - request completed
+_________________ test_r3_4_replaying_a_finished_turn[forget] _________________
+
+r2 = namespace(client=<starlette.testclient.TestClient object at 0x000001F81E0EC350>, guild='source-v2-623c6c878c', model=<...ce object at 0x000001F81F9F4490>, memory=<app.services.source_memory.SourceMemoryService object at 0x000001F81F8F6350>)
+change = 'forget'
+
+    @pytest.mark.parametrize("change", ["nothing", "forget"])
+    def test_r3_4_replaying_a_finished_turn(r2, change):  # noqa: F811
+        client, guild = r2.client, r2.guild
+        r2.model.rules.append(("sentinel-r3", OLD_ANSWER))
+        done = finished_turn(client, guild, "one", "Câu hỏi sentinel-r3.")
+        if change == "forget":
+            r2.memory.forget_actor(f"discord:{guild}", "alice")
+        replay = execute(client, done.turn_id)
+        assert replay.status_code == 200, replay.text
+        if change == "nothing":
+            assert replay.json()["answer"] == OLD_ANSWER
+        else:
+>           assert "sentinel-r3-old" not in answer_of(replay)
+E           AssertionError: assert 'sentinel-r3-old' not in 'Đáp án cũ sentinel-r3-old.'
+E             
+E             'sentinel-r3-old' is contained here:
+E               Đáp án cũ sentinel-r3-old.
+
+tests\test_review2_discord_turns.py:197: AssertionError
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 19:08:47.362 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 19:08:47.362 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 19:08:47.363 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 19:08:47.363 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 19:08:47.363 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 19:08:47.363 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 19:08:47.363 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 19:08:47.363 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 19:08:47.363 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 19:08:47.363 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 19:08:47.363 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 19:08:47.363 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 19:08:47.363 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 19:08:47.363 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 19:08:47.363 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 19:08:47.363 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 19:08:47.363 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 19:08:47.363 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 19:08:47.558 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 19:08:47.558 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 19:08:47.559 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 19:08:47.559 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 19:08:47.927 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_b1_the_bot_editing_its_progress_message_leaves_a_queued_turn_and_the_history_alone _
+
+r2 = namespace(client=<starlette.testclient.TestClient object at 0x000001F81E0EDAD0>, guild='source-v2-44088fc793', model=<...ce object at 0x000001F81F98F3D0>, memory=<app.services.source_memory.SourceMemoryService object at 0x000001F81F98E350>)
+
+    def test_b1_the_bot_editing_its_progress_message_leaves_a_queued_turn_and_the_history_alone(r2):  # noqa: F811
+        from app.discord.source_memory import STALE_TURN_REPLY
+        client, guild = r2.client, r2.guild
+        finished_turn(client, guild, "one", "Mật mã của tôi là sentinel-b1.")
+        _, turn_id = enqueue(client, guild, "one", "Mật mã của tôi là gì?")
+        progress = ledger_message(client, guild, "one", "un-bot", "⏳ Ún đang làm…", bot=True)
+        edited = client.post(f"/api/discord/history/messages/{progress}/edit", json={"content": "Câu trả lời cuối."})
+        assert edited.status_code == 200, edited.text
+        calls = len(r2.model.calls)
+        executed = execute(client, turn_id)
+        assert executed.status_code == 200, executed.text
+>       assert executed.json()["answer"] != STALE_TURN_REPLY
+E       AssertionError: assert 'Tin này đã bị xoá, sửa hoặc trí nhớ vừa được quên trước khi Ún kịp trả lời, nên Ún không xử lý nó. Bạn gửi lại nếu vẫn cần nhé.' != 'Tin này đã bị xoá, sửa hoặc trí nhớ vừa được quên trước khi Ún kịp trả lời, nên Ún không xử lý nó. Bạn gửi lại nếu vẫn cần nhé.'
+
+tests\test_review2_ledger.py:27: AssertionError
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 19:08:48.020 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 19:08:48.020 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 19:08:48.021 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 19:08:48.021 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 19:08:48.021 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 19:08:48.021 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 19:08:48.021 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 19:08:48.021 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 19:08:48.021 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 19:08:48.021 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 19:08:48.021 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 19:08:48.021 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 19:08:48.021 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 19:08:48.021 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 19:08:48.021 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 19:08:48.021 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 19:08:48.021 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 19:08:48.021 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 19:08:48.217 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 19:08:48.217 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 19:08:48.217 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 19:08:48.217 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 19:08:48.558 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_b2_a_person_changing_a_message_in_the_history_keeps_its_old_words_out[edit] _
+
+r2 = namespace(client=<starlette.testclient.TestClient object at 0x000001F81F9F48D0>, guild='source-v2-63a0fafd71', model=<...ce object at 0x000001F81FE1F490>, memory=<app.services.source_memory.SourceMemoryService object at 0x000001F81FEF6610>)
+change = 'edit'
+
+    @pytest.mark.parametrize("change", ["edit", "delete"])
+    def test_b2_a_person_changing_a_message_in_the_history_keeps_its_old_words_out(r2, change):  # noqa: F811
+        client, guild = r2.client, r2.guild
+        # The bot ledgers every heard message, the one that asked Ún included.
+        message_id = ledger_message(client, guild, "one", "alice", "Mật mã của tôi là sentinel-b2.")
+        _, turn_id = enqueue(client, guild, "one", "Mật mã của tôi là sentinel-b2.", message_id=message_id)
+        executed = execute(client, turn_id)
+        assert executed.status_code == 200 and executed.json()["answer"], executed.text
+        complete(client, turn_id, executed.json()["execution_token"])
+        if change == "edit":
+            changed = client.post(f"/api/discord/history/messages/{message_id}/edit", json={"content": "Mật mã đã đổi."})
+        else:
+            changed = client.post(f"/api/discord/history/messages/{message_id}/delete",
+                                  json={"guild_id": guild, "channel_id": "one"})
+        assert changed.status_code == 200 and changed.json()["recorded"], changed.text
+        calls = len(r2.model.calls)
+        _, asking = enqueue(client, guild, "one", "Mật mã của tôi là gì?")
+        asked = execute(client, asking)
+        assert asked.status_code == 200, asked.text
+        assert len(r2.model.calls) == calls + 1
+>       assert "sentinel-b2" not in r2.model.prompts_since(calls)
+E       assert 'sentinel-b2' not in '[{"role": "...ôi là gì?"}]'
+E         
+E         'sentinel-b2' is contained here:
+E           ủa tôi là sentinel-b2."}, {"role": "assistant", "content": "Đã xử lý theo nguồn hiện tại."}, {"role": "system", "content": "Bây giờ là 19:08, Thứ Ba, ngày 10/11/2026, giờ Việt Nam."}, {"role": "user", "content": "[Người đang hỏi: Alice | author_id=alice]\nMật mã của tôi là gì?"}]
+E         ?           +++++++++++
+
+tests\test_review2_ledger.py:52: AssertionError
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 19:08:48.723 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 19:08:48.724 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 19:08:48.724 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 19:08:48.724 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 19:08:48.724 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 19:08:48.724 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 19:08:48.724 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 19:08:48.724 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 19:08:48.724 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 19:08:48.724 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 19:08:48.724 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 19:08:48.724 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 19:08:48.724 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 19:08:48.724 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 19:08:48.724 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 19:08:48.724 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 19:08:48.725 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 19:08:48.725 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 19:08:48.919 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 19:08:48.919 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 19:08:48.919 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 19:08:48.919 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 19:08:49.279 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 19:08:49.411 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_b2_a_person_changing_a_message_in_the_history_keeps_its_old_words_out[delete] _
+
+r2 = namespace(client=<starlette.testclient.TestClient object at 0x000001F81FEE9690>, guild='source-v2-171c1c7880', model=<...ce object at 0x000001F81FFA3810>, memory=<app.services.source_memory.SourceMemoryService object at 0x000001F82005C890>)
+change = 'delete'
+
+    @pytest.mark.parametrize("change", ["edit", "delete"])
+    def test_b2_a_person_changing_a_message_in_the_history_keeps_its_old_words_out(r2, change):  # noqa: F811
+        client, guild = r2.client, r2.guild
+        # The bot ledgers every heard message, the one that asked Ún included.
+        message_id = ledger_message(client, guild, "one", "alice", "Mật mã của tôi là sentinel-b2.")
+        _, turn_id = enqueue(client, guild, "one", "Mật mã của tôi là sentinel-b2.", message_id=message_id)
+        executed = execute(client, turn_id)
+        assert executed.status_code == 200 and executed.json()["answer"], executed.text
+        complete(client, turn_id, executed.json()["execution_token"])
+        if change == "edit":
+            changed = client.post(f"/api/discord/history/messages/{message_id}/edit", json={"content": "Mật mã đã đổi."})
+        else:
+            changed = client.post(f"/api/discord/history/messages/{message_id}/delete",
+                                  json={"guild_id": guild, "channel_id": "one"})
+        assert changed.status_code == 200 and changed.json()["recorded"], changed.text
+        calls = len(r2.model.calls)
+        _, asking = enqueue(client, guild, "one", "Mật mã của tôi là gì?")
+        asked = execute(client, asking)
+        assert asked.status_code == 200, asked.text
+        assert len(r2.model.calls) == calls + 1
+>       assert "sentinel-b2" not in r2.model.prompts_since(calls)
+E       assert 'sentinel-b2' not in '[{"role": "...ôi là gì?"}]'
+E         
+E         'sentinel-b2' is contained here:
+E           ủa tôi là sentinel-b2."}, {"role": "assistant", "content": "Đã xử lý theo nguồn hiện tại."}, {"role": "system", "content": "Bây giờ là 19:08, Thứ Ba, ngày 10/11/2026, giờ Việt Nam."}, {"role": "user", "content": "[Người đang hỏi: Alice | author_id=alice]\nMật mã của tôi là gì?"}]
+E         ?           +++++++++++
+
+tests\test_review2_ledger.py:52: AssertionError
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 19:08:49.461 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 19:08:49.461 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 19:08:49.461 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 19:08:49.461 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 19:08:49.461 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 19:08:49.461 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 19:08:49.461 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 19:08:49.461 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 19:08:49.461 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 19:08:49.461 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 19:08:49.461 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 19:08:49.461 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 19:08:49.463 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 19:08:49.463 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 19:08:49.463 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 19:08:49.463 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 19:08:49.463 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 19:08:49.463 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 19:08:49.658 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 19:08:49.659 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 19:08:49.659 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 19:08:49.659 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 19:08:50.038 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 19:08:50.163 | INFO     | app.services.logging_service:log_request:149 - request completed
+__ test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[1-3-pages0] ___
+
+pdf_service = <app.services.ocr_job_service.OcrJobService object at 0x000001F8200420D0>
+page_range = '1-3', pages = [1, 2, 3]
+
+    @pytest.mark.parametrize(("page_range", "pages"), [
+        ("1-3", [1, 2, 3]), (" 1 - 2 ", [1, 2]), ("1,1,2", [1, 2]),
+        ("5-1", None), ("0", None), ("-1", None), ("1-2-3", None), ("a-b", None), ("1,", None), ("4", None),
+    ])
+    def test_c2_a_page_range_selects_exactly_its_pages_or_is_refused(pdf_service, page_range, pages):
+        outcome = run_pdf(pdf_service, page_range)
+        if pages is None:
+            assert isinstance(outcome, ValueError) or outcome["status"] == "failed", outcome
+        else:
+            assert not isinstance(outcome, ValueError) and outcome["status"] == "completed", outcome
+>           assert [page["page"] for page in outcome["pages"]] == pages
+E           assert [1, 3] == [1, 2, 3]
+E             
+E             At index 1 diff: 3 != 2
+E             Right contains one more item: 3
+E             Use -v to get more diff
+
+tests\test_review2_ocr_jobs.py:281: AssertionError
+___ test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[5-1-None] ____
+
+pdf_service = <app.services.ocr_job_service.OcrJobService object at 0x000001F820041F90>
+page_range = '5-1', pages = None
+
+    @pytest.mark.parametrize(("page_range", "pages"), [
+        ("1-3", [1, 2, 3]), (" 1 - 2 ", [1, 2]), ("1,1,2", [1, 2]),
+        ("5-1", None), ("0", None), ("-1", None), ("1-2-3", None), ("a-b", None), ("1,", None), ("4", None),
+    ])
+    def test_c2_a_page_range_selects_exactly_its_pages_or_is_refused(pdf_service, page_range, pages):
+        outcome = run_pdf(pdf_service, page_range)
+        if pages is None:
+>           assert isinstance(outcome, ValueError) or outcome["status"] == "failed", outcome
+E           AssertionError: {'created_at': 1794312530.3250644, 'current_page': 1, 'dpi': 72, 'events': [{'at': 1794312530.326064, 'level': 'INFO',....}, {'at': 1794312530.3380933, 'level': 'INFO', 'message': 'All selected pages processed', 'progress': 100, ...}], ...}
+E           assert (False or 'completed' == 'failed'
+E            +  where False = isinstance({'created_at': 1794312530.3250644, 'current_page': 1, 'dpi': 72, 'events': [{'at': 1794312530.326064, 'level': 'INFO',....}, {'at': 1794312530.3380933, 'level': 'INFO', 'message': 'All selected pages processed', 'progress': 100, ...}], ...}, ValueError)
+E             
+E             - failed
+E             + completed)
+
+tests\test_review2_ocr_jobs.py:278: AssertionError
+____ test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[0-None] _____
+
+pdf_service = <app.services.ocr_job_service.OcrJobService object at 0x000001F82025F050>
+page_range = '0', pages = None
+
+    @pytest.mark.parametrize(("page_range", "pages"), [
+        ("1-3", [1, 2, 3]), (" 1 - 2 ", [1, 2]), ("1,1,2", [1, 2]),
+        ("5-1", None), ("0", None), ("-1", None), ("1-2-3", None), ("a-b", None), ("1,", None), ("4", None),
+    ])
+    def test_c2_a_page_range_selects_exactly_its_pages_or_is_refused(pdf_service, page_range, pages):
+        outcome = run_pdf(pdf_service, page_range)
+        if pages is None:
+>           assert isinstance(outcome, ValueError) or outcome["status"] == "failed", outcome
+E           AssertionError: {'created_at': 1794312530.3679678, 'current_page': 3, 'dpi': 72, 'events': [{'at': 1794312530.3689675, 'level': 'INFO'....}, {'at': 1794312530.3849814, 'level': 'INFO', 'message': 'All selected pages processed', 'progress': 100, ...}], ...}
+E           assert (False or 'completed' == 'failed'
+E            +  where False = isinstance({'created_at': 1794312530.3679678, 'current_page': 3, 'dpi': 72, 'events': [{'at': 1794312530.3689675, 'level': 'INFO'....}, {'at': 1794312530.3849814, 'level': 'INFO', 'message': 'All selected pages processed', 'progress': 100, ...}], ...}, ValueError)
+E             
+E             - failed
+E             + completed)
+
+tests\test_review2_ocr_jobs.py:278: AssertionError
+____ test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[-1-None] ____
+
+pdf_service = <app.services.ocr_job_service.OcrJobService object at 0x000001F820181F50>
+page_range = '-1', pages = None
+
+    @pytest.mark.parametrize(("page_range", "pages"), [
+        ("1-3", [1, 2, 3]), (" 1 - 2 ", [1, 2]), ("1,1,2", [1, 2]),
+        ("5-1", None), ("0", None), ("-1", None), ("1-2-3", None), ("a-b", None), ("1,", None), ("4", None),
+    ])
+    def test_c2_a_page_range_selects_exactly_its_pages_or_is_refused(pdf_service, page_range, pages):
+        outcome = run_pdf(pdf_service, page_range)
+        if pages is None:
+>           assert isinstance(outcome, ValueError) or outcome["status"] == "failed", outcome
+E           AssertionError: {'created_at': 1794312530.4105465, 'current_page': 1, 'dpi': 72, 'events': [{'at': 1794312530.4115472, 'level': 'INFO'....}, {'at': 1794312530.4250617, 'level': 'INFO', 'message': 'All selected pages processed', 'progress': 100, ...}], ...}
+E           assert (False or 'completed' == 'failed'
+E            +  where False = isinstance({'created_at': 1794312530.4105465, 'current_page': 1, 'dpi': 72, 'events': [{'at': 1794312530.4115472, 'level': 'INFO'....}, {'at': 1794312530.4250617, 'level': 'INFO', 'message': 'All selected pages processed', 'progress': 100, ...}], ...}, ValueError)
+E             
+E             - failed
+E             + completed)
+
+tests\test_review2_ocr_jobs.py:278: AssertionError
+__ test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[1-2-3-None] ___
+
+pdf_service = <app.services.ocr_job_service.OcrJobService object at 0x000001F82025E150>
+page_range = '1-2-3', pages = None
+
+    @pytest.mark.parametrize(("page_range", "pages"), [
+        ("1-3", [1, 2, 3]), (" 1 - 2 ", [1, 2]), ("1,1,2", [1, 2]),
+        ("5-1", None), ("0", None), ("-1", None), ("1-2-3", None), ("a-b", None), ("1,", None), ("4", None),
+    ])
+    def test_c2_a_page_range_selects_exactly_its_pages_or_is_refused(pdf_service, page_range, pages):
+        outcome = run_pdf(pdf_service, page_range)
+        if pages is None:
+>           assert isinstance(outcome, ValueError) or outcome["status"] == "failed", outcome
+E           AssertionError: {'created_at': 1794312530.4553537, 'current_page': 3, 'dpi': 72, 'events': [{'at': 1794312530.4553537, 'level': 'INFO'....}, {'at': 1794312530.4718645, 'level': 'INFO', 'message': 'All selected pages processed', 'progress': 100, ...}], ...}
+E           assert (False or 'completed' == 'failed'
+E            +  where False = isinstance({'created_at': 1794312530.4553537, 'current_page': 3, 'dpi': 72, 'events': [{'at': 1794312530.4553537, 'level': 'INFO'....}, {'at': 1794312530.4718645, 'level': 'INFO', 'message': 'All selected pages processed', 'progress': 100, ...}], ...}, ValueError)
+E             
+E             - failed
+E             + completed)
+
+tests\test_review2_ocr_jobs.py:278: AssertionError
+___ test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[a-b-None] ____
+
+pdf_service = <app.services.ocr_job_service.OcrJobService object at 0x000001F8202012D0>
+page_range = 'a-b', pages = None
+
+    @pytest.mark.parametrize(("page_range", "pages"), [
+        ("1-3", [1, 2, 3]), (" 1 - 2 ", [1, 2]), ("1,1,2", [1, 2]),
+        ("5-1", None), ("0", None), ("-1", None), ("1-2-3", None), ("a-b", None), ("1,", None), ("4", None),
+    ])
+    def test_c2_a_page_range_selects_exactly_its_pages_or_is_refused(pdf_service, page_range, pages):
+        outcome = run_pdf(pdf_service, page_range)
+        if pages is None:
+>           assert isinstance(outcome, ValueError) or outcome["status"] == "failed", outcome
+E           AssertionError: {'created_at': 1794312530.4971347, 'current_page': 3, 'dpi': 72, 'events': [{'at': 1794312530.4971347, 'level': 'INFO'....}, {'at': 1794312530.5159507, 'level': 'INFO', 'message': 'All selected pages processed', 'progress': 100, ...}], ...}
+E           assert (False or 'completed' == 'failed'
+E            +  where False = isinstance({'created_at': 1794312530.4971347, 'current_page': 3, 'dpi': 72, 'events': [{'at': 1794312530.4971347, 'level': 'INFO'....}, {'at': 1794312530.5159507, 'level': 'INFO', 'message': 'All selected pages processed', 'progress': 100, ...}], ...}, ValueError)
+E             
+E             - failed
+E             + completed)
+
+tests\test_review2_ocr_jobs.py:278: AssertionError
+____ test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[1,-None] ____
+
+pdf_service = <app.services.ocr_job_service.OcrJobService object at 0x000001F8201C9ED0>
+page_range = '1,', pages = None
+
+    @pytest.mark.parametrize(("page_range", "pages"), [
+        ("1-3", [1, 2, 3]), (" 1 - 2 ", [1, 2]), ("1,1,2", [1, 2]),
+        ("5-1", None), ("0", None), ("-1", None), ("1-2-3", None), ("a-b", None), ("1,", None), ("4", None),
+    ])
+    def test_c2_a_page_range_selects_exactly_its_pages_or_is_refused(pdf_service, page_range, pages):
+        outcome = run_pdf(pdf_service, page_range)
+        if pages is None:
+>           assert isinstance(outcome, ValueError) or outcome["status"] == "failed", outcome
+E           AssertionError: {'created_at': 1794312530.5389652, 'current_page': 1, 'dpi': 72, 'events': [{'at': 1794312530.5389652, 'level': 'INFO'....}, {'at': 1794312530.5510452, 'level': 'INFO', 'message': 'All selected pages processed', 'progress': 100, ...}], ...}
+E           assert (False or 'completed' == 'failed'
+E            +  where False = isinstance({'created_at': 1794312530.5389652, 'current_page': 1, 'dpi': 72, 'events': [{'at': 1794312530.5389652, 'level': 'INFO'....}, {'at': 1794312530.5510452, 'level': 'INFO', 'message': 'All selected pages processed', 'progress': 100, ...}], ...}, ValueError)
+E             
+E             - failed
+E             + completed)
+
+tests\test_review2_ocr_jobs.py:278: AssertionError
+____ test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[4-None] _____
+
+pdf_service = <app.services.ocr_job_service.OcrJobService object at 0x000001F8202595D0>
+page_range = '4', pages = None
+
+    @pytest.mark.parametrize(("page_range", "pages"), [
+        ("1-3", [1, 2, 3]), (" 1 - 2 ", [1, 2]), ("1,1,2", [1, 2]),
+        ("5-1", None), ("0", None), ("-1", None), ("1-2-3", None), ("a-b", None), ("1,", None), ("4", None),
+    ])
+    def test_c2_a_page_range_selects_exactly_its_pages_or_is_refused(pdf_service, page_range, pages):
+        outcome = run_pdf(pdf_service, page_range)
+        if pages is None:
+>           assert isinstance(outcome, ValueError) or outcome["status"] == "failed", outcome
+E           AssertionError: {'created_at': 1794312530.5821517, 'current_page': 3, 'dpi': 72, 'events': [{'at': 1794312530.5821517, 'level': 'INFO'....}, {'at': 1794312530.6021671, 'level': 'INFO', 'message': 'All selected pages processed', 'progress': 100, ...}], ...}
+E           assert (False or 'completed' == 'failed'
+E            +  where False = isinstance({'created_at': 1794312530.5821517, 'current_page': 3, 'dpi': 72, 'events': [{'at': 1794312530.5821517, 'level': 'INFO'....}, {'at': 1794312530.6021671, 'level': 'INFO', 'message': 'All selected pages processed', 'progress': 100, ...}], ...}, ValueError)
+E             
+E             - failed
+E             + completed)
+
+tests\test_review2_ocr_jobs.py:278: AssertionError
+__ test_r7_3_a_delete_never_reaches_outside_its_own_job_folder[http:%2e%2e] ___
+
+ocr = namespace(app=<fastapi.applications.FastAPI object at 0x000001F81DA88C50>, http=<starlette.testclient.TestClient objec...gbt06/pytest-829/test_r7_3_a_delete_never_reach0'), service=<function ocr_app.<locals>.<lambda> at 0x000001F8201D4400>)
+way = 'http', job_id = '%2e%2e'
+
+    @pytest.mark.parametrize(("way", "job_id"), TRAVERSALS, ids=[f"{way}:{job_id}" for way, job_id in TRAVERSALS])
+    def test_r7_3_a_delete_never_reaches_outside_its_own_job_folder(ocr, way, job_id):
+        canaries = [ocr.tmp / "outside.txt", ocr.tmp / "x" / "canary.txt", ocr.tmp / "victim" / "canary.txt",
+                    ocr.runs / "keep" / "canary.txt", ocr.runs / ("ocr_" + "z" * 32) / "canary.txt",
+                    ocr.runs / ("ocr_" + uuid4().hex) / "canary.txt"]
+        for canary in canaries:
+            canary.parent.mkdir(parents=True, exist_ok=True)
+            canary.write_text("còn đây", encoding="utf-8")
+        if job_id == "ABSOLUTE":
+            job_id = str(ocr.tmp / "victim")
+        if way == "http":
+            ocr.http.delete(f"/api/ocr/history/{job_id}")
+        else:
+            ocr.service().delete(job_id)
+>       assert [str(canary) for canary in canaries if not canary.exists()] == []
+E       AssertionError: assert ['C:\\Users\\...\\canary.txt'] == []
+E         
+E         Left contains 3 more items, first extra item: 'C:\\Users\\dungbt06\\AppData\\Local\\Temp\\pytest-of-dungbt06\\pytest-829\\test_r7_3_a_delete_never_reach0\\data\\runs\\keep\\canary.txt'
+E         Use -v to get more diff
+
+tests\test_review2_ocr_jobs.py:154: AssertionError
+_ test_r7_3_a_delete_never_reaches_outside_its_own_job_folder[http:..%5C..%5Cx] _
+
+ocr = namespace(app=<fastapi.applications.FastAPI object at 0x000001F82025DC50>, http=<starlette.testclient.TestClient objec...gbt06/pytest-829/test_r7_3_a_delete_never_reach1'), service=<function ocr_app.<locals>.<lambda> at 0x000001F8201D65C0>)
+way = 'http', job_id = '..%5C..%5Cx'
+
+    @pytest.mark.parametrize(("way", "job_id"), TRAVERSALS, ids=[f"{way}:{job_id}" for way, job_id in TRAVERSALS])
+    def test_r7_3_a_delete_never_reaches_outside_its_own_job_folder(ocr, way, job_id):
+        canaries = [ocr.tmp / "outside.txt", ocr.tmp / "x" / "canary.txt", ocr.tmp / "victim" / "canary.txt",
+                    ocr.runs / "keep" / "canary.txt", ocr.runs / ("ocr_" + "z" * 32) / "canary.txt",
+                    ocr.runs / ("ocr_" + uuid4().hex) / "canary.txt"]
+        for canary in canaries:
+            canary.parent.mkdir(parents=True, exist_ok=True)
+            canary.write_text("còn đây", encoding="utf-8")
+        if job_id == "ABSOLUTE":
+            job_id = str(ocr.tmp / "victim")
+        if way == "http":
+            ocr.http.delete(f"/api/ocr/history/{job_id}")
+        else:
+            ocr.service().delete(job_id)
+>       assert [str(canary) for canary in canaries if not canary.exists()] == []
+E       AssertionError: assert ['C:\\Users\\...\\canary.txt'] == []
+E         
+E         Left contains one more item: 'C:\\Users\\dungbt06\\AppData\\Local\\Temp\\pytest-of-dungbt06\\pytest-829\\test_r7_3_a_delete_never_reach1\\x\\canary.txt'
+E         Use -v to get more diff
+
+tests\test_review2_ocr_jobs.py:154: AssertionError
+___ test_r7_3_a_delete_never_reaches_outside_its_own_job_folder[direct:..] ____
+
+ocr = namespace(app=<fastapi.applications.FastAPI object at 0x000001F8201C9CD0>, http=<starlette.testclient.TestClient objec...gbt06/pytest-829/test_r7_3_a_delete_never_reach2'), service=<function ocr_app.<locals>.<lambda> at 0x000001F820224540>)
+way = 'direct', job_id = '..'
+
+    @pytest.mark.parametrize(("way", "job_id"), TRAVERSALS, ids=[f"{way}:{job_id}" for way, job_id in TRAVERSALS])
+    def test_r7_3_a_delete_never_reaches_outside_its_own_job_folder(ocr, way, job_id):
+        canaries = [ocr.tmp / "outside.txt", ocr.tmp / "x" / "canary.txt", ocr.tmp / "victim" / "canary.txt",
+                    ocr.runs / "keep" / "canary.txt", ocr.runs / ("ocr_" + "z" * 32) / "canary.txt",
+                    ocr.runs / ("ocr_" + uuid4().hex) / "canary.txt"]
+        for canary in canaries:
+            canary.parent.mkdir(parents=True, exist_ok=True)
+            canary.write_text("còn đây", encoding="utf-8")
+        if job_id == "ABSOLUTE":
+            job_id = str(ocr.tmp / "victim")
+        if way == "http":
+            ocr.http.delete(f"/api/ocr/history/{job_id}")
+        else:
+            ocr.service().delete(job_id)
+>       assert [str(canary) for canary in canaries if not canary.exists()] == []
+E       AssertionError: assert ['C:\\Users\\...\\canary.txt'] == []
+E         
+E         Left contains 3 more items, first extra item: 'C:\\Users\\dungbt06\\AppData\\Local\\Temp\\pytest-of-dungbt06\\pytest-829\\test_r7_3_a_delete_never_reach2\\data\\runs\\keep\\canary.txt'
+E         Use -v to get more diff
+
+tests\test_review2_ocr_jobs.py:154: AssertionError
+_ test_r7_3_a_delete_never_reaches_outside_its_own_job_folder[direct:..\\..\\x] _
+
+ocr = namespace(app=<fastapi.applications.FastAPI object at 0x000001F820231350>, http=<starlette.testclient.TestClient objec...gbt06/pytest-829/test_r7_3_a_delete_never_reach3'), service=<function ocr_app.<locals>.<lambda> at 0x000001F820224A40>)
+way = 'direct', job_id = '..\\..\\x'
+
+    @pytest.mark.parametrize(("way", "job_id"), TRAVERSALS, ids=[f"{way}:{job_id}" for way, job_id in TRAVERSALS])
+    def test_r7_3_a_delete_never_reaches_outside_its_own_job_folder(ocr, way, job_id):
+        canaries = [ocr.tmp / "outside.txt", ocr.tmp / "x" / "canary.txt", ocr.tmp / "victim" / "canary.txt",
+                    ocr.runs / "keep" / "canary.txt", ocr.runs / ("ocr_" + "z" * 32) / "canary.txt",
+                    ocr.runs / ("ocr_" + uuid4().hex) / "canary.txt"]
+        for canary in canaries:
+            canary.parent.mkdir(parents=True, exist_ok=True)
+            canary.write_text("còn đây", encoding="utf-8")
+        if job_id == "ABSOLUTE":
+            job_id = str(ocr.tmp / "victim")
+        if way == "http":
+            ocr.http.delete(f"/api/ocr/history/{job_id}")
+        else:
+            ocr.service().delete(job_id)
+>       assert [str(canary) for canary in canaries if not canary.exists()] == []
+E       AssertionError: assert ['C:\\Users\\...\\canary.txt'] == []
+E         
+E         Left contains one more item: 'C:\\Users\\dungbt06\\AppData\\Local\\Temp\\pytest-of-dungbt06\\pytest-829\\test_r7_3_a_delete_never_reach3\\x\\canary.txt'
+E         Use -v to get more diff
+
+tests\test_review2_ocr_jobs.py:154: AssertionError
+_ test_r7_3_a_delete_never_reaches_outside_its_own_job_folder[direct:ABSOLUTE] _
+
+ocr = namespace(app=<fastapi.applications.FastAPI object at 0x000001F82021E710>, http=<starlette.testclient.TestClient objec...gbt06/pytest-829/test_r7_3_a_delete_never_reach4'), service=<function ocr_app.<locals>.<lambda> at 0x000001F820224720>)
+way = 'direct'
+job_id = 'C:\\Users\\dungbt06\\AppData\\Local\\Temp\\pytest-of-dungbt06\\pytest-829\\test_r7_3_a_delete_never_reach4\\victim'
+
+    @pytest.mark.parametrize(("way", "job_id"), TRAVERSALS, ids=[f"{way}:{job_id}" for way, job_id in TRAVERSALS])
+    def test_r7_3_a_delete_never_reaches_outside_its_own_job_folder(ocr, way, job_id):
+        canaries = [ocr.tmp / "outside.txt", ocr.tmp / "x" / "canary.txt", ocr.tmp / "victim" / "canary.txt",
+                    ocr.runs / "keep" / "canary.txt", ocr.runs / ("ocr_" + "z" * 32) / "canary.txt",
+                    ocr.runs / ("ocr_" + uuid4().hex) / "canary.txt"]
+        for canary in canaries:
+            canary.parent.mkdir(parents=True, exist_ok=True)
+            canary.write_text("còn đây", encoding="utf-8")
+        if job_id == "ABSOLUTE":
+            job_id = str(ocr.tmp / "victim")
+        if way == "http":
+            ocr.http.delete(f"/api/ocr/history/{job_id}")
+        else:
+            ocr.service().delete(job_id)
+>       assert [str(canary) for canary in canaries if not canary.exists()] == []
+E       AssertionError: assert ['C:\\Users\\...\\canary.txt'] == []
+E         
+E         Left contains one more item: 'C:\\Users\\dungbt06\\AppData\\Local\\Temp\\pytest-of-dungbt06\\pytest-829\\test_r7_3_a_delete_never_reach4\\victim\\canary.txt'
+E         Use -v to get more diff
+
+tests\test_review2_ocr_jobs.py:154: AssertionError
+__ test_r7_3_a_delete_never_reaches_outside_its_own_job_folder[direct:keep] ___
+
+ocr = namespace(app=<fastapi.applications.FastAPI object at 0x000001F8201E7650>, http=<starlette.testclient.TestClient objec...gbt06/pytest-829/test_r7_3_a_delete_never_reach5'), service=<function ocr_app.<locals>.<lambda> at 0x000001F8202259E0>)
+way = 'direct', job_id = 'keep'
+
+    @pytest.mark.parametrize(("way", "job_id"), TRAVERSALS, ids=[f"{way}:{job_id}" for way, job_id in TRAVERSALS])
+    def test_r7_3_a_delete_never_reaches_outside_its_own_job_folder(ocr, way, job_id):
+        canaries = [ocr.tmp / "outside.txt", ocr.tmp / "x" / "canary.txt", ocr.tmp / "victim" / "canary.txt",
+                    ocr.runs / "keep" / "canary.txt", ocr.runs / ("ocr_" + "z" * 32) / "canary.txt",
+                    ocr.runs / ("ocr_" + uuid4().hex) / "canary.txt"]
+        for canary in canaries:
+            canary.parent.mkdir(parents=True, exist_ok=True)
+            canary.write_text("còn đây", encoding="utf-8")
+        if job_id == "ABSOLUTE":
+            job_id = str(ocr.tmp / "victim")
+        if way == "http":
+            ocr.http.delete(f"/api/ocr/history/{job_id}")
+        else:
+            ocr.service().delete(job_id)
+>       assert [str(canary) for canary in canaries if not canary.exists()] == []
+E       AssertionError: assert ['C:\\Users\\...\\canary.txt'] == []
+E         
+E         Left contains one more item: 'C:\\Users\\dungbt06\\AppData\\Local\\Temp\\pytest-of-dungbt06\\pytest-829\\test_r7_3_a_delete_never_reach5\\data\\runs\\keep\\canary.txt'
+E         Use -v to get more diff
+
+tests\test_review2_ocr_jobs.py:154: AssertionError
+_ test_r7_3_a_delete_never_reaches_outside_its_own_job_folder[direct:ocr_zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz] _
+
+ocr = namespace(app=<fastapi.applications.FastAPI object at 0x000001F82027F690>, http=<starlette.testclient.TestClient objec...gbt06/pytest-829/test_r7_3_a_delete_never_reach6'), service=<function ocr_app.<locals>.<lambda> at 0x000001F820226700>)
+way = 'direct', job_id = 'ocr_zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz'
+
+    @pytest.mark.parametrize(("way", "job_id"), TRAVERSALS, ids=[f"{way}:{job_id}" for way, job_id in TRAVERSALS])
+    def test_r7_3_a_delete_never_reaches_outside_its_own_job_folder(ocr, way, job_id):
+        canaries = [ocr.tmp / "outside.txt", ocr.tmp / "x" / "canary.txt", ocr.tmp / "victim" / "canary.txt",
+                    ocr.runs / "keep" / "canary.txt", ocr.runs / ("ocr_" + "z" * 32) / "canary.txt",
+                    ocr.runs / ("ocr_" + uuid4().hex) / "canary.txt"]
+        for canary in canaries:
+            canary.parent.mkdir(parents=True, exist_ok=True)
+            canary.write_text("còn đây", encoding="utf-8")
+        if job_id == "ABSOLUTE":
+            job_id = str(ocr.tmp / "victim")
+        if way == "http":
+            ocr.http.delete(f"/api/ocr/history/{job_id}")
+        else:
+            ocr.service().delete(job_id)
+>       assert [str(canary) for canary in canaries if not canary.exists()] == []
+E       AssertionError: assert ['C:\\Users\\...\\canary.txt'] == []
+E         
+E         Left contains one more item: 'C:\\Users\\dungbt06\\AppData\\Local\\Temp\\pytest-of-dungbt06\\pytest-829\\test_r7_3_a_delete_never_reach6\\data\\runs\\ocr_zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz\\canary.txt'
+E         Use -v to get more diff
+
+tests\test_review2_ocr_jobs.py:154: AssertionError
+_ test_r9_4_a_phone_question_without_a_phone_number_is_answered_missing[account_stk] _
+
+block = 'STK: 0123 456 789'
+
+    @pytest.mark.parametrize("block", [NAME, "STK: 0123 456 789", "Ngày lập: 12/03/2024"], ids=["name", "account_stk", "date"])
+    def test_r9_4_a_phone_question_without_a_phone_number_is_answered_missing(block):
+        reader, result = ask("Số điện thoại của người nhận là gì?", {"other": block})
+>       assert reader.calls == 0
+E       assert 1 == 0
+E        +  where 1 = <test_review2_ocr_reader.Reader object at 0x000001F820296C10>.calls
+
+tests\test_review2_ocr_reader.py:79: AssertionError
+_ test_r9_4_a_phone_question_without_a_phone_number_is_answered_missing[date] _
+
+block = 'Ngày lập: 12/03/2024'
+
+    @pytest.mark.parametrize("block", [NAME, "STK: 0123 456 789", "Ngày lập: 12/03/2024"], ids=["name", "account_stk", "date"])
+    def test_r9_4_a_phone_question_without_a_phone_number_is_answered_missing(block):
+        reader, result = ask("Số điện thoại của người nhận là gì?", {"other": block})
+>       assert reader.calls == 0
+E       assert 1 == 0
+E        +  where 1 = <test_review2_ocr_reader.Reader object at 0x000001F82027B2D0>.calls
+
+tests\test_review2_ocr_reader.py:79: AssertionError
+___ test_r9_5_a_field_question_offers_its_field_and_nothing_else[vn_plain] ____
+
+question = 'Số điện thoại?', phone = 'Điện thoại: 0912 345 678'
+expected = 'phone'
+
+    @pytest.mark.parametrize(("question", "phone", "expected"), [
+        ("Số điện thoại?", PHONE, "phone"),
+        ("Số điện thoại?", "SĐT: +84 912 345 678", "phone"),
+        ("Số điện thoại?", "Tel: (028) 3822-1234", "phone"),
+        ("Email của người nhận?", PHONE, "email"),
+        ("Số tài khoản là gì?", PHONE, "account"),
+    ], ids=["vn_plain", "vn_plus84", "vn_landline", "email_only", "account_only"])
+    def test_r9_5_a_field_question_offers_its_field_and_nothing_else(question, phone, expected):
+        reader, _ = ask(question, {"phone": phone, "email": EMAIL, "account": ACCOUNT, "name": NAME})
+>       assert reader.offered == [expected]
+E       AssertionError: assert ['phone', 'account'] == ['phone']
+E         
+E         Left contains one more item: 'account'
+E         Use -v to get more diff
+
+tests\test_review2_ocr_reader.py:92: AssertionError
+___ test_r9_5_a_field_question_offers_its_field_and_nothing_else[vn_plus84] ___
+
+question = 'Số điện thoại?', phone = 'SĐT: +84 912 345 678', expected = 'phone'
+
+    @pytest.mark.parametrize(("question", "phone", "expected"), [
+        ("Số điện thoại?", PHONE, "phone"),
+        ("Số điện thoại?", "SĐT: +84 912 345 678", "phone"),
+        ("Số điện thoại?", "Tel: (028) 3822-1234", "phone"),
+        ("Email của người nhận?", PHONE, "email"),
+        ("Số tài khoản là gì?", PHONE, "account"),
+    ], ids=["vn_plain", "vn_plus84", "vn_landline", "email_only", "account_only"])
+    def test_r9_5_a_field_question_offers_its_field_and_nothing_else(question, phone, expected):
+        reader, _ = ask(question, {"phone": phone, "email": EMAIL, "account": ACCOUNT, "name": NAME})
+>       assert reader.offered == [expected]
+E       AssertionError: assert ['phone', 'account'] == ['phone']
+E         
+E         Left contains one more item: 'account'
+E         Use -v to get more diff
+
+tests\test_review2_ocr_reader.py:92: AssertionError
+__ test_r9_5_a_field_question_offers_its_field_and_nothing_else[vn_landline] __
+
+question = 'Số điện thoại?', phone = 'Tel: (028) 3822-1234', expected = 'phone'
+
+    @pytest.mark.parametrize(("question", "phone", "expected"), [
+        ("Số điện thoại?", PHONE, "phone"),
+        ("Số điện thoại?", "SĐT: +84 912 345 678", "phone"),
+        ("Số điện thoại?", "Tel: (028) 3822-1234", "phone"),
+        ("Email của người nhận?", PHONE, "email"),
+        ("Số tài khoản là gì?", PHONE, "account"),
+    ], ids=["vn_plain", "vn_plus84", "vn_landline", "email_only", "account_only"])
+    def test_r9_5_a_field_question_offers_its_field_and_nothing_else(question, phone, expected):
+        reader, _ = ask(question, {"phone": phone, "email": EMAIL, "account": ACCOUNT, "name": NAME})
+>       assert reader.offered == [expected]
+E       AssertionError: assert ['phone', 'account'] == ['phone']
+E         
+E         Left contains one more item: 'account'
+E         Use -v to get more diff
+
+tests\test_review2_ocr_reader.py:92: AssertionError
+=================================== PASSES ====================================
+____ test_r2_2_a_demoted_admin_with_an_old_token_is_refused_the_user_list _____
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 19:08:38.984 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 19:08:38.985 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 19:08:38.985 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 19:08:38.986 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 19:08:38.986 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 19:08:38.986 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 19:08:38.986 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 19:08:38.987 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 19:08:38.987 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 19:08:38.987 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 19:08:38.987 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 19:08:38.987 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 19:08:38.987 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 19:08:38.987 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 19:08:38.987 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 19:08:38.987 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 19:08:38.987 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 19:08:38.987 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 19:08:39.244 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 19:08:39.244 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 19:08:39.244 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 19:08:39.244 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+2026-11-10 19:08:40.462 | INFO     | app.services.logging_service:log_request:149 - request completed
+_______ test_r1_3_without_a_barrier_a_reply_is_answered[other_session] ________
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 19:08:43.552 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 19:08:43.552 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 19:08:43.553 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 19:08:43.553 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 19:08:43.553 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 19:08:43.553 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 19:08:43.553 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 19:08:43.553 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 19:08:43.553 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 19:08:43.553 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 19:08:43.553 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 19:08:43.553 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 19:08:43.553 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 19:08:43.553 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 19:08:43.553 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 19:08:43.553 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 19:08:43.553 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 19:08:43.553 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 19:08:43.746 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 19:08:43.746 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 19:08:43.746 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 19:08:43.746 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 19:08:44.064 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 19:08:44.166 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 19:08:44.267 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 19:08:44.359 | INFO     | app.services.logging_service:log_request:149 - request completed
+_________ test_r1_3_without_a_barrier_a_reply_is_answered[not_found] __________
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 19:08:44.403 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 19:08:44.403 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 19:08:44.403 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 19:08:44.403 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 19:08:44.403 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 19:08:44.403 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 19:08:44.404 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 19:08:44.404 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 19:08:44.404 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 19:08:44.404 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 19:08:44.404 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 19:08:44.404 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 19:08:44.404 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 19:08:44.404 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 19:08:44.404 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 19:08:44.404 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 19:08:44.404 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 19:08:44.404 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 19:08:44.600 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 19:08:44.601 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 19:08:44.601 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 19:08:44.601 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 19:08:45.134 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 19:08:45.248 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 19:08:45.344 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 19:08:45.433 | INFO     | app.services.logging_service:log_request:149 - request completed
+________________ test_r3_4_replaying_a_finished_turn[nothing] _________________
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 19:08:46.768 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 19:08:46.768 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 19:08:46.768 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 19:08:46.768 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 19:08:46.768 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 19:08:46.768 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 19:08:46.768 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 19:08:46.768 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 19:08:46.768 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 19:08:46.768 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 19:08:46.769 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 19:08:46.769 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 19:08:46.769 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 19:08:46.769 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 19:08:46.769 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 19:08:46.769 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 19:08:46.769 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 19:08:46.769 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 19:08:46.957 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 19:08:46.957 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 19:08:46.958 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 19:08:46.958 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 19:08:47.291 | INFO     | app.services.logging_service:log_request:149 - request completed
+=========================== short test summary info ===========================
+PASSED tests\test_review2_tmp_mut.py::test_r2_2_a_demoted_admin_with_an_old_token_is_refused_the_user_list
+PASSED tests\test_review2_tmp_mut.py::test_r1_3_without_a_barrier_a_reply_is_answered[other_session]
+PASSED tests\test_review2_tmp_mut.py::test_r1_3_without_a_barrier_a_reply_is_answered[not_found]
+PASSED tests\test_review2_tmp_mut.py::test_r3_4_replaying_a_finished_turn[nothing]
+PASSED tests\test_review2_tmp_mut.py::test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[ 1 - 2 -pages1]
+PASSED tests\test_review2_tmp_mut.py::test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[1,1,2-pages2]
+PASSED tests\test_review2_tmp_mut.py::test_r9_4_a_phone_question_without_a_phone_number_is_answered_missing[name]
+PASSED tests\test_review2_tmp_mut.py::test_r9_5_a_field_question_offers_its_field_and_nothing_else[email_only]
+PASSED tests\test_review2_tmp_mut.py::test_r9_5_a_field_question_offers_its_field_and_nothing_else[account_only]
+FAILED tests\test_review2_tmp_mut.py::test_a3_a_bot_returning_after_its_lease_ran_out_gets_the_saved_answer_without_a_second_model_call
+FAILED tests\test_review2_tmp_mut.py::test_n4_4_retrying_a_remember_turn_saves_one_source_and_says_so
+FAILED tests\test_review2_tmp_mut.py::test_r1_3_without_a_barrier_a_reply_is_answered[same_session]
+FAILED tests\test_review2_tmp_mut.py::test_r3_3_resending_after_the_channel_barrier_moved_does_not_return_the_old_answer[remembered_then_edited]
+FAILED tests\test_review2_tmp_mut.py::test_r3_3_resending_after_the_channel_barrier_moved_does_not_return_the_old_answer[deleted_with_its_channel]
+FAILED tests\test_review2_tmp_mut.py::test_r3_4_replaying_a_finished_turn[forget]
+FAILED tests\test_review2_tmp_mut.py::test_b1_the_bot_editing_its_progress_message_leaves_a_queued_turn_and_the_history_alone
+FAILED tests\test_review2_tmp_mut.py::test_b2_a_person_changing_a_message_in_the_history_keeps_its_old_words_out[edit]
+FAILED tests\test_review2_tmp_mut.py::test_b2_a_person_changing_a_message_in_the_history_keeps_its_old_words_out[delete]
+FAILED tests\test_review2_tmp_mut.py::test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[1-3-pages0]
+FAILED tests\test_review2_tmp_mut.py::test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[5-1-None]
+FAILED tests\test_review2_tmp_mut.py::test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[0-None]
+FAILED tests\test_review2_tmp_mut.py::test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[-1-None]
+FAILED tests\test_review2_tmp_mut.py::test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[1-2-3-None]
+FAILED tests\test_review2_tmp_mut.py::test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[a-b-None]
+FAILED tests\test_review2_tmp_mut.py::test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[1,-None]
+FAILED tests\test_review2_tmp_mut.py::test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[4-None]
+FAILED tests\test_review2_tmp_mut.py::test_r7_3_a_delete_never_reaches_outside_its_own_job_folder[http:%2e%2e]
+FAILED tests\test_review2_tmp_mut.py::test_r7_3_a_delete_never_reaches_outside_its_own_job_folder[http:..%5C..%5Cx]
+FAILED tests\test_review2_tmp_mut.py::test_r7_3_a_delete_never_reaches_outside_its_own_job_folder[direct:..]
+FAILED tests\test_review2_tmp_mut.py::test_r7_3_a_delete_never_reaches_outside_its_own_job_folder[direct:..\\..\\x]
+FAILED tests\test_review2_tmp_mut.py::test_r7_3_a_delete_never_reaches_outside_its_own_job_folder[direct:ABSOLUTE]
+FAILED tests\test_review2_tmp_mut.py::test_r7_3_a_delete_never_reaches_outside_its_own_job_folder[direct:keep]
+FAILED tests\test_review2_tmp_mut.py::test_r7_3_a_delete_never_reaches_outside_its_own_job_folder[direct:ocr_zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz]
+FAILED tests\test_review2_tmp_mut.py::test_r9_4_a_phone_question_without_a_phone_number_is_answered_missing[account_stk]
+FAILED tests\test_review2_tmp_mut.py::test_r9_4_a_phone_question_without_a_phone_number_is_answered_missing[date]
+FAILED tests\test_review2_tmp_mut.py::test_r9_5_a_field_question_offers_its_field_and_nothing_else[vn_plain]
+FAILED tests\test_review2_tmp_mut.py::test_r9_5_a_field_question_offers_its_field_and_nothing_else[vn_plus84]
+FAILED tests\test_review2_tmp_mut.py::test_r9_5_a_field_question_offers_its_field_and_nothing_else[vn_landline]
+29 failed, 9 passed in 12.25s

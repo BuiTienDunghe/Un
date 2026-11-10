@@ -20,6 +20,250 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
 
 ---
 
+## 10/11/2026 — Fable 5.2 duyệt lại phần sửa bộ test review2; sửa theo 3 điểm và chạy lại
+
+- **Câu hỏi:**
+  - 4 chỗ Opus sửa, cộng chỗ thứ năm ngoài phạm vi, có bịt đúng lỗ hổng không?
+  - Có làm ca nào đỏ oan khi lỗi được sửa đúng cách không?
+- **Điều kiện:**
+  - Code: main `ed60401`, cộng phần sửa lỗi B và bộ test review2, chưa commit.
+  - Người duyệt: Fable `claude-fable-5-2`, container `chk-r2g-*`.
+  - Phiên điều phối `claude-opus-5-5` sửa theo, chạy lại trên container mới `chk-r2w-*`.
+  - Ollama cổng chết, CUDA ẩn, Windows.
+- **Đăng ký trước:** không. Đây là lần duyệt, rồi kiểm lại sau khi sửa.
+- **Kết quả:**
+
+  | Lần chạy | Kết quả |
+  |---|---|
+  | Fable: bộ review2 | 53 + 55 xfail; 3 đạt (khớp Opus) |
+  | Fable: bản vá phía backend / phía bot của Opus | 10/10, 3/3 lật |
+  | Fable: bản vá phía bot mới cho A-7 ("thôi chờ thì huỷ lượt") | **đỏ oan** vì ca đòi lượt còn ở trạng thái chờ |
+  | Fable: A-5 gửi lại với cách đánh số cũ | đỏ vì trùng mã, nghĩa là chỗ sửa thứ năm là cần |
+  | Sau sửa: bộ review2 | 53 đạt, 55 xfail, 137,6 giây; 3 đạt |
+  | Sau sửa: bản vá phía bot A-7, A-5 ×2, A-6 ×2 | đều lật |
+  | Sau sửa: đột biến R5 cả hai bị từ chối | đỏ ở dòng mới; trước là xfail |
+- **Kết luận:**
+  - Fable kết luận GỘP ĐƯỢC.
+  - Fable đồng ý cả ba chỗ Opus làm khác đề xuất, và xác nhận chỗ thứ năm là cần.
+  - Fable lật lại nhận định "đọc code là đủ" của chính mình ở lần duyệt trước: A-7 cần chạy thử mới thấy đỏ oan.
+  - Sửa ba điểm:
+    - A-7 nhận lượt bị huỷ;
+    - thêm dòng canh thuộc tính đánh số của Discord giả;
+    - R5-1 đỏ khi cả hai lần hạ quyền bị từ chối.
+- **Trạng thái:** xong; chưa commit. Chưa chạy đủ bộ backend: chỉ ba tệp review2 đổi, và ngoài review2 không tệp nào import chúng.
+- **Bằng chứng:** `data/evaluation/results/kept/review2-test-suite-20261110/` (`REVIEW-fable-fix4.md`, `fix4-review/`, `fix5/run.txt`, `fix5/changes.diff`, mục cuối `RUN-LOG.md`). Thư mục chưa commit.
+
+## 10/11/2026 — Sửa 4 chỗ Fable nêu trong bộ test review2 (Opus 5.5 xhigh), phiên điều phối chạy lại
+
+- **Câu hỏi:** sau khi siết 4 chỗ bắt lỗi quá rộng, mỗi ca có còn ra đúng kết quả cũ không, có còn lật khi lỗi được vá không, và có đỏ thật khi gặp sự cố không liên quan không?
+- **Điều kiện:**
+  - Code: main `ed60401`, cộng phần sửa lỗi B và bộ test review2, tất cả chưa commit.
+  - Người sửa: Opus `claude-opus-5-5`, mức xhigh. Chỉ sửa `review2_support.py`, `test_review2_bot_backend.py`, `test_review2_auth.py`, `test_review2_discord_turns.py`.
+  - Container dùng một lần (`chk-r2u-*` cho Opus, `chk-r2v-*` cho phiên điều phối), migrate tới head, Ollama cổng chết, CUDA ẩn, Windows.
+  - Mỗi chỗ chạy ba lần: (a) code hôm nay; (b) bản vá tạm ở `flip/`; (c) một đột biến mà kiểm tra mới nhắm vào.
+  - Phiên điều phối chạy lại (a) trên container mới. Với (b), (c), phiên này chỉ đối chiếu tệp kết quả thô, không chạy lại. Đã xác nhận: ô "đỏ" hỏng đúng ở dòng kiểm mới, hoặc ở lỗi `RuntimeError` được ném lại, chứ không phải dòng `XPASS(strict)`. Diff thật khớp `changes.diff`.
+- **Đăng ký trước:** brief giao việc ghi trước kỳ vọng (a) không đổi, (b) vẫn lật, (c) phải đỏ thật; với N4-1 là không được lật.
+- **Kết quả:**
+
+  | Chỗ | (a) | (b) | (c) bản cũ → bản mới |
+  |---|---|---|---|
+  | A-5…A-8 (bot ném lỗi lạ) | 5 xfail | vá backend 5/5 lật; vá phía bot 3/3 lật | tin 2: 5 xfail → 5 đỏ; tin 1: 4 xfail → 4 đỏ |
+  | R5-1 (lỗi lạ khi hạ quyền) | xfail | lật | một luồng lỗi lạ: lật nhầm → đỏ; hai luồng lỗi kết nối: xfail → đỏ |
+  | R3-1, R3-2 (mã HTTP) | 2 xfail | 2/2 lật | trả 500: lật nhầm → đỏ; trả 409: vẫn lật (từ chối là sửa hợp lệ) |
+  | N4-1 (câu báo cũ) | xfail | lật | câu báo cũ kèm "đã quên": lật nhầm → xfail |
+
+  | Chạy cả bộ review2 | Kết quả |
+  |---|---|
+  | Opus, 8 tệp backend | 53 đạt, 55 xfail, 132,4 giây |
+  | Phiên điều phối chạy lại, container mới | 53 đạt, 55 xfail, 132,8 giây |
+  | `tests/test_review2_bot_turns.py` (cả hai lần) | 3 đạt |
+  | Opus, không có `POSTGRES_TEST_URL` | 30 đạt, 20 xfail, 58 bỏ qua, 0 lỗi |
+- **Kết luận:**
+  - Đúng dự đoán ở cả 4 chỗ; tổng vẫn 56 đạt + 55 xfail.
+  - Opus sửa thêm chỗ thứ năm, ngoài phạm vi được giao: Discord giả của mỗi tin giờ đánh số tin trả lời từ một số riêng. Trước đó hai tin cùng được trả lời thì trùng mã, và bản cũ nuốt lỗi này. Vì thế một trong ba lần lật "phía bot" trước đây thật ra đã hỏng ở bước báo giao tin.
+  - Khác đề xuất của Fable ở hai điểm:
+    - kiểm tra lỗi lạ nằm trong helper `BotOnApp.ask`, không đặt ở từng chỗ gọi;
+    - N4-1 kiểm "không chứa câu báo cũ" thay vì "khác câu báo cũ".
+  - R5-1 giờ chỉ nhận một kiểu từ chối: lỗi "quản trị viên cuối cùng". Nếu bản sửa để bên thua hỏng vì một lỗi database khác, ca sẽ đỏ chứ không lật.
+  - Fable duyệt GỘP ĐƯỢC trên bản trước khi sửa; các thay đổi này chưa ai duyệt lại.
+- **Trạng thái:** xong; chưa commit. Chưa chạy đủ bộ backend, vì không tệp nào ngoài review2 import helper. Chưa chạy trên Linux. A-5, A-7 chưa có bản vá phía bot để thử lật.
+- **Bằng chứng:** `data/evaluation/results/kept/review2-test-suite-20261110/fix4/` (`changes.diff`, `test_review2_tmp_fix4.py`, `run_c.sh`, kết quả thô a/b/c, `final-review2.txt`, `coordinator-rerun.txt`); mục cuối `RUN-LOG.md`. Thư mục chưa commit.
+
+## 10/11/2026 — Bộ test hồi quy review2 (111 test): Opus 5.5 xhigh viết, Fable 5.2 duyệt
+
+- **Câu hỏi:**
+  - Bộ test chuẩn có phủ đủ 52 ca đã họp chốt không?
+  - Test cũ có còn xanh không?
+  - Mỗi ca "lỗi đã biết" có hỏng đúng vì lỗi đó, và có lật khi lỗi được sửa không?
+- **Điều kiện:**
+  - Code: main `ed60401`, cộng phần sửa lỗi B chưa commit, cộng 10 tệp test mới chưa commit.
+  - Kế hoạch: `meeting/test-plan.md`, do Fable gộp, Opus ký kèm sửa, chốt theo `DECISIONS.md`.
+  - Người viết: Opus `claude-opus-5-5`, mức xhigh. Người duyệt: Fable `claude-fable-5-2`. Hai bên chạy lần lượt.
+  - Container dùng một lần `postgres:16-alpine`/`redis:7-alpine`/`qdrant:v1.18.2`, migrate tới head. Ollama cổng chết, CUDA ẩn, Windows.
+  - Lỗi chưa sửa đánh dấu `xfail(strict=True, raises=KnownBug)`.
+- **Đăng ký trước:** kế hoạch ca `meeting/test-plan.md`, viết trước khi viết test.
+- **Kết quả:**
+
+  | Lần chạy | Opus | Fable chạy lại |
+  |---|---|---|
+  | Bộ review2 | 56 đạt, 55 xfail, 0 xpass, 0 hỏng | 56 đạt, 55 xfail |
+  | Backend đủ bộ | 2.283 đạt, 55 xfail | 2.283 đạt, 55 xfail; 7 phút 51 giây |
+  | Bộ gốc `pytest tests` | 245 đạt, 1 bỏ qua (thiếu `mteb`) | 245 đạt, 1 bỏ qua |
+  | Chạy lặp | 3 lần, kết quả giống hệt | đảo thứ tự tệp, kết quả giống |
+  | Không có `POSTGRES_TEST_URL` | — | 58 bỏ qua sạch, 0 lỗi |
+  | Vá tạm cho từng ca xfail | 55/55 lật thành XPASS | 51/51 lật (14 mã); chưa chạy lại A-5, A-6, A-8 |
+  | Cố ý làm hỏng hành vi đang đúng | — | 10 hành vi; 30 ca canh đỏ đúng chỗ |
+  | Nhóm A (bot nối backend thật) | khoảng 80 giây | 80,9 giây; 75 giây là chờ hết hạn, chỉ tốn khi lỗi A còn |
+- **Kết luận:**
+  - Bộ test đủ 52 ca, không làm hỏng test cũ. Mỗi ca "lỗi đã biết" lật khi lỗi được vá.
+  - Fable kết luận GỘP ĐƯỢC, kèm 4 chỗ nên sửa:
+    - bắt lỗi quá rộng ở bộ nối bot của A-5…A-8;
+    - bắt lỗi quá rộng ở R5-1;
+    - R3-1 và R3-2 không kiểm mã HTTP;
+    - N4-1 thiếu một khẳng định.
+  - R4 và D không có ca tự động, vì đang chờ chủ dự án chọn cách sửa.
+  - Chưa chạy trên Linux.
+- **Trạng thái:** xong; chưa commit. 4 chỗ nên sửa đã làm ở mục "Sửa 4 chỗ Fable nêu…" phía trên. Trong các lần thử lật bằng bản vá phía bot, có một ca của A-6 hỏng ngầm; mục đó giải thích.
+- **Bằng chứng:** `data/evaluation/results/kept/review2-test-suite-20261110/` (`RUN-LOG.md`, `REVIEW-fable.md`, `flip/`, `fable-review/`, `meeting/`). Thư mục chưa commit.
+
+## 10/11/2026 — Kiểm độc lập bản sửa bot tự sửa/xóa tin, working tree trên ed60401
+
+- **Câu hỏi:** bản vá chưa commit có sửa đúng việc bot tự sửa/xóa tin làm mất lịch sử và còn đường nào chưa được xử lý?
+- **Điều kiện:** snapshot HEAD ed60401 cộng toàn bộ thay đổi tracked trên đĩa lúc bắt đầu; manifest giữ hash. Bản đối chứng là HEAD với chính test mới. PostgreSQL/Redis/Qdrant dùng một lần không volume thật (53588/53589/53590), database probes riêng. Không .env thật; CUDA ẩn, model URL cổng chết, Python chặn mạng ngoài/cổng model. Chỉ thêm tệp audit và mục đo này theo CLAUDE.md; không sửa mã nguồn sản phẩm. Mục đo được ghi vào sổ chính khi hoàn tất.
+- **Đăng ký trước:** không; kiểm hồi quy và tìm lỗi, không đánh giá chất lượng model.
+- **Kết quả:**
+
+  | Bộ kiểm | Kết quả từ JUnit |
+  |---|---|
+  | backend | tests=2230, failures=0, errors=0, skipped=0 |
+  | baseline-new-tests | tests=3, failures=3, errors=0, skipped=0 |
+  | patched-new-tests | tests=3, failures=0, errors=0, skipped=0 |
+  | probes | tests=11, failures=0, errors=0, skipped=0 |
+  | root | tests=243, failures=0, errors=0, skipped=1 |
+
+  Bài baseline hỏng là kết quả mong đợi để xác nhận test bắt lỗi cũ. PASS ở probes nghĩa là tái hiện được lỗi chưa sửa, không phải đã sửa. Lần xác minh nguồn import ban đầu dừng vì dùng __file__ trên namespace package tools; đã đổi sang module cụ thể và chạy lại trước khi chạy test. Container PostgreSQL ban đầu chưa sẵn sàng, đã xác minh ready trước migration.
+
+- **Kết luận:** bản vá sửa đường đã có raw ledger và sửa không đổi chữ. Xóa trước khi ledger nhận được tin bot vẫn tạo hàng is_bot=false, dời mốc và mất lịch sử. Các lỗi trước vẫn tái hiện, gồm reply AttributeError để lại lượt running và tin tiếp theo queued.
+- **Trạng thái:** xong.
+- **Bằng chứng:** data/evaluation/results/kept/bot-edit-review-20261110/; snapshot và bản đối chứng ở .scratch/bot-edit-review-20261110/. Chỉ trên máy.
+
+## 10/11/2026 — Test cho sửa lỗi B, cách a (bot sửa/xoá tin của mình, sửa không đổi chữ)
+
+- **Câu hỏi:** test mới có bắt được lỗi B trên code cũ không, và bản sửa có giữ toàn bộ test khác xanh không?
+- **Điều kiện:**
+  - Code: main `ed60401` cộng phần sửa chưa commit ở `history_service.record_edit`/`record_delete`.
+  - Container dùng một lần: `postgres:16-alpine`, `redis:7-alpine`, `qdrant:v1.18.2` (cổng 55441/56381/56334, có `REDIS_URL`), migrate tới head.
+  - Ollama cổng chết, CUDA ẩn.
+- **Đăng ký trước:** không; kiểm thử hồi quy.
+- **Kết quả:**
+
+  | Lượt | Kết quả |
+  |---|---|
+  | 3 test mới, code cũ | 3/3 hỏng: mốc kênh dời sau khi bot sửa, sau khi bot xoá, và sau khi có lần sửa không đổi chữ |
+  | Nhóm trí nhớ và sổ lịch sử, code mới | 56 đạt |
+  | Backend đủ bộ | 2.230 đạt, 0 hỏng (5 phút 26 giây) |
+  | Bộ gốc `pytest tests` | 242 đạt, 1 bỏ qua |
+  | Bộ gốc chạy `pytest` không chỉ thư mục | 193 lỗi khi gom test. Lỗi do tôi gọi sai: pytest gom cả bản sao repo trong `.scratch/`. Chạy lại đúng lệnh thì xanh (dòng trên) |
+- **Kết luận:**
+  - Test mới bắt đúng lỗi, và đủ bộ vẫn xanh.
+  - Phần chưa phủ: một lần xoá đến trước khi tin được ghi vào sổ thì không biết tin đó của ai, nên vẫn dời mốc như cũ.
+  - Phía Discord thật chưa chạy.
+- **Trạng thái:** xong; chưa commit.
+- **Bằng chứng:** chỉ có dòng tổng kết trong phiên (scratchpad `rv2/fixb-*.txt`, không giữ).
+
+## 10/11/2026 — Opus 5.5 và Fable 5.2 duyệt độc lập 9 lỗi; tái hiện "bot tự sửa tin làm mất lịch sử kênh"
+
+- **Câu hỏi:** hai người duyệt độc lập có xác nhận 9 lỗi và các hướng sửa không, có tìm thêm lỗi không? Lỗi mới nặng nhất (bot sửa tin "⏳" của chính nó làm dời mốc kênh) có thật khi chạy không?
+- **Điều kiện:**
+  - main `ed60401`.
+  - Hai agent chỉ đọc repo, chạy song song. Model tự báo: `claude-opus-5-5` và `claude-fable-5-2`.
+  - Mỗi agent tự kết luận trước, rồi mới đọc bằng chứng và các hướng sửa trong brief.
+  - Hai agent chỉ chạy Python thuần, không database, không GPU: Fable `fable52_check.py`, Opus `opus55_check_pure.py`. Thời gian đo của họ chậm hơn bình thường.
+  - Lần tái hiện của tôi: test tạm `test_tmp_bot_edit_barrier.py` trên container dùng một lần, migrate tới head, Ollama giả. Lần ghi sổ và lần sửa tin của bot được gọi thẳng vào API, giả vai trò bot.
+- **Đăng ký trước:** không; duyệt và tìm lỗi.
+- **Kết quả:**
+
+  | Mục | Opus 5.5 | Fable 5.2 | Tôi kiểm lại |
+  |---|---|---|---|
+  | 9 lỗi có thật | 9/9 (chạy 1, 9; đọc phần còn lại) | 9/9 (chạy 1, 9; đọc phần còn lại) | khớp |
+  | Lượt bị bot bỏ (5xx, timeout, giao tin hỏng) chặn kênh, không riêng lỗi 1 | có (A) | có (N1) | khớp code: `fail_turn` trả về `queued`, không ai gọi lại |
+  | Thử lại lượt "quên" nhận câu "tin đã bị xoá/sửa" | có | có (N4) | khớp code `prepare_turn` |
+  | OCR `page_range` dựng hết tập trang trước khi kiểm | `1-5000000`: 6 s, đỉnh 281 MiB (bật `tracemalloc`) | `1-20000000`: 1,2 s | khớp code |
+  | OCR không có chủ; thành viên đọc được job của người khác | có (E) | có (N6) | khớp: các route GET chỉ có `read_guard` |
+  | Ba đồng hồ (ứng dụng, Postgres, Discord) so với mốc | có (F) | có (N3) | khớp; lệch sau khi máy ngủ chưa đo |
+  | Bot sửa tin "⏳" của chính nó làm dời mốc kênh | có (B, chỉ đọc) | gần như vậy (N7: sửa tin không so nội dung) | **chạy: có** (bảng dưới) |
+  | Lỗi 4 nên lấy giờ gửi từ database (4b) | nghiêng 4b | nghiêng 4b | đổi ý theo |
+
+  | Tái hiện B | Kết quả |
+  |---|---|
+  | Lịch sử có lượt trước, trước khi bot sửa tin | có |
+  | Ghi tin "⏳" của bot (`is_bot=true`), rồi sửa tin đó | 200, 200 |
+  | Mốc của kênh | không có → 09:49:12 UTC |
+  | Lịch sử có lượt trước, sau khi bot sửa tin | **không** |
+  | Biến thể: người thường (`is_bot=false`, người khác) sửa một tin không liên quan | mốc dời, lịch sử cũng mất (`test_tmp_human_edit_barrier.py`) |
+  | Database thật, chỉ đếm (bật rồi tắt): tin trong sổ theo loại | 2 server, 2 kênh; tin người 45, có sửa 0; tin bot 39, **có sửa 23**; tin mới nhất 03/11 |
+- **Kết luận:**
+  - Hai người duyệt xác nhận cả 9 lỗi và đồng ý gần hết các hướng sửa đang nghiêng. Cả hai nghiêng 4b thay vì 4a.
+  - Lỗi mới nặng nhất là B: sự kiện sửa tin không phân biệt ai sửa, cũng không so nội dung, nên mỗi lần sửa đều dời mốc của cả kênh.
+  - Trên server thật, sự kiện bot tự sửa tin đã đến sổ: 23/39 tin của bot có bản ghi sửa. Vì vậy với v1.6.0, mỗi câu trả lời có tin "⏳" sẽ xoá lịch sử kênh với Ún.
+  - Người thường sửa một tin cũng xoá lịch sử kênh. Đó là thiết kế hiện tại, không phải lỗi gõ nhầm; giữ hay đổi là câu hỏi thiết kế.
+- **Trạng thái:** xong; chưa sửa.
+- **Bằng chứng:** `data/evaluation/results/kept/review2-second-opinion-20261110/`, gồm brief, script của hai agent, kết luận Opus viết trước khi đọc đề xuất, test tạm và `output.txt`. Thư mục chưa commit.
+
+## 10/11/2026 — Kiểm ý kiến thứ hai về 9 lỗi: lượt reply hỏng có chặn kênh không, đồng hồ app/DB
+
+- **Câu hỏi:** sau khi lượt reply ném `AttributeError`, lượt đó nằm ở trạng thái nào và tin thường gửi tiếp trong cùng kênh có chạy được không? Đồng hồ ứng dụng và đồng hồ Postgres lệch nhau bao nhiêu (cách sửa "so giờ gửi với mốc" dựa vào hai đồng hồ này)?
+- **Điều kiện:** main `ed60401`. Một tệp test tạm (đã gỡ khỏi cây; bản giữ ở scratchpad phiên `rv2/test_tmp_reply_block.py`) trên container `postgres:16-alpine`/`redis:7-alpine`/`qdrant:v1.18.2` dùng một lần, migrate tới head, Ollama giả. Mốc `__history__` đặt bằng đúng câu lệnh của migration `20261109_39` dòng 38. Hết hạn lease mô phỏng bằng cách lùi `lease_expires_at` 1 giây. Đồng hồ: 5 lần `SELECT clock_timestamp()` so với giờ Python lấy giữa hai đầu lượt gọi. Python chạy từ venv trên Windows, Postgres trong một container Docker vừa khởi động; đây cũng là bố trí của máy thật.
+- **Đăng ký trước:** không; phép thử tìm nguyên nhân theo một ý kiến thứ hai.
+- **Kết quả:**
+
+  | Loại tin được reply | Lỗi | Lượt reply sau lỗi | Tin thường kế tiếp, cùng kênh | Sau khi lease hết + 3 lần gọi | Kênh khác |
+  |---|---|---|---|---|---|
+  | tin người | `ReplyTargetContext` không có `created_at` | `running`, lần thử 1 | `queued`, model không được gọi | reply `queued`/1, tin thường vẫn `queued` | chạy được |
+  | tin của bot | `BotReplyTargetContext` không có `created_at` | như trên | như trên | như trên | chạy được |
+  | không tìm thấy | `ReplyTargetContext` không có `created_at` | như trên | như trên | như trên | chạy được |
+
+  | Đồng hồ | Kết quả |
+  |---|---|
+  | Postgres trừ ứng dụng, 5 lần | −0,2 đến −3,0 ms; thời gian một lượt gọi 1,3–6,3 ms |
+
+  Đọc code đi kèm, phần chạy thử không phủ:
+  - Bot gặp lỗi 5xx thì báo lỗi rồi bỏ lượt, không gọi lại execute. Xem `api_client.py` `_authorized_post` và `main.py` `answer_mention` (bắt `BackendClientError` rồi `return`).
+  - Không tiến trình nào khác gọi execute cho lượt đang chờ.
+  - Phiên Discord không tự đóng khi rảnh. `session_service.resolve` giữ phiên cũ chừng nào hội thoại gốc còn.
+  - Lượt chỉ được dọn khi bật, tắt hoặc cập nhật bot qua bảng điều khiển: `control.py` gọi `cancel-open`, và lúc bật thì `cancel_previous_open` mặc định là có.
+  - Đường gọi model hỏng thì khác: lượt trả `queued` với HTTP 200, bot gọi lại, và sau 3 lần thì thành `failed`.
+- **Kết luận:**
+  - Phần chạy thật cho thấy một tin reply hỏng chặn kênh đó cả sau khi lease hết hạn. Đọc code thì việc chặn kéo dài tới khi bot được bật, tắt hoặc cập nhật qua bảng điều khiển. Các kênh khác không bị ảnh hưởng.
+  - Mục dưới chỉ nói tới lượt hỏng, nên đánh giá ở đó thấp hơn thực tế.
+  - Đồng hồ được đo trên container vừa khởi động. Phép đo này chỉ cho biết hai đồng hồ lệch nhau bao nhiêu, không đo khe giữa lệnh "nhớ" và lệnh "quên". Lệch sau khi máy ngủ chưa đo.
+  - Đính chính mục dưới: "cửa sổ vài mili giây" là suy đoán, chưa đo. Tỉ lệ 5/83 là số lịch sử, không phải dự báo.
+- **Trạng thái:** xong; chưa sửa.
+- **Bằng chứng:** `data/evaluation/results/kept/review2-second-opinion-20261110/` (test tạm, script đồng hồ, kết quả in ra). Thư mục chưa commit.
+
+## 10/11/2026 — Tái hiện bản nhận xét thứ hai (9 lỗi) trên main `ed60401`
+
+- **Câu hỏi:** 9 lỗi bản nhận xét thứ hai nêu có thật trên main hiện tại không, và lỗi nào chạm người dùng ngay?
+- **Điều kiện:** main `ed60401`. Một tệp test tạm (đã gỡ sau khi chạy) trên container `postgres:16-alpine`/`redis:7-alpine`/`qdrant:v1.18.2` dùng một lần, Ollama giả. Database thật bật để đếm (không đọc nội dung) rồi tắt.
+- **Đăng ký trước:** không; phép thử tìm lỗi sau khi đọc bản nhận xét.
+- **Kết quả:**
+
+  | Lỗi | Cách kiểm | Kết quả |
+  |---|---|---|
+  | Reply Discord đọc `created_at` trên `ReplyTargetContext` | chạy: tạo mốc trong server, gửi lượt reply | `AttributeError` trước khi gọi model |
+  | Mốc có sẵn trên database thật | đếm `source_memory_states` | 2 server Discord + 1 web đều có mốc từ migration; 5/83 lượt Discord cũ là reply |
+  | Phát lại đáp án của tin đã sửa (`_safe_replay`) | chạy: lượt xong, sửa tin, gọi lại execute | trả nguyên đáp án cũ |
+  | Câu hỏi điện thoại + email | chạy `read_evidence` | chỉ khối điện thoại được đưa cho model |
+  | Số quốc tế `+1 415 …` | chạy `read_evidence` | báo `requested_field_missing` |
+  | Route OCR nhận DPI bất kỳ | chạy `POST /api/ocr/jobs?dpi=50000` | 201, service nhận 50000 |
+  | Admin bị hạ quyền vẫn đọc hội thoại người khác | đọc code: `ensure_conversation_access`, `conversations`, `research` lấy vai trò từ token (sống 15 phút), chỉ `require_admin` đọc lại database | có, theo code; code từ 20/08 |
+  | Lưu "nhớ" khi "quên" chen trước snapshot | đọc code `chat_service` | có, cửa sổ vài mili giây |
+  | Hai lần hạ quyền đồng thời | đọc code `auth_service.set_role`: đếm admin rồi cập nhật, không khoá | có (write skew) |
+  | Xoá job OCR đang chạy; xoá sau khi khởi động lại | đọc code `ocr_job_service.delete`: worker còn `_save`; `root` chỉ có khi job đã nạp vào RAM | có cả hai |
+- **Kết luận:** cả 9 có thật. Nặng nhất là reply Discord: không cần thao tác quên, vì migration đã đặt mốc cho mọi server cũ, nên khoảng 1/16 lượt Discord sẽ hỏng ngay khi chạy v1.6.0. Lỗi quyền admin có thật nhưng cũ, chỉ tác dụng khi bật đăng nhập và có nhiều tài khoản, cửa sổ ≤ 15 phút.
+- **Trạng thái:** xong; chưa sửa.
+- **Bằng chứng:** tệp test tạm đã gỡ; nội dung sẽ thành test hồi quy khi sửa.
+
 ## 10/11/2026 — Test cho bốn sửa theo bản nhận xét (quên trên Web, lượt Discord cũ, bảng OCR, bộ đo OCR)
 
 - **Câu hỏi:** các test mới có tái hiện lỗi trên code cũ, và bản sửa có giữ xanh đủ bộ?

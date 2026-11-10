@@ -1,0 +1,25 @@
+start 21:33:25
+xxxxx...xxxxx....xx......xxxxx.....xxxxxxxxx.xxx.x........xxxxxxx...x... [ 66%]
+.......xxxxxxxx....xxxxxxxxx........                                     [100%]
+============================== warnings summary ===============================
+backend/tests/test_review2_bot_backend.py::test_a4_a_plain_message_goes_through_the_bot_and_is_answered
+  C:\Users\dungbt06\local-ai-core\.venv\Lib\site-packages\discord\player.py:30: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13
+    import audioop
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============================= slowest 6 durations =============================
+15.31s call     backend/tests/test_review2_bot_backend.py::test_a5_after_discord_refuses_an_answer_the_next_message_is_answered
+15.29s call     backend/tests/test_review2_bot_backend.py::test_a8_after_the_bot_dies_mid_turn_and_restarts_the_next_message_is_answered
+15.24s call     backend/tests/test_review2_bot_backend.py::test_a7_after_the_bot_stops_waiting_on_a_queued_turn_the_next_message_is_answered
+15.23s call     backend/tests/test_review2_bot_backend.py::test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[forever]
+15.22s call     backend/tests/test_review2_bot_backend.py::test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[once]
+1.54s setup    backend/tests/test_review2_ocr_access.py::test_e2_the_owner_an_admin_and_the_service_key_open_the_job_and_nobody_else_without_signing_in[anonymous-401]
+53 passed, 55 xfailed, 1 warning in 132.44s (0:02:12)
+mid 21:35:45
+...                                                                      [100%]
+============================== warnings summary ===============================
+.venv\Lib\site-packages\discord\player.py:30
+  C:\Users\dungbt06\local-ai-core\.venv\Lib\site-packages\discord\player.py:30: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13
+    import audioop
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+3 passed, 1 warning in 0.35s
+end 21:35:46

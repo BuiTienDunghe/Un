@@ -1,0 +1,78 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\dungbt06\local-ai-core
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collected 9 items / 7 deselected / 2 selected
+
+tests\test_review2_tmp_fix4.py FF                                        [100%]
+
+================================== FAILURES ===================================
+_ test_r3_1_replaying_a_finished_turn_after_its_question_was_edited_does_not_return_the_old_answer _
+tests\test_review2_discord_turns.py:150: in test_r3_1_replaying_a_finished_turn_after_its_question_was_edited_does_not_return_the_old_answer
+    assert replay.status_code < 500, replay.text  # refusing the replay (4xx) is a valid fix; crashing is not
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: {"error":true,"error_code":"REVIEW2_FIX4_MUTATION","message":"mutation 500","detail":null}
+E   assert 500 < 500
+E    +  where 500 = <Response [500 Internal Server Error]>.status_code
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 23:01:16.758 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 23:01:16.758 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 23:01:16.759 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 23:01:16.759 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 23:01:16.759 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 23:01:16.761 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 23:01:16.761 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 23:01:16.761 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 23:01:16.762 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 23:01:16.762 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 23:01:16.762 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 23:01:16.762 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 23:01:16.762 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 23:01:16.762 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 23:01:16.762 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 23:01:16.762 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 23:01:16.762 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 23:01:16.762 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 23:01:16.977 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 23:01:16.977 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 23:01:16.977 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 23:01:16.977 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 23:01:17.402 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_r3_2_resending_a_saved_answer_after_its_question_was_edited_does_not_return_it _
+tests\test_review2_discord_turns.py:164: in test_r3_2_resending_a_saved_answer_after_its_question_was_edited_does_not_return_it
+    assert again.status_code < 500, again.text  # refusing the resend (4xx) is a valid fix; crashing is not
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: {"error":true,"error_code":"REVIEW2_FIX4_MUTATION","message":"mutation 500","detail":null}
+E   assert 500 < 500
+E    +  where 500 = <Response [500 Internal Server Error]>.status_code
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 23:01:18.098 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 23:01:18.098 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 23:01:18.099 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 23:01:18.099 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 23:01:18.099 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 23:01:18.099 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 23:01:18.099 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 23:01:18.099 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 23:01:18.099 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 23:01:18.099 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 23:01:18.099 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 23:01:18.099 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 23:01:18.099 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 23:01:18.099 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 23:01:18.099 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 23:01:18.099 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 23:01:18.099 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 23:01:18.099 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 23:01:18.288 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 23:01:18.288 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 23:01:18.289 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 23:01:18.289 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 23:01:18.594 | INFO     | app.services.logging_service:log_request:149 - request completed
+=========================== short test summary info ===========================
+FAILED tests\test_review2_tmp_fix4.py::test_r3_1_replaying_a_finished_turn_after_its_question_was_edited_does_not_return_the_old_answer
+FAILED tests\test_review2_tmp_fix4.py::test_r3_2_resending_a_saved_answer_after_its_question_was_edited_does_not_return_it
+======================= 2 failed, 7 deselected in 2.29s =======================

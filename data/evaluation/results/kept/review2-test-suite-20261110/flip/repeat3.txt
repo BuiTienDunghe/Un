@@ -1,0 +1,10 @@
+== run 1 18:48:02
+53 passed, 55 xfailed, 1 warning in 135.30s (0:02:15)
+3 passed, 1 warning in 0.43s
+== run 2 18:50:27
+53 passed, 55 xfailed, 1 warning in 135.27s (0:02:15)
+3 passed, 1 warning in 0.43s
+== run 3 18:52:51
+53 passed, 55 xfailed, 1 warning in 134.94s (0:02:14)
+3 passed, 1 warning in 0.42s
+== end 18:55:15

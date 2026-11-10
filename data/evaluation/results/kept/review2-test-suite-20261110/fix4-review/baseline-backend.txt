@@ -1,0 +1,9 @@
+xxxxx...xxxxx....xx..........xxxxxxxxx.xxx.x........xxxxxxx...x......... [ 66%]
+.xxxxxxxx....xxxxxxxxx.........xxxxx                                     [100%]
+============================== warnings summary ===============================
+backend/tests/test_review2_bot_backend.py::test_a4_a_plain_message_goes_through_the_bot_and_is_answered
+  C:\Users\dungbt06\local-ai-core\.venv\Lib\site-packages\discord\player.py:30: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13
+    import audioop
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+53 passed, 55 xfailed, 1 warning in 134.43s (0:02:14)

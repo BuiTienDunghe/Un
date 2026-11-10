@@ -1,0 +1,121 @@
+FFFFF...FFFFF....FF......FFFFF.....FFFFFFFFF.FFF.F........FFFFFFF...F... [ 66%]
+.......FFFFFFFF....FFFFFFFFF........                                     [100%]
+================================== FAILURES ===================================
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:131: review2_support.KnownBug: review2 R1: the reply turn crashed: 'ReplyTargetContext' object has no attribute 'created_at'
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:131: review2_support.KnownBug: review2 R1: the reply turn crashed: 'BotReplyTargetContext' object has no attribute 'created_at'
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:131: review2_support.KnownBug: review2 R1: the reply turn crashed: 'ReplyTargetContext' object has no attribute 'created_at'
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:131: review2_support.KnownBug: review2 R1: the reply turn crashed: 'ReplyTargetContext' object has no attribute 'created_at'
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:131: review2_support.KnownBug: review2 R1: the reply turn crashed: 'BotReplyTargetContext' object has no attribute 'created_at'
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:131: review2_support.KnownBug: review2 R1: the reply turn crashed: 'ReplyTargetContext' object has no attribute 'created_at'
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: the edited message's old words reached the model as the reply target
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: the edited question or its old answer reached the model as the reply target
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: the replay returned the old answer: {"turn_id":"2d9c6325-37a4-4df5-b4ee-6830e2c6676d","session_id":"7d3c1f46-713b-42ec-9d64-35e4fc561807","sequence_number":1,"status":"completed","answer":"Đáp án cũ sentinel-r3-old.","model_used":"qwen3.5:2b","execution_token":null,"replacement_turn_id":null}
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: the resend returned the old answer: {"turn_id":"0370403b-1aa6-452a-bb59-98797b690a28","session_id":"28e1ed8a-af71-4a94-bc90-2fb6f946d74b","sequence_number":1,"status":"running","answer":"Đáp án cũ sentinel-r3-old.","model_used":"qwen3.5:2b","execution_token":"5c6a7342c288479e92357791ec39b66f","replacement_turn_id":null}
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: the retried forget turn carries no receipt: 'Tin này đã bị xoá, sửa hoặc trí nhớ vừa được quên trước khi Ún kịp trả lời, nên Ún không xử lý nó. Bạn gửi lại nếu vẫn cần nhé.'
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: the resend replaced the saved answer: 'Nguồn trí nhớ đã được sửa hoặc quên. Vui lòng hỏi lại.'
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: message 2 was not answered after Discord refused the answer to message 1
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: message 2 was not answered after the backend failed (once) on message 1
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: message 2 was not answered after the backend failed (forever) on message 1
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: message 2 was not answered after the bot stopped waiting on message 1
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: message 2 was not answered after the bot died mid-turn and started again
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: the code said before the forget reached the model again
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: a message sent after the forget was called stale
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: a message written before the forget came back
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: a message written after the forget is not found
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: the code said before the forget reached the model
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: what was said after the forget is missing from the history
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: the demoted admin still sees A's work at /conversations
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: the demoted admin still sees A's work at /conversations/f53f0eb5-a0b3-4daf-b057-d1e4f10217eb
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: the demoted admin still sees A's work at /research/projects
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: both demotions went through and 0 admin(s) remain: {'y': 'demoted', 'x': 'demoted'}
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: the delete answered 204 and the job came back once its worker stopped
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: the delete answered 204 and the job came back once its worker stopped
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: the job's images and text are still on disk
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: deleting the job removed a folder outside the runs folder
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: files of the deleted job are still on disk: ['ocr_79672102c80044cf8151b4792432763f\\pages', 'ocr_79672102c80044cf8151b4792432763f\\pages\\page_0001', 'ocr_79672102c80044cf8151b4792432763f\\pages\\page_0001\\text.txt']
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: a job was made at dpi=50000
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: a job was made at dpi=401
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: a job was made at dpi=71
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: a job was made at dpi=0
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: a job was made at dpi=-1
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: refusing it took a 67.2 MiB peak
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: B's OCR history lists A's job
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: B's open on A's job answered 200
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: B's events on A's job answered 200
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: B's files on A's job answered 200
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: B's export on A's job answered 200
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: B's cancel on A's job answered 200
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: B's promote on A's job answered 202
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: B's evaluate on A's job answered 200
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: the model was offered only ['phone']
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: the model was offered only ['phone']
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: the phone block never reached the model: requested_field_missing
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: the phone block never reached the model: requested_field_missing
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: the phone block never reached the model: requested_field_missing
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: the phone block never reached the model: requested_field_missing
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: the phone block never reached the model: requested_field_missing
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: the model was never asked: requested_field_missing
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:43: review2_support.KnownBug: the model was asked to find an e-mail among ['name']
+============================== warnings summary ===============================
+backend/tests/test_review2_bot_backend.py::test_a4_a_plain_message_goes_through_the_bot_and_is_answered
+  C:\Users\dungbt06\local-ai-core\.venv\Lib\site-packages\discord\player.py:30: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13
+    import audioop
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests\test_review2_discord_turns.py::test_r1_1_a_reply_to_something_older_than_the_barrier_is_answered_without_its_words[user_message]
+FAILED tests\test_review2_discord_turns.py::test_r1_1_a_reply_to_something_older_than_the_barrier_is_answered_without_its_words[bot_response]
+FAILED tests\test_review2_discord_turns.py::test_r1_1_a_reply_to_something_older_than_the_barrier_is_answered_without_its_words[not_found]
+FAILED tests\test_review2_discord_turns.py::test_r1_2_a_reply_to_something_newer_than_the_barrier_carries_its_words[user_message]
+FAILED tests\test_review2_discord_turns.py::test_r1_2_a_reply_to_something_newer_than_the_barrier_carries_its_words[bot_response]
+FAILED tests\test_review2_discord_turns.py::test_r1_4_a_reply_to_a_remembered_message_that_was_deleted_never_shows_its_words
+FAILED tests\test_review2_discord_turns.py::test_n2_1_a_reply_to_an_edited_message_does_not_show_its_old_words
+FAILED tests\test_review2_discord_turns.py::test_n2_2_a_reply_to_the_answer_of_an_edited_question_shows_neither
+FAILED tests\test_review2_discord_turns.py::test_r3_1_replaying_a_finished_turn_after_its_question_was_edited_does_not_return_the_old_answer
+FAILED tests\test_review2_discord_turns.py::test_r3_2_resending_a_saved_answer_after_its_question_was_edited_does_not_return_it
+FAILED tests\test_review2_discord_turns.py::test_n4_1_retrying_a_forget_turn_tells_the_person_it_forgot
+FAILED tests\test_review2_discord_turns.py::test_n4_2_resending_a_saved_forget_answer_returns_that_answer
+FAILED tests\test_review2_bot_backend.py::test_a5_after_discord_refuses_an_answer_the_next_message_is_answered
+FAILED tests\test_review2_bot_backend.py::test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[once]
+FAILED tests\test_review2_bot_backend.py::test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[forever]
+FAILED tests\test_review2_bot_backend.py::test_a7_after_the_bot_stops_waiting_on_a_queued_turn_the_next_message_is_answered
+FAILED tests\test_review2_bot_backend.py::test_a8_after_the_bot_dies_mid_turn_and_restarts_the_next_message_is_answered
+FAILED tests\test_review2_clocks.py::test_f1_discord_with_the_app_clock_30s_fast_forgotten_words_stay_out
+FAILED tests\test_review2_clocks.py::test_f2_discord_with_the_app_clock_30s_slow_a_message_after_a_forget_is_answered
+FAILED tests\test_review2_clocks.py::test_f3_search_history_with_discord_30s_off[fast_snowflake_written_before_the_forget]
+FAILED tests\test_review2_clocks.py::test_f3_search_history_with_discord_30s_off[slow_snowflake_written_after_the_forget]
+FAILED tests\test_review2_clocks.py::test_f4_web_with_the_app_clock_30s_fast_forgotten_words_stay_out
+FAILED tests\test_review2_clocks.py::test_f5_web_with_the_app_clock_30s_slow_what_was_said_after_a_forget_is_kept
+FAILED tests\test_review2_auth.py::test_r2_1_a_demoted_admin_with_an_old_token_no_longer_sees_other_peoples_work[conversation_list]
+FAILED tests\test_review2_auth.py::test_r2_1_a_demoted_admin_with_an_old_token_no_longer_sees_other_peoples_work[conversation_of_a]
+FAILED tests\test_review2_auth.py::test_r2_1_a_demoted_admin_with_an_old_token_no_longer_sees_other_peoples_work[project_list]
+FAILED tests\test_review2_auth.py::test_r5_1_two_admins_demoting_each_other_at_once_leave_one_admin
+FAILED tests\test_review2_ocr_jobs.py::test_r6_1_a_job_deleted_while_running_never_comes_back[delete]
+FAILED tests\test_review2_ocr_jobs.py::test_r6_1_a_job_deleted_while_running_never_comes_back[cancel_then_delete]
+FAILED tests\test_review2_ocr_jobs.py::test_r7_1_a_job_deleted_right_after_a_restart_leaves_no_folder
+FAILED tests\test_review2_ocr_jobs.py::test_r7_4_a_stored_root_outside_the_runs_folder_is_never_deleted
+FAILED tests\test_review2_ocr_jobs.py::test_r7_5_a_file_held_open_during_a_delete_is_gone_after_a_later_delete
+FAILED tests\test_review2_ocr_jobs.py::test_r8_1_an_out_of_range_dpi_never_runs_a_job_at_that_dpi[50000]
+FAILED tests\test_review2_ocr_jobs.py::test_r8_1_an_out_of_range_dpi_never_runs_a_job_at_that_dpi[401]
+FAILED tests\test_review2_ocr_jobs.py::test_r8_1_an_out_of_range_dpi_never_runs_a_job_at_that_dpi[71]
+FAILED tests\test_review2_ocr_jobs.py::test_r8_1_an_out_of_range_dpi_never_runs_a_job_at_that_dpi[0]
+FAILED tests\test_review2_ocr_jobs.py::test_r8_1_an_out_of_range_dpi_never_runs_a_job_at_that_dpi[-1]
+FAILED tests\test_review2_ocr_jobs.py::test_c1_a_huge_page_range_is_refused_without_building_it
+FAILED tests\test_review2_ocr_access.py::test_e1_a_member_cannot_reach_another_members_ocr_job[history]
+FAILED tests\test_review2_ocr_access.py::test_e1_a_member_cannot_reach_another_members_ocr_job[open]
+FAILED tests\test_review2_ocr_access.py::test_e1_a_member_cannot_reach_another_members_ocr_job[events]
+FAILED tests\test_review2_ocr_access.py::test_e1_a_member_cannot_reach_another_members_ocr_job[files]
+FAILED tests\test_review2_ocr_access.py::test_e1_a_member_cannot_reach_another_members_ocr_job[export]
+FAILED tests\test_review2_ocr_access.py::test_e1_a_member_cannot_reach_another_members_ocr_job[cancel]
+FAILED tests\test_review2_ocr_access.py::test_e1_a_member_cannot_reach_another_members_ocr_job[promote]
+FAILED tests\test_review2_ocr_access.py::test_e1_a_member_cannot_reach_another_members_ocr_job[evaluate]
+FAILED tests\test_review2_ocr_reader.py::test_r9_1_asking_for_phone_and_email_offers_both[phone_then_email]
+FAILED tests\test_review2_ocr_reader.py::test_r9_1_asking_for_phone_and_email_offers_both[email_then_phone]
+FAILED tests\test_review2_ocr_reader.py::test_r9_2_a_phone_number_written_another_way_reaches_the_model[intl_plus1]
+FAILED tests\test_review2_ocr_reader.py::test_r9_2_a_phone_number_written_another_way_reaches_the_model[label_DT]
+FAILED tests\test_review2_ocr_reader.py::test_r9_2_a_phone_number_written_another_way_reaches_the_model[label_di_dong]
+FAILED tests\test_review2_ocr_reader.py::test_r9_2_a_phone_number_written_another_way_reaches_the_model[hotline_1900]
+FAILED tests\test_review2_ocr_reader.py::test_r9_2_a_phone_number_written_another_way_reaches_the_model[paren_84_28]
+FAILED tests\test_review2_ocr_reader.py::test_r9_3_a_question_about_a_phone_model_is_not_a_phone_number_question
+FAILED tests\test_review2_ocr_reader.py::test_r9_3_asking_for_an_e_mail_the_document_lacks_is_answered_missing
+55 failed, 53 passed, 1 warning in 133.93s (0:02:13)

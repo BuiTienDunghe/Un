@@ -1,0 +1,12 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\dungbt06\local-ai-core
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collected 6 items / 5 deselected / 1 selected
+
+tests\test_review2_tmp_bb135.py x                                        [100%]
+
+=========================== short test summary info ===========================
+XFAIL tests\test_review2_tmp_bb135.py::test_a7_after_the_bot_stops_waiting_on_a_queued_turn_the_next_message_is_answered - review2 A: a turn the bot abandoned blocks the channel; the next message waits until the bot gives up (the bot stopped waiting while message 1 was queued)
+====================== 5 deselected, 1 xfailed in 17.77s ======================

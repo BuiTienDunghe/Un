@@ -1,0 +1,64 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\dungbt06\local-ai-core
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collected 5 items
+
+tests\test_review2_tmp_fx.py sssFs                                       [100%]
+
+================================== FAILURES ===================================
+_ test_a7_after_the_bot_stops_waiting_on_a_queued_turn_the_next_message_is_answered _
+tests\test_review2_bot_backend.py:141: in test_a7_after_the_bot_stops_waiting_on_a_queued_turn_the_next_message_is_answered
+    answered = asyncio.run(scenario())
+               ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Programs\Python\Python311\Lib\asyncio\runners.py:190: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Programs\Python\Python311\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py:654: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests\test_review2_bot_backend.py:135: in scenario
+    assert row is not None and row.status == "queued", row
+E   AssertionError: (UUID('a2153ddc-1475-4752-9ab3-52b57b70c384'), 'cancelled', 1, None)
+E   assert ((UUID('a2153ddc-1475-4752-9ab3-52b57b70c384'), 'cancelled', 1, None) is not None and 'cancelled' == 'queued'
+E     
+E     - queued
+E     + cancelled)
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 23:00:19.292 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 23:00:19.294 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 23:00:19.294 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 23:00:19.294 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 23:00:19.295 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 23:00:19.295 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 23:00:19.295 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 23:00:19.295 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 23:00:19.295 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 23:00:19.295 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 23:00:19.295 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 23:00:19.296 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 23:00:19.296 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 23:00:19.296 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 23:00:19.296 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 23:00:19.296 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 23:00:19.296 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 23:00:19.296 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 23:00:19.517 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 23:00:19.518 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 23:00:19.518 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 23:00:19.518 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+2026-11-10 23:00:19.757 | WARNING  | logging:callHandlers:1706 - C:\Users\dungbt06\local-ai-core\.venv\Lib\site-packages\discord\player.py:30: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13
+  import audioop
+
+---------------------------- Captured stdout call -----------------------------
+FX turn of 'Đây là tin thứ nhất.': status=cancelled reply_ids=[] source_id=1569743520976354588
+=========================== short test summary info ===========================
+SKIPPED [1] tests\test_review2_bot_backend.py:64: a7_bot_cancel does not target test_a5_after_discord_refuses_an_answer_the_next_message_is_answered
+SKIPPED [2] tests\test_review2_bot_backend.py:89: a7_bot_cancel does not target test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered
+SKIPPED [1] tests\test_review2_auth.py:83: a7_bot_cancel does not target test_r5_1_two_admins_demoting_each_other_at_once_leave_one_admin
+FAILED tests\test_review2_tmp_fx.py::test_a7_after_the_bot_stops_waiting_on_a_queued_turn_the_next_message_is_answered
+======================== 1 failed, 4 skipped in 1.80s =========================

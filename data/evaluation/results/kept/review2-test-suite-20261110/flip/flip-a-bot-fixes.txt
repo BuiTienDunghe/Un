@@ -1,0 +1,109 @@
+FFF                                                                      [100%]
+================================== FAILURES ===================================
+_ test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[once] _
+[XPASS(strict)] review2 A: a turn the bot abandoned blocks the channel; the next message waits until the bot gives up (the backend failed with 5xx on message 1)
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:31:33.318 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:31:33.319 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:31:33.319 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:31:33.319 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:31:33.319 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:31:33.320 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:31:33.320 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:31:33.320 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:31:33.321 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:31:33.321 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:31:33.321 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:31:33.321 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:31:33.321 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:31:33.321 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:31:33.321 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:31:33.321 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:31:33.321 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:31:33.321 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:31:33.548 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:31:33.548 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:31:33.548 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:31:33.548 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:31:37.216 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:31:37.332 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[forever] _
+[XPASS(strict)] review2 A: a turn the bot abandoned blocks the channel; the next message waits until the bot gives up (the backend failed with 5xx on message 1)
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:31:37.387 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:31:37.387 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:31:37.387 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:31:37.387 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:31:37.387 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:31:37.387 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:31:37.387 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:31:37.387 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:31:37.387 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:31:37.387 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:31:37.387 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:31:37.388 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:31:37.388 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:31:37.388 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:31:37.388 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:31:37.388 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:31:37.388 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:31:37.388 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:31:37.589 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:31:37.589 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:31:37.589 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:31:37.589 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:31:47.421 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_a8_after_the_bot_dies_mid_turn_and_restarts_the_next_message_is_answered _
+[XPASS(strict)] review2 A: a turn the bot abandoned blocks the channel; the next message waits until the bot gives up (the bot died mid-turn and was started again)
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:31:47.480 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:31:47.480 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:31:47.480 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:31:47.480 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:31:47.480 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:31:47.481 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:31:47.481 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:31:47.481 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:31:47.481 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:31:47.481 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:31:47.481 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:31:47.481 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:31:47.481 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:31:47.481 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:31:47.481 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:31:47.481 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:31:47.481 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:31:47.482 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:31:47.676 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:31:47.676 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:31:47.677 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:31:47.677 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:31:48.023 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:31:48.050 | WARNING  | logging:callHandlers:1706 - PyNaCl is not installed, voice will NOT be supported
+2026-11-10 18:31:48.050 | WARNING  | logging:callHandlers:1706 - davey is not installed, voice will NOT be supported
+2026-11-10 18:31:48.062 | WARNING  | logging:callHandlers:1706 - /docs is off in every server: DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST is empty
+2026-11-10 18:31:48.148 | INFO     | app.services.logging_service:log_request:149 - request completed
+------------------------------ Captured log call ------------------------------
+WARNING  discord.client:client.py:341 PyNaCl is not installed, voice will NOT be supported
+WARNING  discord.client:client.py:345 davey is not installed, voice will NOT be supported
+WARNING  discord_bot.main:main.py:630 /docs is off in every server: DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST is empty
+============================== warnings summary ===============================
+backend/tests/test_review2_tmp_flip.py::test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[once]
+  C:\Users\dungbt06\local-ai-core\.venv\Lib\site-packages\discord\player.py:30: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13
+    import audioop
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+============================= slowest 5 durations =============================
+9.67s call     backend/tests/test_review2_tmp_flip.py::test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[forever]
+3.60s call     backend/tests/test_review2_tmp_flip.py::test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[once]
+0.72s setup    backend/tests/test_review2_tmp_flip.py::test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[once]
+0.41s setup    backend/tests/test_review2_tmp_flip.py::test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[forever]
+0.40s setup    backend/tests/test_review2_tmp_flip.py::test_a8_after_the_bot_dies_mid_turn_and_restarts_the_next_message_is_answered
+=========================== short test summary info ===========================
+FAILED tests\test_review2_tmp_flip.py::test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[once]
+FAILED tests\test_review2_tmp_flip.py::test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[forever]
+FAILED tests\test_review2_tmp_flip.py::test_a8_after_the_bot_dies_mid_turn_and_restarts_the_next_message_is_answered
+3 failed, 98 deselected, 1 warning in 15.46s

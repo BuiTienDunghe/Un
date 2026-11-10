@@ -1,0 +1,17 @@
+== REVIEW2_FIX4=a5_msg1 REVIEW2_FIX4_SOURCE=old  start 21:31:25
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\dungbt06\local-ai-core
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collected 9 items / 8 deselected / 1 selected
+tests\test_review2_tmp_fix4.py x                                         [100%]
+============================== warnings summary ===============================
+backend/tests/test_review2_tmp_fix4.py::test_a5_after_discord_refuses_an_answer_the_next_message_is_answered
+  C:\Users\dungbt06\local-ai-core\.venv\Lib\site-packages\discord\player.py:30: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13
+    import audioop
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+XFAIL tests\test_review2_tmp_fix4.py::test_a5_after_discord_refuses_an_answer_the_next_message_is_answered - review2 A: a turn the bot abandoned blocks the channel; the next message waits until the bot gives up (Discord refused the answer to message 1)
+================ 8 deselected, 1 xfailed, 1 warning in 16.96s =================
+== end 21:31:49

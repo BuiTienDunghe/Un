@@ -1,0 +1,16 @@
+== REVIEW2_FIX4=a_msg2 REVIEW2_FIX4_SOURCE=old  start 21:30:17
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\dungbt06\local-ai-core
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collected 9 items / 4 deselected / 5 selected
+tests\test_review2_tmp_fix4.py xxxxx                                     [100%]
+=========================== short test summary info ===========================
+XFAIL tests\test_review2_tmp_fix4.py::test_a5_after_discord_refuses_an_answer_the_next_message_is_answered - review2 A: a turn the bot abandoned blocks the channel; the next message waits until the bot gives up (Discord refused the answer to message 1)
+XFAIL tests\test_review2_tmp_fix4.py::test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[once] - review2 A: a turn the bot abandoned blocks the channel; the next message waits until the bot gives up (the backend failed with 5xx on message 1)
+XFAIL tests\test_review2_tmp_fix4.py::test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[forever] - review2 A: a turn the bot abandoned blocks the channel; the next message waits until the bot gives up (the backend failed with 5xx on message 1)
+XFAIL tests\test_review2_tmp_fix4.py::test_a7_after_the_bot_stops_waiting_on_a_queued_turn_the_next_message_is_answered - review2 A: a turn the bot abandoned blocks the channel; the next message waits until the bot gives up (the bot stopped waiting while message 1 was queued)
+XFAIL tests\test_review2_tmp_fix4.py::test_a8_after_the_bot_dies_mid_turn_and_restarts_the_next_message_is_answered - review2 A: a turn the bot abandoned blocks the channel; the next message waits until the bot gives up (the bot died mid-turn and was started again)
+====================== 4 deselected, 5 xfailed in 4.28s =======================
+== end 21:30:29

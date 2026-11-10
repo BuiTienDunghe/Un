@@ -1,0 +1,74 @@
+== REVIEW2_FIX4=n4_appended --runxfail
+F                                                                        [100%]
+================================== FAILURES ===================================
+_________ test_n4_1_retrying_a_forget_turn_tells_the_person_it_forgot _________
+tests\test_review2_discord_turns.py:223: in test_n4_1_retrying_a_forget_turn_tells_the_person_it_forgot
+    known_bug(STALE_TURN_REPLY not in answer, f"the retried forget turn calls itself stale: {answer!r}")
+tests\review2_support.py:42: in known_bug
+    raise KnownBug(message)
+E   review2_support.KnownBug: the retried forget turn calls itself stale: 'Tin này đã bị xoá, sửa hoặc trí nhớ vừa được quên trước khi Ún kịp trả lời, nên Ún không xử lý nó. Bạn gửi lại nếu vẫn cần nhé. Ún đã quên những gì bạn nhờ nhớ.'
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 21:33:03.779 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 21:33:03.779 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 21:33:03.779 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 21:33:03.779 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 21:33:03.781 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 21:33:03.782 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 21:33:03.782 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 21:33:03.784 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 21:33:03.784 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 21:33:03.784 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 21:33:03.784 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 21:33:03.784 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 21:33:03.784 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 21:33:03.784 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 21:33:03.784 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 21:33:03.784 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 21:33:03.784 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 21:33:03.784 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 21:33:04.003 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 21:33:04.003 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 21:33:04.003 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 21:33:04.003 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 21:33:04.469 | INFO     | app.services.logging_service:log_request:149 - request completed
+=========================== short test summary info ===========================
+FAILED tests\test_review2_tmp_fix4.py::test_n4_1_retrying_a_forget_turn_tells_the_person_it_forgot
+1 failed, 8 deselected in 1.74s
+== REVIEW2_FIX4=n4_exact --runxfail
+F                                                                        [100%]
+================================== FAILURES ===================================
+_________ test_n4_1_retrying_a_forget_turn_tells_the_person_it_forgot _________
+tests\test_review2_discord_turns.py:223: in test_n4_1_retrying_a_forget_turn_tells_the_person_it_forgot
+    known_bug(STALE_TURN_REPLY not in answer, f"the retried forget turn calls itself stale: {answer!r}")
+tests\review2_support.py:42: in known_bug
+    raise KnownBug(message)
+E   review2_support.KnownBug: the retried forget turn calls itself stale: 'Tin này đã bị xoá, sửa hoặc trí nhớ vừa được quên trước khi Ún kịp trả lời, nên Ún không xử lý nó. Bạn gửi lại nếu vẫn cần nhé.'
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 21:33:12.563 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 21:33:12.563 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 21:33:12.564 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 21:33:12.564 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 21:33:12.564 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 21:33:12.566 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 21:33:12.566 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 21:33:12.566 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 21:33:12.566 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 21:33:12.566 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 21:33:12.567 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 21:33:12.567 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 21:33:12.567 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 21:33:12.567 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 21:33:12.567 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 21:33:12.567 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 21:33:12.567 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 21:33:12.567 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 21:33:12.782 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 21:33:12.782 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 21:33:12.783 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 21:33:12.783 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 21:33:13.259 | INFO     | app.services.logging_service:log_request:149 - request completed
+=========================== short test summary info ===========================
+FAILED tests\test_review2_tmp_fix4.py::test_n4_1_retrying_a_forget_turn_tells_the_person_it_forgot
+1 failed, 8 deselected in 1.75s

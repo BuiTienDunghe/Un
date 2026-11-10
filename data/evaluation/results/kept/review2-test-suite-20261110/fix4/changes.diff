@@ -1,0 +1,126 @@
+--- before/review2_support.py
++++ backend/tests/review2_support.py
+@@ -362,8 +362,13 @@
+         await api._http.aclose()
+ 
+     def message(self, question: str):
+-        """A new message in channel 20 of this guild, with its own Discord side."""
+-        source = self.fakes.FakeSource(self.fakes.Discord())
++        """A new message in channel 20 of this guild, with its own Discord side. Each side
++        numbers what it sends from a fresh snowflake: every fake side starts at the same id,
++        and the backend links an answer's Discord id to one turn only, so two answered
++        messages would otherwise collide when the second is marked delivered."""
++        side = self.fakes.Discord()
++        side._next_id = int(snowflake())
++        source = self.fakes.FakeSource(side)
+         source.id = int(snowflake())
+         source.guild = SimpleNamespace(id=self.guild, name="review2", member_count=0, members=[])
+         source.question = question
+@@ -374,14 +379,17 @@
+         return DiscordConversationGateway(api, "Bạn là Ún.", 0, True,
+                                           poll_budget_seconds=self.budget if budget is None else budget)
+ 
+-    async def ask(self, api, source, *, budget: float | None = None):
+-        """One @mention handled the way on_message hands it over. Returns what escaped the
+-        handler (today a failed delivery is reported and then re-raised)."""
++    async def ask(self, api, source, *, budget: float | None = None,
++                  allowed: tuple[type[BaseException], ...] = ()):
++        """One @mention handled the way on_message hands it over. Returns None, or the
++        exception that escaped the handler if the case lists its type in `allowed` (A-5: a
++        failed delivery is reported and then re-raised). Any other escape is re-raised, so an
++        unrelated crash of the bot fails the case instead of passing for the known bug."""
+         from discord_bot.main import answer_mention
+         progress = self.fakes.quick(source, first_post_seconds=3600.0)
+         try:
+             await answer_mention(self.gateway(api, budget), source, source.question, progress)
+-        except Exception as error:  # noqa: BLE001  (the outcome is judged by what Discord shows)
++        except allowed as error:
+             return error
+         return None
+ 
+--- before/test_review2_bot_backend.py
++++ backend/tests/test_review2_bot_backend.py
+@@ -51,7 +51,9 @@
+ 
+ 
+ async def second_message_answered(r2, bot, api) -> bool:  # noqa: F811
+-    """Message 2, an ordinary question in the same channel, with the bot's full waiting time."""
++    """Message 2, an ordinary question in the same channel, with the bot's full waiting time.
++    Nothing may escape the handler (BotOnApp.ask re-raises it): today message 2 runs out of
++    waiting time, and answer_mention reports that and returns normally."""
+     r2.model.rules.append(("tin thứ hai", ANSWER_TWO))
+     second = bot.message("Đây là tin thứ hai, bình thường.")
+     await bot.ask(api, second)
+@@ -69,7 +71,9 @@
+     async def scenario():
+         api = bot.api()
+         try:
+-            await bot.ask(api, first)
++            # Discord's refusal may escape the handler (today it is reported, then re-raised);
++            # any other escape fails the case.
++            await bot.ask(api, first, allowed=(discord.HTTPException,))
+             assert first.reply_errors == [], "Discord was never asked to deliver the answer to message 1"
+             assert turn_by_message(r2.client, first.id) is not None
+             age_open_turns(r2.client, r2.guild)
+--- before/test_review2_auth.py
++++ backend/tests/test_review2_auth.py
+@@ -108,7 +108,7 @@
+         try:
+             service.set_role(target, "member")
+             outcomes[actor] = "demoted"
+-        except Exception as error:  # noqa: BLE001  (a refusal of any kind is an outcome)
++        except Exception as error:  # noqa: BLE001  (recorded here, judged after join)
+             outcomes[actor] = error
+ 
+     threads = [threading.Thread(target=demote, args=("x", second["id"])),
+@@ -118,6 +118,10 @@
+     for thread in threads:
+         thread.join(15)
+     assert not any(thread.is_alive() for thread in threads) and len(outcomes) == 2, outcomes
++    # The only refusal is the service's own "last admin" one; any other error in either
++    # thread is a real failure, never the known bug and never a pass.
++    assert all(outcome == "demoted" or isinstance(outcome, auth_module.AuthConflictError)
++               for outcome in outcomes.values()), outcomes
+     succeeded = [actor for actor, outcome in outcomes.items() if outcome == "demoted"]
+     known_bug(len(succeeded) == 1 and admins(factory) >= 1,
+               f"both demotions went through and {admins(factory)} admin(s) remain: {outcomes}")
+--- before/test_review2_discord_turns.py
++++ backend/tests/test_review2_discord_turns.py
+@@ -12,6 +12,7 @@
+ 
+ import pytest
+ 
++from app.discord.source_memory import STALE_TURN_REPLY
+ from review2_support import (KnownBug, active_notes, age_open_turns, channel_barrier, edit_unledgered,  # noqa: F401
+                              enqueue, execute, execute_reply, expire_lease, fail_delivery, finished_turn, known_bug,
+                              r2, seed_history_barrier, snowflake, v2client)
+@@ -146,6 +147,7 @@
+     assert done.answer == OLD_ANSWER
+     edit_unledgered(client, guild, "one", done.message_id)
+     replay = execute(client, done.turn_id)
++    assert replay.status_code < 500, replay.text  # refusing the replay (4xx) is a valid fix; crashing is not
+     known_bug("sentinel-r3-old" not in answer_of(replay), f"the replay returned the old answer: {replay.text}")
+ 
+ 
+@@ -159,6 +161,7 @@
+     assert fail_delivery(client, turn_id, first.json()["execution_token"]) == "queued"
+     edit_unledgered(client, guild, "one", message_id)
+     again = execute(client, turn_id)
++    assert again.status_code < 500, again.text  # refusing the resend (4xx) is a valid fix; crashing is not
+     known_bug("sentinel-r3-old" not in answer_of(again), f"the resend returned the old answer: {again.text}")
+ 
+ 
+@@ -213,8 +216,11 @@
+     calls = len(r2.model.calls)
+     again = execute(client, turn_id)
+     assert again.status_code == 200, again.text
+-    seen = (again.json().get("answer") or "") + r2.model.prompts_since(calls)
+-    known_bug("đã quên" in seen.lower(), f"the retried forget turn carries no receipt: {again.json().get('answer')!r}")
++    answer = again.json().get("answer") or ""
++    seen = answer + r2.model.prompts_since(calls)
++    known_bug("đã quên" in seen.lower(), f"the retried forget turn carries no receipt: {answer!r}")
++    # DECISIONS.md: and no "this message was deleted/edited" sentence, not even next to a receipt.
++    known_bug(STALE_TURN_REPLY not in answer, f"the retried forget turn calls itself stale: {answer!r}")
+ 
+ 
+ @pytest.mark.xfail(strict=True, raises=KnownBug, reason=N4)

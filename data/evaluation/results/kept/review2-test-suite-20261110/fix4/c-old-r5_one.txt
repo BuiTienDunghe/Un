@@ -1,0 +1,38 @@
+== REVIEW2_FIX4=r5_one REVIEW2_FIX4_SOURCE=old  start 21:31:49
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\dungbt06\local-ai-core
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collected 9 items / 8 deselected / 1 selected
+tests\test_review2_tmp_fix4.py F                                         [100%]
+================================== FAILURES ===================================
+______ test_r5_1_two_admins_demoting_each_other_at_once_leave_one_admin _______
+[XPASS(strict)] review2 R5: set_role counts the admins and updates without a lock, so two demotions at once leave none
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 21:31:55.233 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 21:31:55.234 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 21:31:55.234 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 21:31:55.235 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 21:31:55.235 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 21:31:55.235 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 21:31:55.236 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 21:31:55.236 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 21:31:55.236 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 21:31:55.236 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 21:31:55.236 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 21:31:55.236 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 21:31:55.236 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 21:31:55.236 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 21:31:55.236 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 21:31:55.236 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 21:31:55.236 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 21:31:55.236 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 21:31:55.453 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 21:31:55.454 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 21:31:55.454 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 21:31:55.454 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+=========================== short test summary info ===========================
+FAILED tests\test_review2_tmp_fix4.py::test_r5_1_two_admins_demoting_each_other_at_once_leave_one_admin
+======================= 1 failed, 8 deselected in 3.30s =======================
+== end 21:31:59

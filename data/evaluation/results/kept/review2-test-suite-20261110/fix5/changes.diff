@@ -1,0 +1,37 @@
+--- before/review2_support.py
++++ backend/tests/review2_support.py
+@@ -367,9 +367,11 @@
+         and the backend links an answer's Discord id to one turn only, so two answered
+         messages would otherwise collide when the second is marked delivered."""
+         side = self.fakes.Discord()
+-        side._next_id = int(snowflake())
+         source = self.fakes.FakeSource(side)
+         source.id = int(snowflake())
++        # Set after the question's id, so the answers are stamped later than the question.
++        assert "_next_id" in vars(side), "the fake Discord no longer numbers from _next_id"
++        side._next_id = int(snowflake())
+         source.guild = SimpleNamespace(id=self.guild, name="review2", member_count=0, members=[])
+         source.question = question
+         return source
+--- before/test_review2_bot_backend.py
++++ backend/tests/test_review2_bot_backend.py
+@@ -132,7 +132,9 @@
+             await bot.ask(api, first, budget=0.0)  # the bot's waiting time runs out after one call
+             assert r2.model.failures == 0, "message 1 never reached the model"
+             row = turn_by_message(r2.client, first.id)
+-            assert row is not None and row.status == "queued", row
++            # Still open, or cancelled by a bot that gives up on it: both are valid. Only a
++            # turn the first call already finished would make the case meaningless.
++            assert row is not None and row.status != "completed", row
+             age_open_turns(r2.client, r2.guild)
+             return await second_message_answered(r2, bot, api)
+         finally:
+--- before/test_review2_auth.py
++++ backend/tests/test_review2_auth.py
+@@ -123,5 +123,6 @@
+     assert all(outcome == "demoted" or isinstance(outcome, auth_module.AuthConflictError)
+                for outcome in outcomes.values()), outcomes
+     succeeded = [actor for actor, outcome in outcomes.items() if outcome == "demoted"]
++    assert succeeded, f"both demotions were refused, which is neither the bug nor a fix: {outcomes}"
+     known_bug(len(succeeded) == 1 and admins(factory) >= 1,
+               f"both demotions went through and {admins(factory)} admin(s) remain: {outcomes}")

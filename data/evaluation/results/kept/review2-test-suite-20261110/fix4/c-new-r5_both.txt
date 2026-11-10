@@ -1,0 +1,42 @@
+== REVIEW2_FIX4=r5_both REVIEW2_FIX4_SOURCE=new  start 21:29:18
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\dungbt06\local-ai-core
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collected 9 items / 8 deselected / 1 selected
+tests\test_review2_tmp_fix4.py F                                         [100%]
+================================== FAILURES ===================================
+______ test_r5_1_two_admins_demoting_each_other_at_once_leave_one_admin _______
+tests\test_review2_auth.py:123: in test_r5_1_two_admins_demoting_each_other_at_once_leave_one_admin
+    assert all(outcome == "demoted" or isinstance(outcome, auth_module.AuthConflictError)
+E   AssertionError: {'x': OperationalError('(builtins.ConnectionResetError) review2 fix4 mutation: connection lost'), 'y': OperationalError('(builtins.ConnectionResetError) review2 fix4 mutation: connection lost')}
+E   assert False
+E    +  where False = all(<generator object test_r5_1_two_admins_demoting_each_other_at_once_leave_one_admin.<locals>.<genexpr> at 0x0000027D87D2A4D0>)
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 21:29:24.762 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 21:29:24.763 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 21:29:24.763 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 21:29:24.763 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 21:29:24.763 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 21:29:24.764 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 21:29:24.764 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 21:29:24.764 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 21:29:24.764 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 21:29:24.765 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 21:29:24.765 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 21:29:24.765 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 21:29:24.765 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 21:29:24.765 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 21:29:24.765 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 21:29:24.765 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 21:29:24.765 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 21:29:24.765 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 21:29:24.988 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 21:29:24.989 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 21:29:24.989 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 21:29:24.989 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+=========================== short test summary info ===========================
+FAILED tests\test_review2_tmp_fix4.py::test_r5_1_two_admins_demoting_each_other_at_once_leave_one_admin
+======================= 1 failed, 8 deselected in 1.91s =======================
+== end 21:29:27

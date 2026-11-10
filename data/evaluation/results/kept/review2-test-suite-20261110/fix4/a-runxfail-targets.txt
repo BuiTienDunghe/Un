@@ -1,0 +1,12 @@
+FFFF                                                                     [100%]
+================================== FAILURES ===================================
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:42: review2_support.KnownBug: the replay returned the old answer: {"turn_id":"b322b895-6fac-4dc0-8213-02b90a21a8b5","session_id":"174a247e-cbb4-4828-a003-e591487b0771","sequence_number":1,"status":"completed","answer":"Đáp án cũ sentinel-r3-old.","model_used":"qwen3.5:2b","execution_token":null,"replacement_turn_id":null}
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:42: review2_support.KnownBug: the resend returned the old answer: {"turn_id":"77e7783d-3d8c-4633-b4f6-9b019de439f4","session_id":"f3ea125b-f03d-451f-8844-d29bb1f2a8df","sequence_number":1,"status":"running","answer":"Đáp án cũ sentinel-r3-old.","model_used":"qwen3.5:2b","execution_token":"1fd5d474337b4780947b20890c2ae983","replacement_turn_id":null}
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:42: review2_support.KnownBug: the retried forget turn carries no receipt: 'Tin này đã bị xoá, sửa hoặc trí nhớ vừa được quên trước khi Ún kịp trả lời, nên Ún không xử lý nó. Bạn gửi lại nếu vẫn cần nhé.'
+C:\Users\dungbt06\local-ai-core\backend\tests\review2_support.py:42: review2_support.KnownBug: both demotions went through and 0 admin(s) remain: {'x': 'demoted', 'y': 'demoted'}
+=========================== short test summary info ===========================
+FAILED tests\test_review2_discord_turns.py::test_r3_1_replaying_a_finished_turn_after_its_question_was_edited_does_not_return_the_old_answer
+FAILED tests\test_review2_discord_turns.py::test_r3_2_resending_a_saved_answer_after_its_question_was_edited_does_not_return_it
+FAILED tests\test_review2_discord_turns.py::test_n4_1_retrying_a_forget_turn_tells_the_person_it_forgot
+FAILED tests\test_review2_auth.py::test_r5_1_two_admins_demoting_each_other_at_once_leave_one_admin
+4 failed, 25 deselected in 3.28s

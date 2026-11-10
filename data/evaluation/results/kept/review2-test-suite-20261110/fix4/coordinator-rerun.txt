@@ -1,0 +1,6 @@
+    import audioop
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+53 passed, 55 xfailed, 1 warning in 132.83s (0:02:12)
+3 passed, 1 warning in 0.34s
+stopped 21:43:01

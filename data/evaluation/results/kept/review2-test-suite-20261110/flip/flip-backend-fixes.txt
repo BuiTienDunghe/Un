@@ -1,0 +1,1234 @@
+FFF.FFFFFF..FFFFFFFFFF..FFFFF...FFF....FFFFFFFF....F..........FF.F...... [ 71%]
+..FFFFFFF...FFFFFFFFF........                                            [100%]
+================================== FAILURES ===================================
+_ test_r2_1_a_demoted_admin_with_an_old_token_no_longer_sees_other_peoples_work[conversation_list] _
+[XPASS(strict)] review2 R2: the role is read from the access token, so a demoted admin keeps an admin's view for up to 15 minutes
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:29:42.424 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:29:42.426 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:29:42.426 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:29:42.426 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:29:42.426 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:29:42.427 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:29:42.427 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:29:42.427 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:29:42.428 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:29:42.428 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:29:42.428 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:29:42.428 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:29:42.428 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:29:42.428 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:29:42.428 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:29:42.428 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:29:42.428 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:29:42.428 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:29:42.651 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:29:42.651 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:29:42.652 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:29:42.652 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+2026-11-10 18:29:43.865 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_r2_1_a_demoted_admin_with_an_old_token_no_longer_sees_other_peoples_work[conversation_of_a] _
+[XPASS(strict)] review2 R2: the role is read from the access token, so a demoted admin keeps an admin's view for up to 15 minutes
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:29:44.232 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:29:44.233 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:29:44.234 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+2026-11-10 18:29:45.385 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_r2_1_a_demoted_admin_with_an_old_token_no_longer_sees_other_peoples_work[project_list] _
+[XPASS(strict)] review2 R2: the role is read from the access token, so a demoted admin keeps an admin's view for up to 15 minutes
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:29:45.737 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:29:45.737 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:29:45.738 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+2026-11-10 18:29:46.892 | INFO     | app.services.logging_service:log_request:149 - request completed
+______ test_r5_1_two_admins_demoting_each_other_at_once_leave_one_admin _______
+[XPASS(strict)] review2 R5: set_role counts the admins and updates without a lock, so two demotions at once leave none
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:29:48.702 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:29:48.703 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:29:48.703 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+____ test_a5_after_discord_refuses_an_answer_the_next_message_is_answered _____
+[XPASS(strict)] review2 A: a turn the bot abandoned blocks the channel; the next message waits until the bot gives up (Discord refused the answer to message 1)
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:29:51.387 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:29:51.387 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:29:51.387 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:29:51.387 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:29:51.387 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:29:51.387 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:29:51.387 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:29:51.387 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:29:51.387 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:29:51.387 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:29:51.387 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:29:51.388 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:29:51.388 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:29:51.388 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:29:51.388 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:29:51.388 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:29:51.388 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:29:51.388 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:29:51.581 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:29:51.582 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:29:51.583 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:29:51.583 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:29:52.228 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:29:52.343 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[once] _
+[XPASS(strict)] review2 A: a turn the bot abandoned blocks the channel; the next message waits until the bot gives up (the backend failed with 5xx on message 1)
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:29:52.398 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:29:52.399 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:29:52.399 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:29:52.399 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:29:52.399 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:29:52.399 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:29:52.399 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:29:52.399 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:29:52.399 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:29:52.399 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:29:52.399 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:29:52.399 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:29:52.399 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:29:52.399 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:29:52.399 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:29:52.400 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:29:52.400 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:29:52.400 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:29:52.591 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:29:52.591 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:29:52.591 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:29:52.593 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:29:53.001 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[forever] _
+[XPASS(strict)] review2 A: a turn the bot abandoned blocks the channel; the next message waits until the bot gives up (the backend failed with 5xx on message 1)
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:29:53.055 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:29:53.055 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:29:53.055 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:29:53.055 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:29:53.055 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:29:53.055 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:29:53.055 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:29:53.056 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:29:53.056 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:29:53.056 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:29:53.056 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:29:53.056 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:29:53.056 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:29:53.056 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:29:53.057 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:29:53.057 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:29:53.057 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:29:53.057 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:29:53.245 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:29:53.246 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:29:53.246 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:29:53.246 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:29:53.630 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_a7_after_the_bot_stops_waiting_on_a_queued_turn_the_next_message_is_answered _
+[XPASS(strict)] review2 A: a turn the bot abandoned blocks the channel; the next message waits until the bot gives up (the bot stopped waiting while message 1 was queued)
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:29:53.684 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:29:53.685 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:29:53.685 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:29:53.685 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:29:53.685 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:29:53.685 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:29:53.685 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:29:53.685 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:29:53.685 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:29:53.685 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:29:53.685 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:29:53.685 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:29:53.685 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:29:53.685 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:29:53.685 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:29:53.686 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:29:53.686 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:29:53.686 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:29:53.881 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:29:53.881 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:29:53.881 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:29:53.881 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:29:54.318 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_a8_after_the_bot_dies_mid_turn_and_restarts_the_next_message_is_answered _
+[XPASS(strict)] review2 A: a turn the bot abandoned blocks the channel; the next message waits until the bot gives up (the bot died mid-turn and was started again)
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:29:54.378 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:29:54.379 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:29:54.379 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:29:54.379 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:29:54.379 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:29:54.379 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:29:54.379 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:29:54.379 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:29:54.379 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:29:54.379 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:29:54.379 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:29:54.380 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:29:54.380 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:29:54.380 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:29:54.380 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:29:54.380 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:29:54.380 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:29:54.380 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:29:54.575 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:29:54.576 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:29:54.576 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:29:54.576 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:29:54.916 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:29:54.942 | WARNING  | logging:callHandlers:1706 - PyNaCl is not installed, voice will NOT be supported
+2026-11-10 18:29:54.942 | WARNING  | logging:callHandlers:1706 - davey is not installed, voice will NOT be supported
+2026-11-10 18:29:54.943 | WARNING  | logging:callHandlers:1706 - /docs is off in every server: DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST is empty
+2026-11-10 18:29:55.021 | INFO     | app.services.logging_service:log_request:149 - request completed
+------------------------------ Captured log call ------------------------------
+WARNING  discord.client:client.py:341 PyNaCl is not installed, voice will NOT be supported
+WARNING  discord.client:client.py:345 davey is not installed, voice will NOT be supported
+WARNING  discord_bot.main:main.py:630 /docs is off in every server: DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST is empty
+____ test_f1_discord_with_the_app_clock_30s_fast_forgotten_words_stay_out _____
+[XPASS(strict)] review2 F: an app clock running ahead stamps words said before a forget as newer than the barrier; trade-off of the obvious fix: comparing by arrival time instead lets a message sent before the barrier but delivered after it slip through
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:29:56.829 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:29:56.830 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:29:56.830 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:29:56.830 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:29:56.830 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:29:56.830 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:29:56.830 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:29:56.831 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:29:56.831 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:29:56.831 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:29:56.831 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:29:56.831 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:29:56.831 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:29:56.831 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:29:56.831 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:29:56.831 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:29:56.831 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:29:56.831 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:29:57.076 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:29:57.076 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:29:57.076 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:29:57.076 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:29:57.426 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:29:57.544 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:29:57.688 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_f2_discord_with_the_app_clock_30s_slow_a_message_after_a_forget_is_answered _
+[XPASS(strict)] review2 F: an app clock running behind stamps a message sent after a forget as older than the barrier
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:29:57.727 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:29:57.727 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:29:57.727 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:29:57.727 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:29:57.728 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:29:57.728 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:29:57.728 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:29:57.728 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:29:57.728 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:29:57.728 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:29:57.728 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:29:57.728 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:29:57.728 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:29:57.728 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:29:57.728 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:29:57.728 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:29:57.728 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:29:57.728 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:29:57.923 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:29:57.925 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:29:57.925 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:29:57.925 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:29:58.255 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:29:58.412 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_f3_search_history_with_discord_30s_off[fast_snowflake_written_before_the_forget] _
+[XPASS(strict)] review2 F: search_history compares Discord's clock with the Postgres barrier; trade-off of the obvious fix: comparing by arrival time instead lets a message sent before the barrier but delivered after it slip through
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:29:58.457 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:29:58.457 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:29:58.457 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:29:58.457 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:29:58.457 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:29:58.457 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:29:58.457 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:29:58.457 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:29:58.458 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:29:58.458 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:29:58.458 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:29:58.458 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:29:58.458 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:29:58.458 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:29:58.458 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:29:58.458 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:29:58.458 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:29:58.458 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:29:58.651 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:29:58.651 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:29:58.651 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:29:58.653 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+_ test_f3_search_history_with_discord_30s_off[slow_snowflake_written_after_the_forget] _
+[XPASS(strict)] review2 F: search_history compares Discord's clock with the Postgres barrier; trade-off of the obvious fix: comparing by arrival time instead lets a message sent before the barrier but delivered after it slip through
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:29:58.988 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:29:58.989 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:29:58.989 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:29:58.989 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:29:58.989 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:29:58.989 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:29:58.989 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:29:58.989 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:29:58.989 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:29:58.989 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:29:58.989 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:29:58.989 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:29:58.989 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:29:58.989 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:29:58.989 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:29:58.989 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:29:58.989 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:29:58.989 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:29:59.181 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:29:59.181 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:29:59.181 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:29:59.181 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+______ test_f4_web_with_the_app_clock_30s_fast_forgotten_words_stay_out _______
+[XPASS(strict)] review2 F: an app clock running ahead stamps words said before a forget as newer than the barrier; trade-off of the obvious fix: comparing by arrival time instead lets a message sent before the barrier but delivered after it slip through
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:29:59.511 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:29:59.511 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:29:59.511 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:29:59.511 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:29:59.511 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:29:59.511 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:29:59.511 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:29:59.511 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:29:59.511 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:29:59.511 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:29:59.511 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:29:59.511 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:29:59.513 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:29:59.513 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:29:59.513 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:29:59.513 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:29:59.513 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:29:59.513 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:29:59.707 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:29:59.707 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:29:59.708 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:29:59.708 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:30:00.008 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:30:00.082 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:30:00.185 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_f5_web_with_the_app_clock_30s_slow_what_was_said_after_a_forget_is_kept _
+[XPASS(strict)] review2 F: an app clock running behind stamps a message sent after a forget as older than the barrier
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:00.220 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:30:00.220 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:30:00.220 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:30:00.220 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:30:00.220 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:30:00.220 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:30:00.221 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:30:00.221 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:30:00.221 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:30:00.221 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:30:00.221 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:30:00.221 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:30:00.221 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:30:00.221 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:30:00.221 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:30:00.221 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:30:00.221 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:30:00.221 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:30:00.415 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:00.415 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:00.415 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:30:00.416 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:30:00.729 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:30:00.836 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:30:00.885 | INFO     | app.services.logging_service:log_request:149 - request completed
+_____ test_n2_1_a_reply_to_an_edited_message_does_not_show_its_old_words ______
+[XPASS(strict)] review2 N2: a reply turn shows the model its target's words without checking the target's tombstone
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:00.913 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:30:00.913 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:30:00.913 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:30:00.913 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:30:00.913 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:30:00.913 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:30:00.913 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:30:00.913 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:30:00.914 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:30:00.914 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:30:00.914 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:30:00.914 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:30:00.914 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:30:00.914 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:30:00.914 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:30:00.914 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:30:00.914 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:30:00.914 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:30:01.107 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:01.108 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:01.108 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:30:01.108 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:30:01.457 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:30:01.598 | INFO     | app.services.logging_service:log_request:149 - request completed
+_____ test_n2_2_a_reply_to_the_answer_of_an_edited_question_shows_neither _____
+[XPASS(strict)] review2 N2: a reply turn shows the model its target's words without checking the target's tombstone
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:01.637 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:30:01.637 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:30:01.637 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:30:01.637 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:30:01.637 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:30:01.637 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:30:01.637 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:30:01.637 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:30:01.637 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:30:01.637 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:30:01.639 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:30:01.639 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:30:01.639 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:30:01.639 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:30:01.639 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:30:01.639 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:30:01.639 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:30:01.639 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:30:01.833 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:01.833 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:01.833 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:30:01.833 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:30:02.181 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:30:02.322 | INFO     | app.services.logging_service:log_request:149 - request completed
+_________ test_n4_1_retrying_a_forget_turn_tells_the_person_it_forgot _________
+[XPASS(strict)] review2 N4: a forget turn tried again finds the barrier its own first attempt set, and calls itself stale
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:02.365 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:30:02.365 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:30:02.365 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:30:02.365 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:30:02.365 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:30:02.365 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:30:02.365 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:30:02.365 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:30:02.365 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:30:02.365 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:30:02.365 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:30:02.366 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:30:02.366 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:30:02.366 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:30:02.366 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:30:02.366 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:30:02.366 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:30:02.366 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:30:02.767 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:02.768 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:02.768 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:30:02.768 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:30:03.156 | INFO     | app.services.logging_service:log_request:149 - request completed
+________ test_n4_2_resending_a_saved_forget_answer_returns_that_answer ________
+[XPASS(strict)] review2 N4: a forget turn tried again finds the barrier its own first attempt set, and calls itself stale
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:03.204 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:30:03.204 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:30:03.204 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:30:03.204 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:30:03.204 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:30:03.204 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:30:03.204 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:30:03.204 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:30:03.204 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:30:03.204 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:30:03.205 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:30:03.205 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:30:03.205 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:30:03.205 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:30:03.205 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:30:03.205 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:30:03.205 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:30:03.205 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:30:03.401 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:03.402 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:03.402 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:30:03.402 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:30:03.758 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_r1_1_a_reply_to_something_older_than_the_barrier_is_answered_without_its_words[user_message] _
+[XPASS(strict)] review2 R1: on a server with a history barrier a reply turn reads created_at its target does not have, and crashes
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:05.259 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:30:05.260 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:30:05.260 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:30:05.260 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:30:05.260 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:30:05.260 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:30:05.260 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:30:05.260 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:30:05.260 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:30:05.260 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:30:05.260 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:30:05.260 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:30:05.261 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:30:05.261 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:30:05.261 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:30:05.261 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:30:05.261 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:30:05.261 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:30:05.457 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:05.457 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:05.457 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:30:05.457 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:30:05.796 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:30:05.952 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_r1_1_a_reply_to_something_older_than_the_barrier_is_answered_without_its_words[bot_response] _
+[XPASS(strict)] review2 R1: on a server with a history barrier a reply turn reads created_at its target does not have, and crashes
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:05.993 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:30:05.993 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:30:05.993 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:30:05.993 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:30:05.993 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:30:05.993 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:30:05.993 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:30:05.994 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:30:05.994 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:30:05.994 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:30:05.994 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:30:05.994 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:30:05.994 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:30:05.994 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:30:05.994 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:30:05.994 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:30:05.994 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:30:05.994 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:30:06.188 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:06.188 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:06.188 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:30:06.188 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:30:06.533 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:30:06.691 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_r1_1_a_reply_to_something_older_than_the_barrier_is_answered_without_its_words[not_found] _
+[XPASS(strict)] review2 R1: on a server with a history barrier a reply turn reads created_at its target does not have, and crashes
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:06.732 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:30:06.732 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:30:06.732 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:30:06.732 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:30:06.732 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:30:06.732 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:30:06.732 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:30:06.732 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:30:06.732 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:30:06.732 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:30:06.732 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:30:06.732 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:30:06.732 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:30:06.732 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:30:06.732 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:30:06.732 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:30:06.733 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:30:06.733 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:30:06.930 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:06.930 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:06.930 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:30:06.930 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:30:07.255 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:30:07.421 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_r1_2_a_reply_to_something_newer_than_the_barrier_carries_its_words[user_message] _
+[XPASS(strict)] review2 R1: on a server with a history barrier a reply turn reads created_at its target does not have, and crashes
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:07.461 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:30:07.462 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:30:07.462 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:30:07.462 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:30:07.462 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:30:07.462 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:30:07.462 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:30:07.462 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:30:07.462 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:30:07.462 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:30:07.462 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:30:07.462 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:30:07.462 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:30:07.462 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:30:07.462 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:30:07.463 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:30:07.463 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:30:07.463 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:30:07.667 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:07.667 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:07.668 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:30:07.668 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:30:08.054 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:30:08.161 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:30:08.254 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_r1_2_a_reply_to_something_newer_than_the_barrier_carries_its_words[bot_response] _
+[XPASS(strict)] review2 R1: on a server with a history barrier a reply turn reads created_at its target does not have, and crashes
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:08.294 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:30:08.296 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:30:08.296 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:30:08.296 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:30:08.296 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:30:08.296 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:30:08.296 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:30:08.296 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:30:08.296 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:30:08.296 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:30:08.296 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:30:08.296 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:30:08.296 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:30:08.296 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:30:08.296 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:30:08.297 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:30:08.297 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:30:08.297 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:30:08.488 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:08.488 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:08.488 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:30:08.488 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:30:08.889 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:30:08.992 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:30:09.092 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_r1_4_a_reply_to_a_remembered_message_that_was_deleted_never_shows_its_words _
+[XPASS(strict)] review2 R1: on a server with a history barrier a reply turn reads created_at its target does not have, and crashes
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:11.779 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:30:11.779 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:30:11.779 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:30:11.780 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:30:11.780 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:30:11.780 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:30:11.780 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:30:11.780 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:30:11.780 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:30:11.780 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:30:11.780 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:30:11.780 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:30:11.780 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:30:11.780 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:30:11.780 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:30:11.780 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:30:11.780 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:30:11.780 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:30:11.966 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:11.967 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:11.967 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:30:11.967 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:30:12.289 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:30:12.475 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_r3_1_replaying_a_finished_turn_after_its_question_was_edited_does_not_return_the_old_answer _
+[XPASS(strict)] review2 R3: a replay or a resend hands back the answer of a question that was edited since
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:12.519 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:30:12.519 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:30:12.519 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:30:12.519 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:30:12.520 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:30:12.520 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:30:12.520 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:30:12.520 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:30:12.520 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:30:12.520 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:30:12.520 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:30:12.520 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:30:12.520 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:30:12.520 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:30:12.520 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:30:12.520 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:30:12.520 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:30:12.520 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:30:12.713 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:12.713 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:12.713 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:30:12.713 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:30:13.059 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_r3_2_resending_a_saved_answer_after_its_question_was_edited_does_not_return_it _
+[XPASS(strict)] review2 R3: a replay or a resend hands back the answer of a question that was edited since
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:13.409 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:30:13.409 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:30:13.409 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:30:13.409 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:30:13.409 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:30:13.410 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:30:13.410 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:30:13.410 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:30:13.410 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:30:13.410 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:30:13.410 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:30:13.410 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:30:13.410 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:30:13.410 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:30:13.410 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:30:13.410 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:30:13.410 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:30:13.410 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:30:13.600 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:13.600 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:13.600 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:30:13.600 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:30:13.923 | INFO     | app.services.logging_service:log_request:149 - request completed
+_______ test_e1_a_member_cannot_reach_another_members_ocr_job[history] ________
+[XPASS(strict)] review2 E: an OCR job has no owner, so any signed-in member can reach another member's job
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:16.699 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:30:16.699 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:30:16.699 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:30:16.699 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:30:16.699 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:30:16.699 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:30:16.699 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:30:16.699 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:30:16.699 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:30:16.700 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:30:16.700 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:30:16.700 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:30:16.700 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:30:16.700 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:30:16.700 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:30:16.700 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:30:16.700 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:30:16.700 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:30:16.889 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:16.890 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:16.890 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:30:16.890 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+_________ test_e1_a_member_cannot_reach_another_members_ocr_job[open] _________
+[XPASS(strict)] review2 E: an OCR job has no owner, so any signed-in member can reach another member's job
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:18.359 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:18.359 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:18.359 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+________ test_e1_a_member_cannot_reach_another_members_ocr_job[events] ________
+[XPASS(strict)] review2 E: an OCR job has no owner, so any signed-in member can reach another member's job
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:19.765 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:19.765 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:19.765 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+________ test_e1_a_member_cannot_reach_another_members_ocr_job[files] _________
+[XPASS(strict)] review2 E: an OCR job has no owner, so any signed-in member can reach another member's job
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:21.210 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:21.210 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:21.210 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+________ test_e1_a_member_cannot_reach_another_members_ocr_job[export] ________
+[XPASS(strict)] review2 E: an OCR job has no owner, so any signed-in member can reach another member's job
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:22.642 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:22.642 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:22.642 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+________ test_e1_a_member_cannot_reach_another_members_ocr_job[cancel] ________
+[XPASS(strict)] review2 E: an OCR job has no owner, so any signed-in member can reach another member's job
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:24.036 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:24.037 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:24.037 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+_______ test_e1_a_member_cannot_reach_another_members_ocr_job[promote] ________
+[XPASS(strict)] review2 E: an OCR job has no owner, so any signed-in member can reach another member's job
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:25.455 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:25.455 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:25.455 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+_______ test_e1_a_member_cannot_reach_another_members_ocr_job[evaluate] _______
+[XPASS(strict)] review2 E: an OCR job has no owner, so any signed-in member can reach another member's job
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:26.883 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:26.884 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:26.884 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+__________ test_c1_a_huge_page_range_is_refused_without_building_it ___________
+[XPASS(strict)] review2 C: the page range is built in full before it is checked against the page count
+_______ test_r6_1_a_job_deleted_while_running_never_comes_back[delete] ________
+[XPASS(strict)] review2 R6: a job deleted while it runs is saved again by its worker and comes back
+_ test_r6_1_a_job_deleted_while_running_never_comes_back[cancel_then_delete] __
+[XPASS(strict)] review2 R6: a job deleted while it runs is saved again by its worker and comes back
+_______ test_r7_1_a_job_deleted_right_after_a_restart_leaves_no_folder ________
+[XPASS(strict)] review2 R7: after a restart the job is not in memory, so its delete leaves every file on disk
+______ test_r7_4_a_stored_root_outside_the_runs_folder_is_never_deleted _______
+[XPASS(strict)] review2 R7: a job's folder is taken from the stored run, so a stored root outside the runs folder is deleted
+___ test_r7_5_a_file_held_open_during_a_delete_is_gone_after_a_later_delete ___
+[XPASS(strict)] review2 R7: on Windows a file held open survives the delete, and no later delete removes it
+______ test_r8_1_an_out_of_range_dpi_never_runs_a_job_at_that_dpi[50000] ______
+[XPASS(strict)] review2 R8: the OCR route takes any dpi; the 72-400 schema is never used
+_______ test_r8_1_an_out_of_range_dpi_never_runs_a_job_at_that_dpi[401] _______
+[XPASS(strict)] review2 R8: the OCR route takes any dpi; the 72-400 schema is never used
+_______ test_r8_1_an_out_of_range_dpi_never_runs_a_job_at_that_dpi[71] ________
+[XPASS(strict)] review2 R8: the OCR route takes any dpi; the 72-400 schema is never used
+________ test_r8_1_an_out_of_range_dpi_never_runs_a_job_at_that_dpi[0] ________
+[XPASS(strict)] review2 R8: the OCR route takes any dpi; the 72-400 schema is never used
+_______ test_r8_1_an_out_of_range_dpi_never_runs_a_job_at_that_dpi[-1] ________
+[XPASS(strict)] review2 R8: the OCR route takes any dpi; the 72-400 schema is never used
+_____ test_r9_1_asking_for_phone_and_email_offers_both[phone_then_email] ______
+[XPASS(strict)] review2 R9: the field filter keeps only the first matching rule and a Vietnamese-only phone pattern
+_____ test_r9_1_asking_for_phone_and_email_offers_both[email_then_phone] ______
+[XPASS(strict)] review2 R9: the field filter keeps only the first matching rule and a Vietnamese-only phone pattern
+_ test_r9_2_a_phone_number_written_another_way_reaches_the_model[intl_plus1] __
+[XPASS(strict)] review2 R9: the field filter keeps only the first matching rule and a Vietnamese-only phone pattern
+__ test_r9_2_a_phone_number_written_another_way_reaches_the_model[label_DT] ___
+[XPASS(strict)] review2 R9: the field filter keeps only the first matching rule and a Vietnamese-only phone pattern
+_ test_r9_2_a_phone_number_written_another_way_reaches_the_model[label_di_dong] _
+[XPASS(strict)] review2 R9: the field filter keeps only the first matching rule and a Vietnamese-only phone pattern
+_ test_r9_2_a_phone_number_written_another_way_reaches_the_model[hotline_1900] _
+[XPASS(strict)] review2 R9: the field filter keeps only the first matching rule and a Vietnamese-only phone pattern
+_ test_r9_2_a_phone_number_written_another_way_reaches_the_model[paren_84_28] _
+[XPASS(strict)] review2 R9: the field filter keeps only the first matching rule and a Vietnamese-only phone pattern
+___ test_r9_3_a_question_about_a_phone_model_is_not_a_phone_number_question ___
+[XPASS(strict)] review2 R9: the field filter keeps only the first matching rule and a Vietnamese-only phone pattern
+____ test_r9_3_asking_for_an_e_mail_the_document_lacks_is_answered_missing ____
+[XPASS(strict)] review2 R9: the field filter keeps only the first matching rule and a Vietnamese-only phone pattern
+============================== warnings summary ===============================
+backend/tests/test_review2_tmp_flip.py::test_a5_after_discord_refuses_an_answer_the_next_message_is_answered
+  C:\Users\dungbt06\local-ai-core\.venv\Lib\site-packages\discord\player.py:30: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13
+    import audioop
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=================================== PASSES ====================================
+____ test_r2_2_a_demoted_admin_with_an_old_token_is_refused_the_user_list _____
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:29:47.225 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:29:47.225 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:29:47.225 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+2026-11-10 18:29:48.387 | INFO     | app.services.logging_service:log_request:149 - request completed
+________ test_f0_with_true_clocks_both_stories_behave[say_forget_ask] _________
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:29:55.077 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:29:55.077 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:29:55.077 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:29:55.077 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:29:55.078 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:29:55.078 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:29:55.078 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:29:55.078 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:29:55.078 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:29:55.078 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:29:55.078 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:29:55.078 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:29:55.078 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:29:55.078 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:29:55.078 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:29:55.078 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:29:55.078 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:29:55.078 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:29:55.288 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:29:55.288 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:29:55.288 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:29:55.289 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:29:55.638 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:29:55.760 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:29:55.908 | INFO     | app.services.logging_service:log_request:149 - request completed
+________ test_f0_with_true_clocks_both_stories_behave[forget_then_ask] ________
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:29:55.963 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:29:55.963 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:29:55.963 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:29:55.964 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:29:55.964 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:29:55.964 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:29:55.964 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:29:55.964 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:29:55.964 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:29:55.964 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:29:55.964 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:29:55.964 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:29:55.964 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:29:55.965 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:29:55.965 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:29:55.965 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:29:55.965 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:29:55.965 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:29:56.227 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:29:56.227 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:29:56.228 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:29:56.228 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:29:56.615 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:29:56.778 | INFO     | app.services.logging_service:log_request:149 - request completed
+_____________ test_n4_3_retrying_a_forget_turn_forgets_only_once ______________
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:03.837 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:30:03.837 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:30:03.838 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:30:03.838 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:30:03.838 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:30:03.838 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:30:03.838 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:30:03.838 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:30:03.838 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:30:03.838 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:30:03.838 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:30:03.838 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:30:03.838 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:30:03.838 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:30:03.838 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:30:03.838 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:30:03.838 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:30:03.838 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:30:04.031 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:04.031 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:04.031 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:30:04.031 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:30:04.462 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:30:04.538 | INFO     | app.services.logging_service:log_request:149 - request completed
+_______ test_n4_4_retrying_a_remember_turn_saves_one_source_and_says_so _______
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:04.587 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:30:04.588 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:30:04.588 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:30:04.588 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:30:04.588 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:30:04.588 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:30:04.588 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:30:04.588 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:30:04.588 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:30:04.588 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:30:04.588 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:30:04.588 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:30:04.588 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:30:04.588 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:30:04.589 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:30:04.589 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:30:04.589 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:30:04.589 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:30:04.784 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:04.784 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:04.784 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:30:04.784 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:30:05.209 | INFO     | app.services.logging_service:log_request:149 - request completed
+________ test_r1_3_without_a_barrier_a_reply_is_answered[same_session] ________
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:09.134 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:30:09.135 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:30:09.135 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:30:09.135 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:30:09.135 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:30:09.135 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:30:09.135 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:30:09.136 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:30:09.136 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:30:09.136 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:30:09.136 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:30:09.136 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:30:09.136 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:30:09.136 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:30:09.136 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:30:09.136 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:30:09.136 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:30:09.136 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:30:09.332 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:09.332 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:09.332 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:30:09.333 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:30:09.677 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:30:09.774 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:30:09.870 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:30:09.959 | INFO     | app.services.logging_service:log_request:149 - request completed
+_______ test_r1_3_without_a_barrier_a_reply_is_answered[other_session] ________
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:10.000 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:30:10.001 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:30:10.001 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:30:10.001 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:30:10.001 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:30:10.001 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:30:10.001 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:30:10.001 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:30:10.001 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:30:10.001 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:30:10.001 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:30:10.001 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:30:10.001 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:30:10.001 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:30:10.001 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:30:10.001 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:30:10.001 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:30:10.001 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:30:10.199 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:10.200 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:10.200 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:30:10.200 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:30:10.553 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:30:10.649 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:30:10.749 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:30:10.851 | INFO     | app.services.logging_service:log_request:149 - request completed
+_________ test_r1_3_without_a_barrier_a_reply_is_answered[not_found] __________
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:10.893 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:30:10.894 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:30:10.894 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:30:10.894 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:30:10.894 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:30:10.894 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:30:10.894 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:30:10.894 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:30:10.894 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:30:10.894 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:30:10.894 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:30:10.894 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:30:10.894 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:30:10.894 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:30:10.894 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:30:10.894 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:30:10.894 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:30:10.894 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:30:11.092 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:11.092 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:11.092 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:30:11.092 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:30:11.434 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:30:11.545 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:30:11.641 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 18:30:11.739 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_r3_3_resending_after_the_channel_barrier_moved_does_not_return_the_old_answer[remembered_then_edited] _
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:14.056 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:30:14.057 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:30:14.057 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:30:14.057 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:30:14.057 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:30:14.057 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:30:14.057 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:30:14.057 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:30:14.057 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:30:14.057 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:30:14.057 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:30:14.057 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:30:14.058 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:30:14.058 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:30:14.058 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:30:14.058 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:30:14.058 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:30:14.058 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:30:14.256 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:14.256 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:14.256 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:30:14.256 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:30:14.610 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_r3_3_resending_after_the_channel_barrier_moved_does_not_return_the_old_answer[deleted_with_its_channel] _
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:14.736 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:30:14.736 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:30:14.736 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:30:14.736 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:30:14.736 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:30:14.736 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:30:14.736 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:30:14.736 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:30:14.737 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:30:14.737 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:30:14.737 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:30:14.737 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:30:14.737 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:30:14.737 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:30:14.737 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:30:14.737 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:30:14.737 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:30:14.737 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:30:14.927 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:14.928 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:14.928 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:30:14.928 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:30:15.280 | INFO     | app.services.logging_service:log_request:149 - request completed
+________________ test_r3_4_replaying_a_finished_turn[nothing] _________________
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:15.406 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:30:15.406 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:30:15.406 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:30:15.406 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:30:15.407 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:30:15.407 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:30:15.407 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:30:15.407 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:30:15.407 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:30:15.407 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:30:15.407 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:30:15.407 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:30:15.407 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:30:15.407 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:30:15.407 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:30:15.407 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:30:15.407 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:30:15.407 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:30:15.606 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:15.607 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:15.607 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:30:15.607 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:30:15.950 | INFO     | app.services.logging_service:log_request:149 - request completed
+_________________ test_r3_4_replaying_a_finished_turn[forget] _________________
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:16.039 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 18:30:16.039 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 18:30:16.039 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 18:30:16.039 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 18:30:16.039 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 18:30:16.039 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 18:30:16.039 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 18:30:16.039 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 18:30:16.040 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 18:30:16.040 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 18:30:16.040 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 18:30:16.040 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 18:30:16.040 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 18:30:16.040 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 18:30:16.040 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 18:30:16.040 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 18:30:16.040 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 18:30:16.040 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 18:30:16.231 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:16.231 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:16.231 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 18:30:16.233 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 18:30:16.575 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_e2_the_owner_an_admin_and_the_service_key_open_the_job_and_nobody_else_without_signing_in[owner-200] _
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:28.333 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:28.334 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:28.334 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+_ test_e2_the_owner_an_admin_and_the_service_key_open_the_job_and_nobody_else_without_signing_in[admin-200] _
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:29.747 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:29.747 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:29.748 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+_ test_e2_the_owner_an_admin_and_the_service_key_open_the_job_and_nobody_else_without_signing_in[service_key-200] _
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:31.179 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:31.179 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:31.179 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+_ test_e2_the_owner_an_admin_and_the_service_key_open_the_job_and_nobody_else_without_signing_in[anonymous-401] _
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 18:30:32.611 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 18:30:32.611 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 18:30:32.611 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+=========================== short test summary info ===========================
+PASSED tests\test_review2_tmp_flip.py::test_r2_2_a_demoted_admin_with_an_old_token_is_refused_the_user_list
+PASSED tests\test_review2_tmp_flip.py::test_f0_with_true_clocks_both_stories_behave[say_forget_ask]
+PASSED tests\test_review2_tmp_flip.py::test_f0_with_true_clocks_both_stories_behave[forget_then_ask]
+PASSED tests\test_review2_tmp_flip.py::test_n4_3_retrying_a_forget_turn_forgets_only_once
+PASSED tests\test_review2_tmp_flip.py::test_n4_4_retrying_a_remember_turn_saves_one_source_and_says_so
+PASSED tests\test_review2_tmp_flip.py::test_r1_3_without_a_barrier_a_reply_is_answered[same_session]
+PASSED tests\test_review2_tmp_flip.py::test_r1_3_without_a_barrier_a_reply_is_answered[other_session]
+PASSED tests\test_review2_tmp_flip.py::test_r1_3_without_a_barrier_a_reply_is_answered[not_found]
+PASSED tests\test_review2_tmp_flip.py::test_r3_3_resending_after_the_channel_barrier_moved_does_not_return_the_old_answer[remembered_then_edited]
+PASSED tests\test_review2_tmp_flip.py::test_r3_3_resending_after_the_channel_barrier_moved_does_not_return_the_old_answer[deleted_with_its_channel]
+PASSED tests\test_review2_tmp_flip.py::test_r3_4_replaying_a_finished_turn[nothing]
+PASSED tests\test_review2_tmp_flip.py::test_r3_4_replaying_a_finished_turn[forget]
+PASSED tests\test_review2_tmp_flip.py::test_e2_the_owner_an_admin_and_the_service_key_open_the_job_and_nobody_else_without_signing_in[owner-200]
+PASSED tests\test_review2_tmp_flip.py::test_e2_the_owner_an_admin_and_the_service_key_open_the_job_and_nobody_else_without_signing_in[admin-200]
+PASSED tests\test_review2_tmp_flip.py::test_e2_the_owner_an_admin_and_the_service_key_open_the_job_and_nobody_else_without_signing_in[service_key-200]
+PASSED tests\test_review2_tmp_flip.py::test_e2_the_owner_an_admin_and_the_service_key_open_the_job_and_nobody_else_without_signing_in[anonymous-401]
+PASSED tests\test_review2_tmp_flip.py::test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[1-3-pages0]
+PASSED tests\test_review2_tmp_flip.py::test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[ 1 - 2 -pages1]
+PASSED tests\test_review2_tmp_flip.py::test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[1,1,2-pages2]
+PASSED tests\test_review2_tmp_flip.py::test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[5-1-None]
+PASSED tests\test_review2_tmp_flip.py::test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[0-None]
+PASSED tests\test_review2_tmp_flip.py::test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[-1-None]
+PASSED tests\test_review2_tmp_flip.py::test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[1-2-3-None]
+PASSED tests\test_review2_tmp_flip.py::test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[a-b-None]
+PASSED tests\test_review2_tmp_flip.py::test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[1,-None]
+PASSED tests\test_review2_tmp_flip.py::test_c2_a_page_range_selects_exactly_its_pages_or_is_refused[4-None]
+PASSED tests\test_review2_tmp_flip.py::test_r6_2_a_finished_job_deleted_is_gone_from_history_and_disk
+PASSED tests\test_review2_tmp_flip.py::test_r7_2_a_job_opened_after_a_restart_then_deleted_leaves_no_folder
+PASSED tests\test_review2_tmp_flip.py::test_r7_3_a_delete_never_reaches_outside_its_own_job_folder[http:%2e%2e]
+PASSED tests\test_review2_tmp_flip.py::test_r7_3_a_delete_never_reaches_outside_its_own_job_folder[http:..%5C..%5Cx]
+PASSED tests\test_review2_tmp_flip.py::test_r7_3_a_delete_never_reaches_outside_its_own_job_folder[direct:..]
+PASSED tests\test_review2_tmp_flip.py::test_r7_3_a_delete_never_reaches_outside_its_own_job_folder[direct:..\\..\\x]
+PASSED tests\test_review2_tmp_flip.py::test_r7_3_a_delete_never_reaches_outside_its_own_job_folder[direct:ABSOLUTE]
+PASSED tests\test_review2_tmp_flip.py::test_r7_3_a_delete_never_reaches_outside_its_own_job_folder[direct:keep]
+PASSED tests\test_review2_tmp_flip.py::test_r7_3_a_delete_never_reaches_outside_its_own_job_folder[direct:ocr_zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz]
+PASSED tests\test_review2_tmp_flip.py::test_r8_2_a_dpi_in_range_makes_a_job[72]
+PASSED tests\test_review2_tmp_flip.py::test_r8_2_a_dpi_in_range_makes_a_job[200]
+PASSED tests\test_review2_tmp_flip.py::test_r8_2_a_dpi_in_range_makes_a_job[400]
+PASSED tests\test_review2_tmp_flip.py::test_r9_4_a_phone_question_without_a_phone_number_is_answered_missing[name]
+PASSED tests\test_review2_tmp_flip.py::test_r9_4_a_phone_question_without_a_phone_number_is_answered_missing[account_stk]
+PASSED tests\test_review2_tmp_flip.py::test_r9_4_a_phone_question_without_a_phone_number_is_answered_missing[date]
+PASSED tests\test_review2_tmp_flip.py::test_r9_5_a_field_question_offers_its_field_and_nothing_else[vn_plain]
+PASSED tests\test_review2_tmp_flip.py::test_r9_5_a_field_question_offers_its_field_and_nothing_else[vn_plus84]
+PASSED tests\test_review2_tmp_flip.py::test_r9_5_a_field_question_offers_its_field_and_nothing_else[vn_landline]
+PASSED tests\test_review2_tmp_flip.py::test_r9_5_a_field_question_offers_its_field_and_nothing_else[email_only]
+PASSED tests\test_review2_tmp_flip.py::test_r9_5_a_field_question_offers_its_field_and_nothing_else[account_only]
+FAILED tests\test_review2_tmp_flip.py::test_r2_1_a_demoted_admin_with_an_old_token_no_longer_sees_other_peoples_work[conversation_list]
+FAILED tests\test_review2_tmp_flip.py::test_r2_1_a_demoted_admin_with_an_old_token_no_longer_sees_other_peoples_work[conversation_of_a]
+FAILED tests\test_review2_tmp_flip.py::test_r2_1_a_demoted_admin_with_an_old_token_no_longer_sees_other_peoples_work[project_list]
+FAILED tests\test_review2_tmp_flip.py::test_r5_1_two_admins_demoting_each_other_at_once_leave_one_admin
+FAILED tests\test_review2_tmp_flip.py::test_a5_after_discord_refuses_an_answer_the_next_message_is_answered
+FAILED tests\test_review2_tmp_flip.py::test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[once]
+FAILED tests\test_review2_tmp_flip.py::test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[forever]
+FAILED tests\test_review2_tmp_flip.py::test_a7_after_the_bot_stops_waiting_on_a_queued_turn_the_next_message_is_answered
+FAILED tests\test_review2_tmp_flip.py::test_a8_after_the_bot_dies_mid_turn_and_restarts_the_next_message_is_answered
+FAILED tests\test_review2_tmp_flip.py::test_f1_discord_with_the_app_clock_30s_fast_forgotten_words_stay_out
+FAILED tests\test_review2_tmp_flip.py::test_f2_discord_with_the_app_clock_30s_slow_a_message_after_a_forget_is_answered
+FAILED tests\test_review2_tmp_flip.py::test_f3_search_history_with_discord_30s_off[fast_snowflake_written_before_the_forget]
+FAILED tests\test_review2_tmp_flip.py::test_f3_search_history_with_discord_30s_off[slow_snowflake_written_after_the_forget]
+FAILED tests\test_review2_tmp_flip.py::test_f4_web_with_the_app_clock_30s_fast_forgotten_words_stay_out
+FAILED tests\test_review2_tmp_flip.py::test_f5_web_with_the_app_clock_30s_slow_what_was_said_after_a_forget_is_kept
+FAILED tests\test_review2_tmp_flip.py::test_n2_1_a_reply_to_an_edited_message_does_not_show_its_old_words
+FAILED tests\test_review2_tmp_flip.py::test_n2_2_a_reply_to_the_answer_of_an_edited_question_shows_neither
+FAILED tests\test_review2_tmp_flip.py::test_n4_1_retrying_a_forget_turn_tells_the_person_it_forgot
+FAILED tests\test_review2_tmp_flip.py::test_n4_2_resending_a_saved_forget_answer_returns_that_answer
+FAILED tests\test_review2_tmp_flip.py::test_r1_1_a_reply_to_something_older_than_the_barrier_is_answered_without_its_words[user_message]
+FAILED tests\test_review2_tmp_flip.py::test_r1_1_a_reply_to_something_older_than_the_barrier_is_answered_without_its_words[bot_response]
+FAILED tests\test_review2_tmp_flip.py::test_r1_1_a_reply_to_something_older_than_the_barrier_is_answered_without_its_words[not_found]
+FAILED tests\test_review2_tmp_flip.py::test_r1_2_a_reply_to_something_newer_than_the_barrier_carries_its_words[user_message]
+FAILED tests\test_review2_tmp_flip.py::test_r1_2_a_reply_to_something_newer_than_the_barrier_carries_its_words[bot_response]
+FAILED tests\test_review2_tmp_flip.py::test_r1_4_a_reply_to_a_remembered_message_that_was_deleted_never_shows_its_words
+FAILED tests\test_review2_tmp_flip.py::test_r3_1_replaying_a_finished_turn_after_its_question_was_edited_does_not_return_the_old_answer
+FAILED tests\test_review2_tmp_flip.py::test_r3_2_resending_a_saved_answer_after_its_question_was_edited_does_not_return_it
+FAILED tests\test_review2_tmp_flip.py::test_e1_a_member_cannot_reach_another_members_ocr_job[history]
+FAILED tests\test_review2_tmp_flip.py::test_e1_a_member_cannot_reach_another_members_ocr_job[open]
+FAILED tests\test_review2_tmp_flip.py::test_e1_a_member_cannot_reach_another_members_ocr_job[events]
+FAILED tests\test_review2_tmp_flip.py::test_e1_a_member_cannot_reach_another_members_ocr_job[files]
+FAILED tests\test_review2_tmp_flip.py::test_e1_a_member_cannot_reach_another_members_ocr_job[export]
+FAILED tests\test_review2_tmp_flip.py::test_e1_a_member_cannot_reach_another_members_ocr_job[cancel]
+FAILED tests\test_review2_tmp_flip.py::test_e1_a_member_cannot_reach_another_members_ocr_job[promote]
+FAILED tests\test_review2_tmp_flip.py::test_e1_a_member_cannot_reach_another_members_ocr_job[evaluate]
+FAILED tests\test_review2_tmp_flip.py::test_c1_a_huge_page_range_is_refused_without_building_it
+FAILED tests\test_review2_tmp_flip.py::test_r6_1_a_job_deleted_while_running_never_comes_back[delete]
+FAILED tests\test_review2_tmp_flip.py::test_r6_1_a_job_deleted_while_running_never_comes_back[cancel_then_delete]
+FAILED tests\test_review2_tmp_flip.py::test_r7_1_a_job_deleted_right_after_a_restart_leaves_no_folder
+FAILED tests\test_review2_tmp_flip.py::test_r7_4_a_stored_root_outside_the_runs_folder_is_never_deleted
+FAILED tests\test_review2_tmp_flip.py::test_r7_5_a_file_held_open_during_a_delete_is_gone_after_a_later_delete
+FAILED tests\test_review2_tmp_flip.py::test_r8_1_an_out_of_range_dpi_never_runs_a_job_at_that_dpi[50000]
+FAILED tests\test_review2_tmp_flip.py::test_r8_1_an_out_of_range_dpi_never_runs_a_job_at_that_dpi[401]
+FAILED tests\test_review2_tmp_flip.py::test_r8_1_an_out_of_range_dpi_never_runs_a_job_at_that_dpi[71]
+FAILED tests\test_review2_tmp_flip.py::test_r8_1_an_out_of_range_dpi_never_runs_a_job_at_that_dpi[0]
+FAILED tests\test_review2_tmp_flip.py::test_r8_1_an_out_of_range_dpi_never_runs_a_job_at_that_dpi[-1]
+FAILED tests\test_review2_tmp_flip.py::test_r9_1_asking_for_phone_and_email_offers_both[phone_then_email]
+FAILED tests\test_review2_tmp_flip.py::test_r9_1_asking_for_phone_and_email_offers_both[email_then_phone]
+FAILED tests\test_review2_tmp_flip.py::test_r9_2_a_phone_number_written_another_way_reaches_the_model[intl_plus1]
+FAILED tests\test_review2_tmp_flip.py::test_r9_2_a_phone_number_written_another_way_reaches_the_model[label_DT]
+FAILED tests\test_review2_tmp_flip.py::test_r9_2_a_phone_number_written_another_way_reaches_the_model[label_di_dong]
+FAILED tests\test_review2_tmp_flip.py::test_r9_2_a_phone_number_written_another_way_reaches_the_model[hotline_1900]
+FAILED tests\test_review2_tmp_flip.py::test_r9_2_a_phone_number_written_another_way_reaches_the_model[paren_84_28]
+FAILED tests\test_review2_tmp_flip.py::test_r9_3_a_question_about_a_phone_model_is_not_a_phone_number_question
+FAILED tests\test_review2_tmp_flip.py::test_r9_3_asking_for_an_e_mail_the_document_lacks_is_answered_missing
+55 failed, 46 passed, 1 warning in 52.68s

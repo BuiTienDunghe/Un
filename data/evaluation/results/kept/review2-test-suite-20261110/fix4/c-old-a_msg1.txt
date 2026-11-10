@@ -1,0 +1,14 @@
+== REVIEW2_FIX4=a_msg1 REVIEW2_FIX4_SOURCE=old  start 21:30:29
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\dungbt06\local-ai-core
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collected 9 items / 6 deselected / 3 selected
+tests\test_review2_tmp_fix4.py xxx                                       [100%]
+=========================== short test summary info ===========================
+XFAIL tests\test_review2_tmp_fix4.py::test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[once] - review2 A: a turn the bot abandoned blocks the channel; the next message waits until the bot gives up (the backend failed with 5xx on message 1)
+XFAIL tests\test_review2_tmp_fix4.py::test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[forever] - review2 A: a turn the bot abandoned blocks the channel; the next message waits until the bot gives up (the backend failed with 5xx on message 1)
+XFAIL tests\test_review2_tmp_fix4.py::test_a7_after_the_bot_stops_waiting_on_a_queued_turn_the_next_message_is_answered - review2 A: a turn the bot abandoned blocks the channel; the next message waits until the bot gives up (the bot stopped waiting while message 1 was queued)
+====================== 6 deselected, 3 xfailed in 48.32s ======================
+== end 21:31:24

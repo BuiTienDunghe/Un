@@ -1,0 +1,74 @@
+== REVIEW2_FIX4=a5_msg1 REVIEW2_FIX4_SOURCE=new  start 21:28:58
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\dungbt06\local-ai-core
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collected 9 items / 8 deselected / 1 selected
+tests\test_review2_tmp_fix4.py F                                         [100%]
+================================== FAILURES ===================================
+____ test_a5_after_discord_refuses_an_answer_the_next_message_is_answered _____
+..\discord_bot\main.py:559: in answer_mention
+    sent_messages = await send_discord_answer(
+..\discord_bot\main.py:282: in send_discord_answer
+    sent.append(await reply_to.reply(chunks[0], mention_author=False))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\tests\test_discord_progress_message.py:118: in reply
+    raise self.reply_errors.pop(0)
+E   discord.errors.HTTPException: 500 test (error code: 0): test
+During handling of the above exception, another exception occurred:
+tests\test_review2_bot_backend.py:84: in test_a5_after_discord_refuses_an_answer_the_next_message_is_answered
+    answered = asyncio.run(scenario())
+               ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Programs\Python\Python311\Lib\asyncio\runners.py:190: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Programs\Python\Python311\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py:654: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests\test_review2_bot_backend.py:76: in scenario
+    await bot.ask(api, first, allowed=(discord.HTTPException,))
+tests\review2_support.py:391: in ask
+    await answer_mention(self.gateway(api, budget), source, source.question, progress)
+..\discord_bot\main.py:573: in answer_mention
+    await gateway.delivery_failed(
+tests\test_review2_tmp_fix4.py:145: in delivery_failed
+    raise RuntimeError("review2 fix4 mutation: unrelated bot crash after reporting the failed delivery")
+E   RuntimeError: review2 fix4 mutation: unrelated bot crash after reporting the failed delivery
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 21:29:04.552 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 21:29:04.553 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 21:29:04.553 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 21:29:04.553 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 21:29:04.553 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 21:29:04.555 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 21:29:04.555 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 21:29:04.556 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 21:29:04.556 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 21:29:04.556 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 21:29:04.556 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 21:29:04.556 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 21:29:04.556 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 21:29:04.556 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 21:29:04.556 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 21:29:04.556 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 21:29:04.556 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 21:29:04.556 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 21:29:04.773 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 21:29:04.773 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 21:29:04.773 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 21:29:04.773 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 21:29:05.219 | INFO     | app.services.logging_service:log_request:149 - request completed
+============================== warnings summary ===============================
+backend/tests/test_review2_tmp_fix4.py::test_a5_after_discord_refuses_an_answer_the_next_message_is_answered
+  C:\Users\dungbt06\local-ai-core\.venv\Lib\site-packages\discord\player.py:30: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13
+    import audioop
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests\test_review2_tmp_fix4.py::test_a5_after_discord_refuses_an_answer_the_next_message_is_answered
+================= 1 failed, 8 deselected, 1 warning in 2.07s ==================
+== end 21:29:07

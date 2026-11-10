@@ -1,0 +1,281 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\dungbt06\local-ai-core
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collected 9 items / 4 deselected / 5 selected
+
+tests\test_review2_tmp_fix4.py FFFFF                                     [100%]
+
+================================== FAILURES ===================================
+____ test_a5_after_discord_refuses_an_answer_the_next_message_is_answered _____
+tests\test_review2_bot_backend.py:84: in test_a5_after_discord_refuses_an_answer_the_next_message_is_answered
+    answered = asyncio.run(scenario())
+               ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Programs\Python\Python311\Lib\asyncio\runners.py:190: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Programs\Python\Python311\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py:654: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests\test_review2_bot_backend.py:80: in scenario
+    return await second_message_answered(r2, bot, api)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_review2_bot_backend.py:59: in second_message_answered
+    await bot.ask(api, second)
+tests\review2_support.py:391: in ask
+    await answer_mention(self.gateway(api, budget), source, source.question, progress)
+..\discord_bot\main.py:538: in answer_mention
+    prepared = await gateway.prepare(
+..\discord_bot\main.py:369: in prepare
+    turn = await self.api_client.enqueue_discord_turn(
+tests\test_review2_tmp_fix4.py:107: in enqueue
+    raise RuntimeError("review2 fix4 mutation: unrelated bot crash after message 2 was queued")
+E   RuntimeError: review2 fix4 mutation: unrelated bot crash after message 2 was queued
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 23:00:54.804 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 23:00:54.805 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 23:00:54.805 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 23:00:54.805 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 23:00:54.805 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 23:00:54.808 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 23:00:54.808 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 23:00:54.808 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 23:00:54.808 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 23:00:54.808 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 23:00:54.808 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 23:00:54.808 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 23:00:54.808 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 23:00:54.808 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 23:00:54.808 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 23:00:54.808 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 23:00:54.808 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 23:00:54.808 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 23:00:55.026 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 23:00:55.026 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 23:00:55.026 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 23:00:55.026 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+2026-11-10 23:00:55.258 | WARNING  | logging:callHandlers:1706 - C:\Users\dungbt06\local-ai-core\.venv\Lib\site-packages\discord\player.py:30: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13
+  import audioop
+
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 23:00:55.572 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[once] _
+tests\test_review2_bot_backend.py:118: in test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered
+    answered = asyncio.run(scenario())
+               ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Programs\Python\Python311\Lib\asyncio\runners.py:190: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Programs\Python\Python311\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py:654: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests\test_review2_bot_backend.py:114: in scenario
+    return await second_message_answered(r2, bot, api)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_review2_bot_backend.py:59: in second_message_answered
+    await bot.ask(api, second)
+tests\review2_support.py:391: in ask
+    await answer_mention(self.gateway(api, budget), source, source.question, progress)
+..\discord_bot\main.py:538: in answer_mention
+    prepared = await gateway.prepare(
+..\discord_bot\main.py:369: in prepare
+    turn = await self.api_client.enqueue_discord_turn(
+tests\test_review2_tmp_fix4.py:107: in enqueue
+    raise RuntimeError("review2 fix4 mutation: unrelated bot crash after message 2 was queued")
+E   RuntimeError: review2 fix4 mutation: unrelated bot crash after message 2 was queued
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 23:00:56.475 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 23:00:56.475 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 23:00:56.475 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 23:00:56.475 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 23:00:56.475 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 23:00:56.476 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 23:00:56.476 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 23:00:56.476 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 23:00:56.476 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 23:00:56.476 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 23:00:56.476 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 23:00:56.476 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 23:00:56.476 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 23:00:56.476 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 23:00:56.476 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 23:00:56.476 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 23:00:56.476 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 23:00:56.476 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 23:00:56.662 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 23:00:56.662 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 23:00:56.663 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 23:00:56.663 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+_ test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[forever] _
+tests\test_review2_bot_backend.py:118: in test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered
+    answered = asyncio.run(scenario())
+               ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Programs\Python\Python311\Lib\asyncio\runners.py:190: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Programs\Python\Python311\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py:654: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests\test_review2_bot_backend.py:114: in scenario
+    return await second_message_answered(r2, bot, api)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_review2_bot_backend.py:59: in second_message_answered
+    await bot.ask(api, second)
+tests\review2_support.py:391: in ask
+    await answer_mention(self.gateway(api, budget), source, source.question, progress)
+..\discord_bot\main.py:538: in answer_mention
+    prepared = await gateway.prepare(
+..\discord_bot\main.py:369: in prepare
+    turn = await self.api_client.enqueue_discord_turn(
+tests\test_review2_tmp_fix4.py:107: in enqueue
+    raise RuntimeError("review2 fix4 mutation: unrelated bot crash after message 2 was queued")
+E   RuntimeError: review2 fix4 mutation: unrelated bot crash after message 2 was queued
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 23:00:57.062 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 23:00:57.062 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 23:00:57.063 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 23:00:57.063 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 23:00:57.063 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 23:00:57.063 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 23:00:57.063 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 23:00:57.063 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 23:00:57.063 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 23:00:57.063 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 23:00:57.063 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 23:00:57.063 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 23:00:57.063 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 23:00:57.063 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 23:00:57.063 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 23:00:57.063 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 23:00:57.063 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 23:00:57.063 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 23:00:57.258 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 23:00:57.258 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 23:00:57.258 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 23:00:57.258 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+_ test_a7_after_the_bot_stops_waiting_on_a_queued_turn_the_next_message_is_answered _
+tests\test_review2_bot_backend.py:141: in test_a7_after_the_bot_stops_waiting_on_a_queued_turn_the_next_message_is_answered
+    answered = asyncio.run(scenario())
+               ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Programs\Python\Python311\Lib\asyncio\runners.py:190: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Programs\Python\Python311\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py:654: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests\test_review2_bot_backend.py:137: in scenario
+    return await second_message_answered(r2, bot, api)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_review2_bot_backend.py:59: in second_message_answered
+    await bot.ask(api, second)
+tests\review2_support.py:391: in ask
+    await answer_mention(self.gateway(api, budget), source, source.question, progress)
+..\discord_bot\main.py:538: in answer_mention
+    prepared = await gateway.prepare(
+..\discord_bot\main.py:369: in prepare
+    turn = await self.api_client.enqueue_discord_turn(
+tests\test_review2_tmp_fix4.py:107: in enqueue
+    raise RuntimeError("review2 fix4 mutation: unrelated bot crash after message 2 was queued")
+E   RuntimeError: review2 fix4 mutation: unrelated bot crash after message 2 was queued
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 23:00:57.652 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 23:00:57.653 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 23:00:57.653 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 23:00:57.653 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 23:00:57.653 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 23:00:57.653 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 23:00:57.653 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 23:00:57.653 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 23:00:57.653 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 23:00:57.653 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 23:00:57.653 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 23:00:57.653 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 23:00:57.653 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 23:00:57.653 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 23:00:57.653 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 23:00:57.653 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 23:00:57.653 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 23:00:57.653 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 23:00:57.843 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 23:00:57.843 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 23:00:57.843 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 23:00:57.843 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+_ test_a8_after_the_bot_dies_mid_turn_and_restarts_the_next_message_is_answered _
+tests\test_review2_bot_backend.py:180: in test_a8_after_the_bot_dies_mid_turn_and_restarts_the_next_message_is_answered
+    answered = asyncio.run(scenario())
+               ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Programs\Python\Python311\Lib\asyncio\runners.py:190: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Programs\Python\Python311\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py:654: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests\test_review2_bot_backend.py:175: in scenario
+    return await second_message_answered(r2, bot, api)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_review2_bot_backend.py:59: in second_message_answered
+    await bot.ask(api, second)
+tests\review2_support.py:391: in ask
+    await answer_mention(self.gateway(api, budget), source, source.question, progress)
+..\discord_bot\main.py:538: in answer_mention
+    prepared = await gateway.prepare(
+..\discord_bot\main.py:369: in prepare
+    turn = await self.api_client.enqueue_discord_turn(
+tests\test_review2_tmp_fix4.py:107: in enqueue
+    raise RuntimeError("review2 fix4 mutation: unrelated bot crash after message 2 was queued")
+E   RuntimeError: review2 fix4 mutation: unrelated bot crash after message 2 was queued
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 23:00:58.240 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 23:00:58.240 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 23:00:58.240 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 23:00:58.240 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 23:00:58.240 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 23:00:58.240 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 23:00:58.240 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 23:00:58.240 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 23:00:58.240 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 23:00:58.241 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 23:00:58.241 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 23:00:58.241 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 23:00:58.241 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 23:00:58.241 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 23:00:58.241 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 23:00:58.241 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 23:00:58.241 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 23:00:58.241 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 23:00:58.429 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 23:00:58.430 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 23:00:58.430 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 23:00:58.430 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 23:00:58.747 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 23:00:58.770 | WARNING  | logging:callHandlers:1706 - PyNaCl is not installed, voice will NOT be supported
+2026-11-10 23:00:58.770 | WARNING  | logging:callHandlers:1706 - davey is not installed, voice will NOT be supported
+2026-11-10 23:00:58.770 | WARNING  | logging:callHandlers:1706 - /docs is off in every server: DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST is empty
+------------------------------ Captured log call ------------------------------
+WARNING  discord.client:client.py:341 PyNaCl is not installed, voice will NOT be supported
+WARNING  discord.client:client.py:345 davey is not installed, voice will NOT be supported
+WARNING  discord_bot.main:main.py:630 /docs is off in every server: DISCORD_AGENT_TOOLS_GUILD_ALLOWLIST is empty
+=========================== short test summary info ===========================
+FAILED tests\test_review2_tmp_fix4.py::test_a5_after_discord_refuses_an_answer_the_next_message_is_answered
+FAILED tests\test_review2_tmp_fix4.py::test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[once]
+FAILED tests\test_review2_tmp_fix4.py::test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[forever]
+FAILED tests\test_review2_tmp_fix4.py::test_a7_after_the_bot_stops_waiting_on_a_queued_turn_the_next_message_is_answered
+FAILED tests\test_review2_tmp_fix4.py::test_a8_after_the_bot_dies_mid_turn_and_restarts_the_next_message_is_answered
+======================= 5 failed, 4 deselected in 4.58s =======================

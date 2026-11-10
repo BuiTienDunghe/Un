@@ -1,0 +1,111 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\dungbt06\local-ai-core
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collected 5 items
+
+tests\test_review2_tmp_fx.py sFFss                                       [100%]
+
+================================== FAILURES ===================================
+_ test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[once] _
+tests\test_review2_bot_backend.py:118: in test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered
+    answered = asyncio.run(scenario())
+               ^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Programs\Python\Python311\Lib\asyncio\runners.py:190: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Programs\Python\Python311\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\AppData\Local\Programs\Python\Python311\Lib\asyncio\base_events.py:654: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests\test_review2_bot_backend.py:114: in scenario
+    return await second_message_answered(r2, bot, api)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_review2_bot_backend.py:59: in second_message_answered
+    await bot.ask(api, second)
+tests\test_review2_tmp_fx.py:75: in ask
+    return await original(self, api, source, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\review2_support.py:391: in ask
+    await answer_mention(self.gateway(api, budget), source, source.question, progress)
+..\discord_bot\main.py:580: in answer_mention
+    await gateway.delivered(
+..\discord_bot\main.py:481: in delivered
+    await self.api_client.complete_discord_turn(
+..\discord_bot\api_client.py:722: in complete_discord_turn
+    response = await self._authorized_post(
+..\discord_bot\api_client.py:830: in _authorized_post
+    raise BackendDiscordDeliveryConflictError(
+E   discord_bot.api_client.BackendDiscordDeliveryConflictError: Turn completion conflicts with persisted Discord response delivery IDs.
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 22:59:57.275 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 22:59:57.276 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 22:59:57.276 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 22:59:57.276 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 22:59:57.276 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 22:59:57.276 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 22:59:57.277 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 22:59:57.277 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 22:59:57.277 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 22:59:57.277 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 22:59:57.277 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 22:59:57.277 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 22:59:57.277 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 22:59:57.277 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 22:59:57.278 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 22:59:57.278 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 22:59:57.278 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 22:59:57.278 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 22:59:57.499 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 22:59:57.500 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 22:59:57.500 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 22:59:57.500 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+2026-11-10 22:59:57.733 | WARNING  | logging:callHandlers:1706 - C:\Users\dungbt06\local-ai-core\.venv\Lib\site-packages\discord\player.py:30: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13
+  import audioop
+
+---------------------------- Captured stdout call -----------------------------
+FX turn of 'Đây là tin thứ nhất.': status=completed reply_ids=['1001'] source_id=1569743428613628781
+FX turn of 'Đây là tin thứ hai, bình thường.': status=running reply_ids=[] source_id=1569743443210106787
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 23:00:01.248 | INFO     | app.services.logging_service:log_request:149 - request completed
+2026-11-10 23:00:01.360 | INFO     | app.services.logging_service:log_request:149 - request completed
+_ test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[forever] _
+[XPASS(strict)] review2 A: a turn the bot abandoned blocks the channel; the next message waits until the bot gives up (the backend failed with 5xx on message 1)
+---------------------------- Captured stderr setup ----------------------------
+2026-11-10 23:00:02.075 | INFO     | app.config.model_registry:_log:84 - Model registry loaded from C:\Users\dungbt06\local-ai-core\backend\app\config\model_versions.yaml
+2026-11-10 23:00:02.075 | INFO     | app.config.model_registry:_log:84 - general: general-small-v1 (registry)
+2026-11-10 23:00:02.075 | INFO     | app.config.model_registry:_log:84 - general: active (loaded general-small-v1)
+2026-11-10 23:00:02.075 | INFO     | app.config.model_registry:_log:84 - condenser: active is null (not served)
+2026-11-10 23:00:02.075 | INFO     | app.config.model_registry:_log:84 - condenser: unconfigured (loaded None)
+2026-11-10 23:00:02.075 | INFO     | app.config.model_registry:_log:84 - embedding: embedding-v0 (registry)
+2026-11-10 23:00:02.075 | INFO     | app.config.model_registry:_log:84 - embedding: active (loaded embedding-v0)
+2026-11-10 23:00:02.076 | INFO     | app.config.model_registry:_log:84 - vision: active is null (not served)
+2026-11-10 23:00:02.076 | INFO     | app.config.model_registry:_log:84 - vision: unconfigured (loaded None)
+2026-11-10 23:00:02.076 | INFO     | app.config.model_registry:_log:84 - ocr: ocr-ovis-v1 (registry)
+2026-11-10 23:00:02.076 | INFO     | app.config.model_registry:_log:84 - ocr: active (loaded ocr-ovis-v1)
+2026-11-10 23:00:02.076 | INFO     | app.config.model_registry:_log:84 - reranker: reranker-v0 (registry)
+2026-11-10 23:00:02.076 | INFO     | app.config.model_registry:_log:84 - reranker: active (loaded reranker-v0)
+2026-11-10 23:00:02.076 | INFO     | app.config.model_registry:_log:84 - extractor: active is null (not served)
+2026-11-10 23:00:02.076 | INFO     | app.config.model_registry:_log:84 - extractor: unconfigured (loaded None)
+2026-11-10 23:00:02.076 | INFO     | app.config.model_registry:_log:84 - verifier: active is null (not served)
+2026-11-10 23:00:02.076 | INFO     | app.config.model_registry:_log:84 - verifier: unconfigured (loaded None)
+2026-11-10 23:00:02.076 | INFO     | app.config.model_registry:_log:84 - Qdrant collections documents_test / memories_test
+2026-11-10 23:00:02.264 | INFO     | app.services.chunk_context_service:from_config:65 - Contextual retrieval OFF (per-machine env override)
+2026-11-10 23:00:02.264 | INFO     | app.services.reranker_service:from_config:146 - Reranker OFF (per-machine env override)
+2026-11-10 23:00:02.264 | INFO     | app.config.model_registry:_log:84 - reranker resolved: off
+2026-11-10 23:00:02.264 | INFO     | app.services.injection_defense:from_config:57 - Injection defense OFF (per-machine env override)
+---------------------------- Captured stdout call -----------------------------
+FX turn of 'Đây là tin thứ nhất.': status=failed reply_ids=[] source_id=1569743448088110965
+FX turn of 'Đây là tin thứ hai, bình thường.': status=completed reply_ids=['1001'] source_id=1569743488269439042
+---------------------------- Captured stderr call -----------------------------
+2026-11-10 23:00:12.098 | INFO     | app.services.logging_service:log_request:149 - request completed
+=========================== short test summary info ===========================
+SKIPPED [1] tests\test_review2_bot_backend.py:64: a6_bot_oldids does not target test_a5_after_discord_refuses_an_answer_the_next_message_is_answered
+SKIPPED [1] tests\test_review2_bot_backend.py:123: a6_bot_oldids does not target test_a7_after_the_bot_stops_waiting_on_a_queued_turn_the_next_message_is_answered
+SKIPPED [1] tests\test_review2_auth.py:83: a6_bot_oldids does not target test_r5_1_two_admins_demoting_each_other_at_once_leave_one_admin
+FAILED tests\test_review2_tmp_fx.py::test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[once]
+FAILED tests\test_review2_tmp_fx.py::test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[forever]
+======================== 2 failed, 3 skipped in 15.22s ========================

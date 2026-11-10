@@ -1,0 +1,9 @@
+.xxxxx                                                                   [100%]
+============================= slowest 6 durations =============================
+15.43s call     backend/tests/test_review2_bot_backend.py::test_a5_after_discord_refuses_an_answer_the_next_message_is_answered
+15.36s call     backend/tests/test_review2_bot_backend.py::test_a8_after_the_bot_dies_mid_turn_and_restarts_the_next_message_is_answered
+15.36s call     backend/tests/test_review2_bot_backend.py::test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[forever]
+15.34s call     backend/tests/test_review2_bot_backend.py::test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered[once]
+15.33s call     backend/tests/test_review2_bot_backend.py::test_a7_after_the_bot_stops_waiting_on_a_queued_turn_the_next_message_is_answered
+0.82s setup    backend/tests/test_review2_bot_backend.py::test_a4_a_plain_message_goes_through_the_bot_and_is_answered
+1 passed, 5 xfailed in 80.87s (0:01:20)

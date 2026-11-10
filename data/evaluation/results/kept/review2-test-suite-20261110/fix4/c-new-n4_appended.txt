@@ -1,0 +1,12 @@
+== REVIEW2_FIX4=n4_appended REVIEW2_FIX4_SOURCE=new  start 21:29:46
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\dungbt06\local-ai-core
+configfile: pyproject.toml
+plugins: anyio-4.14.1
+collected 9 items / 8 deselected / 1 selected
+tests\test_review2_tmp_fix4.py x                                         [100%]
+=========================== short test summary info ===========================
+XFAIL tests\test_review2_tmp_fix4.py::test_n4_1_retrying_a_forget_turn_tells_the_person_it_forgot - review2 N4: a forget turn tried again finds the barrier its own first attempt set, and calls itself stale
+====================== 8 deselected, 1 xfailed in 1.73s =======================
+== end 21:29:55
