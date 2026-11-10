@@ -194,7 +194,15 @@ class DiscordHistoryService:
                 and source_edited_at <= row.source_edited_at
             ):
                 return False
-            if self.source_memory:
+            if row.content == content:
+                # A link preview arrives as an edit event with the same text: nothing was
+                # revoked, so the channel barrier must not move (review 10/11, finding B).
+                if source_edited_at is not None:
+                    row.source_edited_at = source_edited_at
+                return False
+            # A bot's message is never a memory source; the bot editing its own "⏳"
+            # progress message into the answer must not wipe the channel history.
+            if self.source_memory and not row.is_bot:
                 self.source_memory.invalidate_in(database, f"discord:{discord_message_id}", reader=self._memory_reader(row))
             if row.content_original is None:
                 row.content_original = row.content
@@ -241,7 +249,8 @@ class DiscordHistoryService:
             else:
                 row.content = row.content_original = row.content_tokens = None
                 row.deleted_at = datetime.now(UTC)
-            if self.source_memory:
+            # The bot deletes its own "⏳" message when it is discarded; see record_edit.
+            if self.source_memory and not row.is_bot:
                 self.source_memory.invalidate_in(database, f"discord:{discord_message_id}", reader=self._memory_reader(row))
         return True
 

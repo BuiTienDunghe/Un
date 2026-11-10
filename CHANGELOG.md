@@ -16,6 +16,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
 - **Discord không trả lời tin đã bị xoá, sửa hoặc quên trong lúc chờ.** Lượt như vậy dừng trước khi gọi model và trả một câu cố định. Trước đây code chỉ thêm một dòng thông báo vào prompt rồi vẫn gửi yêu cầu cũ cho model; riêng tin bị xoá còn không được nhận ra, vì dấu xoá không gắn với server.
 - **Bảng OCR không còn lấy hàng dữ liệu đầu làm tên cột.** Chỉ coi là tiêu đề khi bảng tự đánh dấu (`<thead>`, ô `<th>`, dòng `|---|`); bảng tách bằng tab, bảng nhiều tầng tiêu đề hoặc có hàng lệch cột thì các hàng không gắn nhãn và bảng gốc vẫn được giữ làm bằng chứng.
 - **Bộ đo OCR dùng đúng model của API.** `ocr_evidence_eval` mặc định đọc `general` đang active thay vì LFM3.
+- **Bot sửa hoặc xoá tin của chính nó không còn làm Ún quên lịch sử kênh** (bản duyệt Opus 5.5 và Fable 5.2, 10/11). Bot sửa tin "⏳" thành câu trả lời, xoá nó khi bỏ dở; mỗi sự kiện như vậy từng dời mốc quên của cả kênh, nên lượt sau mất hết lịch sử. Trên server thật, 23/39 tin của bot đã có bản ghi sửa. Giờ sổ lịch sử vẫn cập nhật chữ, nhưng sửa hay xoá tin của bot (`is_bot`) và sự kiện sửa không đổi nội dung (như Discord thêm ô xem trước link) không dời mốc. Người sửa nội dung tin của mình vẫn làm Ún quên cả kênh như trước.
 
 ## [1.6.0] - 2026-11-10
 

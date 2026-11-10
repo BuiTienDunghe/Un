@@ -125,3 +125,51 @@ def test_a_turn_revoked_while_queued_never_reaches_the_model(v2client, revoke):
     send(client, guild, 'one', 'Mã riêng của tôi là gì?')
     assert len(captured) == calls + 1
     assert 'sentinel-queued-57' not in json.dumps(captured[-1], ensure_ascii=False)
+
+
+def ledger(client, guild, channel, author, content, *, bot=False):
+    message_id = str(((int(time.time()*1000)-1420070400000)<<22) + int(uuid4().hex[:5],16))
+    recorded = client.post('/api/discord/history/messages', json={
+        'guild_id':guild, 'channel_id':channel, 'thread_id':None, 'discord_message_id':message_id,
+        'author_id':author, 'author_display_name':author, 'is_bot':bot, 'content':content,
+        'reply_to_message_id':None})
+    assert recorded.status_code == 200 and recorded.json()['recorded'], recorded.text
+    return message_id
+
+
+def channel_barrier(client, guild, channel):
+    from app.services.source_memory import MemoryReader
+    return client.app.state.source_memory_service.snapshot(MemoryReader.discord(guild, channel, None, 'alice'))[1]
+
+
+@pytest.mark.parametrize('change', ['edit', 'delete'])
+def test_the_bots_own_edits_and_deletes_keep_the_channel_history(v2client, change):
+    # Review 10/11 (finding B): the bot edits its "⏳" progress message into the answer and
+    # deletes it when discarded. Each event moved the channel barrier, so the next turn
+    # lost the whole channel history. A bot's message is never a memory source.
+    client, captured, guild = v2client
+    send(client, guild, 'one', 'Mật mã của tôi là sentinel-history-314.')
+    before = channel_barrier(client, guild, 'one')
+    progress = ledger(client, guild, 'one', 'un-bot', 'Đang đọc tài liệu…', bot=True)
+    if change == 'edit':
+        client.post(f'/api/discord/history/messages/{progress}/edit', json={'content':'Câu trả lời cuối.'})
+    else:
+        client.post(f'/api/discord/history/messages/{progress}/delete', json={'guild_id':guild, 'channel_id':'one'})
+    assert channel_barrier(client, guild, 'one') == before
+    send(client, guild, 'one', 'Mật mã của tôi là gì?')
+    assert 'sentinel-history-314' in json.dumps(captured[-1], ensure_ascii=False)
+
+
+def test_an_edit_that_keeps_the_text_keeps_the_channel_history(v2client):
+    # A link preview arrives as an edit event carrying the same text; only a real change revokes.
+    client, captured, guild = v2client
+    send(client, guild, 'one', 'Mật mã của tôi là sentinel-history-271.')
+    note = ledger(client, guild, 'one', 'bob', 'Mai họp lúc 9h, xem link này.')
+    before = channel_barrier(client, guild, 'one')
+    client.post(f'/api/discord/history/messages/{note}/edit', json={'content':'Mai họp lúc 9h, xem link này.'})
+    assert channel_barrier(client, guild, 'one') == before
+    send(client, guild, 'one', 'Mật mã của tôi là gì?')
+    assert 'sentinel-history-271' in json.dumps(captured[-1], ensure_ascii=False)
+    # A person changing the words still revokes, as before.
+    client.post(f'/api/discord/history/messages/{note}/edit', json={'content':'Mai họp lúc 10h.'})
+    assert channel_barrier(client, guild, 'one') != before
