@@ -1070,3 +1070,254 @@ def test_summary_breaks_results_down_by_category_and_check():
     assert summary["by_category"]["documents"] == {"passed": 1, "total": 2, "rate": 0.5}
     assert summary["by_check"]["must_mention"] == {"passed": 1, "total": 2, "rate": 0.5}
     assert summary["failed_tasks"] == ["b"]
+
+
+# ── parity with a chat turn (11/11): --clock-note, --discord-persona, labelled history ──
+
+CLOCK = {"role": "system", "content": "Bây giờ là 10:00, Thứ Tư, ngày 11/11/2026, giờ Việt Nam."}
+WEB_TASK = {
+    "id": "nt-w", "category": "no_tool", "input": "Chào Ún",
+    "history": [{"role": "user", "content": "Ún ơi"}, {"role": "assistant", "content": "Dạ"}],
+    "expect": {"tools_forbidden": ["*"]},
+}
+DISCORD_TASK = {
+    "id": "nt-dc", "category": "no_tool", "surface": "discord", "speaker": {"name": "Minh", "author_id": "1002"},
+    "input": "Chào Ún", "expect": {"tools_forbidden": ["*"]},
+}
+
+
+class SeeingRouter(ScriptedRouter):
+    """Keeps what each chat_tools round was sent."""
+
+    def __init__(self, turns):
+        super().__init__(turns)
+        self.seen: list[list[dict]] = []
+
+    def chat_tools(self, mode, messages, tools):
+        self.seen.append([dict(message) for message in messages])
+        return super().chat_tools(mode, messages, tools)
+
+
+def test_without_the_parity_options_the_messages_and_the_manifest_say_nothing_new(tmp_path):
+    assert build_messages(WEB_TASK, "SYS") == [{"role": "system", "content": "SYS"}, *WEB_TASK["history"], {"role": "user", "content": "Chào Ún"}]
+    assert build_messages(WEB_TASK, "SYS", clock=None, discord_persona=None) == build_messages(WEB_TASK, "SYS")
+    assert build_messages(DISCORD_TASK, "SYS", clock=None, discord_persona=None) == build_messages(DISCORD_TASK, "SYS")
+    assert build_messages(DISCORD_TASK, "SYS")[0]["content"] == "SYS"
+
+    out_dir, _ = _run(tmp_path, [WEB_TASK], [], ScriptedRouter([final("Chào bạn")]))
+    manifest = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["clock_note"] is None and manifest["discord_persona_sha256"] is None
+
+
+def test_the_clock_note_goes_just_before_the_new_message_on_both_surfaces():
+    web = build_messages(WEB_TASK, "SYS", clock=CLOCK)
+    assert [m["role"] for m in web] == ["system", "user", "assistant", "system", "user"]
+    assert web[-2] == CLOCK and web[-2] is not CLOCK, "a copy: the agent must not be able to write to the run's one clock line"
+    assert web[-1] == {"role": "user", "content": "Chào Ún"}
+
+    discord = build_messages(DISCORD_TASK, "SYS", clock=CLOCK)
+    assert [m["role"] for m in discord] == ["system", "system", "system", "user"]
+    assert discord[-2] == CLOCK and discord[-1]["content"].startswith("[Người đang hỏi: Minh | author_id=1002]")
+
+
+def test_the_persona_replaces_the_system_prompt_on_discord_tasks_only():
+    assert build_messages(DISCORD_TASK, "SYS", discord_persona="PERSONA")[0] == {"role": "system", "content": "PERSONA"}
+    assert build_messages(WEB_TASK, "SYS", discord_persona="PERSONA")[0] == {"role": "system", "content": "SYS"}
+    # The speaker rules still follow it, as context_system_prompt follows the turn's prompt in chat_service.
+    assert [m["role"] for m in build_messages(DISCORD_TASK, "SYS", discord_persona="PERSONA")] == ["system", "system", "user"]
+
+
+def test_a_run_with_both_options_sends_them_and_the_manifest_records_them(tmp_path):
+    import hashlib
+
+    dataset = load_dataset(write_dataset(tmp_path / "ds", [WEB_TASK, DISCORD_TASK], []))
+    router = SeeingRouter([final("Chào bạn"), final("Chào Minh")])
+    run_eval(
+        dataset, router, out_dir=tmp_path / "run", agent_config={"max_steps": 3, "tool_result_max_chars": 2400},
+        defense=InjectionDefense(enabled=True), system_prompt="Bạn là trợ lý.",
+        run_meta={"run_id": "t", "seed": NO_SEED, "temperature": 0}, progress=lambda line: None,
+        clock=CLOCK, discord_persona="PERSONA",
+    )
+
+    web, discord = router.seen
+    assert web[0]["content"] == "Bạn là trợ lý." and discord[0]["content"] == "PERSONA"
+    assert web[-2] == CLOCK and discord[-2] == CLOCK, "one line for the whole run"
+    manifest = json.loads((tmp_path / "run" / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["clock_note"] == CLOCK["content"]
+    assert manifest["discord_persona_sha256"] == hashlib.sha256(b"PERSONA").hexdigest()
+
+
+def test_the_cli_reads_the_products_clock_once_and_only_with_the_flag(tmp_path, monkeypatch):
+    import scripts.agent_eval as agent_eval
+    from app.services import agent_service
+
+    assert agent_eval.clock_note is agent_service.clock_note, "the product's own function, not a copy of its sentence"
+    env = tmp_path / ".env"
+    env.write_text("", encoding="utf-8")
+    seen = {}
+    reads = []
+
+    class Stop(Exception):
+        pass
+
+    def capture(*args, **kwargs):
+        seen.update(clock=kwargs["clock"], discord_persona=kwargs["discord_persona"], run_meta=kwargs["run_meta"])
+        raise Stop
+
+    def fixed_clock():
+        reads.append(1)
+        return dict(CLOCK)
+
+    monkeypatch.setattr(agent_eval, "run_eval", capture)
+    monkeypatch.setattr(agent_eval, "clock_note", fixed_clock)
+    base = ["--env-file", str(env), "--out", str(tmp_path / "runs")]
+    with pytest.raises(Stop):
+        agent_eval.main(base)
+    assert seen["clock"] is None and seen["discord_persona"] is None and not reads
+    assert seen["run_meta"]["discord_guild_context"] is None and seen["run_meta"]["discord_guild_name"] is None
+
+    with pytest.raises(Stop):
+        agent_eval.main([*base, "--clock-note"])
+    assert seen["clock"] == CLOCK and len(reads) == 1 and seen["discord_persona"] is None
+
+    monkeypatch.setattr(agent_eval, "discord_persona_prompt", lambda guild: ("PERSONA\n\nLINE", "LINE"))
+    with pytest.raises(Stop):
+        agent_eval.main([*base, "--discord-persona"])
+    assert seen["discord_persona"] == "PERSONA\n\nLINE" and seen["run_meta"]["discord_guild_context"] == "LINE" and seen["clock"] is None
+    assert seen["run_meta"]["discord_guild_name"] == agent_eval.DISCORD_GUILD_NAME, "v0's guild has no name of its own"
+
+
+def test_a_persona_that_cannot_be_built_stops_the_run_before_any_model_call(tmp_path, monkeypatch, capsys):
+    import scripts.agent_eval as agent_eval
+
+    def missing(guild):
+        raise RuntimeError("--discord-persona needs discord_bot.main (and discord.py) importable: no module")
+
+    ran = []
+    monkeypatch.setattr(agent_eval, "discord_persona_prompt", missing)
+    monkeypatch.setattr(agent_eval, "run_eval", lambda *args, **kwargs: ran.append(1))
+    assert agent_eval.main(["--out", str(tmp_path / "runs"), "--discord-persona"]) == 2
+    assert "refusing to run" in capsys.readouterr().err and not ran
+
+
+def test_the_persona_is_composed_from_the_bots_own_two_functions():
+    from types import SimpleNamespace
+
+    from scripts.agent_eval import DISCORD_GUILD_NAME, DISCORD_MEMBER_CONTEXT_LIMIT, DISCORD_SYSTEM_PROMPT_PATH, discord_persona_prompt
+
+    assert "eval" not in DISCORD_GUILD_NAME.lower() and "test" not in DISCORD_GUILD_NAME.lower(), "the name must not say this is an exam"
+    asked = {}
+
+    def load_system_prompt(path):
+        asked["path"] = path
+        return "PROMPT"
+
+    def guild_context(guild, member_limit):
+        asked["limit"] = member_limit
+        names = [member.display_name for member in guild.members if not member.bot]
+        return f"{guild.name}: {names}, {guild.member_count}"
+
+    guild = {**GUILD, "messages": [*GUILD["messages"], {"id": "9", "channel_id": "50", "author_id": "1999", "author_display_name": "Ún", "is_bot": True, "content": "x", "sent_at": "2026-10-19T12:00:00+07:00"}]}
+    prompt, line = discord_persona_prompt(guild, bot=SimpleNamespace(load_system_prompt=load_system_prompt, guild_context=guild_context))
+
+    # Members in order of first message, each once; the bot is counted but not named, as in a real guild.
+    assert line == f"{DISCORD_GUILD_NAME}: ['Lan', 'Minh'], 3"
+    assert prompt == "PROMPT\n\n" + line, "as DiscordConversationGateway.prompt_for joins them"
+    assert asked == {"path": DISCORD_SYSTEM_PROMPT_PATH, "limit": DISCORD_MEMBER_CONTEXT_LIMIT}
+    assert discord_persona_prompt({**guild, "name": "Xóm"}, bot=SimpleNamespace(load_system_prompt=load_system_prompt, guild_context=guild_context))[1].startswith("Xóm: ")
+
+
+def test_the_persona_equals_what_the_real_bot_would_send_for_the_same_guild():
+    pytest.importorskip("discord")
+    bot = pytest.importorskip("discord_bot.main")
+    from scripts.agent_eval import DISCORD_MEMBER_CONTEXT_LIMIT, DISCORD_SYSTEM_PROMPT_PATH, _fixture_guild, discord_persona_prompt
+
+    prompt, line = discord_persona_prompt(GUILD)
+
+    gateway = bot.DiscordConversationGateway(object(), bot.load_system_prompt(DISCORD_SYSTEM_PROMPT_PATH), DISCORD_MEMBER_CONTEXT_LIMIT, False)
+    assert prompt == gateway.prompt_for(_fixture_guild(GUILD))
+    assert line.startswith("Discord server context:") and "Lan" in line and "Minh" in line
+    assert prompt.startswith(DISCORD_SYSTEM_PROMPT_PATH.read_text(encoding="utf-8").strip())
+
+
+def test_an_earlier_discord_turn_that_names_its_speaker_is_labelled_as_the_turn_service_labels_it(tmp_path):
+    from types import SimpleNamespace
+
+    from app.discord.speaker_context import build_discord_speaker_context
+
+    unlabelled = {"role": "user", "content": "C"}
+    task = {
+        **DISCORD_TASK,
+        "history": [
+            {"role": "user", "speaker": {"name": "Lan", "author_id": "1001"}, "content": "A"},
+            {"role": "assistant", "content": "B"},
+            unlabelled,
+            {"role": "user", "speaker": {"name": "Lan", "author_id": "1001"}, "content": "D"},
+        ],
+    }
+
+    messages = build_messages(task, "SYS")
+
+    def turn(text, name, author_id, response=None):
+        return SimpleNamespace(request_text=text, response_text=response, author_id=author_id, author_display_name=name, reply_to_discord_message_id=None)
+
+    product = build_discord_speaker_context([turn("A", "Lan", "1001", "B"), turn("D", "Lan", "1001")], turn("Chào Ún", "Minh", "1002"))
+    assert messages[2:4] == product.history[:2] == [{"role": "user", "content": "[Lan | author_id=1001]\nA"}, {"role": "assistant", "content": "B"}]
+    assert messages[4] is unlabelled, "an item without a speaker goes through untouched"
+    assert messages[5] == product.history[2] == {"role": "user", "content": "[Lan | author_id=1001]\nD"}
+    assert messages[6] == product.current_message
+    assert all(set(message) == {"role", "content"} for message in messages), "no `speaker` key reaches the model"
+
+    # The label means something on a Discord user turn only; anywhere else the dataset is refused.
+    on_web = {**WEB_TASK, "history": [{"role": "user", "speaker": {"name": "Lan", "author_id": "1001"}, "content": "A"}]}
+    with pytest.raises(ValueError, match="nt-w: speaker trong history chỉ dùng cho lượt user của bài discord"):
+        load_dataset(write_dataset(tmp_path / "web", [on_web], []))
+    nameless = {**DISCORD_TASK, "history": [{"role": "user", "speaker": {"author_id": "1001"}, "content": "A"}]}
+    with pytest.raises(ValueError, match="nt-dc: speaker trong history cần name và author_id"):
+        load_dataset(write_dataset(tmp_path / "nameless", [nameless], []))
+
+
+def test_the_discord_chat_set_loads_and_cannot_be_passed_by_never_calling_a_tool():
+    dataset = load_dataset(DATASET_DIR.parent / "v0-discord-chat")
+    assert dataset.version.startswith("agent-eval-v0-discord-chat")
+    assert {task["id"] for task in dataset.tasks}.isdisjoint({task["id"] for task in load_dataset(DATASET_DIR).tasks})
+    quiet = [task for task in dataset.tasks if task["category"] == "no_tool"]
+    needing = [task for task in dataset.tasks if task["category"] != "no_tool"]
+    assert 15 <= len(quiet) <= 20 and len(needing) >= 7, "never calling a tool must fail a good share of the set"
+    members = {message["author_id"]: message["author_display_name"] for message in dataset.guild["messages"]}
+    for task in dataset.tasks:
+        assert task["surface"] == "discord" and members[task["speaker"]["author_id"]] == task["speaker"]["name"]
+        labelled = [item for item in task["history"] if item["role"] == "user"]
+        assert labelled and all(members[item["speaker"]["author_id"]] == item["speaker"]["name"] for item in labelled), task["id"]
+        for pattern in [*task["expect"].get("must_mention", []), *task["expect"].get("must_not_mention", [])]:
+            re.compile(pattern)
+        messages = build_messages(task, "SYS", clock=CLOCK, discord_persona="PERSONA")
+        assert messages[0]["content"] == "PERSONA" and messages[-2] == CLOCK
+        assert len(task["input"]) <= INPUT_MAX_CHARS["discord"]
+    for task in quiet:
+        assert task["expect"]["tools_forbidden"] == ["*"], task["id"]
+        assert checks(grade(task["expect"], steps_for(("current_time", {})), "Chào bạn", SCHEMAS))["tools_forbidden"] is False
+    for task in needing:
+        required = task["expect"]["tools_required"]
+        assert required and checks(grade(task["expect"], steps_for(), "Chào bạn", SCHEMAS))["tools_required"] is False, task["id"]
+    # One answer written the way the fixture reads passes each lookup task; the same answer without the lookup does not.
+    right = {
+        "hist-d01": ("search_history", {"query": "board game 14/11"}, "Khoa chốt ở quán cà phê Mộc Miên, bắt đầu lúc 19 giờ 30."),
+        "hist-d02": ("search_history", {"query": "sửa bàn phím cơ"}, "Vy có chỉ tiệm Phím Nhỏ trên đường Lê Duẩn."),
+        # Asked in a chatting voice, with no "look it up": the answer is still only in the server's old messages.
+        "hist-d03": ("search_history", {"query": "thi cuối kỳ"}, "Có nha, Thảo từng nói sắp thi cuối kỳ môn Xác suất."),
+        "hist-d04": ("search_history", {"query": "tới trễ"}, "Đạt nói sẽ tới trễ khoảng 15 phút."),
+        "hist-d05": ("search_history", {"query": "mang trò chơi"}, "Thảo nói sẽ mang Catan với Bài Mèo Nổ."),
+        "stat-d01": ("system_status", {}, "Hệ thống đang ổn, Qdrant không báo lỗi."),
+        "doc-d01": ("search_documents", {"query": "quỹ nhóm mỗi tháng"}, "Theo noi_quy_nhom.pdf (trang 2), mỗi người đóng 150.000 đồng mỗi tháng."),
+    }
+    assert set(right) == {task["id"] for task in needing}
+    for task in needing:
+        name, arguments, answer = right[task["id"]]
+        assert grade(task["expect"], steps_for((name, arguments)), answer, SCHEMAS)["passed"] is True, task["id"]
+        assert grade(task["expect"], steps_for(), answer, SCHEMAS)["passed"] is False, task["id"]
+    # The lookups find their answers in the fixture guild, by the fixture's own search.
+    history = FixtureHistory(dataset.guild)
+    gid = dataset.guild["guild_id"]
+    assert any("Mộc Miên" in hit.content for hit in history.search(guild_id=gid, query="board game ngày 14/11 quán nào mấy giờ"))
+    assert any("Phím Nhỏ" in hit.content for hit in history.search(guild_id=gid, query="chỗ sửa bàn phím cơ"))

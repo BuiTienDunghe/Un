@@ -20,6 +20,40 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
 
 ---
 
+## 11/11/2026 — Test các bản sửa review2 (Discord, OCR, auth, web) và phần chuẩn bị đo mốc 2B
+
+- **Câu hỏi:** đêm 10→11/11, agent viết các bản sửa review2 và phần chuẩn bị đo mốc 2B, chỉ kiểm bằng cách đọc. Khi chạy thật, chúng có đạt bộ test không? Có đúng dự đoán đã ghi trước "bộ review2 ra 107 đạt và 14 xfail (F ×6, E ×8)" không?
+- **Điều kiện:**
+  - Code: cây làm việc trên `69ca4ad`, chưa commit. Diff ở `.scratch/review2-fixes/*/changes.diff` và `.scratch/harness-research/changes.diff`.
+  - Môi trường: Python 3.11.9 trên Windows. Container dùng một lần: `postgres:16-alpine` (16.15), `redis:7-alpine`, `qdrant/qdrant:v1.18.2`, đã migrate tới head `20261109_39`.
+  - Ollama giả (`OLLAMA_BASE_URL` trỏ cổng chết), ẩn CUDA, không nạp model, không đụng database thật.
+  - Chủ dự án cho phép lúc sáng 11/11: "Cho chạy test".
+- **Đăng ký trước:** dự đoán ở `.scratch/review2-fixes/RUN-PLAN.md`, mục "Dự đoán cho bước 1–2", viết trước lần chạy.
+- **Kết quả:**
+
+  | Lần chạy | Kết quả | Thời gian |
+  |---|---|---|
+  | Nhóm backend (review2 + Discord + OCR + auth + eval, 34 tệp) | 535 đạt, 14 xfail, 0 hỏng, 0 bỏ qua | 2 phút 40 giây |
+  | Trong đó review2 backend | 99 đạt, 14 xfail (clocks F ×6, ocr_access E ×8) | — |
+  | review2 gốc (`tests/test_review2_bot_turns.py`) | 8 đạt | — |
+  | **review2 tổng** | **107 đạt, 14 xfail: đúng dự đoán** | — |
+  | Nhóm bot ở gốc (6 tệp) | 103 đạt | 7 giây |
+  | R6-1 + R7-5 (Windows nhả tệp), chạy lặp 3 lần | lần nào cũng 3/3 | — |
+  | R5-1 + A-5…A-8, chạy lặp 3 lần | lần nào cũng 6/6 | 8,3–8,5 giây mỗi lần |
+  | Backend đủ bộ | 2.341 đạt, 14 xfail, 0 hỏng | 5 phút 56 giây |
+  | Gốc đủ bộ | 250 đạt, 1 bỏ qua (`test_run_mteb_prefixes`: thiếu `mteb`) | 23 giây |
+  | Bước 0 của PREREG mốc 2B | Băm v0 vẫn là `35b39db4…`; bộ `v0-discord-chat` có 25 bài; persona dựng được; `bfcl_run --dry-run` chạy; `run_2b_baseline.py --plan` in 12 lượt chạy | — |
+
+- **Kết luận:** mọi bản sửa đều chạy đúng như lần đọc dự đoán; không ca nào hỏng, không ca nào bất ngờ đạt. 41 dấu xfail đã gỡ đều chuyển sang đạt. 14 ca còn lại đúng là các lỗi chưa sửa: F (đồng hồ) và E (OCR không có chủ).
+- **Còn thiếu:**
+  - Chưa chạy với Ollama thật hay Discord thật.
+  - Bot chạy trong container phải build lại image mới dùng code mới.
+  - Lần đo mốc 2B (bước 7) chưa chạy.
+- **Trạng thái:** xong. Sáng 11/11 chủ dự án cho commit; code vào 5 commit liền nhau trên `69ca4ad`, mục này đi cùng commit cuối. Test chạy trên cây làm việc trước khi tách commit; chưa chạy lại trên từng commit hay trên đầu nhánh sau khi tách.
+- **Bằng chứng:**
+  - `data/evaluation/results/kept/review2-fixes-20261111/tests/` gồm log của 4 lần chạy, danh sách tệp nhóm, và kết quả các lần chạy lặp. Commit cùng mục này.
+  - Báo cáo và bản duyệt: `.scratch/review2-fixes/` (chỉ trên máy).
+
 ## 10/11/2026 — Fable 5.2 duyệt lại phần sửa bộ test review2; sửa theo 3 điểm và chạy lại
 
 - **Câu hỏi:**
@@ -51,7 +85,7 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
     - thêm dòng canh thuộc tính đánh số của Discord giả;
     - R5-1 đỏ khi cả hai lần hạ quyền bị từ chối.
 - **Trạng thái:** xong; chưa commit. Chưa chạy đủ bộ backend: chỉ ba tệp review2 đổi, và ngoài review2 không tệp nào import chúng.
-- **Bằng chứng:** `data/evaluation/results/kept/review2-test-suite-20261110/` (`REVIEW-fable-fix4.md`, `fix4-review/`, `fix5/run.txt`, `fix5/changes.diff`, mục cuối `RUN-LOG.md`). Thư mục chưa commit.
+- **Bằng chứng:** `data/evaluation/results/kept/review2-test-suite-20261110/` (`REVIEW-fable-fix4.md`, `fix4-review/`, `fix5/run.txt`, `fix5/changes.diff`, mục cuối `RUN-LOG.md`). Đã commit ở `69ca4ad`.
 
 ## 10/11/2026 — Sửa 4 chỗ Fable nêu trong bộ test review2 (Opus 5.5 xhigh), phiên điều phối chạy lại
 
@@ -87,7 +121,7 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
   - R5-1 giờ chỉ nhận một kiểu từ chối: lỗi "quản trị viên cuối cùng". Nếu bản sửa để bên thua hỏng vì một lỗi database khác, ca sẽ đỏ chứ không lật.
   - Fable duyệt GỘP ĐƯỢC trên bản trước khi sửa; các thay đổi này chưa ai duyệt lại.
 - **Trạng thái:** xong; chưa commit. Chưa chạy đủ bộ backend, vì không tệp nào ngoài review2 import helper. Chưa chạy trên Linux. A-5, A-7 chưa có bản vá phía bot để thử lật.
-- **Bằng chứng:** `data/evaluation/results/kept/review2-test-suite-20261110/fix4/` (`changes.diff`, `test_review2_tmp_fix4.py`, `run_c.sh`, kết quả thô a/b/c, `final-review2.txt`, `coordinator-rerun.txt`); mục cuối `RUN-LOG.md`. Thư mục chưa commit.
+- **Bằng chứng:** `data/evaluation/results/kept/review2-test-suite-20261110/fix4/` (`changes.diff`, `test_review2_tmp_fix4.py`, `run_c.sh`, kết quả thô a/b/c, `final-review2.txt`, `coordinator-rerun.txt`); mục cuối `RUN-LOG.md`. Đã commit ở `69ca4ad`.
 
 ## 10/11/2026 — Bộ test hồi quy review2 (111 test): Opus 5.5 xhigh viết, Fable 5.2 duyệt
 
@@ -124,7 +158,7 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
   - R4 và D không có ca tự động, vì đang chờ chủ dự án chọn cách sửa.
   - Chưa chạy trên Linux.
 - **Trạng thái:** xong; chưa commit. 4 chỗ nên sửa đã làm ở mục "Sửa 4 chỗ Fable nêu…" phía trên. Trong các lần thử lật bằng bản vá phía bot, có một ca của A-6 hỏng ngầm; mục đó giải thích.
-- **Bằng chứng:** `data/evaluation/results/kept/review2-test-suite-20261110/` (`RUN-LOG.md`, `REVIEW-fable.md`, `flip/`, `fable-review/`, `meeting/`). Thư mục chưa commit.
+- **Bằng chứng:** `data/evaluation/results/kept/review2-test-suite-20261110/` (`RUN-LOG.md`, `REVIEW-fable.md`, `flip/`, `fable-review/`, `meeting/`). Đã commit ở `69ca4ad`.
 
 ## 10/11/2026 — Kiểm độc lập bản sửa bot tự sửa/xóa tin, working tree trên ed60401
 
@@ -208,7 +242,7 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
   - Trên server thật, sự kiện bot tự sửa tin đã đến sổ: 23/39 tin của bot có bản ghi sửa. Vì vậy với v1.6.0, mỗi câu trả lời có tin "⏳" sẽ xoá lịch sử kênh với Ún.
   - Người thường sửa một tin cũng xoá lịch sử kênh. Đó là thiết kế hiện tại, không phải lỗi gõ nhầm; giữ hay đổi là câu hỏi thiết kế.
 - **Trạng thái:** xong; chưa sửa.
-- **Bằng chứng:** `data/evaluation/results/kept/review2-second-opinion-20261110/`, gồm brief, script của hai agent, kết luận Opus viết trước khi đọc đề xuất, test tạm và `output.txt`. Thư mục chưa commit.
+- **Bằng chứng:** `data/evaluation/results/kept/review2-second-opinion-20261110/`, gồm brief, script của hai agent, kết luận Opus viết trước khi đọc đề xuất, test tạm và `output.txt`. Đã commit ở `69ca4ad`.
 
 ## 10/11/2026 — Kiểm ý kiến thứ hai về 9 lỗi: lượt reply hỏng có chặn kênh không, đồng hồ app/DB
 
@@ -239,7 +273,7 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
   - Đồng hồ được đo trên container vừa khởi động. Phép đo này chỉ cho biết hai đồng hồ lệch nhau bao nhiêu, không đo khe giữa lệnh "nhớ" và lệnh "quên". Lệch sau khi máy ngủ chưa đo.
   - Đính chính mục dưới: "cửa sổ vài mili giây" là suy đoán, chưa đo. Tỉ lệ 5/83 là số lịch sử, không phải dự báo.
 - **Trạng thái:** xong; chưa sửa.
-- **Bằng chứng:** `data/evaluation/results/kept/review2-second-opinion-20261110/` (test tạm, script đồng hồ, kết quả in ra). Thư mục chưa commit.
+- **Bằng chứng:** `data/evaluation/results/kept/review2-second-opinion-20261110/` (test tạm, script đồng hồ, kết quả in ra). Đã commit ở `69ca4ad`.
 
 ## 10/11/2026 — Tái hiện bản nhận xét thứ hai (9 lỗi) trên main `ed60401`
 

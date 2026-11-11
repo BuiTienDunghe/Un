@@ -1,0 +1,2 @@
+R6-1 + R7-5, 3 runs: 3 passed each
+R5-1 + A-5..A-8, 3 runs: 6 passed each (8.3-8.5 s)

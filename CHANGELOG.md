@@ -27,6 +27,11 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
 - **Admin bị hạ quyền mất màn admin ngay, không chờ token hết hạn.** Vai trò được đọc từ database ở mỗi request đã đăng nhập; token của tài khoản đã xoá nhận 401. Dự án do admin tạo không có chủ, nên admin bị hạ cũng thôi thấy các dự án đó ngay (R2-3, chưa đổi).
 - **Trên web, "nhớ" không còn sống sót qua một lần "quên" chen vào lúc tin đang được xử lý.** Giờ gửi của lệnh nhớ được đọc từ đồng hồ database trước khi chụp trạng thái trí nhớ, và ghi chú bị từ chối nếu có lần quên, sửa hay xoá ghi xuống sau mốc đó. Giờ lưu của chính tin vẫn theo đồng hồ app (lỗi F chưa sửa).
 
+### Added (11/11, chuẩn bị đo mốc 2B, chưa đo)
+- **Hai công tắc cho Agent Eval, mặc định tắt.** `--clock-note` thêm dòng báo giờ như chat thật; `--discord-persona` dùng đúng lời dặn mà bot Discord gửi cho bài Discord. Tắt cả hai thì lần chạy gửi đúng những gì các lần trước đã gửi (băm bộ v0 không đổi). Manifest ghi lại dòng giờ và băm lời dặn.
+- **Bộ bài `v0-discord-chat`** (25 bài, `agent-eval-v0-discord-chat.1`): trò chuyện kiểu Discord, gồm cả bài không được gọi công cụ. Chưa chạy qua model nào.
+- **`backend/scripts/run_2b_baseline.py` và `count_self_chosen.py`** chạy và đếm lần đo mốc 2B theo bản đăng ký trước `.scratch/harness-research/PREREGISTRATION-2b-baseline.md`. Script từ chối chạy khi `backend/`, `discord_bot/` hay `data/benchmarks/` lệch HEAD; dừng hẳn khi GPU từ 85 °C, khi League chạy hoặc khi Ollama đổi phiên bản.
+
 ### Fixed (10/11, theo một bản nhận xét)
 - **Tin vừa quên không còn quay lại lịch sử Web.** Khi người dùng bấm quên trong lúc Ún đang trả lời, tin của lượt đó được lưu với giờ gửi (trước mốc quên), nên vẫn hiện trên màn hình nhưng không còn được gửi cho model ở lượt sau. Áp dụng cho chat và hỏi tài liệu.
 - **Discord không trả lời tin đã bị xoá, sửa hoặc quên trong lúc chờ.** Lượt như vậy dừng trước khi gọi model và trả một câu cố định. Trước đây code chỉ thêm một dòng thông báo vào prompt rồi vẫn gửi yêu cầu cũ cho model; riêng tin bị xoá còn không được nhận ra, vì dấu xoá không gắn với server.

@@ -14,6 +14,12 @@ memory context or the SSE path: those have their own evals or none yet.
     python -m scripts.agent_eval --tasks doc-01,hist-01,hist-07   # a subset
     python -m scripts.agent_eval --probe --temperature 0 --seed 42  # a citable baseline
     python -m scripts.agent_eval --temperature 0 --seed 42 --unload-between-tasks  # each task as if run alone
+    python -m scripts.agent_eval --clock-note --discord-persona   # the two things a real chat turn carries that the eval left out
+
+`--clock-note` and `--discord-persona` are off by default, so a run without them sends what
+every earlier run sent. With them the messages are closer to a chat turn, not equal to one:
+the tools are still the core's plus search_history (no remember, remind, jokes, ask_user or
+web), and there is no memory block, recap or reply target.
 
 Each run writes data/evaluation/results/agent_eval/<run_id>/ (gitignored):
 manifest.json, task_results.jsonl, events.jsonl, summary.json. The agent's
@@ -47,9 +53,9 @@ from app.llm_clients.usage import consume_usage
 from app.schemas.chat_schema import ChatRequest
 from app.discord.schema import DiscordTurnEnqueueRequest
 from app.discord import agent_tools
-from app.services.agent_service import AGENT_GUIDE, FINAL_RESERVE_SECONDS, READ_RESULT_MAX_CHARS, TURN_BUDGET_SECONDS, AgentService, core_tools
+from app.services.agent_service import AGENT_GUIDE, FINAL_RESERVE_SECONDS, READ_RESULT_MAX_CHARS, TURN_BUDGET_SECONDS, AgentService, clock_note, core_tools
 from app.discord.history_service import _SAFE_LEXEME, DiscordHistoryHit
-from app.discord.speaker_context import DISCORD_SPEAKER_SYSTEM_INSTRUCTION, attributed_user_content
+from app.discord.speaker_context import DISCORD_SPEAKER_SYSTEM_INSTRUCTION, attributed_user_content, build_discord_speaker_context
 from app.services.injection_defense import InjectionDefense
 from app.services.context_budget import context_budget_from_config
 from app.services.pastes import CHARS_PER_TOKEN, INLINE_FIXED_TOKENS, INLINE_MAX_TOKENS, inline_ceiling
@@ -62,6 +68,14 @@ PROJECT_ROOT = BACKEND.parent
 DATASET_DIR = PROJECT_ROOT / "data" / "benchmarks" / "agent_eval" / "v0"
 RESULTS_DIR = PROJECT_ROOT / "data" / "evaluation" / "results" / "agent_eval"
 SYSTEM_PROMPT_PATH = BACKEND / "app" / "prompts" / "general_system.md"
+# --discord-persona: the file the bot reads by default (DISCORD_SYSTEM_PROMPT_PATH in discord_bot/main.py).
+DISCORD_SYSTEM_PROMPT_PATH = PROJECT_ROOT / "discord_bot" / "system_prompt.md"
+# The bot's default for DISCORD_MEMBER_CONTEXT_LIMIT. It is a literal inside the bot's settings
+# (discord_bot/main.py), so it is repeated here and can drift: change both.
+DISCORD_MEMBER_CONTEXT_LIMIT = 100
+# The server's name in the bot's guild line when a dataset's guild has no `name` (v0's): a name a real
+# server could have. "Agent Eval" would tell the model it is sitting an exam (review 11/11).
+DISCORD_GUILD_NAME = "Góc Nhỏ"
 
 # Hashed in this order; README.md and retrieval_manifest.json describe the data
 # and never move the hash.
@@ -143,6 +157,16 @@ def load_dataset(directory: Path) -> Dataset:
             problems.append(f"{task['id']}: không có snapshot {task.get('status_snapshot')!r}")
         if not task.get("expect"):
             problems.append(f"{task['id']}: thiếu expect")
+        # An earlier turn that says who spoke is labelled the way the Discord path labels it
+        # (build_messages); anywhere else the label would be silently dropped.
+        for item in task.get("history") or []:
+            if "speaker" not in item:
+                continue
+            speaker = item["speaker"]
+            if task.get("surface") != "discord" or item.get("role") != "user":
+                problems.append(f"{task['id']}: speaker trong history chỉ dùng cho lượt user của bài discord")
+            elif not (isinstance(speaker, dict) and speaker.get("name") and speaker.get("author_id")):
+                problems.append(f"{task['id']}: speaker trong history cần name và author_id")
     problems += [f"retrieval cho bài không tồn tại: {task_id}" for task_id in retrieval if task_id not in ids]
     problems += [f"{task_id}: source {f.get('source')!r}" for task_id, f in retrieval.items() if f.get("source") not in RETRIEVAL_SOURCES]
     documents = {document["document_id"]: document for document in _read_jsonl(directory / "documents.jsonl")}
@@ -349,27 +373,105 @@ def override_general(
 # ── one run ──────────────────────────────────────────────────────────────
 
 
-def build_messages(task: dict[str, Any], system_prompt: str) -> list[dict[str, Any]]:
+def _turn(text: str, speaker: dict[str, Any], response: str | None = None) -> SimpleNamespace:
+    """One Discord turn with the attributes speaker_context reads (DiscordAttributedTurn)."""
+    return SimpleNamespace(
+        request_text=text,
+        response_text=response,
+        author_id=speaker["author_id"],
+        author_display_name=speaker["name"],
+        reply_to_discord_message_id=None,
+    )
+
+
+def _discord_history(history: list[dict[str, Any]], current: SimpleNamespace) -> list[dict[str, Any]]:
+    """A Discord task's earlier turns as the turn service hands them over. A user item that
+    carries `speaker` is labelled by build_discord_speaker_context, with the assistant item
+    right after it as that turn's reply; an item without one goes through as the very dict it
+    is, so a task written before `speaker` existed sends what it always sent."""
+    rendered: list[dict[str, Any]] = []
+    index = 0
+    while index < len(history):
+        item = history[index]
+        if item.get("role") != "user" or "speaker" not in item:
+            rendered.append(item)
+            index += 1
+            continue
+        reply = history[index + 1] if index + 1 < len(history) and history[index + 1].get("role") == "assistant" else None
+        earlier = _turn(str(item["content"]), item["speaker"], str(reply["content"]) if reply is not None else None)
+        rendered.extend(build_discord_speaker_context([earlier], current).history)
+        index += 2 if reply is not None else 1
+    return rendered
+
+
+def build_messages(
+    task: dict[str, Any],
+    system_prompt: str,
+    *,
+    clock: dict[str, str] | None = None,
+    discord_persona: str | None = None,
+) -> list[dict[str, Any]]:
     """The messages chat_service.respond_with_context hands the agent: system
     prompt, the Discord context block on a guild turn, history, the user turn
-    (speaker-labelled on Discord, exactly as discord_speaker_context does it)."""
-    messages: list[dict[str, Any]] = [{"role": "system", "content": system_prompt}]
-    if task.get("surface") == "discord":
-        messages.append({"role": "system", "content": DISCORD_SPEAKER_SYSTEM_INSTRUCTION})
-    messages.extend(task.get("history") or [])
+    (speaker-labelled on Discord, exactly as discord_speaker_context does it).
+
+    `clock` (--clock-note) is agent_service.clock_note()'s message, put where
+    chat_service puts it: after the history, just before the new message, on both
+    surfaces. `discord_persona` (--discord-persona) is the system prompt the bot
+    sends with a turn; it takes the place of `system_prompt` on Discord tasks only,
+    as the turn's own prompt does in chat_service. Without either, the messages are
+    what this function has always built."""
+    discord = task.get("surface") == "discord"
+    messages: list[dict[str, Any]] = [
+        {"role": "system", "content": discord_persona if discord and discord_persona is not None else system_prompt}
+    ]
     content = task["input"]
-    if task.get("surface") == "discord":
-        speaker = task["speaker"]
-        turn = SimpleNamespace(
-            request_text=task["input"],
-            response_text=None,
-            author_id=speaker["author_id"],
-            author_display_name=speaker["name"],
-            reply_to_discord_message_id=None,
-        )
-        content = attributed_user_content(turn, current_speaker=True)
+    if discord:
+        messages.append({"role": "system", "content": DISCORD_SPEAKER_SYSTEM_INSTRUCTION})
+        current = _turn(task["input"], task["speaker"])
+        messages.extend(_discord_history(task.get("history") or [], current))
+        content = attributed_user_content(current, current_speaker=True)
+    else:
+        messages.extend(task.get("history") or [])
+    if clock is not None:
+        messages.append(dict(clock))
     messages.append({"role": "user", "content": content})
     return messages
+
+
+def _fixture_guild(guild: dict[str, Any]) -> SimpleNamespace:
+    """The dataset's guild with the three attributes discord_bot.main.guild_context reads off a
+    discord.Guild: its name, its members (display_name, bot) and member_count. The members are
+    whoever wrote a fixture message, in order of first message; member_count counts the bot too,
+    as Discord's does."""
+    members: dict[str, SimpleNamespace] = {}
+    for message in guild.get("messages") or []:
+        members.setdefault(
+            str(message["author_id"]),
+            SimpleNamespace(display_name=str(message["author_display_name"]), bot=bool(message.get("is_bot", False))),
+        )
+    return SimpleNamespace(name=str(guild.get("name") or DISCORD_GUILD_NAME), members=list(members.values()), member_count=len(members))
+
+
+def discord_persona_prompt(guild: dict[str, Any], *, bot: Any = None) -> tuple[str, str]:
+    """(the system prompt the bot sends with a guild turn, its guild line), composed the way
+    DiscordConversationGateway.prompt_for does it and with the bot's own two functions, so a
+    change to either moves the eval with it. `bot` is discord_bot.main; a test hands in a
+    stand-in. Raises RuntimeError when the bot cannot be imported or its prompt cannot be read:
+    a run that asked for the persona must not go on without it."""
+    if bot is None:
+        try:
+            from discord_bot import main as bot
+        except ImportError:
+            # discord_bot is imported from the repository root (pyproject.toml); a checkout that
+            # is not installed has only backend/ on the path. Appended, so nothing is shadowed.
+            sys.path.append(str(PROJECT_ROOT))
+            try:
+                from discord_bot import main as bot
+            except ImportError as error:
+                raise RuntimeError(f"--discord-persona needs discord_bot.main (and discord.py) importable: {error}") from error
+    line = bot.guild_context(_fixture_guild(guild), DISCORD_MEMBER_CONTEXT_LIMIT)
+    return f"{bot.load_system_prompt(DISCORD_SYSTEM_PROMPT_PATH)}\n\n{line}", line
 
 
 def _sum(values: list[int | None]) -> int | None:
@@ -406,8 +508,13 @@ def run_eval(
     task_ids: list[str] | None = None,
     progress: Any = print,
     reloader: Any = None,
+    clock: dict[str, str] | None = None,
+    discord_persona: str | None = None,
 ) -> dict[str, Any]:
     """Run the tasks, grade them, write the four artifacts; returns the summary.
+
+    `clock` and `discord_persona` are build_messages' (--clock-note, --discord-persona):
+    one clock message for the whole run, so every task of an arm reads the same line.
 
     Lines are appended task by task, so a run that dies half-way still leaves
     a readable manifest and every finished task on disk. With a reloader
@@ -468,6 +575,11 @@ def run_eval(
         "agent_guide_sha256": _sha256(defense.agent_guide(AGENT_GUIDE)),
         "system_prompt_sha256": _sha256(system_prompt),
         "discord_context_sha256": _sha256(DISCORD_SPEAKER_SYSTEM_INSTRUCTION),
+        # Parity with a chat turn (11/11): null = off, what every earlier run sent. The clock line is
+        # kept whole, since it is the one part of the prompt that differs from run to run; runs
+        # compare task by task only when both of these agree.
+        "clock_note": clock["content"] if clock is not None else None,
+        "discord_persona_sha256": _sha256(discord_persona) if discord_persona is not None else None,
         # What the model is shown, not what is registered: a tool that waits for approval is not shown while nothing can approve it.
         "tools_sha256": _sha256(json.dumps(AgentService(router, None, None, registry=registry)._offered_schemas(), ensure_ascii=False, sort_keys=True)),
         "dataset": {
@@ -522,7 +634,8 @@ def run_eval(
             error = f"INPUT_TOO_LONG: {len(task['input'])} > {limit} ký tự, API từ chối trước khi agent chạy"
         else:
             try:
-                answer, model, steps = agent.run(build_messages(task, system_prompt), tool_context=tool_context)
+                messages = build_messages(task, system_prompt, clock=clock, discord_persona=discord_persona)
+                answer, model, steps = agent.run(messages, tool_context=tool_context)
             except Exception as exc:  # one broken task must not cost the others
                 error = f"{type(exc).__name__}: {exc}"
         latency_ms = int((perf_counter() - started) * 1000)
@@ -626,6 +739,16 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--max-steps", type=int,
         help="tool rounds per turn instead of agent.max_steps: what the context budget needs on tasks that read many times",
+    )
+    parser.add_argument(
+        "--clock-note", action="store_true",
+        help="put the clock line chat_service puts before every new message (agent_service.clock_note), read once when the run starts; "
+        "default off, as every run before 11/11. It is the real clock, so two such runs do not send the same bytes",
+    )
+    parser.add_argument(
+        "--discord-persona", action="store_true",
+        help="on Discord tasks, the system prompt the bot sends (discord_bot/system_prompt.md and its guild line) instead of general_system.md; "
+        "default off. Needs discord_bot.main importable",
     )
     return parser.parse_args(argv)
 
@@ -788,6 +911,14 @@ def main(argv: list[str] | None = None) -> int:
             stream.reconfigure(encoding="utf-8", errors="replace")
     args = parse_args(argv)
     dataset = load_dataset(args.dataset)
+    discord_persona: str | None = None
+    discord_guild_context: str | None = None
+    if args.discord_persona:
+        try:
+            discord_persona, discord_guild_context = discord_persona_prompt(dataset.guild)
+        except RuntimeError as error:
+            print(f"refusing to run: {error}", file=sys.stderr)
+            return 2
     settings = build_settings(args.env_file, probe=args.probe)
     loaded_at_start = ollama_loaded(settings.ollama_base_url) if args.probe else None
     gpu_at_start = gpu_snapshot() if args.probe else None
@@ -875,6 +1006,10 @@ def main(argv: list[str] | None = None) -> int:
         "think": general.get("think"),
         "num_ctx": general.get("context"),
         "overrides": {"temperature": args.temperature, "seed": args.seed, "model": args.model},
+        # The guild line inside the bot's prompt, readable beside its hash (discord_persona_sha256); null without --discord-persona.
+        "discord_guild_context": discord_guild_context,
+        # The server name that line carries: the dataset's own, or DISCORD_GUILD_NAME when its guild has none.
+        "discord_guild_name": str(dataset.guild.get("name") or DISCORD_GUILD_NAME) if args.discord_persona else None,
         "argv": sys.argv[1:] if argv is None else argv,
     }
     out_dir = args.out / run_id
@@ -888,6 +1023,9 @@ def main(argv: list[str] | None = None) -> int:
         run_meta=run_meta,
         task_ids=[task_id.strip() for task_id in args.tasks.split(",") if task_id.strip()] if args.tasks else None,
         reloader=reloader,
+        # Read once, here: the whole run is told the same minute.
+        clock=clock_note() if args.clock_note else None,
+        discord_persona=discord_persona,
     )
     overall = summary["overall"]
     card = scorecard(out_dir)

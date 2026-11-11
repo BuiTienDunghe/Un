@@ -1,0 +1,95 @@
+{
+  "version": "agent-eval-v0-discord-chat.1",
+  "created": "2026-11-11",
+  "note": "Bộ bài hồi quy do dự án tự viết, không phải benchmark chất lượng: trò chuyện Discord có lịch sử, Ún không được gọi công cụ, kèm vài bài cần gọi để không qua được bằng cách không bao giờ gọi. Không có bài nào của v0. Dữ liệu hoàn toàn bịa.",
+  "guild": {
+    "guild_id": "900000000000000002",
+    "name": "Xóm Board Game",
+    "now": "2026-11-10T20:00:00+07:00",
+    "messages": [
+      {
+        "id": "8001",
+        "channel_id": "70",
+        "author_id": "2002",
+        "author_display_name": "Khoa",
+        "is_bot": false,
+        "content": "Buổi chơi board game chốt ngày 14/11 ở quán cà phê Mộc Miên nhé, bắt đầu lúc 19 giờ 30.",
+        "sent_at": "2026-11-08T19:05:00+07:00"
+      },
+      {
+        "id": "8002",
+        "channel_id": "70",
+        "author_id": "2003",
+        "author_display_name": "Thảo",
+        "is_bot": false,
+        "content": "Ok, mình mang Catan với Bài Mèo Nổ.",
+        "sent_at": "2026-11-08T19:07:00+07:00"
+      },
+      {
+        "id": "8003",
+        "channel_id": "70",
+        "author_id": "2004",
+        "author_display_name": "Đạt",
+        "is_bot": false,
+        "content": "Mình tới trễ khoảng 15 phút, mọi người cứ chơi trước.",
+        "sent_at": "2026-11-08T19:10:00+07:00"
+      },
+      {
+        "id": "8004",
+        "channel_id": "70",
+        "author_id": "2001",
+        "author_display_name": "Vy",
+        "is_bot": false,
+        "content": "Ai đi được thì thả tim tin của Khoa để mình đặt bàn cho đủ ghế.",
+        "sent_at": "2026-11-09T08:30:00+07:00"
+      },
+      {
+        "id": "8005",
+        "channel_id": "70",
+        "author_id": "2999",
+        "author_display_name": "Ún",
+        "is_bot": true,
+        "content": "Ún đã ghim tin chốt lịch rồi nha.",
+        "sent_at": "2026-11-09T08:31:00+07:00"
+      },
+      {
+        "id": "8006",
+        "channel_id": "70",
+        "author_id": "2003",
+        "author_display_name": "Thảo",
+        "is_bot": false,
+        "content": "Mình sắp thi cuối kỳ môn Xác suất nên chắc ít online.",
+        "sent_at": "2026-11-09T21:00:00+07:00"
+      },
+      {
+        "id": "8007",
+        "channel_id": "70",
+        "author_id": "2004",
+        "author_display_name": "Đạt",
+        "is_bot": false,
+        "content": "Có ai biết chỗ sửa bàn phím cơ ở Đà Nẵng không?",
+        "sent_at": "2026-11-10T12:15:00+07:00"
+      },
+      {
+        "id": "8008",
+        "channel_id": "70",
+        "author_id": "2001",
+        "author_display_name": "Vy",
+        "is_bot": false,
+        "content": "Bạn thử tiệm Phím Nhỏ trên đường Lê Duẩn xem, mình từng sửa bàn phím cơ ở đó.",
+        "sent_at": "2026-11-10T12:20:00+07:00"
+      }
+    ]
+  },
+  "status_snapshots": {
+    "healthy": {
+      "status": "ok",
+      "service": "local-ai-core",
+      "ollama": "ok",
+      "qdrant": "ok",
+      "postgres": "ok",
+      "redis": "ok",
+      "checked_at": "2026-11-10T13:00:00+00:00"
+    }
+  }
+}
