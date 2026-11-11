@@ -10,7 +10,6 @@ from __future__ import annotations
 import asyncio
 import io
 import json
-import sys
 import tracemalloc
 from types import SimpleNamespace
 from uuid import uuid4
@@ -22,7 +21,7 @@ from starlette.datastructures import UploadFile
 
 from app.routers.ocr import router as ocr_router
 from app.services.ocr_job_service import OcrJobService
-from review2_support import PNG, BlockingOcr, KnownBug, MemoryOcrStore, known_bug, ocr_router_stub, quiet_ocr, wait_idle
+from review2_support import PNG, BlockingOcr, MemoryOcrStore, known_bug, ocr_router_stub, quiet_ocr, wait_idle
 
 
 def ocr_app(tmp_path, monkeypatch, *, ocr_service=None) -> SimpleNamespace:
@@ -67,8 +66,6 @@ def history_ids(ocr) -> list[str]:
 # ── R6: deleting a job while its worker runs ────────────────────────────────────
 
 @pytest.mark.parametrize("cancel_first", [False, True], ids=["delete", "cancel_then_delete"])
-@pytest.mark.xfail(strict=True, raises=KnownBug,
-                   reason="review2 R6: a job deleted while it runs is saved again by its worker and comes back")
 def test_r6_1_a_job_deleted_while_running_never_comes_back(tmp_path, monkeypatch, cancel_first):
     blocking = BlockingOcr()
     ocr = ocr_app(tmp_path, monkeypatch, ocr_service=blocking)
@@ -108,8 +105,6 @@ def restart(ocr) -> None:
     ocr.app.state.ocr_job_service = OcrJobService(ocr_router_stub(), ocr.runs, ocr.store)
 
 
-@pytest.mark.xfail(strict=True, raises=KnownBug,
-                   reason="review2 R7: after a restart the job is not in memory, so its delete leaves every file on disk")
 def test_r7_1_a_job_deleted_right_after_a_restart_leaves_no_folder(ocr):
     job_id = finished_job(ocr)
     restart(ocr)
@@ -154,8 +149,6 @@ def test_r7_3_a_delete_never_reaches_outside_its_own_job_folder(ocr, way, job_id
     assert [str(canary) for canary in canaries if not canary.exists()] == []
 
 
-@pytest.mark.xfail(strict=True, raises=KnownBug,
-                   reason="review2 R7: a job's folder is taken from the stored run, so a stored root outside the runs folder is deleted")
 def test_r7_4_a_stored_root_outside_the_runs_folder_is_never_deleted(tmp_path, monkeypatch):
     quiet_ocr(monkeypatch)
     runs, victim = tmp_path / "data" / "runs", tmp_path / "victim"
@@ -180,8 +173,6 @@ def make_job(service) -> str:
     return created["id"]
 
 
-@pytest.mark.xfail(sys.platform == "win32", strict=True, raises=KnownBug,
-                   reason="review2 R7: on Windows a file held open survives the delete, and no later delete removes it")
 def test_r7_5_a_file_held_open_during_a_delete_is_gone_after_a_later_delete(tmp_path, monkeypatch):
     quiet_ocr(monkeypatch)
     runs, store = tmp_path / "data" / "runs", MemoryOcrStore()
@@ -203,7 +194,6 @@ def test_r7_5_a_file_held_open_during_a_delete_is_gone_after_a_later_delete(tmp_
 # ── R8: the dpi a job runs at ───────────────────────────────────────────────────
 
 @pytest.mark.parametrize("dpi", [50000, 401, 71, 0, -1])
-@pytest.mark.xfail(strict=True, raises=KnownBug, reason="review2 R8: the OCR route takes any dpi; the 72-400 schema is never used")
 def test_r8_1_an_out_of_range_dpi_never_runs_a_job_at_that_dpi(ocr, dpi):
     response = upload(ocr, dpi=dpi)
     wait_idle(ocr.service())
@@ -255,8 +245,6 @@ def pdf_service(tmp_path, monkeypatch):
     wait_idle(service)
 
 
-@pytest.mark.xfail(strict=True, raises=KnownBug,
-                   reason="review2 C: the page range is built in full before it is checked against the page count")
 def test_c1_a_huge_page_range_is_refused_without_building_it(pdf_service):
     tracemalloc.start()
     try:

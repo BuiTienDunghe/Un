@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import threading
 import time
@@ -10,9 +11,11 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi import UploadFile
+from pydantic import ValidationError
 
 from app.parsers.pymupdf_parser import PyMuPDFParser
 from app.parsers.smart_parser import SmartParser
+from app.schemas.ocr_schema import OcrJobOptions
 from app.services.model_router import ModelRouter
 from app.services.ocr_service import OCRService
 from app.services.ocr_evidence import native_evidence, parse_evidence
@@ -29,6 +32,9 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from app.services.postgres_document_service import PostgresDocumentService
 
+# The only ids create() makes; a delete reaches the disk only for one of these (review2 R7).
+JOB_ID = re.compile(r"ocr_[0-9a-f]{32}")
+
 
 class OcrJobService:
     allowed = {".pdf", ".png", ".jpg", ".jpeg", ".webp"}
@@ -37,10 +43,19 @@ class OcrJobService:
         self.router, self.runs_path, self.store = router, runs_path, store
         self.ocr_service = ocr_service or OCRService(router, store)
         self.jobs: dict[str, dict[str, object]] = {}
-        self._lock = threading.Lock()
+        # One re-entrant lock guards the running job, the deleted ids and every store write of a
+        # run, so a delete and a worker's save never interleave (review2 R6).
+        self._lock = threading.RLock()
         self._active: str | None = None
+        self._deleted: set[str] = set()
 
     async def create(self, file: UploadFile, dpi: int, page_range: str | None, output_format: str, force_ocr: bool = False) -> dict[str, object]:
+        # Refused, never clamped: a clamped dpi would silently change ocr_config_hash (review2 R8).
+        try:
+            OcrJobOptions(dpi=dpi, page_range=page_range, output_format=output_format)
+        except ValidationError as error:
+            fields = ", ".join(str(item["loc"][0]) for item in error.errors() if item.get("loc"))
+            raise ValueError(f"INVALID_OCR_OPTIONS: {fields}") from error
         suffix = Path(file.filename or "upload").suffix.lower()
         if suffix not in self.allowed:
             raise ValueError("UNSUPPORTED_OCR_FILE")
@@ -68,8 +83,10 @@ class OcrJobService:
         job["logs"].append(event)  # type: ignore[index]
 
     def _run(self, job_id: str) -> None:
-        job = self.jobs[job_id]
+        job = self.jobs.get(job_id)
         with self._lock:
+            if job is None or job_id in self._deleted:
+                return  # deleted before its worker started; delete() removed the folder itself
             if self._active:
                 job["status"] = "failed"; self._event(job, "Rejected", 0, "Another OCR job is currently running", "ERROR")
                 self._save(job)
@@ -115,8 +132,12 @@ class OcrJobService:
             job["status"] = "failed"; self._event(job, "Failed", int(job.get("progress", 0)), str(error), "ERROR")
         finally:
             job["timings"] = {"total_seconds": round(time.perf_counter() - started, 3)}; job["metrics"] = system_metrics()
-            self._save(job)
-            with self._lock: self._active = None
+            with self._lock:
+                self._save(job)
+                # Deleted while it ran: delete() left the folder to this worker, whose files are all
+                # closed now (Windows keeps a file that is open). Gone before _active is released.
+                if job_id in self._deleted: self._remove_folder(job_id)
+                self._active = None
 
     def _native_pages(self, source: Path, suffix: str) -> dict[int, str]:
         """Pages whose own text is good enough, by the test the library already uses. 13 pages of a
@@ -148,18 +169,22 @@ class OcrJobService:
         selected: set[int] = set()
         for part in page_range.split(","):
             bounds = [int(item.strip()) for item in part.split("-")]
-            start, end = (bounds[0], bounds[-1]) if len(bounds) <= 2 else (_ for _ in ()).throw(ValueError("Invalid page range"))
+            if len(bounds) > 2: raise ValueError("Invalid page range")
+            start, end = bounds[0], bounds[-1]
+            # Each part is checked before it is expanded: "1-1000000" on a 3-page PDF used to
+            # build a million-page set first (review2 C). The message is matched by ocr.js.
+            if start < 1 or end > total or start > end: raise ValueError(f"Page range must be within 1-{total}")
             selected.update(range(start, end + 1))
-        if not selected or min(selected) < 1 or max(selected) > total: raise ValueError(f"Page range must be within 1-{total}")
         return sorted(selected)
 
     def view(self, job_id: str) -> dict[str, object]:
-        if job_id not in self.jobs:
-            for item in self.store.list_ocr_runs():
-                if item["id"] == job_id:
-                    job = json.loads(str(item["result_json"])); self.jobs[job_id] = job; break
-            else: raise KeyError(job_id)
-        job = self.jobs[job_id]
+        job = self.jobs.get(job_id)
+        if job is None:
+            stored = next((item for item in self.store.list_ocr_runs() if item["id"] == job_id), None)
+            with self._lock:
+                # A deleted run is never loaded back, even by a read that raced its delete.
+                if stored is None or job_id in self._deleted: raise KeyError(job_id)
+                job = self.jobs.setdefault(job_id, json.loads(str(stored["result_json"])))
         return {key: value for key, value in job.items() if key not in {"path", "root", "cancel"}}
 
     def cancel(self, job_id: str) -> dict[str, object]:
@@ -209,12 +234,37 @@ class OcrJobService:
         return archive
 
     def delete(self, job_id: str) -> None:
-        job = self.jobs.pop(job_id, None)
-        if job: shutil.rmtree(Path(str(job["root"])), ignore_errors=True)
-        self.store.delete_ocr_run(job_id)
+        """Gone for good once the worker stops: never saved again, never reloaded, and its folder
+        removed by whoever holds it last (review2 R6). Works after a restart too (R7)."""
+        with self._lock:
+            self.store.delete_ocr_run(job_id)  # first: if the store fails, the job stays whole
+            self._deleted.add(job_id)
+            job = self.jobs.pop(job_id, None)
+            if job is not None: job["cancel"] = True  # a running worker stops at its next page
+            running = self._active == job_id
+        if not running:  # a running worker removes its own folder as it exits
+            self._remove_folder(job_id)
+
+    def _job_folder(self, job_id: str) -> Path | None:
+        """runs_path/<job_id>. Never the root stored with a run: that is data, and after a restart
+        a run is known only from the store (review2 R7). Only for an id create() could have made,
+        and only if the folder resolves directly inside runs_path, so a dot-dot id, a backslash
+        path or a link never reaches outside it."""
+        if not JOB_ID.fullmatch(job_id): return None
+        runs = self.runs_path.resolve()
+        folder = (runs / job_id).resolve()
+        return folder if folder.parent == runs else None
+
+    def _remove_folder(self, job_id: str) -> None:
+        folder = self._job_folder(job_id)
+        # On Windows a file another process holds open survives this; deleting the same id again
+        # (or after a restart) removes what is left.
+        if folder is not None: shutil.rmtree(folder, ignore_errors=True)
 
     def list_history(self) -> list[dict[str, object]]:
         return [{key: value for key, value in json.loads(str(item["result_json"])).items() if key not in {"path", "root", "cancel", "events", "logs", "pages"}} for item in self.store.list_ocr_runs()]
 
     def _save(self, job: dict[str, object]) -> None:
-        self.store.save_ocr_run(str(job["id"]), str(job["filename"]), str(job["status"]), str(job["model"]), json.dumps(job, ensure_ascii=False, default=str))
+        with self._lock:
+            if str(job["id"]) in self._deleted: return  # a deleted run is never written back
+            self.store.save_ocr_run(str(job["id"]), str(job["filename"]), str(job["status"]), str(job["model"]), json.dumps(job, ensure_ascii=False, default=str))

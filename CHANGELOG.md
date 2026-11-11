@@ -18,6 +18,11 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
 - **Thử lại lượt "quên" vẫn báo đã quên và chỉ quên một lần**, thay vì báo tin đã bị xoá hoặc sửa.
 - **Lượt bị bỏ rơi không còn chặn kênh Discord.** Lượt đang chờ mà 30 giây không ai hỏi tới (`DISCORD_TURN_ABANDON_AFTER_SECONDS`) bị đánh `failed` khi có lượt sau đang chờ. Bot bỏ cuộc (hết giờ chờ, backend lỗi 5xx hoặc 409) thì xin huỷ lượt qua `POST /api/discord/sessions/turns/{id}/cancel`, route chỉ huỷ lượt đang chờ. Câu trả lời Discord không nhận thì lượt kết thúc hẳn thay vì quay về hàng đợi. Lượt đang chạy vẫn có thể giữ kênh tới khoảng 150 giây.
 - **Bot chỉ báo sửa hoặc xoá một tin sau khi chính tin đó đã vào sổ lịch sử** (chờ tối đa 10 giây), nên bot xoá "⏳" của mình ngay sau khi gửi không còn làm kênh quên lịch sử. Đây là chỗ hở còn lại của bản sửa ngày 10/11.
+- **API OCR từ chối DPI ngoài khoảng 72–400.** `POST /api/ocr/jobs` từng nhận mọi `dpi`; giờ `dpi`, `page_range` (tối đa 100 ký tự) và `output_format` sai thì trả 422 trước khi có job hay thư mục nào được tạo. Màn web chỉ gửi 150/200/300.
+- **Dải trang vượt quá số trang của PDF bị từ chối ngay.** Mỗi phần của `page_range` được so với số trang trước khi bung ra; `1-5000000` trên PDF 3 trang từng ăn tới 281 MiB rồi mới bị từ chối.
+- **Xoá job OCR đang chạy là xoá hẳn.** Worker từng lưu lại job lúc dừng nên job hiện lại trong lịch sử; giờ job biến mất ngay, worker dừng ở trang kế tiếp và tự xoá thư mục của job khi thoát.
+- **Xoá lịch sử OCR sau khi khởi động lại thì xoá cả ảnh và chữ trên đĩa.** Thư mục được tìm từ mã job, chỉ với mã do server tạo và chỉ bên trong thư mục OCR, không bao giờ theo đường dẫn lưu kèm lần chạy.
+- **Câu hỏi OCR nêu nhiều trường thì giữ bằng chứng cho từng trường.** "Điện thoại và email" từng chỉ đưa model các khối điện thoại. Số viết dạng `+1 415…`, `(84-28)…`, `1900 1234`, hay đứng sau `ĐT`, `Di động`, `Hotline`, `Mobile` từng bị bỏ, và `e-mail` không khớp luật nào. Câu hỏi về mẫu điện thoại không còn bị coi là hỏi số điện thoại.
 
 ### Fixed (10/11, theo một bản nhận xét)
 - **Tin vừa quên không còn quay lại lịch sử Web.** Khi người dùng bấm quên trong lúc Ún đang trả lời, tin của lượt đó được lưu với giờ gửi (trước mốc quên), nên vẫn hiện trên màn hình nhưng không còn được gửi cho model ở lượt sau. Áp dụng cho chat và hỏi tài liệu.

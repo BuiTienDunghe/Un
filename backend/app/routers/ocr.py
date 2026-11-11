@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse
 
 from app.schemas.ocr_schema import OcrEvaluationRequest, OcrQuestionRequest
@@ -14,8 +14,12 @@ def _job(request: Request, job_id: str):
     try: return request.app.state.ocr_job_service.view(job_id)
     except KeyError as error: raise HTTPException(404, detail={"error_code":"OCR_JOB_NOT_FOUND", "message":"OCR job was not found"}) from error
 
+# The bounds are OcrJobOptions' own (the service checks it too): an out-of-range value is
+# refused here with 422 before a job, a folder or a config hash exists (review2 R8).
 @router.post("/jobs", status_code=201, dependencies=[Depends(require_api_key)])
-async def create_job(request: Request, file: UploadFile = File(...), dpi: int = 200, page_range: str | None = None, output_format: str = "all", force_ocr: bool = False):
+async def create_job(request: Request, file: UploadFile = File(...), dpi: int = Query(200, ge=72, le=400),
+                     page_range: str | None = Query(None, max_length=100),
+                     output_format: str = Query("all", pattern="^(text|markdown|json|all)$"), force_ocr: bool = False):
     try: return await request.app.state.ocr_job_service.create(file, dpi, page_range, output_format, force_ocr)
     except ValueError as error: raise HTTPException(422, detail={"error_code":"INVALID_OCR_INPUT", "message":str(error)}) from error
 

@@ -2,6 +2,7 @@
 
 ID/quote integrity is deterministic; relevance is still a model decision. Known
 field types have a conservative prefilter so a name cannot answer a phone query.
+A question naming several fields (phone and email) keeps the blocks of each.
 """
 from __future__ import annotations
 
@@ -17,9 +18,15 @@ def folded(text: str) -> str:
                    if not unicodedata.combining(char)).replace("đ", "d")
 
 
+# (question, label the block must carry, value it must hold). Question and label are matched on
+# folded text. A phone value is any number of 8-20 characters, grouped by spaces, dots, dashes
+# or brackets (+1 415…, (84-28)…, 0912.34.56.78, 1900 1234); the label is what keeps account
+# numbers and dates out (review2 R9). "What phone model" asks about a device, not a number.
 FIELD_RULES = (
-    (r"dien thoai|\bsdt\b|phone|telephone", r"dien thoai|\bsdt\b|phone|telephone|\btel\b", r"(?<!\d)(?:\+84|0)[\d .()\-]{7,16}\d(?!\d)"),
-    (r"\bemail\b|thu dien tu", r"", r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}"),
+    (r"dien thoai|\bsdt\b|\bphone\b(?!\s+model)|telephone",
+     r"dien thoai|\bsdt\b|\bdt\b|\bdtdd\b|di dong|hotline|\bmobile\b|phone|telephone|\btel\b",
+     r"(?<![\d+])\+?\(?\d[\d ()+.\-]{6,18}\d(?!\d)"),
+    (r"\be-?mail\b|thu dien tu", r"", r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}"),
     (r"so tai khoan|\bstk\b|account number", r"tai khoan|\bstk\b|account", r"(?<!\d)\d[\d .\-]{4,28}\d(?!\d)"),
 )
 SYSTEM = """Read the evidence blocks in page order and select up to THREE block IDs that
@@ -48,15 +55,17 @@ def read_evidence(router, question: str, blocks: list[dict], *, budget: int = 18
     grouped_ids = {key for block in blocks if block.get("kind") == "layout_group" for key in block.get("source_ids", [])}
     eligible = [block for block in blocks if block.get("kind", "text").rstrip("+") not in VISUAL_KINDS
                 and block["id"] not in row_parents | grouped_ids and block["text"].strip()]
-    field_rule = next((rule for rule in FIELD_RULES if re.search(rule[0], folded(question))), None)
-    if field_rule:
-        _, label, value = field_rule
-        eligible = [block for block in eligible if (not label or re.search(label, folded(block["text"])))
-                    and re.search(value, block["text"], re.I)]
+    # Every rule the question names counts: a block stays if it carries the label and the value of
+    # one of them (review2 R9: "phone and email" used to keep only the phone blocks).
+    rules = [rule for rule in FIELD_RULES if re.search(rule[0], folded(question))]
+    if rules:
+        eligible = [block for block in eligible if any(
+            (not label or re.search(label, folded(block["text"]))) and re.search(value, block["text"], re.I)
+            for _, label, value in rules)]
     if not eligible:
         return {"status": "insufficient_evidence", "message": "Không tìm thấy bằng chứng để trả lời câu hỏi này.",
                 "evidence": [], "model": None, "selection_calls": 0,
-                "reason": "requested_field_missing" if field_rule else "no_text_evidence"}
+                "reason": "requested_field_missing" if rules else "no_text_evidence"}
     # Rank only to fit a bounded context. Never cut text or a table row in half.
     terms = set(re.findall(r"\w+", folded(question))) - {"la", "gi", "cua", "co", "nao", "cho", "toi", "hay", "the", "what", "is"}
     scored = sorted(enumerate(eligible), key=lambda item: (
