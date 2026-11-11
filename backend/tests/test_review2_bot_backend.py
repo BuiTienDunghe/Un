@@ -61,7 +61,6 @@ async def second_message_answered(r2, bot, api) -> bool:  # noqa: F811
     return ANSWER_TWO in bot.shown(second)
 
 
-@pytest.mark.xfail(strict=True, raises=KnownBug, reason=ORPHAN + " (Discord refused the answer to message 1)")
 def test_a5_after_discord_refuses_an_answer_the_next_message_is_answered(r2, bot):  # noqa: F811
     import discord
     r2.model.rules.append(("tin thứ nhất", "Đáp án cho tin một."))
@@ -87,7 +86,6 @@ def test_a5_after_discord_refuses_an_answer_the_next_message_is_answered(r2, bot
 
 
 @pytest.mark.parametrize("fault", ["once", "forever"])
-@pytest.mark.xfail(strict=True, raises=KnownBug, reason=ORPHAN + " (the backend failed with 5xx on message 1)")
 def test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered(r2, bot, monkeypatch, fault):  # noqa: F811
     # The fault is tied to message 1's turn only: message 2 must stay answerable by any fix.
     import app.discord.turn_service as turn_service
@@ -120,7 +118,6 @@ def test_a6_after_the_backend_fails_on_a_message_the_next_message_is_answered(r2
     known_bug(answered, f"message 2 was not answered after the backend failed ({fault}) on message 1")
 
 
-@pytest.mark.xfail(strict=True, raises=KnownBug, reason=ORPHAN + " (the bot stopped waiting while message 1 was queued)")
 def test_a7_after_the_bot_stops_waiting_on_a_queued_turn_the_next_message_is_answered(r2, bot):  # noqa: F811
     r2.model.failures = 1  # message 1's first model call fails; the turn goes back to the queue
     r2.model.rules.append(("tin thứ nhất", "Đáp án cho tin một."))
@@ -145,7 +142,6 @@ def test_a7_after_the_bot_stops_waiting_on_a_queued_turn_the_next_message_is_ans
     known_bug(answered, "message 2 was not answered after the bot stopped waiting on message 1")
 
 
-@pytest.mark.xfail(strict=True, raises=KnownBug, reason=ORPHAN + " (the bot died mid-turn and was started again)")
 def test_a8_after_the_bot_dies_mid_turn_and_restarts_the_next_message_is_answered(r2, bot):  # noqa: F811
     # "Restart" is create_bot + setup_hook + on_ready, the startup a real process runs (the
     # Discord command sync is the only step stubbed). Message 2 then goes through

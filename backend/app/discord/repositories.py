@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Literal
 from uuid import UUID, uuid4
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.postgres.models import (
@@ -321,12 +321,35 @@ class DiscordSessionRepository:
                 cancelled.append(turn)
         return cancelled
 
+    @staticmethod
+    def _last_sign_of_life(turn: DiscordSessionTurn) -> datetime:
+        """When a queued turn last changed state, became claimable, or was asked for by
+        its waiter (heartbeat_at, stamped by claim_turn while it waits)."""
+        return max(
+            moment
+            for moment in (turn.updated_at, turn.available_at, turn.heartbeat_at)
+            if moment is not None
+        )
+
+    def _open_head(self, session_id: UUID) -> DiscordSessionTurn | None:
+        return self.session.scalar(
+            select(DiscordSessionTurn)
+            .where(
+                DiscordSessionTurn.session_id == session_id,
+                DiscordSessionTurn.status.in_(("queued", "running")),
+            )
+            .order_by(DiscordSessionTurn.sequence_number)
+            .limit(1)
+            .with_for_update()
+        )
+
     def claim_turn(
         self,
         turn_id: UUID,
         worker_id: str,
         *,
         lease_seconds: int,
+        abandon_after_seconds: int | None = None,
     ) -> DiscordSessionTurn | None:
         target = self.session.get(DiscordSessionTurn, turn_id)
         if target is None:
@@ -342,22 +365,54 @@ class DiscordSessionRepository:
             raise KeyError(str(target.session_id))
         self.session.refresh(target)
         now = datetime.now(UTC)
-        head = self.session.scalar(
-            select(DiscordSessionTurn)
-            .where(
-                DiscordSessionTurn.session_id == target.session_id,
-                DiscordSessionTurn.status.in_(("queued", "running")),
-            )
-            .order_by(DiscordSessionTurn.sequence_number)
-            .limit(1)
-            .with_for_update()
-        )
+        head = self._open_head(target.session_id)
+        waiting = abandon_after_seconds is not None and target.status == "queued"
+        if waiting:
+            # Review2 A: a queued turn ahead of this one that nobody has asked for within
+            # abandon_after_seconds has no bot left to run it (the bot gave up, died, or
+            # could not deliver), and it would block the channel for good. A waiting turn's
+            # polls stamp its heartbeat below, so a turn someone still waits for never ages.
+            # Only a later turn ends it, under the session lock, so a running turn and the
+            # turn's own claim are never touched.
+            cutoff = now - timedelta(seconds=abandon_after_seconds)
+            while (
+                head is not None
+                and head.id != target.id
+                and head.status == "queued"
+                and self._last_sign_of_life(head) <= cutoff
+            ):
+                head.status = "failed"
+                head.completed_at = now
+                head.error = (
+                    f"Abandoned: nobody resumed this turn for {abandon_after_seconds} s "
+                    "while a later turn in its channel waited."
+                )
+                head.worker_id = None
+                head.lease_expires_at = None
+                head.heartbeat_at = None
+                head.updated_at = now
+                self.session.flush()
+                head = self._open_head(target.session_id)
         if (
             head is None
             or head.id != target.id
             or head.status != "queued"
             or head.available_at > now
         ):
+            # The waiter is alive. heartbeat_at, which a queued turn does not otherwise use,
+            # and not updated_at, which the dashboard reads as the last Discord activity
+            # (the column's onupdate is held off by setting it to itself); at most one write
+            # per third of the threshold, not one per half-second poll.
+            if waiting and (
+                target.heartbeat_at is None
+                or target.heartbeat_at <= now - timedelta(seconds=abandon_after_seconds / 3)
+            ):
+                self.session.execute(
+                    update(DiscordSessionTurn)
+                    .where(DiscordSessionTurn.id == target.id)
+                    .values(heartbeat_at=now, updated_at=DiscordSessionTurn.updated_at)
+                    .execution_options(synchronize_session=False)
+                )
             return None
         head.status = "running"
         head.worker_id = worker_id
@@ -536,6 +591,8 @@ class DiscordSessionRepository:
         turn.status = "cancelled"
         turn.completed_at = now
         turn.error = error[:4_000] if error else None
+        # A waiting turn's poll stamps (claim_turn); an ended turn carries none.
+        turn.heartbeat_at = None
         turn.updated_at = now
         return True
 

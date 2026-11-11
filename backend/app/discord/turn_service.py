@@ -32,6 +32,9 @@ from app.discord.speaker_context import (
 
 logger = logging.getLogger(__name__)
 
+# What a saved answer is replaced with once its question was edited, deleted or forgotten.
+SOURCE_CHANGED_REPLY = "Nguồn trí nhớ đã được sửa hoặc quên. Vui lòng hỏi lại."
+
 
 class DiscordTurnNotFoundError(KeyError):
     pass
@@ -75,8 +78,12 @@ class DiscordTurnService:
         condensation_service: object | None = None,
         recap_limit: int = 6,
         progress: TurnProgress | None = None,
+        abandon_after_seconds: int = 30,
     ) -> None:
         self.sessions = sessions
+        # Review2 A: how long a queued turn nobody asks for may block a later turn in its
+        # channel (DISCORD_TURN_ABANDON_AFTER_SECONDS; see settings.py for the reasoning).
+        self.abandon_after_seconds = max(1, abandon_after_seconds)
         # Ticket 20 #4: what a running turn is doing, for the bot's progress endpoint.
         self.progress = progress
         self.session_service = session_service
@@ -279,6 +286,7 @@ class DiscordTurnService:
                     turn_id,
                     token,
                     lease_seconds=self.lease_seconds,
+                    abandon_after_seconds=self.abandon_after_seconds,
                 )
             except KeyError as error:
                 raise DiscordTurnNotFoundError(str(turn_id)) from error
@@ -373,9 +381,13 @@ class DiscordTurnService:
             return self._result(turn)
 
     def cancel(self, turn_id: UUID, error: str | None = None) -> DiscordTurnResult:
+        """End one queued turn. A running turn belongs to whoever holds its lease, and an
+        ended turn stays as it ended, so both are refused."""
         with self.sessions.begin() as database:
             repository = DiscordSessionRepository(database)
             if not repository.cancel_turn(turn_id, error):
+                if database.get(DiscordSessionTurn, turn_id) is None:
+                    raise DiscordTurnNotFoundError(str(turn_id))
                 raise DiscordTurnOwnershipError("Only a queued turn can be cancelled.")
             turn = database.get(DiscordSessionTurn, turn_id)
             assert turn is not None
@@ -423,18 +435,49 @@ class DiscordTurnService:
     def _resolve_reply_target(
         repository: DiscordSessionRepository,
         turn: DiscordSessionTurn,
+        *,
+        memory=None,
+        barrier: datetime | None = None,
     ) -> DiscordReplyTargetContext | None:
-        """Resolve an exact target without relying on history text or display names."""
+        """Resolve an exact target without relying on history text or display names.
+
+        With source memory on (`memory`), a target the channel no longer remembers keeps
+        its id and loses its words, exactly like a target that was never found (review2
+        R1, N2): the person's message its words came from was asked before the history
+        barrier, or was edited, deleted or forgotten since. A bot answer is judged by the
+        turn that asked for it, not by when it was delivered. A target that was not found
+        has no words and no time, so nothing is compared for it."""
 
         reply_id = turn.reply_to_discord_message_id
         if reply_id is None:
             return None
+
+        def withdrawn(origin: DiscordSessionTurn) -> bool:
+            if memory is None:
+                return False
+            if barrier is not None and origin.created_at <= barrier:
+                return True
+            # Not the bot answer's own id: an edit of the bot's "⏳" message that reaches
+            # the backend before the message itself leaves a tombstone on that id.
+            return memory.is_retracted(f"discord:{origin.discord_message_id}")
+
+        unavailable = ReplyTargetContext(
+            discord_message_id=reply_id,
+            sequence=None,
+            author_id=None,
+            author_display_name=None,
+            request_text=None,
+            resolution_status="not_found",
+            same_author_as_current=None,
+        )
         target = repository.find_reply_target_turn(
             turn.session_id,
             reply_id,
             before_sequence=turn.sequence_number,
         )
         if target is not None:
+            if withdrawn(target):
+                return unavailable
             has_stable_author = bool(target.author_id)
             return ReplyTargetContext(
                 discord_message_id=reply_id,
@@ -460,6 +503,8 @@ class DiscordTurnService:
         )
         if bot_delivery is not None:
             _, originating_turn = bot_delivery
+            if withdrawn(originating_turn):
+                return unavailable
             return BotReplyTargetContext(
                 discord_response_message_id=reply_id,
                 originating_turn_sequence=originating_turn.sequence_number,
@@ -547,11 +592,22 @@ class DiscordTurnService:
                 turn = database.get(DiscordSessionTurn, result.turn_id)
                 session = database.get(DiscordConversationSession, turn.session_id) if turn else None
                 if session:
-                    from app.discord.source_memory import reader_for
-                    _, barrier = v2.snapshot(reader_for(session, turn))
-                    if barrier and turn.created_at <= barrier:
-                        return replace(result, answer="Nguồn trí nhớ đã được sửa hoặc quên. Vui lòng hỏi lại.")
+                    # Review2 R3: the tombstone counts as much as the barrier.
+                    from app.discord.source_memory import answer_withdrawn
+                    if answer_withdrawn(v2, session, turn):
+                        return replace(result, answer=SOURCE_CHANGED_REPLY)
         return result
+
+    def _save_provisional_response(self, turn_id: UUID, execution_token: str, text: str) -> None:
+        """Persist an answer the backend wrote itself, before the model is asked; the
+        model's answer replaces it if it comes."""
+        with self.sessions.begin() as database:
+            if not DiscordSessionRepository(database).save_response(
+                turn_id, execution_token, text, "none", lease_seconds=self.lease_seconds,
+            ):
+                raise DiscordTurnOwnershipError(
+                    "Turn ownership was lost before the response could be persisted."
+                )
 
     def execute(self, turn_id: UUID) -> DiscordTurnResult:
         # Recovery is its own short transaction. Claim commits before any model
@@ -562,159 +618,197 @@ class DiscordTurnService:
             return self._safe_replay(claimed)
 
         execution_token = claimed.execution_token
-        with self.sessions() as database:
-            turn = database.get(DiscordSessionTurn, turn_id)
-            if turn is None:
-                raise DiscordTurnNotFoundError(str(turn_id))
-            request_text = turn.request_text
-            system_prompt = turn.system_prompt
-            response_text = turn.response_text
-            model_used = turn.model_used
-            session = database.get(DiscordConversationSession, turn.session_id)
-            if session is None:
-                raise DiscordTurnNotFoundError(str(turn.session_id))
-            conversation_id = str(session.backend_conversation_id)
-            v2 = getattr(self.chat_service, "source_memory", None)
-            reader, receipt = (None, "")
-            epoch, barrier = (None, None)
-            stale = False
-            if v2:
-                from app.discord.source_memory import STALE_TURN, prepare_turn
-                reader, receipt = prepare_turn(v2, session, turn)
-                # Decided before this turn's own forget (if any) moves the barrier.
-                stale = receipt == STALE_TURN
-                epoch, barrier = v2.snapshot(reader)
-            use_tools_for_turn = self._tools_allowed_for_guild(session.guild_id)
-            repository = DiscordSessionRepository(database)
-            previous_turns = repository.context_turns(
-                turn.session_id,
-                turn.sequence_number,
-                limit=self.history_turn_limit,
-            )
-            if barrier:
-                previous_turns = [previous for previous in previous_turns if previous.created_at > barrier]
-            if v2 and previous_turns:
-                # An edited or deleted message is no longer evidence (search_history already
-                # skips it); its old words must not come back as history either.
-                gone = v2.retracted({f"discord:{previous.discord_message_id}" for previous in previous_turns})
-                previous_turns = [previous for previous in previous_turns
-                                  if f"discord:{previous.discord_message_id}" not in gone]
-            reply_target = self._resolve_reply_target(repository, turn)
-            if barrier and reply_target is not None and reply_target.created_at <= barrier:
-                reply_target = None
-            speaker_context = build_discord_speaker_context(
-                previous_turns,
-                turn,
-                reply_target=reply_target,
-            )
-            tool_context = self._agent_tool_context(session.guild_id, turn, previous_turns)
-            if v2:
-                tool_context.update({"_memory_reader": reader, "_memory_epoch": epoch,
-                    "channel_id": session.channel_id, "thread_id": session.thread_id, "actor_id": turn.author_id})
-            model_history = [*speaker_context.history]
-            if speaker_context.reply_target_message is not None:
-                model_history.append(speaker_context.reply_target_message)
-            # Memory reaches the answer as an unconditional ledger SELECT, not
-            # as a tool the model may or may not call (measured: 4/19 turns)
-            # and not via the unfiltered Qdrant mirror (memory_design.md §3).
-            # Same transaction as the history read; the model call stays
-            # outside it (invariant #2). Zero extra model calls (invariant #7).
-            # Step 4 (28/08): guild-wide, not asker-only — both observed
-            # production uses cross the asker boundary (PA asking about
-            # Dũng's birthday; Dũng asking what PA stated about him). Each
-            # line names its subject by author_id so the model can join it
-            # against the speaker labels in the history. Ordering is a
-            # MEASURED variable (§13.7): the history-usage rules must be the
-            # LAST system content, so the memory block goes in the middle.
-            active_memories = [] if v2 else DiscordMemoryRepository(database).list_active_context_memories(
-                guild_id=session.guild_id,
-                subject_id=None,
-                all_members=True,
-                limit=50,
-            )
-            # Rendered INSIDE the transaction: these rows detach when the
-            # session closes.
-            memory_lines = "\n".join(
-                (
-                    f"- [{memory.fact_key} | về author_id="
-                    f"{memory.subject_id}] {memory.canonical_fact}"
-                    if memory.scope == "member_in_guild"
-                    else f"- [{memory.fact_key} | về server] "
-                    f"{memory.canonical_fact}"
-                )
-                for memory in active_memories
-            )
-            if v2:
-                memory_lines = "\n".join(filter(None, [receipt, v2.context(reader, request_text)]))
-                if barrier and response_text is not None and turn.created_at <= barrier:
-                    response_text = "Nguồn trí nhớ đã được sửa hoặc quên. Vui lòng hỏi lại."
-            guild_id = session.guild_id
-            channel_id = session.channel_id
-            base_instruction = speaker_context.system_instruction
-            queue_wait_ms = self._elapsed_ms(getattr(turn, "created_at", None), getattr(turn, "started_at", None) or datetime.now(UTC))
-        self._state_event("tool_state_turn_started", turn_id, queue_wait_ms=queue_wait_ms)
-        # Ticket 36: what a person approved from decided's suggestions. Its own short read.
-        if not v2 and self.message_labels is not None:
-            try:
-                memory_lines = "\n".join(line for line in (memory_lines, *self.message_labels.memory_lines(guild_id)) if line)
-            except Exception:
-                logger.warning("approved labels unavailable; answering without them")
-
-        # Tier 3 read path (§9.4 — the section that refused to let tier 3 ship
-        # write-only). Its own short transaction, outside the one above, and
-        # still zero model calls on the answer path.
-        recap_lines = "" if v2 else self._recap_lines(guild_id, channel_id)
-
-        blocks: list[str] = [DISCORD_SPEAKER_ATTRIBUTION_RULES]
-        if v2 and memory_lines:
-            blocks.append(memory_lines)
-        elif memory_lines:
-            blocks.append(
-                "Trí nhớ dài hạn đã được xác nhận về server và thành viên "
-                "(chỉ dùng khi câu hỏi thật sự liên quan):\n"
-                f"{memory_lines}"
-            )
-        if recap_lines:
-            blocks.append(
-                "Tóm tắt các cuộc trò chuyện trước trong kênh này (do bộ rút "
-                "gọn tạo, KHÔNG phải lời nói trực tiếp — nếu mâu thuẫn với "
-                "trí nhớ đã xác nhận thì tin trí nhớ đã xác nhận):\n"
-                f"{recap_lines}"
-            )
-        if len(blocks) == 1:
-            context_system_prompt = base_instruction
-        else:
-            # The history-usage rules stay LAST — measured §13.7.
-            blocks.append(DISCORD_HISTORY_USAGE_RULES)
-            context_system_prompt = "\n".join(blocks)
-
-        # Review 10/11 (P1): a turn whose message was deleted or edited, or whose memory was
-        # forgotten, while it waited never reaches a model; it ends on one fixed sentence.
-        if stale and response_text is None:
-            from app.discord.source_memory import STALE_TURN_REPLY
-            with self.sessions.begin() as database:
-                saved = DiscordSessionRepository(database).save_response(
-                    turn_id, execution_token, STALE_TURN_REPLY, "none", lease_seconds=self.lease_seconds)
-                if not saved:
-                    raise DiscordTurnOwnershipError(
-                        "Turn ownership was lost before the response could be persisted.")
+        # Review2 R1/A: an unexpected error while the claimed turn is prepared ends the way a
+        # failed model call does below: the turn goes back to the queue (failed after
+        # max_attempts) and the caller gets a normal answer. A 500 left the turn claimed with
+        # nobody to resume it, and every later turn in the channel waited behind it.
+        try:
+            with self.sessions() as database:
                 turn = database.get(DiscordSessionTurn, turn_id)
-                assert turn is not None
-                result = self._result(turn, execution_token=execution_token)
-            self._state_event("tool_state_response_saved", turn_id)
-            return result
+                if turn is None:
+                    raise DiscordTurnNotFoundError(str(turn_id))
+                request_text = turn.request_text
+                system_prompt = turn.system_prompt
+                response_text = turn.response_text
+                model_used = turn.model_used
+                session = database.get(DiscordConversationSession, turn.session_id)
+                if session is None:
+                    raise DiscordTurnNotFoundError(str(turn.session_id))
+                conversation_id = str(session.backend_conversation_id)
+                v2 = getattr(self.chat_service, "source_memory", None)
+                reader, receipt = (None, "")
+                epoch, barrier = (None, None)
+                stale = False
+                if v2:
+                    from app.discord.source_memory import (
+                        FORGET_TURN_REPLY,
+                        STALE_TURN,
+                        answer_withdrawn,
+                        forget_request,
+                        prepare_turn,
+                        reader_for,
+                    )
+                    if response_text is None:
+                        reader, receipt = prepare_turn(v2, session, turn)
+                        # Decided before this turn's own forget (if any) moves the barrier.
+                        stale = receipt == STALE_TURN
+                        if not stale and forget_request(turn):
+                            # Review2 N4: the forget is done. Saved before anything else can
+                            # fail, so a retry resends this instead of forgetting a second
+                            # time or calling the turn stale because of its own barrier.
+                            self._save_provisional_response(turn_id, execution_token, FORGET_TURN_REPLY)
+                    else:
+                        # A delivery retry repeats no remember or forget (review2 N4), and
+                        # hands back nothing whose question was edited, deleted or
+                        # forgotten since (review2 R3).
+                        reader = reader_for(session, turn)
+                        if answer_withdrawn(v2, session, turn):
+                            response_text = SOURCE_CHANGED_REPLY
+                    epoch, barrier = v2.snapshot(reader)
+                use_tools_for_turn = self._tools_allowed_for_guild(session.guild_id)
+                repository = DiscordSessionRepository(database)
+                previous_turns = repository.context_turns(
+                    turn.session_id,
+                    turn.sequence_number,
+                    limit=self.history_turn_limit,
+                )
+                if barrier:
+                    previous_turns = [previous for previous in previous_turns if previous.created_at > barrier]
+                if v2 and previous_turns:
+                    # An edited or deleted message is no longer evidence (search_history already
+                    # skips it); its old words must not come back as history either.
+                    gone = v2.retracted({f"discord:{previous.discord_message_id}" for previous in previous_turns})
+                    previous_turns = [previous for previous in previous_turns
+                                      if f"discord:{previous.discord_message_id}" not in gone]
+                # Review2 R1, N2: the barrier and the tombstones are checked where the
+                # target's own turn is in hand.
+                reply_target = self._resolve_reply_target(
+                    repository,
+                    turn,
+                    memory=v2 or None,
+                    barrier=barrier,
+                )
+                speaker_context = build_discord_speaker_context(
+                    previous_turns,
+                    turn,
+                    reply_target=reply_target,
+                )
+                tool_context = self._agent_tool_context(session.guild_id, turn, previous_turns)
+                if v2:
+                    tool_context.update({"_memory_reader": reader, "_memory_epoch": epoch,
+                        "channel_id": session.channel_id, "thread_id": session.thread_id, "actor_id": turn.author_id})
+                model_history = [*speaker_context.history]
+                if speaker_context.reply_target_message is not None:
+                    model_history.append(speaker_context.reply_target_message)
+                # Memory reaches the answer as an unconditional ledger SELECT, not
+                # as a tool the model may or may not call (measured: 4/19 turns)
+                # and not via the unfiltered Qdrant mirror (memory_design.md §3).
+                # Same transaction as the history read; the model call stays
+                # outside it (invariant #2). Zero extra model calls (invariant #7).
+                # Step 4 (28/08): guild-wide, not asker-only — both observed
+                # production uses cross the asker boundary (PA asking about
+                # Dũng's birthday; Dũng asking what PA stated about him). Each
+                # line names its subject by author_id so the model can join it
+                # against the speaker labels in the history. Ordering is a
+                # MEASURED variable (§13.7): the history-usage rules must be the
+                # LAST system content, so the memory block goes in the middle.
+                active_memories = [] if v2 else DiscordMemoryRepository(database).list_active_context_memories(
+                    guild_id=session.guild_id,
+                    subject_id=None,
+                    all_members=True,
+                    limit=50,
+                )
+                # Rendered INSIDE the transaction: these rows detach when the
+                # session closes.
+                memory_lines = "\n".join(
+                    (
+                        f"- [{memory.fact_key} | về author_id="
+                        f"{memory.subject_id}] {memory.canonical_fact}"
+                        if memory.scope == "member_in_guild"
+                        else f"- [{memory.fact_key} | về server] "
+                        f"{memory.canonical_fact}"
+                    )
+                    for memory in active_memories
+                )
+                if v2:
+                    memory_lines = "\n".join(filter(None, [receipt, v2.context(reader, request_text)]))
+                guild_id = session.guild_id
+                channel_id = session.channel_id
+                base_instruction = speaker_context.system_instruction
+                queue_wait_ms = self._elapsed_ms(getattr(turn, "created_at", None), getattr(turn, "started_at", None) or datetime.now(UTC))
+            self._state_event("tool_state_turn_started", turn_id, queue_wait_ms=queue_wait_ms)
+            # Ticket 36: what a person approved from decided's suggestions. Its own short read.
+            if not v2 and self.message_labels is not None:
+                try:
+                    memory_lines = "\n".join(line for line in (memory_lines, *self.message_labels.memory_lines(guild_id)) if line)
+                except Exception:
+                    logger.warning("approved labels unavailable; answering without them")
 
-        # A delivery retry reuses the stored response and never calls the model
-        # a second time.
-        if response_text is not None:
-            return DiscordTurnResult(
-                turn_id=turn_id,
-                session_id=claimed.session_id,
-                sequence_number=claimed.sequence_number,
-                status="running",
-                answer=response_text,
-                model_used=model_used,
-                execution_token=execution_token,
+            # Tier 3 read path (§9.4 — the section that refused to let tier 3 ship
+            # write-only). Its own short transaction, outside the one above, and
+            # still zero model calls on the answer path.
+            recap_lines = "" if v2 else self._recap_lines(guild_id, channel_id)
+
+            blocks: list[str] = [DISCORD_SPEAKER_ATTRIBUTION_RULES]
+            if v2 and memory_lines:
+                blocks.append(memory_lines)
+            elif memory_lines:
+                blocks.append(
+                    "Trí nhớ dài hạn đã được xác nhận về server và thành viên "
+                    "(chỉ dùng khi câu hỏi thật sự liên quan):\n"
+                    f"{memory_lines}"
+                )
+            if recap_lines:
+                blocks.append(
+                    "Tóm tắt các cuộc trò chuyện trước trong kênh này (do bộ rút "
+                    "gọn tạo, KHÔNG phải lời nói trực tiếp — nếu mâu thuẫn với "
+                    "trí nhớ đã xác nhận thì tin trí nhớ đã xác nhận):\n"
+                    f"{recap_lines}"
+                )
+            if len(blocks) == 1:
+                context_system_prompt = base_instruction
+            else:
+                # The history-usage rules stay LAST — measured §13.7.
+                blocks.append(DISCORD_HISTORY_USAGE_RULES)
+                context_system_prompt = "\n".join(blocks)
+
+            # Review 10/11 (P1): a turn whose message was deleted or edited, or whose memory was
+            # forgotten, while it waited never reaches a model; it ends on one fixed sentence.
+            if stale and response_text is None:
+                from app.discord.source_memory import STALE_TURN_REPLY
+                with self.sessions.begin() as database:
+                    saved = DiscordSessionRepository(database).save_response(
+                        turn_id, execution_token, STALE_TURN_REPLY, "none", lease_seconds=self.lease_seconds)
+                    if not saved:
+                        raise DiscordTurnOwnershipError(
+                            "Turn ownership was lost before the response could be persisted.")
+                    turn = database.get(DiscordSessionTurn, turn_id)
+                    assert turn is not None
+                    result = self._result(turn, execution_token=execution_token)
+                self._state_event("tool_state_response_saved", turn_id)
+                return result
+
+            # A delivery retry reuses the stored response and never calls the model
+            # a second time.
+            if response_text is not None:
+                return DiscordTurnResult(
+                    turn_id=turn_id,
+                    session_id=claimed.session_id,
+                    sequence_number=claimed.sequence_number,
+                    status="running",
+                    answer=response_text,
+                    model_used=model_used,
+                    execution_token=execution_token,
+                )
+        except (DiscordTurnNotFoundError, DiscordTurnOwnershipError):
+            raise
+        except Exception as error:
+            logger.exception("Discord turn %s failed while it was prepared; it goes back to the queue", turn_id)
+            return self.fail(
+                turn_id,
+                execution_token,
+                f"{type(error).__name__}: {error}",
+                retryable=True,
             )
 
         stop = threading.Event()

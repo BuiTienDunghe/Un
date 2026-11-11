@@ -112,6 +112,11 @@ class Settings(BaseSettings):
     # default, and no real tool is declared so yet; it obeys the guild allowlist above.
     discord_approvals_enabled: bool = False
     discord_approval_ttl_seconds: int = 600
+    # Review2 A: a queued turn nobody has asked for in this many seconds (its bot gave up,
+    # died, or could not deliver) is ended as failed when a later turn in its channel waits.
+    # A live bot asks every half second, and the bot waits 180 s by default, so the turn of a
+    # dead bot (back in the queue one lease, 120 s, after it died) is gone within one wait.
+    discord_turn_abandon_after_seconds: int = 30
     # Tier 3 condensation (memory_design.md §7). OFF by default: it is the one
     # tier that sends member text to a third party, so it starts only when the
     # operator sets both this flag and GEMINI_API_KEY. The floor replaces the

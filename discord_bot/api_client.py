@@ -169,6 +169,8 @@ class BackendDiscordTurnProgress:
 # The progress endpoint reads API memory only; a poll slower than this is skipped
 # rather than waited on, since the answer never depends on it.
 PROGRESS_TIMEOUT_SECONDS = 5.0
+# Cancelling a turn the bot gives up on is best effort and sits on the error path.
+CANCEL_TIMEOUT_SECONDS = 5.0
 
 
 class LocalAgentClient:
@@ -756,6 +758,22 @@ class LocalAgentClient:
         status = body.get("status")
         if status not in {"queued", "failed"}:
             raise BackendResponseError("Backend returned an invalid Discord turn failure state.")
+        return status
+
+    async def cancel_discord_turn(self, turn_id: str, error: str) -> str:
+        """Review2 A: end a queued turn the bot gives up on while holding no lease for it, so
+        it does not block its channel. The backend refuses (409) a turn that is running under
+        a lease or already over. Short timeout: the caller is on its way to report an error."""
+        response = await self._authorized_post(
+            f"/api/discord/sessions/turns/{turn_id}/cancel",
+            {"error": error[:4_000]},
+            "Discord turn cancel",
+            timeout=min(self.settings.timeout_seconds, CANCEL_TIMEOUT_SECONDS),
+        )
+        body = self._json_object(response, "turn cancel")
+        status = body.get("status")
+        if status != "cancelled":
+            raise BackendResponseError("Backend did not cancel the Discord turn.")
         return status
 
     async def _chat_request(self, question: str, conversation_id: str | None, system_prompt: str | None) -> httpx.Response:

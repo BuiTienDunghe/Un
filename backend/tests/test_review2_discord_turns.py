@@ -9,13 +9,14 @@ from __future__ import annotations
 
 import re
 import time
+from uuid import uuid4
 
 import pytest
 
 from app.discord.source_memory import STALE_TURN_REPLY
 from review2_support import (KnownBug, active_notes, age_open_turns, channel_barrier, edit_unledgered,  # noqa: F401
                              enqueue, execute, execute_reply, expire_lease, fail_delivery, finished_turn, known_bug,
-                             r2, seed_history_barrier, snowflake, v2client)
+                             r2, seed_history_barrier, snowflake, turn_by_message, v2client)
 
 FORGET = "Hãy quên toàn bộ trí nhớ về tôi"
 R1 = "review2 R1: on a server with a history barrier a reply turn reads created_at its target does not have, and crashes"
@@ -24,7 +25,6 @@ R1 = "review2 R1: on a server with a history barrier a reply turn reads created_
 # ── R1: replies on a server that has a history barrier ──────────────────────────
 
 @pytest.mark.parametrize("target", ["user_message", "bot_response", "not_found"])
-@pytest.mark.xfail(strict=True, raises=KnownBug, reason=R1)
 def test_r1_1_a_reply_to_something_older_than_the_barrier_is_answered_without_its_words(r2, target):  # noqa: F811
     client, guild = r2.client, r2.guild
     r2.model.rules.append(("Câu cũ", "Đáp án cũ sentinel-r1-old-answer."))
@@ -40,7 +40,6 @@ def test_r1_1_a_reply_to_something_older_than_the_barrier_is_answered_without_it
 
 
 @pytest.mark.parametrize("target", ["user_message", "bot_response"])
-@pytest.mark.xfail(strict=True, raises=KnownBug, reason=R1)
 def test_r1_2_a_reply_to_something_newer_than_the_barrier_carries_its_words(r2, monkeypatch, target):  # noqa: F811
     client, guild = r2.client, r2.guild
     seed_history_barrier(client, guild)
@@ -77,7 +76,6 @@ def test_r1_3_without_a_barrier_a_reply_is_answered(r2, monkeypatch, target):  #
     assert "sentinel-r1-there" not in prompt
 
 
-@pytest.mark.xfail(strict=True, raises=KnownBug, reason=R1)
 def test_r1_4_a_reply_to_a_remembered_message_that_was_deleted_never_shows_its_words(r2):  # noqa: F811
     client, guild = r2.client, r2.guild
     gone = finished_turn(client, guild, "one", "Hãy nhớ mã riêng sentinel-r1-gone.")
@@ -100,7 +98,6 @@ def test_r1_4_a_reply_to_a_remembered_message_that_was_deleted_never_shows_its_w
 N2 = "review2 N2: a reply turn shows the model its target's words without checking the target's tombstone"
 
 
-@pytest.mark.xfail(strict=True, raises=KnownBug, reason=N2)
 def test_n2_1_a_reply_to_an_edited_message_does_not_show_its_old_words(r2):  # noqa: F811
     client, guild = r2.client, r2.guild
     target = finished_turn(client, guild, "one", "Tin gốc sentinel-n2-old-question.")
@@ -114,7 +111,6 @@ def test_n2_1_a_reply_to_an_edited_message_does_not_show_its_old_words(r2):  # n
               "the edited message's old words reached the model as the reply target")
 
 
-@pytest.mark.xfail(strict=True, raises=KnownBug, reason=N2)
 def test_n2_2_a_reply_to_the_answer_of_an_edited_question_shows_neither(r2):  # noqa: F811
     client, guild = r2.client, r2.guild
     r2.model.rules.append(("Tin gốc", "Đáp án cũ sentinel-n2-old-answer."))
@@ -139,7 +135,6 @@ def answer_of(response) -> str:
     return (response.json().get("answer") or "") if response.status_code == 200 else ""
 
 
-@pytest.mark.xfail(strict=True, raises=KnownBug, reason=R3)
 def test_r3_1_replaying_a_finished_turn_after_its_question_was_edited_does_not_return_the_old_answer(r2):  # noqa: F811
     client, guild = r2.client, r2.guild
     r2.model.rules.append(("sentinel-r3", OLD_ANSWER))
@@ -151,7 +146,6 @@ def test_r3_1_replaying_a_finished_turn_after_its_question_was_edited_does_not_r
     known_bug("sentinel-r3-old" not in answer_of(replay), f"the replay returned the old answer: {replay.text}")
 
 
-@pytest.mark.xfail(strict=True, raises=KnownBug, reason=R3)
 def test_r3_2_resending_a_saved_answer_after_its_question_was_edited_does_not_return_it(r2):  # noqa: F811
     client, guild = r2.client, r2.guild
     r2.model.rules.append(("sentinel-r3", OLD_ANSWER))
@@ -205,7 +199,6 @@ def test_r3_4_replaying_a_finished_turn(r2, change):  # noqa: F811
 N4 = "review2 N4: a forget turn tried again finds the barrier its own first attempt set, and calls itself stale"
 
 
-@pytest.mark.xfail(strict=True, raises=KnownBug, reason=N4)
 def test_n4_1_retrying_a_forget_turn_tells_the_person_it_forgot(r2):  # noqa: F811
     client, guild = r2.client, r2.guild
     r2.model.failures = 1
@@ -223,7 +216,6 @@ def test_n4_1_retrying_a_forget_turn_tells_the_person_it_forgot(r2):  # noqa: F8
     known_bug(STALE_TURN_REPLY not in answer, f"the retried forget turn calls itself stale: {answer!r}")
 
 
-@pytest.mark.xfail(strict=True, raises=KnownBug, reason=N4)
 def test_n4_2_resending_a_saved_forget_answer_returns_that_answer(r2):  # noqa: F811
     client, guild = r2.client, r2.guild
     saved = "Ún đã quên hết những gì bạn nhờ nhớ sentinel-n4-2."
@@ -284,6 +276,22 @@ def test_a2_an_abandoned_turn_blocks_neither_another_channel_nor_the_operator_st
     executed = execute(client, turn_id)
     assert executed.status_code == 200, executed.text
     assert executed.json()["status"] == "running" and executed.json()["answer"]
+
+
+def test_a_the_bot_may_cancel_a_queued_turn_it_gave_up_on_but_never_a_running_one(r2):  # noqa: F811
+    client, guild = r2.client, r2.guild
+    running_message, running = enqueue(client, guild, "one", "Tin đang chạy.")
+    assert execute(client, running).json()["status"] == "running"
+    waiting_message, waiting = enqueue(client, guild, "one", "Tin đang chờ.")
+    refused = client.post(f"/api/discord/sessions/turns/{running}/cancel", json={"error": "gave up"})
+    assert refused.status_code == 409, refused.text
+    assert turn_by_message(client, running_message).status == "running"
+    cancelled = client.post(f"/api/discord/sessions/turns/{waiting}/cancel", json={"error": "gave up"})
+    assert cancelled.status_code == 200 and cancelled.json()["status"] == "cancelled", cancelled.text
+    assert turn_by_message(client, waiting_message).status == "cancelled"
+    again = client.post(f"/api/discord/sessions/turns/{waiting}/cancel")
+    assert again.status_code == 409, again.text
+    assert client.post(f"/api/discord/sessions/turns/{uuid4()}/cancel").status_code == 404
 
 
 def test_a3_a_bot_returning_after_its_lease_ran_out_gets_the_saved_answer_without_a_second_model_call(r2):  # noqa: F811

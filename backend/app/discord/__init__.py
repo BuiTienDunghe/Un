@@ -94,6 +94,7 @@ def register_services(app: Any, settings: Any, postgres_sessions: Any, *, projec
             else None
         ),
         recap_limit=settings.discord_condensation_recap_limit,
+        abandon_after_seconds=settings.discord_turn_abandon_after_seconds,
     )
     # Job 1+2 (28/08): sổ gốc writes + guild-scoped verbatim history search.
     state.discord_history_service = DiscordHistoryService(postgres_sessions)

@@ -17,6 +17,7 @@ from discord_bot.api_client import (
     BackendConversationNotFoundError,
     BackendDocument,
     BackendRagAnswer,
+    BackendResponseError,
     BackendTimeoutError,
     BackendUnavailableError,
     LocalAgentClient,
@@ -383,7 +384,15 @@ class DiscordConversationGateway:
         deadline = monotonic() + self.poll_budget_seconds
         try:
             while True:
-                execution = await self.api_client.execute_discord_turn(turn_id)
+                try:
+                    execution = await self.api_client.execute_discord_turn(turn_id)
+                except (BackendUnavailableError, BackendResponseError) as error:
+                    # Review2 A: the backend failed (5xx) or took the turn away (409), and the
+                    # bot reports that without asking again. A timeout is not caught here: the
+                    # backend is still running that turn under its lease, so it cannot be
+                    # cancelled, and the bot reports it without retrying (pinned).
+                    await self.give_up(turn_id, f"The Discord bot gave up on this turn: {type(error).__name__}.")
+                    raise
                 if execution.status == "requeued" and execution.replacement_turn_id:
                     turn_id = execution.replacement_turn_id
                     if progress is not None:
@@ -414,7 +423,18 @@ class DiscordConversationGateway:
         finally:
             if progress is not None:
                 await progress.stop()
+        await self.give_up(turn_id, "The Discord bot stopped waiting for this turn: polling deadline.")
         raise BackendClientError("Discord turn did not become ready before the polling deadline.")
+
+    async def give_up(self, turn_id: str, error: str) -> None:
+        """Review2 A: the bot stops waiting for a turn it holds no lease for. Nobody else will
+        ask for it, so a queued turn is cancelled and stops blocking its channel; the backend
+        refuses a running one, which ends with its lease. Best effort: a failure is logged,
+        and the backend ends a turn nobody asks for on its own."""
+        try:
+            await self.api_client.cancel_discord_turn(turn_id, error)
+        except Exception as failure:
+            logger.info("abandoned Discord turn %s was not cancelled: %s", turn_id, type(failure).__name__)
 
     async def _progress_label(self, turn_id: str) -> str | None:
         return (await self.api_client.get_discord_turn_progress(turn_id)).label
@@ -520,6 +540,16 @@ class DiscordConversationGateway:
                 retryable=retryable,
             )
 
+    async def abandon_delivery(self, prepared: PreparedDiscordAnswer, error: str) -> None:
+        """Review2 A: the bot gives up on an answer Discord did not take. Nobody comes back
+        for it, so the turn is ended for good rather than queued for a retry that never
+        happens, and the next message in the channel can run. A failed report is only
+        logged: the backend ends a turn nobody asks for on its own."""
+        try:
+            await self.delivery_failed(prepared, error, retryable=False)
+        except Exception:
+            logger.exception("could not tell the backend that a Discord turn was given up")
+
 
 async def answer_mention(
     gateway: DiscordConversationGateway,
@@ -563,17 +593,15 @@ async def answer_mention(
             progress=progress,
         )
     except discord.NotFound:
-        await gateway.delivery_failed(
+        await gateway.abandon_delivery(
             prepared,
             "Discord source message was deleted before response delivery.",
-            retryable=False,
         )
         return
     except Exception as error:
-        await gateway.delivery_failed(
+        await gateway.abandon_delivery(
             prepared,
             f"Discord delivery failed: {type(error).__name__}",
-            retryable=True,
         )
         raise
     await gateway.offer_approvals(prepared, sent_messages, message.guild, message.author.id)
@@ -663,17 +691,15 @@ def create_bot(
                 prepared.answer,
             )
         except discord.NotFound:
-            await gateway.delivery_failed(
+            await gateway.abandon_delivery(
                 prepared,
                 "Discord interaction was deleted or no longer exists.",
-                retryable=False,
             )
             return
         except Exception as error:
-            await gateway.delivery_failed(
+            await gateway.abandon_delivery(
                 prepared,
                 f"Discord delivery failed: {type(error).__name__}",
-                retryable=True,
             )
             raise
         await gateway.offer_approvals(prepared, sent_messages, interaction.guild, interaction.user.id)

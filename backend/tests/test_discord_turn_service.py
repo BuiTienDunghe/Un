@@ -348,6 +348,65 @@ def test_max_attempts_fails_head_and_allows_next_turn(turn_resources):
         )
 
 
+def test_a_waiting_turn_whose_bot_keeps_asking_is_never_abandoned(turn_resources):
+    # Review2 A: three messages in one channel. The first runs past the abandon threshold;
+    # the bot of the second keeps asking; the third's bot asks too. The second's own times
+    # are moved an hour back, so only its bot's asking can keep it from looking abandoned.
+    factory, prefix, resolver, chat, _ = turn_resources
+    service = DiscordTurnService(factory, resolver, chat, lease_seconds=30, abandon_after_seconds=30)
+    session = resolver.resolve(prefix, "kept-alive")
+    first = enqueue_turn(service, session.session_id, "m1", "one")
+    second = enqueue_turn(service, session.session_id, "m2", "two")
+    third = enqueue_turn(service, session.session_id, "m3", "three")
+    running = service.execute(first.turn_id)
+    assert running.status == "running" and running.execution_token
+    with factory.begin() as database:
+        row = database.get(DiscordSessionTurn, second.turn_id)
+        row.created_at -= timedelta(hours=1)
+        row.updated_at -= timedelta(hours=1)
+        row.available_at -= timedelta(hours=1)
+
+    assert service.execute(second.turn_id).status == "queued"  # its bot asks while the first runs
+    with factory() as database:
+        stamped = database.get(DiscordSessionTurn, second.turn_id).heartbeat_at
+    assert stamped is not None
+    assert service.execute(second.turn_id).status == "queued"
+    with factory() as database:
+        # One write per third of the threshold, not one per half-second poll.
+        assert database.get(DiscordSessionTurn, second.turn_id).heartbeat_at == stamped
+
+    service.complete(first.turn_id, running.execution_token, [f"bot-{first.turn_id}"])
+    # The third's bot asks before the second's: the second is still wanted, so it stays ahead.
+    assert service.execute(third.turn_id).status == "queued"
+    with factory() as database:
+        assert database.get(DiscordSessionTurn, second.turn_id).status == "queued"
+    answered = service.execute(second.turn_id)
+    assert answered.status == "running" and answered.answer == "answer:two"
+    service.complete(second.turn_id, answered.execution_token, [f"bot-{second.turn_id}"])
+    assert service.execute(third.turn_id).answer == "answer:three"
+
+
+def test_a_waiting_turn_nobody_asks_for_is_abandoned_for_the_next(turn_resources):
+    # The same channel without the second's bot: it gave up, and the third must not wait for it.
+    factory, prefix, resolver, chat, _ = turn_resources
+    service = DiscordTurnService(factory, resolver, chat, lease_seconds=30, abandon_after_seconds=30)
+    session = resolver.resolve(prefix, "abandoned")
+    first = enqueue_turn(service, session.session_id, "m1", "one")
+    second = enqueue_turn(service, session.session_id, "m2", "two")
+    third = enqueue_turn(service, session.session_id, "m3", "three")
+    running = service.execute(first.turn_id)
+    service.complete(first.turn_id, running.execution_token, [f"bot-{first.turn_id}"])
+    with factory.begin() as database:
+        row = database.get(DiscordSessionTurn, second.turn_id)
+        row.updated_at -= timedelta(hours=1)
+        row.available_at -= timedelta(hours=1)
+
+    assert service.execute(third.turn_id).answer == "answer:three"
+    with factory() as database:
+        abandoned = database.get(DiscordSessionTurn, second.turn_id)
+        assert abandoned.status == "failed" and abandoned.error.startswith("Abandoned")
+
+
 def test_retryable_failure_preserves_sequence_and_permanent_failure_unblocks(turn_resources):
     _, prefix, resolver, _, service = turn_resources
     session = resolver.resolve(prefix, "failures")

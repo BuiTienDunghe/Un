@@ -79,6 +79,12 @@ Web memory and Discord memory meet at one contract. The `memories` table and the
 projected into them under a `mem_dc_<uuid>` id through `upsert_with_id` / `remove_with_id`,
 and the core infers nothing from that prefix.
 
+A channel's turns run one at a time, in order. A queued turn at the head that nobody has asked for in
+`DISCORD_TURN_ABANDON_AFTER_SECONDS` (default 30; its bot gave up, died or could not deliver) is ended as `failed`
+when a later turn of the channel waits, and a bot that gives up asks `POST /api/discord/sessions/turns/{id}/cancel`,
+which cancels a queued turn only: a running one is refused (409) and can hold the channel for about 150 s (its lease, then
+the threshold).
+
 ## Reminders (ticket 48)
 
 Off unless `DISCORD_REMINDERS_ENABLED=true` on both the backend and the bot; only then is the `remind` tool

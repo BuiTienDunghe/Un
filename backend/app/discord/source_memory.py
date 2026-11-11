@@ -17,13 +17,37 @@ def reader_for(session, turn):
 STALE_TURN = "Lượt cũ đã bị vô hiệu hóa; không phát lại thao tác ghi/quên."
 STALE_TURN_REPLY = ("Tin này đã bị xoá, sửa hoặc trí nhớ vừa được quên trước khi Ún kịp trả lời, "
                     "nên Ún không xử lý nó. Bạn gửi lại nếu vẫn cần nhé.")
+# A forget request's answer once its forget is done. The turn service saves it before the
+# model is asked, so a retried turn resends it instead of forgetting a second time (review2 N4).
+FORGET_TURN_REPLY = "Ún đã quên toàn bộ những gì bạn nhờ nhớ ở server này."
+
+
+def typed_text(turn) -> str:
+    """request_text may have an appended image slip. Only the typed prefix counts."""
+    from app.services.agent_service import IMAGE_NOTE
+    return turn.request_text.split(IMAGE_NOTE, 1)[0]
+
+
+def forget_request(turn) -> bool:
+    return explicit_forget(typed_text(turn))
+
+
+def answer_withdrawn(memory, session, turn) -> bool:
+    """Whether an answer already saved for this turn may no longer be handed out (review2
+    R3): its message was edited or deleted (a tombstone that may sit under "__deleted__", so
+    the id itself is asked), or the channel's history was reset after it was asked. A forget
+    request resets that history itself, so for one only its own message counts (N4)."""
+    if memory.is_retracted(f"discord:{turn.discord_message_id}"):
+        return True
+    if forget_request(turn):
+        return False
+    _, barrier = memory.snapshot(reader_for(session, turn))
+    return bool(barrier and turn.created_at <= barrier)
 
 
 def prepare_turn(memory, session, turn):
     reader = reader_for(session, turn)
-    # request_text may have an appended image slip. Only the typed prefix counts.
-    from app.services.agent_service import IMAGE_NOTE
-    text = turn.request_text.split(IMAGE_NOTE, 1)[0]
+    text = typed_text(turn)
     receipt = ""
     epoch, barrier = memory.snapshot(reader)
     if (barrier and turn.created_at <= barrier) or memory.is_retracted(f"discord:{turn.discord_message_id}"):

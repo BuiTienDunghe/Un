@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, Field
 
 from app.security.api_key import require_api_key
 
@@ -173,6 +174,42 @@ def fail_discord_turn(
         raise HTTPException(
             status_code=409,
             detail={"error_code": "DISCORD_TURN_OWNERSHIP_LOST", "message": str(error)},
+        ) from error
+    return DiscordTurnStateResponse(turn_id=turn.turn_id, status=turn.status)
+
+
+class DiscordTurnCancelRequest(BaseModel):
+    error: str = Field(
+        default="The Discord bot stopped waiting for this turn.",
+        min_length=1,
+        max_length=4_000,
+    )
+
+
+@router.post("/turns/{turn_id}/cancel", response_model=DiscordTurnStateResponse)
+def cancel_discord_turn(
+    turn_id: UUID,
+    request: Request,
+    payload: DiscordTurnCancelRequest | None = None,
+) -> DiscordTurnStateResponse:
+    """Review2 A: the bot gives up on a turn it holds no lease for (the backend failed, the
+    bot's own wait ran out, or the turn was taken from it), so the turn must not block its
+    channel. Only that turn, and only while it is queued: a running turn belongs to whoever
+    holds its lease, and an ended one stays as it ended (409)."""
+    try:
+        turn = request.app.state.discord_turn_service.cancel(
+            turn_id,
+            (payload or DiscordTurnCancelRequest()).error,
+        )
+    except DiscordTurnNotFoundError as error:
+        raise HTTPException(
+            status_code=404,
+            detail={"error_code": "DISCORD_TURN_NOT_FOUND", "message": "Discord turn does not exist."},
+        ) from error
+    except DiscordTurnOwnershipError as error:
+        raise HTTPException(
+            status_code=409,
+            detail={"error_code": "DISCORD_TURN_NOT_QUEUED", "message": str(error)},
         ) from error
     return DiscordTurnStateResponse(turn_id=turn.turn_id, status=turn.status)
 

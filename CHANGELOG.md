@@ -11,6 +11,13 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
 
 ## [Unreleased]
 
+### Fixed (11/11, bản nhận xét thứ hai)
+- **Reply một tin cũ hoặc đã sửa không còn làm hỏng kênh Discord.** Trên server đã có mốc quên, mọi lượt reply từng lỗi và kênh bị chặn. Giờ tin được reply được xét theo lượt gốc của nó và theo dấu xoá; tin kênh không còn nhớ thì hiện là "không tìm thấy", không kèm lời.
+- **Lượt Discord lỗi lúc chuẩn bị được thử lại rồi bỏ**, như khi gọi model hỏng: bot nhận câu trả lời bình thường thay vì lỗi 500, và sau ba lần thử lượt kết thúc `failed` để kênh chạy tiếp.
+- **Câu trả lời gửi lại hoặc phát lại bị giữ khi câu hỏi đã bị sửa hoặc xoá**, kể cả khi lần sửa không dời mốc của kênh.
+- **Thử lại lượt "quên" vẫn báo đã quên và chỉ quên một lần**, thay vì báo tin đã bị xoá hoặc sửa.
+- **Lượt bị bỏ rơi không còn chặn kênh Discord.** Lượt đang chờ mà 30 giây không ai hỏi tới (`DISCORD_TURN_ABANDON_AFTER_SECONDS`) bị đánh `failed` khi có lượt sau đang chờ. Bot bỏ cuộc (hết giờ chờ, backend lỗi 5xx hoặc 409) thì xin huỷ lượt qua `POST /api/discord/sessions/turns/{id}/cancel`, route chỉ huỷ lượt đang chờ. Câu trả lời Discord không nhận thì lượt kết thúc hẳn thay vì quay về hàng đợi. Lượt đang chạy vẫn có thể giữ kênh tới khoảng 150 giây.
+
 ### Fixed (10/11, theo một bản nhận xét)
 - **Tin vừa quên không còn quay lại lịch sử Web.** Khi người dùng bấm quên trong lúc Ún đang trả lời, tin của lượt đó được lưu với giờ gửi (trước mốc quên), nên vẫn hiện trên màn hình nhưng không còn được gửi cho model ở lượt sau. Áp dụng cho chat và hỏi tài liệu.
 - **Discord không trả lời tin đã bị xoá, sửa hoặc quên trong lúc chờ.** Lượt như vậy dừng trước khi gọi model và trả một câu cố định. Trước đây code chỉ thêm một dòng thông báo vào prompt rồi vẫn gửi yêu cầu cũ cho model; riêng tin bị xoá còn không được nhận ra, vì dấu xoá không gắn với server.
