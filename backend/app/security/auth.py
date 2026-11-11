@@ -6,7 +6,9 @@ Three identity kinds resolve per request, in priority order:
   harness and the smoke test keep working untouched — the settings validator
   guarantees the key EXISTS whenever auth is enabled, so the service lane can
   never silently die (or, worse, fail open).
-- ``user``: a valid ``Authorization: Bearer`` access token (HS256, 15 min).
+- ``user``: a valid ``Authorization: Bearer`` access token (HS256, 15 min). The
+  role comes from the database on every request, not from the token; a token
+  whose user no longer exists is refused with 401.
 - ``anonymous``: everything else. With auth disabled this is the normal state
   and nothing here rejects it; with auth enabled the guards fail CLOSED.
 
@@ -93,12 +95,26 @@ def _resolve(request: Request) -> Identity:
             raise _unauthorized("TOKEN_INVALID", "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.") from error
         if claims.get("type") != "access" or not claims.get("sub"):
             raise _unauthorized("TOKEN_INVALID", "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.")
-        return Identity(
-            "user",
-            user_id=str(claims["sub"]),
-            username=str(claims.get("username") or ""),
-            role=str(claims.get("role") or "member"),
-        )
+        user_id = str(claims["sub"])
+        username = str(claims.get("username") or "")
+        role = str(claims.get("role") or "member")
+        # Review2 R2: the token keeps the role it was issued with for its whole 15 minutes,
+        # so a demoted admin kept an admin's view. The role is read from the database once
+        # per request instead, and every role check below uses that one fresh value. An
+        # app without a database (small test apps only; main.py always wires one) keeps
+        # the token's role for scoping, and require_admin stays closed there.
+        sessions = getattr(request.app.state, "postgres_sessions", None)
+        if sessions is not None:
+            try:
+                parsed = UUID(user_id)
+            except ValueError as error:
+                raise _unauthorized("TOKEN_INVALID", "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.") from error
+            with sessions() as database:
+                user = database.get(User, parsed)
+                if user is None:
+                    raise _unauthorized("TOKEN_INVALID", "Tài khoản không còn tồn tại.")
+                username, role = user.username, user.role
+        return Identity("user", user_id=user_id, username=username, role=role)
     return ANONYMOUS
 
 
@@ -113,23 +129,15 @@ def require_identity(request: Request) -> Identity:
 def require_admin(request: Request) -> None:
     """Admin surface. No-op with auth disabled (single-user mode keeps its
     existing API-key-only protections). Service identity passes. For user
-    identity the role is re-read from the DATABASE, so a demotion takes effect
-    immediately instead of at access-token expiry."""
+    identity the role was re-read from the DATABASE by _resolve, so a demotion
+    takes effect immediately instead of at access-token expiry. Without a
+    database there is nothing to re-read, so the surface stays closed."""
     if not auth_enabled(request):
         return
     identity = require_identity(request)
     if identity.is_service:
         return
-    sessions = getattr(request.app.state, "postgres_sessions", None)
-    stored_role = None
-    if sessions is not None and identity.user_id:
-        try:
-            with sessions() as database:
-                user = database.get(User, UUID(identity.user_id))
-            stored_role = user.role if user is not None else None
-        except ValueError:
-            stored_role = None
-    if stored_role != "admin":
+    if getattr(request.app.state, "postgres_sessions", None) is None or identity.role != "admin":
         raise _forbidden()
 
 

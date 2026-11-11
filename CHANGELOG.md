@@ -23,6 +23,9 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
 - **Xoá job OCR đang chạy là xoá hẳn.** Worker từng lưu lại job lúc dừng nên job hiện lại trong lịch sử; giờ job biến mất ngay, worker dừng ở trang kế tiếp và tự xoá thư mục của job khi thoát.
 - **Xoá lịch sử OCR sau khi khởi động lại thì xoá cả ảnh và chữ trên đĩa.** Thư mục được tìm từ mã job, chỉ với mã do server tạo và chỉ bên trong thư mục OCR, không bao giờ theo đường dẫn lưu kèm lần chạy.
 - **Câu hỏi OCR nêu nhiều trường thì giữ bằng chứng cho từng trường.** "Điện thoại và email" từng chỉ đưa model các khối điện thoại. Số viết dạng `+1 415…`, `(84-28)…`, `1900 1234`, hay đứng sau `ĐT`, `Di động`, `Hotline`, `Mobile` từng bị bỏ, và `e-mail` không khớp luật nào. Câu hỏi về mẫu điện thoại không còn bị coi là hỏi số điện thoại.
+- **Hai admin hạ quyền nhau cùng lúc không còn làm hệ thống mất hết admin.** Đổi vai trò dùng chung khoá database với lúc tạo admin đầu tiên, nên lần hạ thứ hai thấy lần thứ nhất và nhận 409 `LAST_ADMIN`.
+- **Admin bị hạ quyền mất màn admin ngay, không chờ token hết hạn.** Vai trò được đọc từ database ở mỗi request đã đăng nhập; token của tài khoản đã xoá nhận 401. Dự án do admin tạo không có chủ, nên admin bị hạ cũng thôi thấy các dự án đó ngay (R2-3, chưa đổi).
+- **Trên web, "nhớ" không còn sống sót qua một lần "quên" chen vào lúc tin đang được xử lý.** Giờ gửi của lệnh nhớ được đọc từ đồng hồ database trước khi chụp trạng thái trí nhớ, và ghi chú bị từ chối nếu có lần quên, sửa hay xoá ghi xuống sau mốc đó. Giờ lưu của chính tin vẫn theo đồng hồ app (lỗi F chưa sửa).
 
 ### Fixed (10/11, theo một bản nhận xét)
 - **Tin vừa quên không còn quay lại lịch sử Web.** Khi người dùng bấm quên trong lúc Ún đang trả lời, tin của lượt đó được lưu với giờ gửi (trước mốc quên), nên vẫn hiện trên màn hình nhưng không còn được gửi cho model ở lượt sau. Áp dụng cho chat và hỏi tài liệu.

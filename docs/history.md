@@ -1156,6 +1156,10 @@ phút (surface admin thì đọc DB rồi); memory/tài liệu là workspace chu
 member đọc được của nhau (đúng thiết kế «nhóm nhỏ»); chưa có đổi/quên mật khẩu
 (quản trị viên reset qua psql).
 
+> *Đính chính 11/11/2026 (review2 R2):* câu "role trong access token có thể cũ tối đa
+> 15 phút" không còn đúng. Mỗi request đã đăng nhập đọc vai trò từ database, nên hạ
+> quyền có hiệu lực ngay; token của tài khoản đã xoá nhận 401.
+
 ## P3-2 — Điều khiển bot Discord từ dashboard — ✅ 20/08
 
 - Bot xưa nay chạy qua `docker compose --profile discord up discord-bot`

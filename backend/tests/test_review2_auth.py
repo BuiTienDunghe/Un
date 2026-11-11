@@ -13,7 +13,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import delete, func, select
 
-from review2_support import KnownBug, known_bug
+from review2_support import known_bug
 from test_auth_api import auth_on, bearer, factory, register  # noqa: F401  (fixtures and helpers)
 
 PASSWORD = "matkhau-123"
@@ -55,8 +55,6 @@ def demoted_admin(client, mock_ollama, auth_on, factory):  # noqa: F811
 
 
 @pytest.mark.parametrize("what", ["conversation_list", "conversation_of_a", "project_list"])
-@pytest.mark.xfail(strict=True, raises=KnownBug,
-                   reason="review2 R2: the role is read from the access token, so a demoted admin keeps an admin's view for up to 15 minutes")
 def test_r2_1_a_demoted_admin_with_an_old_token_no_longer_sees_other_peoples_work(demoted_admin, what):
     client, b = demoted_admin.client, demoted_admin.b
     path, marker = {
@@ -80,8 +78,6 @@ def admins(factory) -> int:  # noqa: F811
         return session.scalar(select(func.count()).select_from(User).where(User.role == "admin")) or 0
 
 
-@pytest.mark.xfail(strict=True, raises=KnownBug,
-                   reason="review2 R5: set_role counts the admins and updates without a lock, so two demotions at once leave none")
 def test_r5_1_two_admins_demoting_each_other_at_once_leave_one_admin(client, auth_on, factory, monkeypatch):  # noqa: F811
     import app.services.auth_service as auth_module
     service = client.app.state.auth_service

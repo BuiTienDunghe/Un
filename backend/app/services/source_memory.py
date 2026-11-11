@@ -115,18 +115,35 @@ class SourceMemoryService:
         # Clock time after acquiring the audience lock, not transaction start.
         state.barrier_at = database.scalar(select(func.clock_timestamp()))
 
+    def now(self, reader):
+        """The database's time, read while holding the reader's two state rows (the same
+        clock and the same locks every barrier is written under). Any forget, edit or
+        delete for this reader either committed before it, so its barrier is earlier, or
+        commits after it, so its barrier is later; never in between (review2 R4)."""
+        with self.sessions.begin() as database:
+            self._state(database, MemoryReader(reader.tenant, "__history__", ""), lock=True)
+            self._state(database, reader, lock=True)
+            return database.scalar(select(func.clock_timestamp()))
+
     def save(self, reader, text: str, *, source_id: str | None = None,
-             memory_type="source_note", importance=.5, expected_epoch=None):
+             memory_type="source_note", importance=.5, expected_epoch=None, sent_at=None):
+        """sent_at, when given, is the moment the request to remember arrived, from now():
+        the save is refused if any barrier of this reader is at or after it, i.e. if a
+        forget, edit or delete committed after the words were sent."""
         if not text.strip() or len(text) > 10000:
             raise ValueError("Source must contain 1..10000 characters")
         key = source_id or f"web:{uuid4()}"
         with self.sessions.begin() as database:
-            if expected_epoch is not None:
+            if expected_epoch is not None or sent_at is not None:
                 global_state = self._state(database, MemoryReader(reader.tenant, "__history__", ""), lock=True)
             database.execute(select(func.pg_advisory_xact_lock(func.hashtextextended(key, 0))))
             state = self._state(database, reader, lock=True)
             if expected_epoch is not None and (global_state.epoch, state.epoch) != expected_epoch:
                 raise MemoryConflict("Source context was revoked while the write was pending")
+            if sent_at is not None:
+                barriers = [t for t in (global_state.barrier_at, state.barrier_at) if t is not None]
+                if barriers and sent_at <= max(barriers):
+                    raise MemoryConflict("Source context was revoked after the source was sent")
             row = database.get(SourceMemory, key)
             if row is not None:
                 if (row.tenant, row.audience, row.actor) != (reader.tenant, reader.audience, reader.actor):

@@ -116,10 +116,16 @@ class ChatService:
         user_id: str | None = None,
         on_step: Callable[[dict[str, object]], None] | None = None,
     ) -> tuple[str, str, str, int, list[dict[str, object]] | None]:
-        from app.services.source_memory import MemoryReader
+        from app.services.source_memory import MemoryReader, explicit_remember
         from contextlib import nullcontext
         v2 = self.source_memory
         reader = (tool_context or {}).get("_memory_reader") or MemoryReader.web(user_id)
+        # Review2 R4: a web "remember" first takes its send time from the database clock, under
+        # the memory locks. A forget that commits after this moment carries a later barrier, so
+        # save() refuses even when the snapshot below already shows the forget's new epoch. It is
+        # read before the app-clock stamp, so (with true clocks) a note that is saved always has a
+        # message that stays in the history. The stored message keeps the app clock (review2 F).
+        remember_sent_at = v2.now(reader) if v2 and model_history is None and explicit_remember(message) else None
         # Stamped before the epoch snapshot: if the user forgets during this turn, the
         # barrier lands after this moment and the history filter drops the message.
         sent_at = datetime.now(UTC)
@@ -152,7 +158,7 @@ class ChatService:
                 history = v2.history(reader, conversation_id, self.history_limit)
             receipt = ""
             if v2 and model_history is None:
-                from app.services.source_memory import explicit_remember, explicit_forget
+                from app.services.source_memory import explicit_forget
                 if explicit_forget(message):
                     count = v2.forget_actor(reader.tenant, reader.actor)
                     epoch, barrier = v2.snapshot(reader)
@@ -162,7 +168,8 @@ class ChatService:
                 elif explicit_remember(message) and len(message) <= 10000:
                     from app.services.source_memory import MemoryConflict
                     try:
-                        saved = v2.save(reader, message, source_id=f"web-turn:{uuid4()}", expected_epoch=epoch)
+                        saved = v2.save(reader, message, source_id=f"web-turn:{uuid4()}", expected_epoch=epoch,
+                                        sent_at=remember_sent_at)
                         receipt = f"Backend đã lưu nguyên văn source_id={saved['id']} revision={saved['revision']}."
                     except MemoryConflict:
                         receipt = "Chưa lưu: ngữ cảnh vừa bị sửa hoặc quên."

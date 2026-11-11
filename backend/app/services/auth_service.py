@@ -10,7 +10,8 @@ Design notes, distilled from the adversarial review of the auth design:
 - Login flattens timing with a dummy bcrypt check for unknown usernames and
   locks a username out after repeated failures (in-memory — one backend
   process serves this box).
-- The last remaining admin can never be demoted (no-recovery lockout guard).
+- The last remaining admin can never be demoted (no-recovery lockout guard), even by two
+  demotions at once: role changes take the same advisory lock as the bootstrap.
 """
 from __future__ import annotations
 
@@ -30,6 +31,9 @@ from app.postgres.models import RefreshToken, User
 
 USERNAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_.-]{2,63}$")
 BOOTSTRAP_LOCK_KEY = 745_301_991
+# One lock for every change to who is an admin: the first-admin bootstrap and role changes
+# share it, so no two of them ever count the admins at the same time (review2 R5).
+ROLE_CHANGE_LOCK_KEY = BOOTSTRAP_LOCK_KEY
 MAX_LOGIN_FAILURES = 5
 LOGIN_LOCK_SECONDS = 60.0
 
@@ -132,6 +136,11 @@ class AuthService:
         if role not in ("admin", "member"):
             raise ValueError("Vai trò phải là admin hoặc member.")
         with self.sessions.begin() as database:
+            # Review2 R5: two admins demoting each other at once both counted two admins
+            # and both went through. The lock is the first statement, so the role read and
+            # the count below see every role change committed before it, and no other role
+            # change can commit until this one does.
+            database.execute(select(func.pg_advisory_xact_lock(ROLE_CHANGE_LOCK_KEY)))
             user = database.get(User, UUID(user_id))
             if user is None:
                 raise InvalidCredentialsError("user not found")
