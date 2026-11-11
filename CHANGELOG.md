@@ -17,6 +17,7 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
 - **Câu trả lời gửi lại hoặc phát lại bị giữ khi câu hỏi đã bị sửa hoặc xoá**, kể cả khi lần sửa không dời mốc của kênh.
 - **Thử lại lượt "quên" vẫn báo đã quên và chỉ quên một lần**, thay vì báo tin đã bị xoá hoặc sửa.
 - **Lượt bị bỏ rơi không còn chặn kênh Discord.** Lượt đang chờ mà 30 giây không ai hỏi tới (`DISCORD_TURN_ABANDON_AFTER_SECONDS`) bị đánh `failed` khi có lượt sau đang chờ. Bot bỏ cuộc (hết giờ chờ, backend lỗi 5xx hoặc 409) thì xin huỷ lượt qua `POST /api/discord/sessions/turns/{id}/cancel`, route chỉ huỷ lượt đang chờ. Câu trả lời Discord không nhận thì lượt kết thúc hẳn thay vì quay về hàng đợi. Lượt đang chạy vẫn có thể giữ kênh tới khoảng 150 giây.
+- **Bot chỉ báo sửa hoặc xoá một tin sau khi chính tin đó đã vào sổ lịch sử** (chờ tối đa 10 giây), nên bot xoá "⏳" của mình ngay sau khi gửi không còn làm kênh quên lịch sử. Đây là chỗ hở còn lại của bản sửa ngày 10/11.
 
 ### Fixed (10/11, theo một bản nhận xét)
 - **Tin vừa quên không còn quay lại lịch sử Web.** Khi người dùng bấm quên trong lúc Ún đang trả lời, tin của lượt đó được lưu với giờ gửi (trước mốc quên), nên vẫn hiện trên màn hình nhưng không còn được gửi cho model ở lượt sau. Áp dụng cho chat và hỏi tài liệu.

@@ -48,6 +48,9 @@ from discord_bot.session_location import (
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
 
+# Review2 B: how long an edit or delete event waits for the ledger write of its message.
+LEDGER_WRITE_WAIT_SECONDS = 10.0
+
 
 @dataclass(frozen=True)
 class DiscordSettings:
@@ -877,6 +880,27 @@ def create_bot(
     # Fire-and-forget tasks need a strong reference until they finish, or
     # asyncio may garbage-collect them mid-flight (review finding 28/08).
     _ledger_tasks: set[asyncio.Task] = set()
+    # Review2 B: the ledger write still in flight for a message, by message id. An edit or a
+    # delete of that message waits for it, so the backend never hears of a change before the
+    # message itself: a delete that came first was filed as a person's message and moved the
+    # channel's history barrier, even when it was the bot removing its own "⏳".
+    _ledger_pending: dict[str, asyncio.Task] = {}
+
+    def _track_ledger_write(message_id: str, task: asyncio.Task) -> None:
+        _ledger_pending[message_id] = task
+
+        def forget(done: asyncio.Task) -> None:
+            if _ledger_pending.get(message_id) is done:
+                del _ledger_pending[message_id]
+
+        task.add_done_callback(forget)
+
+    async def _after_ledger_write(message_id) -> None:
+        task = _ledger_pending.get(str(message_id))
+        if task is not None:
+            # Bounded: the write swallows its own failures, and a hung one must not hold
+            # the edit or delete back for good.
+            await asyncio.wait({task}, timeout=LEDGER_WRITE_WAIT_SECONDS)
 
     def _guild_public(message: discord.Message) -> bool:
         """Only guild-public content enters the ledger: a channel hidden from
@@ -948,6 +972,7 @@ def create_bot(
             task = asyncio.create_task(_ship_history_message(message, parent_id))
             _ledger_tasks.add(task)
             task.add_done_callback(_ledger_tasks.discard)
+            _track_ledger_write(str(message.id), task)
         if message.author.bot or bot.user is None or not bot.user.mentioned_in(message):
             return
         question = message.content.replace(f"<@{bot.user.id}>", "").replace(f"<@!{bot.user.id}>", "").strip()
@@ -997,6 +1022,7 @@ def create_bot(
             content = data.get("content") or ""
             if not content:
                 return
+            await _after_ledger_write(payload.message_id)
             await api_client.record_history_edit(
                 str(payload.message_id),
                 content,
@@ -1014,6 +1040,7 @@ def create_bot(
         try:
             if not _raw_event_listened(payload):
                 return
+            await _after_ledger_write(payload.message_id)
             await api_client.record_history_delete(
                 str(payload.message_id),
                 guild_id=str(payload.guild_id),
