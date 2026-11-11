@@ -1,0 +1,4 @@
+worktree HEAD: 4936223716caf4b2d339d9a3ec7b229e10609ee7
+app from C:\Users\dungbt06\AppData\Local\Temp\claude\ee2371d0a8cf6a43\e6e8417c-7768-4bfa-af3c-88aece6116c1\scratchpad\wt-4936223\backend\app\__init__.py
+bot from C:\Users\dungbt06\AppData\Local\Temp\claude\ee2371d0a8cf6a43\e6e8417c-7768-4bfa-af3c-88aece6116c1\scratchpad\wt-4936223\discord_bot\__init__.py
+done

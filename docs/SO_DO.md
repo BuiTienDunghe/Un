@@ -20,6 +20,28 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
 
 ---
 
+## 11/11/2026 — Chạy lại đủ bộ test trên đầu nhánh `4936223` trước khi push
+
+- **Câu hỏi:** sau khi tách thành 5 commit, đúng commit sẽ push có còn xanh như cây làm việc buổi sáng không?
+- **Điều kiện:**
+  - Commit `4936223` checkout riêng thành worktree tách rời trong scratchpad. Đã in đường dẫn để chắc `app` và `discord_bot` được nạp từ worktree.
+  - Python 3.11.9 trên Windows.
+  - Container dùng một lần như mục dưới, đã migrate tới head.
+  - Ollama giả, ẩn CUDA, không đụng database thật.
+  - Chủ dự án cho phép: "Chạy lại test rồi push".
+- **Đăng ký trước:** `tests-tip-4936223/prediction.md`, viết khi test đang chạy, trước khi thấy kết quả: backend 2.341 đạt + 14 xfail, gốc 250 đạt + 1 bỏ qua.
+- **Kết quả:**
+
+  | Bộ | Kết quả | Thời gian |
+  |---|---|---|
+  | Backend đủ bộ | 2.341 đạt, 14 xfail, 0 hỏng, 0 bỏ qua | 7 phút 17 giây |
+  | Gốc đủ bộ | 250 đạt, 1 bỏ qua (thiếu `mteb`) | 27 giây |
+
+- **Kết luận:** đúng dự đoán, giống hệt lần chạy sáng.
+  - Backend có 6 cảnh báo, sáng nay có 4. Hai cảnh báo thêm là `\o` trong chuỗi của `test_backup_worker.py:201`: bản checkout mới phải dịch lại tệp Python nên cảnh báo này hiện ra. Test đó có từ trước, không thuộc loạt sửa này.
+- **Trạng thái:** xong. Được phép push.
+- **Bằng chứng:** `data/evaluation/results/kept/review2-fixes-20261111/tests-tip-4936223/`, gồm log hai bộ, log migrate, chỗ nạp code và bản dự đoán.
+
 ## 11/11/2026 — Test các bản sửa review2 (Discord, OCR, auth, web) và phần chuẩn bị đo mốc 2B
 
 - **Câu hỏi:** đêm 10→11/11, agent viết các bản sửa review2 và phần chuẩn bị đo mốc 2B, chỉ kiểm bằng cách đọc. Khi chạy thật, chúng có đạt bộ test không? Có đúng dự đoán đã ghi trước "bộ review2 ra 107 đạt và 14 xfail (F ×6, E ×8)" không?
@@ -49,7 +71,7 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
   - Chưa chạy với Ollama thật hay Discord thật.
   - Bot chạy trong container phải build lại image mới dùng code mới.
   - Lần đo mốc 2B (bước 7) chưa chạy.
-- **Trạng thái:** xong. Sáng 11/11 chủ dự án cho commit; code vào 5 commit liền nhau trên `69ca4ad`, mục này đi cùng commit cuối. Test chạy trên cây làm việc trước khi tách commit; chưa chạy lại trên từng commit hay trên đầu nhánh sau khi tách.
+- **Trạng thái:** xong. Sáng 11/11 chủ dự án cho commit; code vào 5 commit liền nhau trên `69ca4ad`, mục này đi cùng commit cuối. Test chạy trên cây làm việc trước khi tách commit. Sau đó đã chạy lại trên đầu nhánh (mục trên) nhưng chưa chạy trên từng commit.
 - **Bằng chứng:**
   - `data/evaluation/results/kept/review2-fixes-20261111/tests/` gồm log của 4 lần chạy, danh sách tệp nhóm, và kết quả các lần chạy lặp. Commit cùng mục này.
   - Báo cáo và bản duyệt: `.scratch/review2-fixes/` (chỉ trên máy).
