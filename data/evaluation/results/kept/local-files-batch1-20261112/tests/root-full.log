@@ -1,0 +1,13 @@
+........................................................................ [ 28%]
+........................................................................ [ 57%]
+....................................................................s... [ 86%]
+...................................                                      [100%]
+============================== warnings summary ===============================
+.venv\Lib\site-packages\discord\player.py:30
+  C:\Users\dungbt06\local-ai-core\.venv\Lib\site-packages\discord\player.py:30: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13
+    import audioop
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+SKIPPED [1] tests\test_run_mteb_prefixes.py:69: could not import 'mteb': No module named 'mteb'
+250 passed, 1 skipped, 1 warning in 24.70s

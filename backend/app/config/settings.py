@@ -219,6 +219,11 @@ class Settings(BaseSettings):
     # (README.en rule 5's fourth exception). Off by default: the seconds a part takes are not measured.
     agent_long_input_enabled: bool = False
     agent_tool_state_enabled: bool = False
+    # Laptop agent, batch 1 (12/11/2026): list_files and read_file over the folders below, for the
+    # machine's owner on the web chat only (local_files.py). Off by default: the baselines are measured
+    # with it off, and a folder holds the owner's own files. Folders are separated by ";"; none by default.
+    agent_local_files_enabled: bool = False
+    agent_local_files_roots: str = ""
     # Ticket 36: the local decided service (run-decided.bat). Unset = the labelling worker stays off.
     decided_url: str | None = None
     # Ticket 49: the local speech-to-text service (tools/voice_server.py). Unset = /voice/transcribe says 501.

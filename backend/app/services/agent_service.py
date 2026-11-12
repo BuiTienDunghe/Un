@@ -314,6 +314,10 @@ class AgentTool:
     # Opt-in durable observations. Unknown/MCP tools remain unremembered until
     # an operator-owned registration declares their policy.
     state_policy: str = "none"
+    # Laptop agent (12/11/2026): `available(tool_context)` says whether this turn may see the tool at
+    # all. False: not offered to the model, and a call by name is answered like an unknown tool. None
+    # (every tool before local_files.py): offered everywhere, as before.
+    available: Callable[[dict[str, Any]], bool] | None = None
 
     @property
     def name(self) -> str:
@@ -587,7 +591,7 @@ class AgentService:
             started = perf_counter()
             try:
                 with call_within(left - self.final_reserve_seconds):
-                    result, model_used = self.router.chat_tools("general", window.view(working), self._offered_schemas())
+                    result, model_used = self.router.chat_tools("general", window.view(working), self._offered_schemas(tool_context))
             except ModelCallTimeoutError:
                 # The round ran into the reserve's edge: answer from what is gathered.
                 consume_usage()
@@ -746,6 +750,10 @@ class AgentService:
                 # A name the model invented can carry the user's words: the content-free
                 # trace keeps a tool's name only when the step says it is a declared one.
                 tool = self.registry.get(call["name"])
+                if tool is not None and not self._available(tool, tool_context):
+                    # A tool this turn may not see is treated as one that does not exist: no label, no
+                    # name in the trace, no approval, and _run_tool answers UNKNOWN_TOOL.
+                    tool = None
                 declared = tool is not None
                 steps.append({
                     "kind": "tool_call", "tool_name": call["name"], "tool_declared": declared,
@@ -969,9 +977,17 @@ class AgentService:
         """Whether the registry holds a tool to look something up with (BFCL's holds only the task's own functions)."""
         return any(self.registry.get(name) is not None for name in LOOKUP_TOOLS)
 
-    def _offered_schemas(self) -> list[dict[str, Any]]:
-        """What the model is shown: every tool, except one that requires approval while nothing can approve it."""
-        return [tool.schema for tool in self.registry.tools() if self.approvals is not None or not tool.requires_approval]
+    def _offered_schemas(self, tool_context: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+        """What the model is shown: every tool, except one that requires approval while nothing can approve it,
+        and one this turn may not see (AgentTool.available)."""
+        return [
+            tool.schema for tool in self.registry.tools()
+            if (self.approvals is not None or not tool.requires_approval) and self._available(tool, tool_context)
+        ]
+
+    @staticmethod
+    def _available(tool: AgentTool, tool_context: dict[str, Any] | None) -> bool:
+        return tool.available is None or bool(tool.available(tool_context or {}))
 
     def _hold_for_approval(self, name: str, arguments: dict[str, Any], tool_context: dict[str, Any] | None) -> ApprovalNotice | ToolOutput:
         """The gate keeps the call (ApprovalNotice), or the reason it could not is a tool error for the model."""
@@ -1009,8 +1025,11 @@ class AgentService:
         model gets a sentence saying what to do next, not "TypeError: ..."."""
         try:
             tool = self.registry.get(name)
-            if tool is None:
-                return self._error(UNKNOWN_TOOL, f"Không có công cụ {name}. Chỉ có {', '.join(self.registry.names())}.")
+            if tool is None or not self._available(tool, tool_context):
+                # A tool this turn may not see is answered like one that does not exist, and the list
+                # names only what it may see.
+                names = [item.name for item in self.registry.tools() if self._available(item, tool_context)]
+                return self._error(UNKNOWN_TOOL, f"Không có công cụ {name}. Chỉ có {', '.join(names)}.")
             if tool.requires_approval and not approved:
                 # Whatever calls this, a tool that waits for a person does not run without one (ticket 46).
                 return self._error(APPROVAL_REQUIRED, f"{name} cần người dùng duyệt trước nên chưa chạy.")

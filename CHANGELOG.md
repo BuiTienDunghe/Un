@@ -11,6 +11,18 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
 
 ## [Unreleased]
 
+### Added (12/11, agent cục bộ, đợt 1: đọc tệp, tắt mặc định)
+- **Agent đọc được tệp trên máy, trong những thư mục chủ máy khai.** Bật bằng `AGENT_LOCAL_FILES_ENABLED`, thư mục ở `AGENT_LOCAL_FILES_ROOTS` (cách nhau bằng `;`). Có hai công cụ:
+  - `list_files`: xem một thư mục, hoặc tìm tệp theo tên, có dấu hay không dấu đều được.
+  - `read_file`: đọc tệp chữ, PDF có lớp chữ (kèm số trang) và Word .docx, đọc từng phần có chỗ đọc tiếp.
+- **Chỉ chủ máy, chỉ trên chat web.** Khi tắt tài khoản: chỉ trình duyệt trên chính máy này, có kiểm cả `Host` và `Origin`; khoá API từ máy khác không đủ. Khi bật tài khoản: quản trị viên hoặc khoá API. Lượt Discord và thành viên thường không thấy hai công cụ; gọi đúng tên cũng bị coi như công cụ không có.
+- **Không ra khỏi thư mục đã khai.**
+  - Model chỉ thấy `<tên thư mục>/<đường dẫn con>`.
+  - Đường mạng, ổ khác và tên thiết bị bị từ chối ngay theo chữ, trước khi chạm tới đĩa hay mạng.
+  - Lối tắt và junction trỏ ra ngoài, tệp hay thư mục ẩn ở bất kỳ tầng nào, tệp khoá bí mật, tệp chỉ có trên OneDrive và tệp quá 20 MB đều không mở.
+  - Mỗi lần xem, tìm hay đọc PDF đều có trần số mục và trần thời gian.
+- Cờ tắt thì model thấy đúng như trước: thêm trường `AgentTool.available` (mặc định `None`), và `/chat` chỉ truyền `tool_context` khi có dấu chủ máy. Chưa có trong đợt này: ghi tệp, cổng duyệt cho chat web, "đọc nốt", tìm theo nội dung tệp.
+
 ### Fixed (11/11, bản nhận xét thứ hai)
 - **Reply một tin cũ hoặc đã sửa không còn làm hỏng kênh Discord.** Trên server đã có mốc quên, mọi lượt reply từng lỗi và kênh bị chặn. Giờ tin được reply được xét theo lượt gốc của nó và theo dấu xoá; tin kênh không còn nhớ thì hiện là "không tìm thấy", không kèm lời.
 - **Lượt Discord lỗi lúc chuẩn bị được thử lại rồi bỏ**, như khi gọi model hỏng: bot nhận câu trả lời bình thường thay vì lỗi 500, và sau ba lần thử lượt kết thúc `failed` để kênh chạy tiếp.

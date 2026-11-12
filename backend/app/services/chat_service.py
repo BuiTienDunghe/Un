@@ -57,7 +57,9 @@ class ChatService:
         use_tools: bool = False,
         user_id: str | None = None,
         on_step: Callable[[dict[str, object]], None] | None = None,
+        tool_context: dict[str, object] | None = None,
     ) -> tuple[str, str, str, int, list[dict[str, object]] | None]:
+        # tool_context: only the /chat route passes one, to mark the owner's turn (local_files.py).
         return self._respond(
             message,
             conversation_id,
@@ -66,6 +68,7 @@ class ChatService:
             use_tools=use_tools,
             user_id=user_id,
             on_step=on_step,
+            tool_context=tool_context,
         )
 
     def respond_with_context(
@@ -196,7 +199,7 @@ class ChatService:
                     messages.append({"role": "system", "content": f"{self.memory_prompt}\n\nRelevant memories:\n{context}"})
             if v2:
                 from app.services.source_memory import bound_history
-                offered = self.agent_service._offered_schemas() if agent_mode else []
+                offered = self.agent_service._offered_schemas(tool_context) if agent_mode else []
                 guide = self.agent_service.defense.agent_guide(AGENT_GUIDE) if agent_mode else ""
                 base = [*messages, current_model_message or {"role":"user", "content":message}]
                 room = history_budget(base, offered, guide, int(self.router.models.get("general", {}).get("context",16384)))["room"]
@@ -221,7 +224,7 @@ class ChatService:
             if state_on:
                 recorder = ToolStateRecorder()
                 state_scope = continuity_scope(conversation_id, user_id, tool_context)
-                schemas = self.agent_service._offered_schemas()
+                schemas = self.agent_service._offered_schemas(tool_context)
                 # Conservative character budget, including the actual schemas
                 # and guide. This is an estimate, not a tokenizer guarantee.
                 window = int(self.router.models.get("general", {}).get("context", 16384))

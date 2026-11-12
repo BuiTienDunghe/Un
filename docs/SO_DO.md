@@ -20,6 +20,55 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
 
 ---
 
+## 12/11/2026 — Chạy cả bộ test cho đợt 1 công cụ đọc tệp, chưa commit
+
+- **Câu hỏi:** với database thật, phần sửa chung (vòng lặp agent, chat, đường `/chat`) có làm hỏng test nào đang có không? Và cả bộ có ra đúng số đã dự đoán không?
+- **Điều kiện:**
+  - Code: cùng cây làm việc với mục test nhẹ bên dưới, trên `b0f146d`, chưa commit.
+  - Python 3.11.9 trên Windows.
+  - Container dùng một lần: `chk-lf1-*` (`postgres:16-alpine`, `redis:7-alpine`, `qdrant/qdrant:v1.18.2`). Đã migrate tới head. Chạy xong đã gỡ.
+  - Ollama giả, ẩn CUDA, không đụng database thật.
+  - Chủ dự án cho phép: "Chạy cả bộ".
+- **Đăng ký trước:** `tests/prediction-full.md`, viết trước khi chạy. Dự đoán: backend 2.400 đạt, 14 xfail, 1 bỏ qua; gốc 250 đạt, 1 bỏ qua.
+- **Kết quả:**
+
+  | Bộ | Kết quả | Thời gian |
+  |---|---|---|
+  | Backend đủ bộ | 2.400 đạt, 14 xfail, 1 bỏ qua (symlink), 0 hỏng | 6 phút 30 giây |
+  | Gốc đủ bộ | 250 đạt, 1 bỏ qua (thiếu `mteb`) | 25 giây |
+
+- **Kết luận:** đúng dự đoán, khớp từng con số. Lần 11/11 backend có 2.341 bài đạt; lần này nhiều hơn 59 bài, đúng bằng số bài đạt của tệp test mới.
+- **Trạng thái:** xong.
+- **Bằng chứng:** `data/evaluation/results/kept/local-files-batch1-20261112/tests/` gồm `prediction-full.md`, `alembic.log`, `backend-full.log`, `root-full.log`.
+
+## 12/11/2026 — Test nhẹ đợt 1 công cụ đọc tệp (list_files, read_file), chưa commit
+
+- **Câu hỏi:** code đợt 1 (agent cục bộ được đọc tệp trong thư mục chủ máy chọn) có đạt bộ test mới của nó không? Có làm hỏng các test agent và chat đang có không?
+- **Điều kiện:**
+  - Code: cây làm việc trên `b0f146d`, chưa commit.
+    - Tệp mới: `backend/app/services/local_files.py`, `backend/tests/test_local_files.py`.
+    - Tệp sửa: `agent_service.py`, `chat_service.py`, `routers/chat.py`, `settings.py`, `main.py`, `.env.example`.
+    - Đã qua 2 vòng duyệt của Fable (`.scratch/laptop-agent/reviews/`). Phần sửa R1 làm sau vòng 2, chưa ai duyệt lại.
+  - Môi trường: Python 3.11.9 trên Windows.
+    - **Không có database**: bỏ `POSTGRES_TEST_URL` và `REDIS_TEST_URL`, nên các test cần database tự bỏ qua.
+    - Ollama giả (cổng chết), ẩn CUDA, không nạp model.
+    - GPU trống (0 MiB, 42 °C) lúc bắt đầu.
+  - Chủ dự án cho phép: "Chạy test nhẹ".
+- **Đăng ký trước:** không. Không ghi dự đoán trước khi chạy.
+- **Kết quả:**
+
+  | Lần chạy | Kết quả | Thời gian |
+  |---|---|---|
+  | Test mới + `test_agent_*` + `test_ask_user` + `test_chat_api` + `test_api_key_auth` + `test_tool_state*` (33 tệp) | 665 đạt, 102 bỏ qua (cần database), 0 hỏng | 37 giây cả khởi động |
+  | Riêng `test_local_files.py`, có tên từng bài | 59 đạt, 1 bỏ qua | dưới 1 giây |
+
+- **Kết luận:** xanh. Lần nào cũng chạy lần đầu đã xanh, không phải sửa gì.
+  - Bài bỏ qua trong tệp mới là test lối tắt kiểu symlink: máy này không cho tạo symlink nếu không có quyền.
+  - Test junction (cùng loại rủi ro) có chạy và đạt.
+  - Bộ đủ có database chưa chạy, nên các đường chat cần database (trí nhớ v2, lưu kết quả công cụ) chưa được kiểm với phần sửa này.
+- **Trạng thái:** xong (mức nhẹ). Bộ đủ chờ cho phép.
+- **Bằng chứng:** `data/evaluation/results/kept/local-files-batch1-20261112/tests/` (`run1-light.log`, `run2-local-files-verbose.log`).
+
 ## 11/11/2026 — Chạy lại đủ bộ test trên đầu nhánh `4936223` trước khi push
 
 - **Câu hỏi:** sau khi tách thành 5 commit, đúng commit sẽ push có còn xanh như cây làm việc buổi sáng không?
