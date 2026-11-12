@@ -14,7 +14,7 @@ from app.services import model_choice
 from app.config.model_registry import write_attention_marker
 from app.config.settings import PROJECT_ROOT, get_settings
 from app import discord
-from app.routers import agent, auth, chat, conversations, dashboard, documents, health, memory, models, ocr, rag, research, vision, voice
+from app.routers import agent, auth, chat, conversations, dashboard, documents, health, local_files as local_files_router, memory, models, ocr, rag, research, vision, voice
 from app.security.api_key import require_api_key_for_read
 from app.security.auth import require_admin
 from app.services.auth_service import AuthService
@@ -246,10 +246,21 @@ async def lifespan(app: FastAPI):
         from app.services import ask_user
 
         ask_user.register(app.state.agent_service.registry)
+    # Laptop agent: None unless the write tools are on; routers/local_files.py answers 404 then.
+    app.state.local_file_approvals = None
     if settings.agent_local_files_enabled:
         from app.services import local_files
 
-        local_files.register(app.state.agent_service.registry, settings.agent_local_files_roots)
+        roots = local_files.register(app.state.agent_service.registry, settings.agent_local_files_roots)
+        if roots and settings.agent_local_files_write_enabled:
+            from app.services import local_file_writes
+
+            store = app.state.chat_service.store
+            app.state.local_file_approvals = local_file_writes.register(
+                app.state.agent_service, roots,
+                Path(settings.agent_local_files_backup_dir or PROJECT_ROOT / "data" / "local-files-backup"),
+                record_message=lambda conversation_id, text: store.add_message(conversation_id, "assistant", text),
+            )
     mcp_clients: list = []
     if settings.agent_mcp_enabled:
         from app.services import mcp_tools
@@ -289,6 +300,7 @@ read_guard = [Depends(require_api_key_for_read)]
 admin_guard = [*read_guard, Depends(require_admin)]
 app.include_router(agent.router, dependencies=admin_guard)
 app.include_router(chat.router, dependencies=read_guard)
+app.include_router(local_files_router.router, dependencies=read_guard)
 app.include_router(documents.router, dependencies=read_guard)
 app.include_router(ocr.router, dependencies=read_guard)
 app.include_router(rag.router, dependencies=read_guard)

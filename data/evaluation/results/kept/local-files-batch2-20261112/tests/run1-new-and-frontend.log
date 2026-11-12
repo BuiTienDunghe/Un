@@ -1,0 +1,9 @@
+......................................................................s. [ 37%]
+..........................................ss............................ [ 75%]
+.............................................s                           [100%]
+=========================== short test summary info ===========================
+SKIPPED [1] tests\test_local_files.py:196: this machine does not let the test make a link
+SKIPPED [1] tests\test_frontend.py:45: set POSTGRES_TEST_URL to run worker integration tests
+SKIPPED [1] tests\test_frontend.py:52: set POSTGRES_TEST_URL to run worker integration tests
+SKIPPED [1] tests\test_agent_approvals.py:550: set POSTGRES_TEST_URL
+186 passed, 4 skipped in 2.67s

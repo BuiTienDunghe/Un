@@ -58,6 +58,8 @@ data/evaluation/results/*
 !data/evaluation/results/kept/**
 data/archives/
 data/backups/
+# Ban cu cua tep ma agent ghi de hoac xoa (local_file_writes.py) - tep rieng cua chu may, khong push
+data/local-files-backup/
 # Bo dem nghe thu dong (memory_design.md 13.6 job 1) - id nguoi dung that, khong push
 data/discord_listen/
 data/model_choice.env*

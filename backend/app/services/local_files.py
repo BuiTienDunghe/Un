@@ -129,6 +129,10 @@ class Refused(Exception):
         self.code = code
 
 
+class Missing(Refused):
+    """Nothing at that path, inside an allowed folder (the write tools tell "new" from "refused" by it)."""
+
+
 def parse_roots(value: str | None) -> list[Root]:
     """The allowed folders, from the setting. A folder that does not exist is left out with a log line
     that names no path (logs outlive the conversation). Two folders with the same name get " (2)"."""
@@ -271,7 +275,7 @@ class LocalFiles:
                 raise outside
             real = candidate.resolve(strict=True)
         except FileNotFoundError:
-            raise Refused("Không có tệp hay thư mục này. Gọi list_files để xem tên đúng.") from None
+            raise Missing("Không có tệp hay thư mục này. Gọi list_files để xem tên đúng.") from None
         except (OSError, RuntimeError):
             raise Refused("Không mở được đường dẫn này.") from None
         # With every link followed: a link inside the folder may point out of it.

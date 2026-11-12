@@ -11,6 +11,13 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
 
 ## [Unreleased]
 
+### Added (12/11, agent cục bộ, đợt 2: ghi tệp có duyệt, tắt mặc định)
+- **Agent ghi, chuyển và xoá được tệp trong các thư mục chủ máy khai, nhưng mỗi lần phải được duyệt.** Bật bằng `AGENT_LOCAL_FILES_WRITE_ENABLED` (cần bật cả cờ đọc). Ba công cụ mới: `write_file` (tạo hoặc ghi đè, tối đa 50.000 ký tự), `move_file` (đổi tên hoặc chuyển chỗ), `delete_file` (chỉ xoá tệp, không xoá thư mục; tệp trên 200 MB thì từ chối).
+- **Thẻ duyệt trong khung chat web.** Lượt agent dừng ở thẻ có nút Duyệt và Từ chối. Thẻ ghi rõ việc sẽ làm, nội dung sẽ ghi, và có cảnh báo đỏ khi tệp chạy được (`.bat`, `.ps1`, `.exe`, `.html`…) hoặc khi đổi đuôi tệp. Việc chờ duyệt giữ trong bộ nhớ, tối đa 5 việc, hết hạn sau 10 phút; khởi động lại API thì huỷ. Lúc chạy, máy chủ dựng lại việc từ đầu và so với việc đã duyệt; khác đi (tệp mới xuất hiện hoặc biến mất, đường dẫn đổi) thì không làm. Tệp chỉ bị sửa nội dung trong lúc chờ thì vẫn làm, và bản cũ giữ lại là bản đã sửa đó. Ai thấy ba công cụ này thì giống đợt 1: chỉ chủ máy, chỉ trên chat web.
+- **Hoàn tác trong 3 ngày.** Trước khi ghi đè, chuyển hay xoá, bản cũ được chép vào `AGENT_LOCAL_FILES_BACKUP_DIR` (để trống thì dùng `data/local-files-backup/`, đã gitignore). Thẻ có nút Hoàn tác. Hoàn tác bị từ chối nếu tệp đã bị sửa tay sau đó (so dấu sha256), hoặc nếu chỗ cũ đã có tệp khác. Mở lại hội thoại thì thẻ hiện lại. Thư mục bản cũ nằm trong một thư mục được phép thì API không bật công cụ ghi.
+- Route mới `/local-files/…`: xem, duyệt việc chờ; liệt kê thẻ của một hội thoại; hoàn tác. Khi cờ tắt thì trả 404, người không phải chủ máy nhận 403. Cờ tắt thì vòng lặp agent và chat giống hệt trước.
+- Chưa làm, chờ chủ dự án: ghi lại tệp có thể đổi kiểu xuống dòng và bảng mã; không đổi được riêng chữ hoa/thường của tên trên Windows; chuyển hay xoá sang ổ khác mà dở dang thì câu báo có thể sai; admin này duyệt được việc của admin khác; việc hết hạn không được ghi vào hội thoại.
+
 ### Added (12/11, agent cục bộ, đợt 1: đọc tệp, tắt mặc định)
 - **Agent đọc được tệp trên máy, trong những thư mục chủ máy khai.** Bật bằng `AGENT_LOCAL_FILES_ENABLED`, thư mục ở `AGENT_LOCAL_FILES_ROOTS` (cách nhau bằng `;`). Có hai công cụ:
   - `list_files`: xem một thư mục, hoặc tìm tệp theo tên, có dấu hay không dấu đều được.

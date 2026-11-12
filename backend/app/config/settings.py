@@ -224,6 +224,11 @@ class Settings(BaseSettings):
     # with it off, and a folder holds the owner's own files. Folders are separated by ";"; none by default.
     agent_local_files_enabled: bool = False
     agent_local_files_roots: str = ""
+    # Batch 2: write_file, move_file, delete_file, each approved by the owner on the web chat first
+    # (local_file_writes.py). Needs the flag above too. Old versions go to the backup folder below
+    # (default data/local-files-backup) and are kept 3 days.
+    agent_local_files_write_enabled: bool = False
+    agent_local_files_backup_dir: str = ""
     # Ticket 36: the local decided service (run-decided.bat). Unset = the labelling worker stays off.
     decided_url: str | None = None
     # Ticket 49: the local speech-to-text service (tools/voice_server.py). Unset = /voice/transcribe says 501.

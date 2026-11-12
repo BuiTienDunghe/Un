@@ -875,6 +875,99 @@
       rows);
   }
 
+  /* Thẻ việc ghi tệp (agent cục bộ, đợt 2). Hai loại:
+     - approvalCard: một lượt agent dừng ở việc chờ chủ máy duyệt; trạng thái lấy từ máy chủ khi vẽ.
+     - changeCard: một thay đổi đã làm, còn Hoàn tác được trong 3 ngày.
+     Mở lại hội thoại thì loadFileCards vẽ lại cả hai ở cuối khung chat (mã duyệt không nằm trong lịch sử). */
+  function fileCardParts(title) {
+    const detail = h("div", { class: "approval-detail" });
+    const status = h("p", { class: "approval-status", role: "status" });
+    const actions = h("div", { class: "approval-actions" });
+    const card = h("div", { class: "approval-card", role: "group", "aria-label": title },
+      h("div", { class: "approval-title" }, icon("shield", { size: 14 }), title), detail, status, actions);
+    const busy = (on) => { for (const button of actions.querySelectorAll("button")) button.disabled = on; };
+    const describe = (summary, warning, content) => detail.replaceChildren(...[
+      h("p", { class: "approval-summary" }, String(summary || "")),
+      warning ? h("p", { class: "approval-warning" }, icon("alert", { size: 13 }), String(warning)) : null,
+      typeof content === "string" ? h("pre", { class: "approval-content" }, content) : null,
+    ].filter(Boolean));
+    const undoButton = (changeId) => h("button", {
+      type: "button", class: "btn btn-28 btn-outline",
+      onClick: () => {
+        busy(true);
+        Shell.api(`/local-files/changes/${enc(changeId)}/undo`, { method: "POST" })
+          .then((data) => { status.textContent = String(data.message || "Đã hoàn tác."); actions.replaceChildren(); })
+          .catch((error) => { status.textContent = viError(error); busy(false); });
+      },
+    }, icon("retry", { size: 13 }), "Hoàn tác");
+    return { card, status, actions, busy, describe, undoButton };
+  }
+
+  function changeCard(change) {
+    const parts = fileCardParts("Việc đã làm trên máy");
+    parts.describe(change.summary, change.warning, null);
+    parts.status.textContent = change.state === "undone" ? "Đã hoàn tác." : change.undoable ? "Còn hoàn tác được trong 3 ngày." : "";
+    if (change.state === "done" && change.undoable) parts.actions.replaceChildren(parts.undoButton(String(change.id)));
+    return parts.card;
+  }
+
+  function loadFileCards(id, v, seq) {
+    Shell.api(`/local-files/conversations/${enc(id)}/cards`, { signal: v.ctx.signal })
+      .then((data) => {
+        if (V !== v || S.cur.seq !== seq || !data) return;
+        const cards = [
+          ...(Array.isArray(data.approvals) ? data.approvals : []).map((item) => approvalCard(String(item.id))),
+          ...(Array.isArray(data.changes) ? data.changes : []).map(changeCard),
+        ];
+        if (cards.length) v.msgs.append(h("div", { class: "file-cards" }, cards));
+      })
+      // Ghi tệp đang tắt (404) hoặc người xem không phải chủ máy (403): không có thẻ nào để hiện.
+      .catch(() => {});
+  }
+
+  function approvalCard(id) {
+    const { card, status, actions, busy, describe, undoButton } = fileCardParts("Cần bạn duyệt");
+    status.textContent = "Đang tải việc cần duyệt…";
+    const load = () => Shell.api(`/local-files/approvals/${enc(id)}`);
+    const decide = (approve) => {
+      busy(true);
+      status.textContent = approve ? "Đang làm…" : "Đang từ chối…";
+      Shell.api(`/local-files/approvals/${enc(id)}`, { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ approve }) })
+        .then(render)
+        .catch((error) => {
+          // Quá hạn, đã xử lý ở tab khác…: vẽ lại theo máy chủ để nút không còn bấm được, giữ câu báo lỗi.
+          const said = viError(error);
+          load().then((data) => { render(data); status.textContent = said; }).catch(() => { status.textContent = said; busy(false); });
+        });
+    };
+    function render(data) {
+      const plan = (data && data.plan) || {};
+      describe(data.summary, plan.warning, plan.content);
+      const result = data.result || {};
+      const left = Math.ceil((Number(data.seconds_left) || 0) / 60);
+      const texts = {
+        pending: `Chưa có gì thay đổi. Hết hạn sau khoảng ${left} phút.`,
+        running: "Đang làm…",
+        done: String(result.done || "Đã làm xong."),
+        failed: `Chưa làm được: ${String(result.error || "lỗi không rõ")}`,
+        denied: "Đã từ chối. Không có gì thay đổi.",
+        expired: "Đã quá hạn duyệt nên việc này không chạy.",
+      };
+      status.textContent = texts[data.status] || "";
+      if (data.status === "pending") {
+        actions.replaceChildren(
+          h("button", { type: "button", class: "btn btn-28 btn-primary", onClick: () => decide(true) }, icon("check", { size: 13 }), "Duyệt"),
+          h("button", { type: "button", class: "btn btn-28 btn-outline", onClick: () => decide(false) }, icon("x", { size: 13 }), "Từ chối"));
+      } else if (data.status === "done" && result.change_id) {
+        actions.replaceChildren(undoButton(String(result.change_id)));
+      } else {
+        actions.replaceChildren();
+      }
+    }
+    load().then(render).catch((error) => { status.textContent = viError(error); });
+    return card;
+  }
+
   function sourceChip(src, n) {
     // Chip chỉ mang MỤC CUỐI của heading_path (prototype P:792 cũng dùng nhãn ngắn): cắt cả đường
     // mục ở 220px sẽ giấu đúng phần cụ thể nhất và đẩy chip xuống hai hàng. Đường đầy đủ nằm ở
@@ -906,6 +999,7 @@
     let frame = 0;
     let dirty = false;   // raw đã đổi mà md chưa vẽ lại
     let stepsEl = null;
+    let approvalEl = null;
     // Nguồn về từ sự kiện `meta`, tức TRƯỚC token đầu tiên. Khối "đang tìm trong N tài liệu…" mà đã
     // có chip trích dẫn xong bên dưới thì trạng thái chờ tự mâu thuẫn (thiết kế P:191-198 chỉ có 2
     // vạch mờ) → giữ chip ẩn tới khi lượt bắt đầu chảy chữ / kết thúc / lỗi.
@@ -966,6 +1060,12 @@
         if (stepsEl) stepsEl.remove();
         stepsEl = panel;
         if (panel) body.insertBefore(panel, sourcesEl);
+        // Lượt dừng ở một việc chờ duyệt (ghi tệp): thẻ Duyệt / Từ chối, một lần cho mỗi câu trả lời.
+        const waiting = (Array.isArray(steps) ? steps : []).find((step) => step && step.kind === "final" && step.stop_reason === "awaiting_approval" && step.approval_id);
+        if (waiting && !approvalEl) {
+          approvalEl = approvalCard(String(waiting.approval_id));
+          body.insertBefore(approvalEl, sourcesEl);
+        }
       },
       setSources(list) {
         const sources = (Array.isArray(list) ? list : []).filter((src) => src && typeof src === "object");
@@ -1093,6 +1193,7 @@
       S.cur.title = (detail && detail.title) || null;
       const messages = Array.isArray(detail && detail.messages) ? detail.messages : [];
       renderHistory(messages);
+      if (messages.length) loadFileCards(id, v, seq);
       if (!S.cur.title && !S.titles[id] && messages.length) {
         // Hội thoại cũ tạo trước khi máy chủ lưu tiêu đề: đặt tên cục bộ theo câu hỏi đầu (≤60 ký tự).
         const first = messages.find((message) => message.role === "user");

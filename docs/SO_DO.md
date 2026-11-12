@@ -20,6 +20,35 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
 
 ---
 
+## 12/11/2026 — Test đợt 2 công cụ ghi tệp (write_file, move_file, delete_file có duyệt), chưa commit
+
+- **Câu hỏi:** code đợt 2 có đạt bộ test mới của nó không? Có làm hỏng test nào đang có không? Code và test này mới chỉ được đọc qua hai vòng duyệt của Fable, chưa chạy lần nào.
+- **Điều kiện:**
+  - Code: cây làm việc trên `4cb3ba2` (đợt 1), chưa commit.
+    - Tệp mới: `local_file_writes.py`, `routers/local_files.py`, `tests/test_local_file_writes.py`.
+    - Tệp sửa: `local_files.py`, `agent_service.py`, `chat_service.py`, `settings.py`, `main.py`, `chat.js`, `chat.css`, `.env.example`, `.gitignore`.
+  - Python 3.11.9 trên Windows. Ollama giả, ẩn CUDA.
+  - Lần 1: không có database.
+  - Lần 2: container dùng một lần `chk-lf2-*` (postgres 16, redis 7, qdrant 1.18.2), đã migrate tới head, chạy xong đã gỡ.
+  - Chủ dự án cho phép: "Chạy cả bộ".
+- **Đăng ký trước:** `tests/prediction-full.md`, viết trước khi chạy.
+  - Nếu mọi thứ đúng: backend 2.454 đạt, 14 xfail, 1 bỏ qua; gốc 250 đạt, 1 bỏ qua.
+  - Dự đoán thật đã ghi: lần đầu sẽ có vài ca mới hỏng.
+- **Kết quả:**
+
+  | Lần chạy | Kết quả | Thời gian |
+  |---|---|---|
+  | 1. `test_local_file_writes` + `test_local_files` + `test_frontend` + `test_agent_approvals`, không database | 186 đạt, 4 bỏ qua (3 cần database, 1 symlink), 0 hỏng | 2,7 giây |
+  | 2. Backend đủ bộ | 2.454 đạt, 14 xfail, 1 bỏ qua (symlink), 0 hỏng | 6 phút 28 giây |
+  | 2. Gốc đủ bộ | 250 đạt, 1 bỏ qua (thiếu `mteb`) | 25 giây |
+
+- **Kết luận:** xanh ngay lần đầu.
+  - Dự đoán thật ("sẽ có ca hỏng") **sai**: không ca nào hỏng, không phải sửa gì giữa hai lần chạy.
+  - Số đạt khớp đúng cột "nếu mọi thứ đúng": nhiều hơn 54 bài so với đợt 1, đúng bằng 54 ca của tệp test mới.
+  - Test tệp chỉ-đọc và test junction có chạy (đây là Windows). Test symlink vẫn bỏ qua vì máy không cho tạo symlink.
+- **Trạng thái:** xong.
+- **Bằng chứng:** `data/evaluation/results/kept/local-files-batch2-20261112/tests/` gồm `prediction-full.md`, `run1-new-and-frontend.log`, `alembic.log`, `backend-full.log`, `root-full.log`.
+
 ## 12/11/2026 — Chạy cả bộ test cho đợt 1 công cụ đọc tệp, chưa commit
 
 - **Câu hỏi:** với database thật, phần sửa chung (vòng lặp agent, chat, đường `/chat`) có làm hỏng test nào đang có không? Và cả bộ có ra đúng số đã dự đoán không?

@@ -781,6 +781,9 @@ class AgentService:
                         steps.append({
                             "kind": "final", "tool_name": None, "arguments": None, "content": _clip(held.reply, 4000),
                             "latency_ms": 0, "stop_reason": STOP_AWAITING_APPROVAL, "tokens_in": None, "tokens_out": None,
+                            # The web chat draws its approve/deny card from this (local_file_writes.py). Only for
+                            # a tool gated by AgentTool.available, so a Discord turn's step is as before.
+                            **({"approval_id": held.approval_id} if tool.available is not None else {}),
                         })
                         record_usage(last["tokens_in"], last["tokens_out"])
                         emit("final", stop_reason=STOP_AWAITING_APPROVAL)

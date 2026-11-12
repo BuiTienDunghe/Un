@@ -11,6 +11,7 @@ from loguru import logger
 
 from app.llm_clients.usage import consume_usage
 from app.services.agent_service import AGENT_GUIDE, STOP_TURN_BUDGET_EXHAUSTED, clock_note
+from app.services.local_files import LOCAL_FILES_KEY
 from app.services.tool_state import ToolStateRecorder
 from app.services.tool_state_bridge import continuity_scope, history_budget, restore_history
 from app.services.input_metrics import model_input_measurements
@@ -240,6 +241,9 @@ class ChatService:
                 logger.bind(event="tool_state_context", request_id=state_request_id,
                     base_chars=base_chars, schema_chars=schema_chars, history_chars=state_stats["chars"],
                     groups=state_stats["groups"], dropped=state_stats["dropped"]).info("Prepared bounded tool history")
+            if agent_mode and (tool_context or {}).get(LOCAL_FILES_KEY):
+                # The owner's turn (routers/chat.py): an approved file change is noted in this conversation.
+                tool_context = {**(tool_context or {}), "conversation_id": conversation_id}
             started = perf_counter()
             # In agent mode the agent counts its own calls; this turn adds none (ticket 43).
             with model_input_measurements(state_on) as input_metrics, turn_call_budget("chat", 0 if agent_mode else CHAT_CALL_CAP):
