@@ -42,7 +42,15 @@ def test_flags_decide_what_starts_like_the_launcher_did() -> None:
     assert "condenser" not in names({"DISCORD_CONDENSATION_ENABLED": "false"})
     assert {"outbox", "memory"} <= set(names({"DISCORD_MEMORY_INGESTION_ENABLED": "true"}))
     assert {"decided", "decided-worker"} <= set(names({"DECIDED_URL": "http://127.0.0.1:8377"}))
-    assert "decided" not in names({"DECIDED_URL": ""})
+    assert "label" not in names({"DECIDED_URL": "http://127.0.0.1:8377"})
+    # Any other way of writing decided's address starts decided, as before the label door existed.
+    assert "decided" in names({"DECIDED_URL": "http://localhost:8377"}) and "decided" in names({"DECIDED_URL": "http://pc:8377/"})
+    # The port picks the door: the small model's, and never decided's WSL behind it.
+    for url in ("http://127.0.0.1:8379", "http://localhost:8379/"):
+        assert {"label", "decided-worker"} <= set(names({"DECIDED_URL": url}))
+        assert "decided" not in names({"DECIDED_URL": url})
+    assert "decided" in names({"DECIDED_URL": "http://127.0.0.1:notaport"})
+    assert "decided" not in names({"DECIDED_URL": ""}) and "label" not in names({"DECIDED_URL": ""})
     assert "voice" in names({"VOICE_URL": "http://127.0.0.1:8378"})
     assert "voice" not in names({"VOICE_URL": ""}) and "voice" not in names({})
 

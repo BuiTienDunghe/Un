@@ -20,6 +20,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parent.parent
 LOG_DIR = ROOT / "data" / "logs" / "services"
@@ -31,6 +32,8 @@ CONSOLE_BACKLOG = 5000
 # The API leaves with this after a pick on the Model screen (app/services/model_choice.py).
 RESTART_EXIT_CODE = 75
 CHOICE_FILE = ROOT / "data" / "model_choice.env"
+# The small-model label door's port; tools/label_server.py listens on this one.
+LABEL_PORT = 8379
 RESET, RED = "\033[0m", "\033[91m"
 COLOURS = ("\033[96m", "\033[92m", "\033[93m", "\033[95m", "\033[94m", "\033[36m", "\033[32m", "\033[33m")
 SECRET_NAME = re.compile(r"(KEY|TOKEN|SECRET|PASSWORD)$", re.I)
@@ -46,6 +49,8 @@ class Service:
     cwd: Path
     # The .env line that turns it on: a name and what its value must start with ("" = any value).
     needs: tuple[str, str] | None = None
+    # A further test on that value, for one line that picks between services.
+    accepts: Callable[[str], bool] | None = None
 
 
 def read_env(path: Path) -> dict[str, str]:
@@ -56,6 +61,13 @@ def read_env(path: Path) -> dict[str, str]:
             if separator and not line.lstrip().startswith("#"):
                 values[name.strip()] = value.strip().strip("\"'")
     return values
+
+
+def url_port(url: str) -> int | None:
+    try:
+        return urlsplit(url.strip()).port
+    except ValueError:  # A port that is not a number: not the label door's.
+        return None
 
 
 def services(python: str = sys.executable) -> list[Service]:
@@ -74,7 +86,10 @@ def services(python: str = sys.executable) -> list[Service]:
         # The only component that sends member text to a third party: its own flag, and the worker
         # itself refuses to run without a real GEMINI_API_KEY and says which one is missing.
         worker("condenser", "scripts.condensation_worker", "--loop", needs=("DISCORD_CONDENSATION_ENABLED", "true")),
-        Service("decided", ("cmd", "/c", str(ROOT / "run-decided.bat")), ROOT, ("DECIDED_URL", "")),
+        # DECIDED_URL names the labeller the worker asks, and its port picks the door: the small Ollama model's
+        # on LABEL_PORT, decided's on any other, as before (.scratch/memory-labels-2b/spec.md).
+        Service("decided", ("cmd", "/c", str(ROOT / "run-decided.bat")), ROOT, ("DECIDED_URL", ""), lambda url: url_port(url) != LABEL_PORT),
+        Service("label", (python, "-u", str(ROOT / "tools" / "label_server.py")), ROOT, ("DECIDED_URL", ""), lambda url: url_port(url) == LABEL_PORT),
         worker("decided-worker", "scripts.decided_worker", needs=("DECIDED_URL", "")),
         # Ticket 49: the door only; the speech model starts in a child on the first recording and leaves when idle.
         Service("voice", (python, "-u", str(ROOT / "tools" / "voice_server.py")), ROOT, ("VOICE_URL", "")),
@@ -98,7 +113,7 @@ def enabled(all_services: list[Service], env: dict[str, str]) -> list[Service]:
         if service.needs is None:
             return True
         value = env.get(service.needs[0], "")
-        return bool(value) and value.startswith(service.needs[1])
+        return bool(value) and value.startswith(service.needs[1]) and (service.accepts is None or service.accepts(value))
 
     return [service for service in all_services if wanted(service)]
 

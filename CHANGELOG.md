@@ -11,6 +11,12 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
 
 ## [Unreleased]
 
+### Added (13/11, quầy gắn nhãn bằng model nhỏ, tắt mặc định)
+- **Bộ gắn nhãn tin Discord dùng được một model nhỏ qua Ollama thay cho decided.** `tools/label_server.py` nghe cổng 8379 và trả lời đúng hợp đồng `POST /classify` của decided (`label`, `confidence`, `stable`, `probs`, `model`): cùng câu hỏi, cùng bốn lựa chọn, hỏi bốn lần với thứ tự xoay rồi lấy trung bình; xác suất lấy từ `logprobs` của chữ cái đầu tiên model trả. Model mặc định `qwen3.5:2b`, đổi bằng `LABEL_OLLAMA_MODEL` và `LABEL_OLLAMA_NUM_CTX`.
+- **Cổng trong `DECIDED_URL` chọn quầy.** `:8379` thì supervisor bật quầy model nhỏ; cổng khác bật decided như trước, nên `.env` cũ chỉ có `DECIDED_URL` chạy y như cũ.
+- **Lỗi của một tin tách khỏi lỗi của model.** Model trả lời không dùng được thì quầy hỏi lại một câu mẫu: câu mẫu cũng hỏng thì trả 503 (worker chờ rồi thử lại cả hàng), câu mẫu qua thì trả 500 và chỉ tin đó bị ghi hỏng. Nội dung tin không vào log.
+- Chưa chạy với Ollama thật, chưa đo trên tin thật: test chỉ dùng Ollama giả. Chưa biết 2B có đưa chữ A–D vào top 20 hay không.
+
 ### Added (12/11, agent cục bộ, đợt 2: ghi tệp có duyệt, tắt mặc định)
 - **Agent ghi, chuyển và xoá được tệp trong các thư mục chủ máy khai, nhưng mỗi lần phải được duyệt.** Bật bằng `AGENT_LOCAL_FILES_WRITE_ENABLED` (cần bật cả cờ đọc). Ba công cụ mới: `write_file` (tạo hoặc ghi đè, tối đa 50.000 ký tự), `move_file` (đổi tên hoặc chuyển chỗ), `delete_file` (chỉ xoá tệp, không xoá thư mục; tệp trên 200 MB thì từ chối).
 - **Thẻ duyệt trong khung chat web.** Lượt agent dừng ở thẻ có nút Duyệt và Từ chối. Thẻ ghi rõ việc sẽ làm, nội dung sẽ ghi, và có cảnh báo đỏ khi tệp chạy được (`.bat`, `.ps1`, `.exe`, `.html`…) hoặc khi đổi đuôi tệp. Việc chờ duyệt giữ trong bộ nhớ, tối đa 5 việc, hết hạn sau 10 phút; khởi động lại API thì huỷ. Lúc chạy, máy chủ dựng lại việc từ đầu và so với việc đã duyệt; khác đi (tệp mới xuất hiện hoặc biến mất, đường dẫn đổi) thì không làm. Tệp chỉ bị sửa nội dung trong lúc chờ thì vẫn làm, và bản cũ giữ lại là bản đã sửa đó. Ai thấy ba công cụ này thì giống đợt 1: chỉ chủ máy, chỉ trên chat web.

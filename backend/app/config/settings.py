@@ -229,7 +229,8 @@ class Settings(BaseSettings):
     # (default data/local-files-backup) and are kept 3 days.
     agent_local_files_write_enabled: bool = False
     agent_local_files_backup_dir: str = ""
-    # Ticket 36: the local decided service (run-decided.bat). Unset = the labelling worker stays off.
+    # Ticket 36: the labeller the worker asks, decided (run-decided.bat, :8377) or a small Ollama model
+    # (tools/label_server.py, :8379). Unset = the labelling worker stays off.
     decided_url: str | None = None
     # Ticket 49: the local speech-to-text service (tools/voice_server.py). Unset = /voice/transcribe says 501.
     voice_url: str | None = None
