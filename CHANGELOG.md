@@ -11,6 +11,8 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-11-13
+
 ### Added (13/11, quầy gắn nhãn bằng model nhỏ, tắt mặc định)
 - **Bộ gắn nhãn tin Discord dùng được một model nhỏ qua Ollama thay cho decided.** `tools/label_server.py` nghe cổng 8379 và trả lời đúng hợp đồng `POST /classify` của decided (`label`, `confidence`, `stable`, `probs`, `model`): cùng câu hỏi, cùng bốn lựa chọn, hỏi bốn lần với thứ tự xoay rồi lấy trung bình; xác suất lấy từ `logprobs` của chữ cái đầu tiên model trả. Model mặc định `qwen3.5:2b`, đổi bằng `LABEL_OLLAMA_MODEL` và `LABEL_OLLAMA_NUM_CTX`.
 - **Cổng trong `DECIDED_URL` chọn quầy.** `:8379` thì supervisor bật quầy model nhỏ; cổng khác bật decided như trước, nên `.env` cũ chỉ có `DECIDED_URL` chạy y như cũ.
@@ -1290,7 +1292,8 @@ dẫn nguồn đã đo được chất lượng, hai kênh web và Discord dùng
 - Bộ eval mới phủ một tài liệu và đã bão hòa ở 100%, chưa đo được tiến bộ tiếp theo (G7).
 - BM25 chạy trong tiến trình, giới hạn quy mô corpus (G8).
 
-[Unreleased]: https://github.com/BuiTienDunghe/Un/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/BuiTienDunghe/Un/compare/v1.6.1...HEAD
+[1.6.1]: https://github.com/BuiTienDunghe/Un/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/BuiTienDunghe/Un/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/BuiTienDunghe/Un/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/BuiTienDunghe/Un/compare/v1.3.0...v1.4.0
