@@ -21,13 +21,22 @@ never written to. So the answer check (answer_figures) still counts a figure the
 in a cleared result as seen, and the trace keeps the whole result. The price is that the
 check is lenient about a figure the model could now only recall from before the note.
 
+`keep_edges` (23/11/2026, off) puts one step before clearing, as DeepSeek Harness's pruner
+keeps a result's first 4096 and last 1024 characters and opencode 2.0 shrinks before it drops:
+the old results, oldest first, are cut to their first EDGE_HEAD_CHARS and last EDGE_TAIL_CHARS
+with a note in the middle; only if every one of them is cut and the prompt still does not fit
+are they cleared, oldest first, as above. The two ends are the parts of a result that say the
+most about it: the head holds what it was (a search's best-ranked item, the document and its
+first chunk) and the tail where a read goes on (next_from_chunk) and the defense's closing
+marker. Unmeasured.
+
 Off by default: with no ContextBudget, `view` returns `working` itself.
 """
 from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from app.services.pastes import CHARS_PER_TOKEN, INLINE_FIXED_TOKENS
@@ -36,6 +45,10 @@ _LOG = logging.getLogger(__name__)
 
 KEEP_RECENT_RESULTS = 2
 NOTE_ARGUMENTS_CHARS = 160
+# keep_edges: DeepSeek Harness's 4:1 split, at the scale of Ún's results (at most 2400 characters
+# for a search, 6000 for a read).
+EDGE_HEAD_CHARS = 800
+EDGE_TAIL_CHARS = 200
 # Measured tokens may only raise the estimate, and by at most this much: Ollama's
 # prompt_eval_count can leave out a cached prefix, so a low reading proves nothing.
 MAX_SCALE = 2.0
@@ -48,6 +61,7 @@ class ContextBudget:
 
     ceiling_tokens: int | None = None
     keep_recent: int = KEEP_RECENT_RESULTS
+    keep_edges: bool = False
 
 
 def context_budget_from_config(section: object, general: dict[str, Any] | None = None) -> ContextBudget | None:
@@ -63,7 +77,12 @@ def context_budget_from_config(section: object, general: dict[str, Any] | None =
         if value is not None and (isinstance(value, bool) or not isinstance(value, int) or value < 1):
             _LOG.warning("agent.context_budget has %r where a whole number of at least 1 belongs: context budget stays off", value)
             return None
-    return ContextBudget(ceiling_tokens=ceiling, keep_recent=keep)
+    edges = section.get("keep_edges", False)
+    if not isinstance(edges, bool):
+        # The budget itself was asked for and is readable: only the optional step is left out.
+        _LOG.warning("agent.context_budget.keep_edges must be true or false, got %r: results are cleared without it", edges)
+        edges = False
+    return ContextBudget(ceiling_tokens=ceiling, keep_recent=keep, keep_edges=edges)
 
 
 def estimate_tokens(messages: list[dict[str, Any]]) -> float:
@@ -113,15 +132,32 @@ def _calls_by_result(messages: list[dict[str, Any]]) -> dict[int, tuple[str, obj
     return found
 
 
+def _shown_arguments(arguments: object) -> str:
+    if not arguments:
+        return ""
+    text = json.dumps(arguments, ensure_ascii=False, default=str)
+    return "(" + (text if len(text) <= NOTE_ARGUMENTS_CHARS else text[: NOTE_ARGUMENTS_CHARS - 1] + "…") + ")"
+
+
 def cleared_note(name: str, arguments: object) -> str:
-    shown = ""
-    if arguments:
-        text = json.dumps(arguments, ensure_ascii=False, default=str)
-        shown = "(" + (text if len(text) <= NOTE_ARGUMENTS_CHARS else text[: NOTE_ARGUMENTS_CHARS - 1] + "…") + ")"
     return (
-        f"[Kết quả cũ của {name}{shown} đã được bỏ để nhường chỗ trong cuộc trò chuyện. "
+        f"[Kết quả cũ của {name}{_shown_arguments(arguments)} đã được bỏ để nhường chỗ trong cuộc trò chuyện. "
         "Cần xem lại thì gọi lại công cụ này với đúng tham số trên.]"
     )
+
+
+def edges_kept(content: str, name: str, arguments: object) -> str | None:
+    """`content` cut to its first EDGE_HEAD_CHARS and last EDGE_TAIL_CHARS, with a note between
+    them saying how much went and how to read it all again; None when the cut would free no more
+    than the note takes."""
+    dropped = len(content) - EDGE_HEAD_CHARS - EDGE_TAIL_CHARS
+    note = (
+        f"\n…[Đã bỏ {dropped} ký tự ở giữa kết quả cũ của {name}{_shown_arguments(arguments)} để nhường chỗ. "
+        "Cần xem đủ thì gọi lại công cụ này với đúng tham số trên.]…\n"
+    )
+    if dropped <= len(note):
+        return None
+    return content[:EDGE_HEAD_CHARS] + note + content[-EDGE_TAIL_CHARS:]
 
 
 def calls_have_results(messages: list[dict[str, Any]]) -> bool:
@@ -148,25 +184,46 @@ def clear_old_results(messages: list[dict[str, Any]], budget: ContextBudget, cei
     """`messages` with the oldest tool results replaced by notes until the estimate (times
     `scale`) is at most `ceiling`; returns (messages, how many were replaced). Under the
     ceiling it returns `messages` itself. A result no longer than its note stays: clearing
-    it would free nothing."""
+    it would free nothing. Clearing only, whatever `budget.keep_edges` says."""
+    view, cleared, _ = shrink_old_results(messages, replace(budget, keep_edges=False), ceiling, scale, protected_results)
+    return view, cleared
+
+
+def shrink_old_results(messages: list[dict[str, Any]], budget: ContextBudget, ceiling: int, scale: float = 1.0, protected_results: set[int] | None = None) -> tuple[list[dict[str, Any]], int, int]:
+    """As clear_old_results, with budget.keep_edges' step first: returns (messages, how many
+    results were cleared, how many are left cut to their edges). Without keep_edges it is
+    clear_old_results exactly."""
     if estimate_tokens(messages) * scale <= ceiling:
-        return messages, 0
+        return messages, 0, 0
     results = [index for index, message in enumerate(messages) if message.get("role") == "tool"]
     calls = _calls_by_result(messages)
+    eligible = [index for index in results[: max(0, len(results) - budget.keep_recent)] if index not in (protected_results or set())]
     view = list(messages)
+    trimmed: set[int] = set()
     cleared = 0
-    for index in results[: max(0, len(results) - budget.keep_recent)]:
-        if index in (protected_results or set()):
-            continue
-        name, arguments = calls.get(index, (str(view[index].get("tool_name") or "công cụ"), None))
-        note = cleared_note(name, arguments)
+
+    def call_of(index: int) -> tuple[str, object]:
+        return calls.get(index, (str(view[index].get("tool_name") or "công cụ"), None))
+
+    if budget.keep_edges:
+        for index in eligible:
+            cut = edges_kept(str(view[index].get("content") or ""), *call_of(index))
+            if cut is None:
+                continue
+            view[index] = {**view[index], "content": cut}
+            trimmed.add(index)
+            if estimate_tokens(view) * scale <= ceiling:
+                return view, 0, len(trimmed)
+    for index in eligible:
+        note = cleared_note(*call_of(index))
         if len(str(view[index].get("content") or "")) <= len(note):
             continue
         view[index] = {**view[index], "content": note}
+        trimmed.discard(index)
         cleared += 1
         if estimate_tokens(view) * scale <= ceiling:
             break
-    return (view, cleared) if cleared else (messages, 0)
+    return (view, cleared, len(trimmed)) if cleared or trimmed else (messages, 0, 0)
 
 
 class ContextWindow:
@@ -177,6 +234,7 @@ class ContextWindow:
         self.budget = budget
         self.ceiling = (budget.ceiling_tokens or default_ceiling) if budget else 0
         self.cleared = 0
+        self.trimmed = 0
         self._scale = 1.0
         self._estimated: float | None = None
         self._protected_results = protected_results or set()
@@ -184,10 +242,19 @@ class ContextWindow:
     def view(self, working: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if self.budget is None:
             return working
-        sent, cleared = clear_old_results(working, self.budget, self.ceiling, self._scale, self._protected_results)
+        sent, cleared, trimmed = shrink_old_results(working, self.budget, self.ceiling, self._scale, self._protected_results)
         self.cleared = max(self.cleared, cleared)
+        self.trimmed = max(self.trimmed, trimmed)
         self._estimated = estimate_tokens(sent)
         return sent
+
+    def trace(self) -> dict[str, int]:
+        """What the final step records: how many old results the turn's fullest view cleared and
+        cut to their edges, each only when there was any (a turn that touched nothing adds no key)."""
+        return {
+            **({"context_cleared": self.cleared} if self.cleared else {}),
+            **({"context_trimmed": self.trimmed} if self.trimmed else {}),
+        }
 
     def observe(self, tokens_in: int | None) -> None:
         """What the model said it read for the view just sent. Only a reading above the

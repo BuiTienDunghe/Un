@@ -85,6 +85,31 @@ agent:
   # code read the rest (document_reading.py): rule 5's sixth exception, on by the owner's word (03/11).
   # Agent Eval v0-long ctx 0 -> 6/7, v0 55 -> 56/66, it fired on doc-24 and doc-36.
   read_rest: true
+  # Small-model aids (23/11/2026, .scratch/harness-research/code-improvements-2026-11-23.md). Each is
+  # code only, adds no model call, and is off until measured on its own against a same-day control.
+  # scoped_tools: a Discord-only tool (search_history, remember, remind, search_jokes) is not offered on
+  #   a turn without a guild (web chat), and the guide names only the tools offered. Evidence: 2B called
+  #   search_history on a web document task (Agent Eval doc-31, 10/11).
+  # dedupe_calls: a call identical to one that already ran this turn is answered with a short note,
+  #   not run again. Evidence: 2B repeated one search two or three times on doc-51, doc-53, doc-54.
+  # focused_excerpts: search_documents shows the 400 characters of a chunk that match the query best
+  #   instead of its first 400. Evidence: answer past character 400 on doc-33..37.
+  # history_hints: a keyword search of search_history that finds nothing says how to read the latest
+  #   messages instead. Evidence: 2B answered "không truy cập được lịch sử" on hist-08.
+  # final_keeps_tools: the forced answer (rounds or time used up) is asked with the same tool list as
+  #   the rounds before, so the prompt head does not change; calls it writes are not run. Speed only,
+  #   unmeasured: forced answers were 9% of 2B tasks and 4.7% of 9B tasks in the kept runs.
+  # validate_arguments: each call is checked against the schema the model was shown before it runs;
+  #   "4" becomes 4 where an integer is wanted, a missing required key or a type that cannot be
+  #   converted is refused with the arguments received (pi, opencode). Matters most for MCP tools,
+  #   whose protocol error restarts the server and tells the model not to call again. Unmeasured;
+  #   risk: a value a tool used to tolerate (top_k: "năm") now costs a round.
+  scoped_tools: false
+  dedupe_calls: false
+  focused_excerpts: false
+  history_hints: false
+  final_keeps_tools: false
+  validate_arguments: false
   # 4 excerpt x ~400 ky tu + metadata JSON ~ 2000+ ky tu; tran thap hon se cat
   # giua chung JSON (model van doc duoc nhung mat doan cuoi).
   tool_result_max_chars: 2400
@@ -103,9 +128,12 @@ agent:
   # answer), the OLDEST tool results are replaced by a note saying which call to repeat to
   # read them again; the newest `keep_recent` are never touched. Off until measured
   # (.scratch/future-plan/issues/44-context-budget.md). `ceiling_tokens` overrides the ceiling.
+  # keep_edges (23/11/2026): before clearing, cut the old results to their first 800 and last 200
+  # characters (DeepSeek Harness keeps 4096 + 1024); clear only if that is not enough. Unmeasured.
   context_budget:
     enabled: false
     keep_recent: 2
+    keep_edges: false
   # Ticket 47: tools from MCP servers, read only when AGENT_MCP_ENABLED=true. Each entry:
   #   - name: notes                      # 1-24 letters, digits, - or _
   #     command: ["python", "server.py"] # started with a bare environment (PATH and the like) plus `env`

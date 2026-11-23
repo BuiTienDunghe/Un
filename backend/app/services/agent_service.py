@@ -31,10 +31,12 @@ from app.services.call_budget import agent_call_cap, turn_call_budget
 from app.services.context_budget import ContextBudget, ContextWindow
 from app.services.answer_figures import grounding_summary, retry_instruction, turn_texts, unsupported_figures
 from app.services.document_reading import READ_REST_STEP, documents_left_unread, note_read, read_rest
+from app.services.excerpts import focused_excerpt
 from app.services.long_input import read_long_input
 from app.services.pastes import INLINE_MAX_TOKENS, is_paste, read_paste, take_pastes
 from app.services.injection_defense import InjectionDefense
 from app.services.model_router import ModelRouter
+from app.services.tool_arguments import check_arguments, refusal
 from app.services.tool_state import ToolStateRecorder
 
 
@@ -67,6 +69,33 @@ AGENT_GUIDE = (
     "tin nhắn cũ, nêu ai nói và lúc nào. Khi đã đủ "
     "thông tin, trả lời trọn vẹn bằng tiếng Việt."
 )
+
+# agent.scoped_tools (off by default): the guide names only the tools this turn is offered. AGENT_GUIDE
+# names search_history on a web turn too, where it can only answer TOOL_UNAVAILABLE_HERE; qwen3.5:2b
+# called it on a web document question and failed the task (Agent Eval doc-31, run of 10/11). Built from
+# the same words: with all five tools offered it is AGENT_GUIDE byte for byte (test_agent_scoped_tools).
+GUIDE_INTRO = "Bạn có thể dùng công cụ khi cần dữ liệu thật"
+GUIDE_TOOLS = (
+    ("search_documents", "`search_documents` tìm trong tài liệu người dùng đã tải lên"),
+    ("search_history", "`search_history` đọc tin nhắn cũ của server (có query = tìm từ khóa; bỏ trống query = N tin mới nhất, dùng khi cần tóm tắt gần đây)"),
+    ("system_status", "`system_status` xem sức khỏe hệ thống"),
+    ("current_time", "`current_time` xem ngày giờ hiện tại"),
+    ("calculate", "`calculate` tính phép tính chính xác (có phép tính thì dùng công cụ này, đừng tự nhẩm)"),
+)
+GUIDE_WHEN = (
+    "Chỉ gọi công cụ khi câu hỏi thật sự cần dữ liệu đó; câu chào hỏi hay kiến thức chung thì trả lời thẳng, "
+    "không gọi gì. Khi dùng nội dung tài liệu, nêu tên tệp và số trang."
+)
+GUIDE_HISTORY_CITE = " Khi dùng tin nhắn cũ, nêu ai nói và lúc nào."
+GUIDE_CLOSE = " Khi đã đủ thông tin, trả lời trọn vẹn bằng tiếng Việt."
+
+
+def agent_guide_for(offered: set[str] | frozenset[str] | tuple[str, ...]) -> str:
+    """AGENT_GUIDE with only the tools in `offered` named, and the history citation rule only when
+    search_history is one of them."""
+    named = [text for name, text in GUIDE_TOOLS if name in offered]
+    intro = f"{GUIDE_INTRO}: {', '.join(named)}. " if named else f"{GUIDE_INTRO}. "
+    return intro + GUIDE_WHEN + (GUIDE_HISTORY_CITE if "search_history" in offered else "") + GUIDE_CLOSE
 
 # A search shows the first SEARCH_EXCERPT_CHARS of each chunk; read_document returns
 # chunks whole up to READ_CHUNK_MAX_CHARS each, READ_RESULT_MAX_CHARS in all (ticket 20
@@ -108,6 +137,22 @@ READ_DOCUMENT_SCHEMA: dict[str, Any] = {
             },
             "required": ["document_id"],
         },
+    },
+}
+# agent.focused_excerpts: the same two tools, described for an excerpt taken where the chunk matches
+# the query (app/services/excerpts.py). Same parameters, so the trace's declared keys do not change.
+SEARCH_DOCUMENTS_FOCUSED_SCHEMA: dict[str, Any] = {
+    "type": "function",
+    "function": {
+        **SEARCH_DOCUMENTS_SCHEMA["function"],
+        "description": f"Tìm các đoạn liên quan trong tài liệu đã index (PDF, DOCX, ...). Trả về tên tệp, trang, {SEARCH_EXCERPT_CHARS} ký tự khớp câu truy vấn nhất của mỗi đoạn (excerpt; có excerpt_from là trích từ giữa đoạn, tại ký tự đó), độ dài cả đoạn (chars), và document_id + chunk_index để đọc trọn đoạn bằng read_document.",
+    },
+}
+READ_DOCUMENT_FOCUSED_SCHEMA: dict[str, Any] = {
+    "type": "function",
+    "function": {
+        **READ_DOCUMENT_SCHEMA["function"],
+        "description": "Đọc trọn nguyên văn các đoạn liên tiếp của một tài liệu mà search_documents vừa tìm thấy, khi trích đoạn chưa đủ để trả lời. Dùng document_id và chunk_index trong kết quả search_documents. Trả về các đoạn kèm next_from_chunk: muốn đọc tiếp thì gọi lại với from_chunk bằng số đó (null = đã hết tài liệu).",
     },
 }
 SYSTEM_STATUS_SCHEMA: dict[str, Any] = {
@@ -163,6 +208,21 @@ BAD_ARGUMENTS = "BAD_ARGUMENTS"
 UNKNOWN_TOOL = "UNKNOWN_TOOL"
 TOOL_FAILED = "TOOL_FAILED"
 TOOL_TIMEOUT = "TOOL_TIMEOUT"
+# agent.dedupe_calls (off by default): a call identical, name and arguments, to one that already ran
+# without error this turn is not run again. qwen3.5:2b sent the same search_documents query two or three
+# times in a row on 3 of 66 Agent Eval tasks (doc-51, doc-53, doc-54, run of 10/11), spending every round
+# on one result; 9B never did. The model gets this note instead of a second copy of that result: the
+# window keeps one copy, and a tool with an effect (remind) does not act twice.
+DUPLICATE_CALL = "DUPLICATE_CALL"
+DUPLICATE_CALL_NOTE = (
+    "Lệnh {name} này giống hệt một lệnh đã chạy ở trên trong lượt này nên không chạy lại; kết quả vẫn là "
+    "kết quả ở trên. Dùng kết quả đó để trả lời, hoặc gọi với tham số khác nếu cần thông tin khác."
+)
+
+
+def _call_key(name: object, arguments: object) -> str:
+    """What makes two calls the same call: the name and the arguments, key order aside."""
+    return json.dumps({"name": name, "arguments": arguments}, sort_keys=True, ensure_ascii=False, default=str)
 # One sentence for an id that does not exist and for one this turn may not open, so
 # read_document never tells the model which document ids exist.
 NOT_READABLE = (
@@ -318,6 +378,10 @@ class AgentTool:
     # all. False: not offered to the model, and a call by name is answered like an unknown tool. None
     # (every tool before local_files.py): offered everywhere, as before.
     available: Callable[[dict[str, Any]], bool] | None = None
+    # agent.scoped_tools (23/11/2026): a tool that works only inside a Discord turn (it reads the turn's
+    # guild, author or session). With the flag on it is not offered on a turn whose context has no
+    # guild_id, the web chat's, instead of being offered there to answer TOOL_UNAVAILABLE_HERE.
+    discord_only: bool = False
 
     @property
     def name(self) -> str:
@@ -416,6 +480,12 @@ class AgentService:
         lookup_check: bool = False,
         read_on_check: bool = False,
         read_rest: bool = False,
+        scoped_tools: bool = False,
+        dedupe_calls: bool = False,
+        focused_excerpts: bool = False,
+        history_hints: bool = False,
+        final_keeps_tools: bool = False,
+        validate_arguments: bool = False,
     ) -> None:
         self.defense = defense or InjectionDefense(enabled=False)
         self.router = router
@@ -442,9 +512,29 @@ class AgentService:
         self.read_on_check = bool(read_on_check)
         # The code reads what the model gave up on (document_reading.py). Needs a store to read from.
         self.read_rest = bool(read_rest) and document_reader is not None
+        # Small-model aids (23/11/2026), each off unless its agent.* key is true, each measured on its own:
+        # scoped_tools hides Discord-only tools off Discord and names only the offered tools in the guide;
+        # dedupe_calls answers a call identical to one already run this turn without running it again;
+        # focused_excerpts shows the part of a chunk that matches the query instead of its first characters;
+        # history_hints makes a keyword miss in search_history say how to read the latest messages;
+        # final_keeps_tools asks the forced answer with the same tool list, so the prompt head is unchanged;
+        # validate_arguments checks each call against its schema first, converting "4" to 4 (tool_arguments.py).
+        self.final_keeps_tools = bool(final_keeps_tools)
+        self.validate_arguments = bool(validate_arguments)
+        self.scoped_tools = bool(scoped_tools)
+        self.dedupe_calls = bool(dedupe_calls)
+        self.focused_excerpts = bool(focused_excerpts)
+        self.history_hints = bool(history_hints)
         self.turn_budget_seconds = max(1.0, float(turn_budget_seconds))
         self.final_reserve_seconds = min(max(0.0, float(final_reserve_seconds)), self.turn_budget_seconds)
         self.clock = clock
+
+    def guide_text(self, tool_context: dict[str, Any] | None = None) -> str:
+        """The tool guide this turn gets, before the injection defense adds its rule: AGENT_GUIDE, or with
+        agent.scoped_tools only the offered tools named."""
+        if not self.scoped_tools:
+            return AGENT_GUIDE
+        return agent_guide_for(frozenset(schema["function"]["name"] for schema in self._offered_schemas(tool_context)))
 
     def _out_of_time_reply(self) -> str:
         return f"Mình chưa trả lời kịp trong {round(self.turn_budget_seconds)} giây. Bạn hỏi lại, hoặc hỏi hẹp hơn nhé."
@@ -456,7 +546,7 @@ class AgentService:
         on_step: Callable[[dict[str, object]], None] | None = None,
     ) -> tuple[str, str, list[dict[str, object]]]:
         """The loop below, with its model calls counted against agent_call_cap (ticket 43)."""
-        with turn_call_budget("agent", agent_call_cap(self.max_steps, self.lookup_check, self.read_on_check, self.read_rest, self._promises() != [])):
+        with turn_call_budget("agent", agent_call_cap(self.max_steps, self.lookup_check, self.read_on_check, self.read_rest, self._promises(tool_context) != [])):
             return self._run(messages, tool_context, on_step)
 
     def _run(
@@ -489,7 +579,7 @@ class AgentService:
         # A paste longer than PASTE_THRESHOLD reaches the model as a slip, and is read
         # through read_document from this turn's own pastes (ticket 20 #3).
         working, pastes = take_pastes(list(messages), self.inline_max_tokens)
-        guide = {"role": "system", "content": self.defense.agent_guide(AGENT_GUIDE)}
+        guide = {"role": "system", "content": self.defense.agent_guide(self.guide_text(tool_context))}
         insert_at = 1 if working and working[0].get("role") == "system" else 0
         working.insert(insert_at, guide)
         protected_state = set()
@@ -544,6 +634,8 @@ class AgentService:
         read_on_retried = False
         read_rest_tried = False
         promise_retried = promise_declined = False
+        # agent.dedupe_calls: the calls that already ran without error this turn (_call_key).
+        ran_ok: set[str] = set()
 
         def gave_up(answer: str) -> bool:
             """Found documents, left some unread, and said the fact is not there, with time left to do something about it."""
@@ -660,6 +752,8 @@ class AgentService:
                         tool_context["_state_resources"] = {}
                         tool_context["_state_resources_unknown"] = False
                         text, error_code, error_type = self._run_tool(owed.name, arguments, tool_context)
+                        if error_code is None:
+                            ran_ok.add(_call_key(owed.name, arguments))
                         output = self.defense.wrap_tool_result(text)
                         self._record_tool_state({"name": owed.name, "arguments": arguments}, output, error_code, tool_context)
                         steps.append({
@@ -739,7 +833,7 @@ class AgentService:
                 steps.append({
                     "kind": "final", "tool_name": None, "arguments": None,
                     "content": _clip(answer, 4000), "latency_ms": round_latency,
-                    "stop_reason": STOP_FINAL, **check["trace"], **last, **({"context_cleared": window.cleared} if window.cleared else {}),
+                    "stop_reason": STOP_FINAL, **check["trace"], **last, **window.trace(),
                 })
                 record_usage(last["tokens_in"], last["tokens_out"])
                 emit("final", stop_reason=STOP_FINAL)
@@ -755,10 +849,21 @@ class AgentService:
                     # name in the trace, no approval, and _run_tool answers UNKNOWN_TOOL.
                     tool = None
                 declared = tool is not None
+                # agent.validate_arguments: the call against the schema the model was shown (tool_arguments.py).
+                checked = (
+                    check_arguments(call["arguments"], self._shown_schema(tool)["function"]["parameters"])
+                    if self.validate_arguments and tool is not None and isinstance(call["arguments"], dict) else None
+                )
+                arguments = checked.arguments if checked is not None else call["arguments"]
+                shape = arguments_shape(call["name"], call["arguments"], self.registry.declared())
+                if checked is not None and shape is not None:
+                    # Counts only, as _undeclared: the trace that outlives the conversation keeps no values.
+                    shape.update({**({"_coerced": len(checked.coerced)} if checked.coerced else {}),
+                                  **({"_invalid": len(checked.problems)} if checked.problems else {})})
                 steps.append({
                     "kind": "tool_call", "tool_name": call["name"], "tool_declared": declared,
                     "arguments": call["arguments"], "content": None, "latency_ms": round_latency,
-                    "arguments_shape": arguments_shape(call["name"], call["arguments"], self.registry.declared()),
+                    "arguments_shape": shape,
                     # One model round, however many calls it made: counted once.
                     **(last if index == 0 else {"tokens_in": None, "tokens_out": None}),
                 })
@@ -768,11 +873,22 @@ class AgentService:
                 tool_started = perf_counter()
                 tool_context["_state_resources"] = {}
                 tool_context["_state_resources_unknown"] = False
-                if tool is not None and tool.requires_approval:
+                call_key = _call_key(call["name"], arguments)
+                ran_call = call if arguments is call["arguments"] else {**call, "arguments": arguments}
+                if checked is not None and checked.problems:
+                    # Refused before it ran, and before any person is asked to approve it.
+                    text, error_code, error_type = self._error(BAD_ARGUMENTS, refusal(call["name"], checked, call["arguments"]))
+                elif (
+                    self.dedupe_calls and tool is not None and not tool.requires_approval and not tool.ends_turn
+                    and call_key in ran_ok
+                ):
+                    # agent.dedupe_calls: the same call already ran this turn; its result is above.
+                    text, error_code, error_type = self._error(DUPLICATE_CALL, DUPLICATE_CALL_NOTE.format(name=call["name"]))
+                elif tool is not None and tool.requires_approval:
                     # Ticket 46: kept for a person, not run. Kept: the turn ends here with the gate's reply.
-                    held = self._hold_for_approval(call["name"], call["arguments"], tool_context)
+                    held = self._hold_for_approval(call["name"], arguments, tool_context)
                     if isinstance(held, ApprovalNotice):
-                        self._record_tool_state(call, None, APPROVAL_PENDING, tool_context)
+                        self._record_tool_state(ran_call, None, APPROVAL_PENDING, tool_context)
                         steps.append({
                             "kind": "tool_result", "tool_name": call["name"], "tool_declared": True, "arguments": None,
                             "content": None, "latency_ms": int((perf_counter() - tool_started) * 1000),
@@ -790,9 +906,11 @@ class AgentService:
                         return held.reply, model_used, steps
                     text, error_code, error_type = held
                 else:
-                    text, error_code, error_type = self._run_tool(call["name"], call["arguments"], tool_context)
+                    text, error_code, error_type = self._run_tool(call["name"], arguments, tool_context)
+                    if error_code is None:
+                        ran_ok.add(call_key)
                     if tool is not None and tool.ends_turn and error_code is None:
-                        self._record_tool_state(call, text, None, tool_context)
+                        self._record_tool_state(ran_call, text, None, tool_context)
                         steps.append({
                             "kind": "tool_result", "tool_name": call["name"], "tool_declared": True, "arguments": None,
                             "content": None, "latency_ms": int((perf_counter() - tool_started) * 1000),
@@ -808,7 +926,7 @@ class AgentService:
                 # D5: tool output is untrusted data (document chunks, memory
                 # text); the defense marks it so before the model reads it.
                 output = self.defense.wrap_tool_result(text)
-                self._record_tool_state(call, output, error_code, tool_context)
+                self._record_tool_state(ran_call, output, error_code, tool_context)
                 steps.append({
                     "kind": "tool_result", "tool_name": call["name"], "tool_declared": declared, "arguments": None,
                     "content": output, "latency_ms": int((perf_counter() - tool_started) * 1000),
@@ -838,7 +956,10 @@ class AgentService:
             if left <= 0:
                 raise ModelCallTimeoutError("no time left for the final answer")
             with call_within(left):
-                answer, model_used = self.router.chat("general", window.view(working))
+                if self.final_keeps_tools:
+                    answer, model_used = self._final_keeping_tools(window.view(working), tool_context)
+                else:
+                    answer, model_used = self.router.chat("general", window.view(working))
             usage = last = consume_usage()
         except ModelCallTimeoutError:
             # Only running out of time ends here: an unreachable or broken model still
@@ -866,11 +987,28 @@ class AgentService:
         steps.append({
             "kind": "final", "tool_name": None, "arguments": None,
             "content": _clip(answer, 4000), "latency_ms": int((perf_counter() - started) * 1000),
-            "stop_reason": stop_reason, **check["trace"], **usage, **({"context_cleared": window.cleared} if window.cleared else {}),
+            "stop_reason": stop_reason, **check["trace"], **usage, **window.trace(),
         })
         record_usage(last["tokens_in"], last["tokens_out"])
         emit("final", stop_reason=stop_reason)
         return answer, model_used, steps
+
+    def _final_keeping_tools(self, view: list[dict[str, Any]], tool_context: dict[str, Any] | None) -> tuple[str, str]:
+        """agent.final_keeps_tools: the forced answer asked with the same tool list as the rounds before it.
+
+        A request without tools renders a different prompt head (the chat template writes the tools near
+        the top), so the server cannot reuse what it already read of this turn and reads it all again.
+        opencode 2.0 keeps the tool definitions on its last step for this reason (runner/llm.ts, read
+        23/11/2026). Calls the model writes anyway are not run: its text is the answer when it wrote one;
+        otherwise, or when the call cannot be parsed, the answer is asked again without tools, as before."""
+        try:
+            result, model_used = self.router.chat_tools("general", view, self._offered_schemas(tool_context))
+            if str(result.get("content") or "").strip():
+                return str(result["content"]), model_used
+        except OllamaToolCallParseError:
+            pass
+        consume_usage()
+        return self.router.chat("general", view)
 
     @staticmethod
     def _check_answer(answer: str, working: list[dict[str, Any]], checked_out: set[int]) -> dict[str, Any]:
@@ -899,16 +1037,17 @@ class AgentService:
     def _error(self, code: str, message: str, error_type: str | None = None) -> tuple[str, str, str | None]:
         return self._dump({"error": message, "code": code}), code, error_type
 
-    def _promises(self) -> list[AgentTool]:
-        """The offered tools that carry a promise check."""
-        offered = {id(schema) for schema in self._offered_schemas()}
+    def _promises(self, tool_context: dict[str, Any] | None = None) -> list[AgentTool]:
+        """The offered tools that carry a promise check. Given the turn's context, so a tool that only this
+        kind of turn offers (agent.scoped_tools, AgentTool.available) counts exactly where it is offered."""
+        offered = {id(schema) for schema in self._offered_schemas(tool_context)}
         return [tool for tool in self.registry.tools() if tool.promised is not None and id(tool.schema) in offered]
 
     def _owed_tool(self, tool_context: dict[str, Any], steps: list[dict[str, object]]) -> AgentTool | None:
         """A tool the speaker asked for that this turn has not called. A gate that fails says nothing is owed."""
         # A call the tool refused (remind(at="15:00") -> BAD_ARGUMENTS) kept nothing: only a result without an error counts.
         called = {step["tool_name"] for step in steps if step["kind"] == "tool_result" and not step.get("error_code")}
-        for tool in self._promises():
+        for tool in self._promises(tool_context):
             if tool.name in called:
                 continue
             try:
@@ -984,12 +1123,22 @@ class AgentService:
         """What the model is shown: every tool, except one that requires approval while nothing can approve it,
         and one this turn may not see (AgentTool.available)."""
         return [
-            tool.schema for tool in self.registry.tools()
+            self._shown_schema(tool) for tool in self.registry.tools()
             if (self.approvals is not None or not tool.requires_approval) and self._available(tool, tool_context)
         ]
 
-    @staticmethod
-    def _available(tool: AgentTool, tool_context: dict[str, Any] | None) -> bool:
+    def _shown_schema(self, tool: AgentTool) -> dict[str, Any]:
+        """The schema the model reads for `tool`: its own, except that agent.focused_excerpts describes the
+        excerpt it changes (the default descriptions say "the first 400 characters")."""
+        if self.focused_excerpts and tool.schema is SEARCH_DOCUMENTS_SCHEMA:
+            return SEARCH_DOCUMENTS_FOCUSED_SCHEMA
+        if self.focused_excerpts and tool.schema is READ_DOCUMENT_SCHEMA:
+            return READ_DOCUMENT_FOCUSED_SCHEMA
+        return tool.schema
+
+    def _available(self, tool: AgentTool, tool_context: dict[str, Any] | None) -> bool:
+        if self.scoped_tools and tool.discord_only and not (tool_context or {}).get("guild_id"):
+            return False
         return tool.available is None or bool(tool.available(tool_context or {}))
 
     def _hold_for_approval(self, name: str, arguments: dict[str, Any], tool_context: dict[str, Any] | None) -> ApprovalNotice | ToolOutput:
@@ -1077,7 +1226,13 @@ class AgentService:
                 if tool_context and "read_state" in tool_context:
                     tool_context["read_state"].setdefault(item["document_id"], {"seen": set(), "total": None})
                     tool_context["document_names"].setdefault(item["document_id"], str(chunk.get("filename") or item["document_id"]))
-            item["excerpt"] = _clip(content, SEARCH_EXCERPT_CHARS)
+            if self.focused_excerpts:
+                # agent.focused_excerpts: the part of the chunk the query is about (excerpts.py).
+                item["excerpt"], start = focused_excerpt(content, query, SEARCH_EXCERPT_CHARS)
+                if start:
+                    item["excerpt_from"] = start
+            else:
+                item["excerpt"] = _clip(content, SEARCH_EXCERPT_CHARS)
             # How long the whole chunk is, so the model knows the excerpt stopped short.
             item["chars"] = len(content)
             item["score"] = round(float(chunk.get("score") or 0.0), 3)

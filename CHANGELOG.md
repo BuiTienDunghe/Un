@@ -11,6 +11,16 @@ có kế hoạch phát triển chính thức. Mỗi phase trong `docs/history.md
 
 ## [Unreleased]
 
+### Fixed (23/11)
+- **"Tóm tắt tin gần đây" trên Discord không còn mất các tin mới nhất.** Ở bản trí nhớ nguồn (đang bật mặc định), `search_history` không có từ khóa xếp tin cũ → mới trước khi cắt theo ngân sách, rồi khi vượt trần lại bỏ cuối danh sách: cả hai bước bỏ đúng tin mới nhất. Giờ giữ từ tin mới nhất trở về trước, xếp lại theo thời gian, và khi vượt trần thì bỏ tin cũ nhất, như bản cũ đã sửa ở hist-05. Đã kiểm qua test của hàm cắt (`fit_history`), chưa chạy trên database thật.
+
+### Added (23/11, năm công tắc cho model nhỏ, đều tắt)
+- `agent.scoped_tools`, `agent.dedupe_calls`, `agent.focused_excerpts`, `agent.history_hints`, `agent.final_keeps_tools` trong `models.yaml`, cùng cờ dòng lệnh tương ứng của `scripts.agent_eval`. Tắt hết thì lượt agent gửi đúng như trước. Lý do và bằng chứng từng cái: `.scratch/harness-research/code-improvements-2026-11-23.md`. Chưa đo với model nào.
+
+### Added (23/11, hai ý từ pi, opencode và DeepSeek Harness, đều tắt)
+- **`agent.validate_arguments`: kiểm tham số trước khi chạy công cụ.** Mỗi lệnh gọi được so với schema model đã thấy. Chuyển được chính xác thì chuyển (`"4"` thành `4`, `"true"` thành `true`, chuỗi JSON thành danh sách). Thiếu tham số bắt buộc, hoặc sai kiểu mà không chuyển được, thì từ chối trước khi chạy, và trước khi đưa cho người duyệt; câu báo nêu từng chỗ sai và tham số đã nhận. Thứ không hiểu (anyOf, giá trị enum lạ, khoá không khai) thì để qua. Trace giữ lệnh gốc của model và chỉ đếm `_coerced`, `_invalid`. Đếm ngoại tuyến trên 4.129 lệnh gọi Agent Eval đã lưu: không đổi lệnh nào, không từ chối lệnh nào. Rủi ro: một giá trị công cụ từng tự bỏ qua (`top_k: "năm"`) giờ tốn một vòng. BFCL không đọc cờ này.
+- **`agent.context_budget.keep_edges`: giữ đầu và đuôi trước khi bỏ kết quả cũ.** Khi ngân sách ngữ cảnh đang bật mà prompt gần chạm trần, kết quả công cụ cũ được cắt còn 800 ký tự đầu và 200 ký tự cuối, có ghi chú ở giữa; nếu cắt hết mà vẫn không vừa thì mới xoá như trước, cũ nhất trước. Trace của lượt ghi `context_trimmed`. Cờ dòng lệnh `--context-keep-edges` của `scripts.agent_eval`. Chưa đo.
+
 ## [1.6.1] - 2026-11-13
 
 ### Added (13/11, quầy gắn nhãn bằng model nhỏ, tắt mặc định)
