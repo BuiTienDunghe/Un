@@ -224,6 +224,13 @@ async def lifespan(app: FastAPI):
         read_on_check=bool(agent_config.get("read_on_check", False)),
         # Off unless agent.read_rest is true.
         read_rest=bool(agent_config.get("read_rest", False)),
+        # Small-model aids (23/11/2026), each off unless its agent.* key is true (models.yaml).
+        scoped_tools=bool(agent_config.get("scoped_tools", False)),
+        dedupe_calls=bool(agent_config.get("dedupe_calls", False)),
+        focused_excerpts=bool(agent_config.get("focused_excerpts", False)),
+        history_hints=bool(agent_config.get("history_hints", False)),
+        final_keeps_tools=bool(agent_config.get("final_keeps_tools", False)),
+        validate_arguments=bool(agent_config.get("validate_arguments", False)),
     )
     # ChatService is built before the retrieval stack the agent needs, so the
     # agent is handed over here instead of through the constructor.

@@ -7,6 +7,7 @@ from app.postgres.models import DiscordChannelMessage, DiscordConversationSessio
 from app.services.agent_service import AgentTool, TOOL_UNAVAILABLE_HERE, BAD_ARGUMENTS
 from app.services.source_memory import MemoryReader, explicit_remember, explicit_forget, MemoryConflict, SourceMemoryNotFound
 from app.discord.history_service import _hit, _or_query_text
+from app.discord.agent_tools import HISTORY_NO_MATCH, HISTORY_NO_MATCH_HINT
 
 
 def reader_for(session, turn):
@@ -64,6 +65,31 @@ def prepare_turn(memory, session, turn):
     return reader, receipt
 
 
+# What one search_history result may carry before AgentService._dump applies the tool cap.
+HISTORY_RESULT_BUDGET = 4800
+HISTORY_ITEM_OVERHEAD = 300
+
+
+def fit_history(items, *, chronological):
+    """Whole messages, best first, within HISTORY_RESULT_BUDGET -> (payload in reading order, the side
+    AgentService._dump gives up on overflow).
+
+    `items` arrive best first: ranked by match for a keyword search, newest first for the latest-N
+    read. The budget keeps from the front of THAT order, so a latest-N read keeps the newest messages;
+    only then are they put in time order, and an overflow at the tool cap drops the oldest. Doing it
+    the other way round (time order first) kept the oldest and then cut the newest, the hist-05 loss
+    the pre-v2 tool had already fixed (agent_tools.SearchHistory, drop="first")."""
+    payload, chars = [], 0
+    for item in items:
+        cost = len(item["message"]) + HISTORY_ITEM_OVERHEAD
+        if chars + cost <= HISTORY_RESULT_BUDGET:
+            payload.append(item)
+            chars += cost
+    if chronological:
+        payload.reverse()
+    return payload, "first" if chronological else "last"
+
+
 class ScopedSearchHistory:
     def __init__(self, memory, history):
         self.memory, self.history = memory, history
@@ -102,19 +128,20 @@ class ScopedSearchHistory:
             conditions.append(DiscordChannelMessage.content_tokens.op("@@")(tsquery))
             order.insert(0, func.ts_rank(DiscordChannelMessage.content_tokens, tsquery).desc())
         with self.history.sessions() as database:
+            # Best first: ranked with a query, newest first without one (`order` above).
             rows = list(database.scalars(select(DiscordChannelMessage).where(*conditions).order_by(*order).limit(limit)))
-            if not query:
-                rows.reverse()
             # Whole quotes only: no suffix clipping that could drop a negation.
-            payload, chars = [], 0
-            for row in rows:
-                hit = _hit(row)
-                item = {"source_id": f"discord:{hit.discord_message_id}", "message": hit.content,
-                    "author_id": hit.author_id, "sent_at": hit.sent_at.isoformat(), "link": hit.link}
-                if chars + len(hit.content) + 300 <= 4800:
-                    payload.append(item)
-                    chars += len(hit.content) + 300
-        return service._dump(payload or {"result": "Không có nguồn còn hiệu lực trong kênh/luồng này."}), None, None
+            items = [
+                {"source_id": f"discord:{hit.discord_message_id}", "message": hit.content,
+                 "author_id": hit.author_id, "sent_at": hit.sent_at.isoformat(), "link": hit.link}
+                for hit in (_hit(row) for row in rows)
+            ]
+        payload, drop = fit_history(items, chronological=not query)
+        if payload:
+            return service._dump(payload, drop=drop), None, None
+        if query and getattr(service, "history_hints", False):
+            return service._dump({"result": HISTORY_NO_MATCH, "hint": HISTORY_NO_MATCH_HINT}), None, None
+        return service._dump({"result": "Không có nguồn còn hiệu lực trong kênh/luồng này."}), None, None
 
 
 class SourceRemember:
@@ -141,6 +168,6 @@ def register_tools(registry, memory, history, sessions):
     from app.discord.agent_tools import SEARCH_HISTORY_SCHEMA, ORDER
     from app.discord.remember_tool import REMEMBER_SCHEMA, ORDER as REMEMBER_ORDER
     registry.register(AgentTool(SEARCH_HISTORY_SCHEMA, ScopedSearchHistory(memory, history),
-        "Đang tìm nguồn trong kênh này…", state_policy="read"), ORDER)
+        "Đang tìm nguồn trong kênh này…", state_policy="read", discord_only=True), ORDER)
     registry.register(AgentTool(REMEMBER_SCHEMA, SourceRemember(memory, sessions),
-        "Đang kiểm tra nguồn đã lưu…", state_policy="receipt"), REMEMBER_ORDER)
+        "Đang kiểm tra nguồn đã lưu…", state_policy="receipt", discord_only=True), REMEMBER_ORDER)

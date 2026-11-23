@@ -1,0 +1,246 @@
+{
+  "summary": {
+    "tasks": 21,
+    "answer_in_replayed_chunks": 20,
+    "head_excerpt_covers": 15,
+    "focused_excerpt_covers": 17,
+    "gained": [
+      "doc-34",
+      "doc-37"
+    ],
+    "lost": []
+  },
+  "rows": [
+    {
+      "task": "doc-04",
+      "query_from": "2b",
+      "answer_in_chunks": true,
+      "head_covers": true,
+      "focused_covers": true,
+      "moved": 0,
+      "chunks": 2,
+      "2b_passed": true,
+      "2b_read_document_calls": 0
+    },
+    {
+      "task": "doc-10",
+      "query_from": "2b",
+      "answer_in_chunks": true,
+      "head_covers": true,
+      "focused_covers": true,
+      "moved": 0,
+      "chunks": 2,
+      "2b_passed": false,
+      "2b_read_document_calls": 0
+    },
+    {
+      "task": "doc-20",
+      "query_from": "2b",
+      "answer_in_chunks": true,
+      "head_covers": true,
+      "focused_covers": true,
+      "moved": 0,
+      "chunks": 2,
+      "2b_passed": true,
+      "2b_read_document_calls": 0
+    },
+    {
+      "task": "doc-21",
+      "query_from": "2b",
+      "answer_in_chunks": true,
+      "head_covers": true,
+      "focused_covers": true,
+      "moved": 2,
+      "chunks": 5,
+      "2b_passed": true,
+      "2b_read_document_calls": 0
+    },
+    {
+      "task": "doc-22",
+      "query_from": "recorded",
+      "answer_in_chunks": true,
+      "head_covers": true,
+      "focused_covers": true,
+      "moved": 2,
+      "chunks": 5,
+      "2b_passed": false,
+      "2b_read_document_calls": 0
+    },
+    {
+      "task": "doc-23",
+      "query_from": "2b",
+      "answer_in_chunks": true,
+      "head_covers": true,
+      "focused_covers": true,
+      "moved": 3,
+      "chunks": 5,
+      "2b_passed": true,
+      "2b_read_document_calls": 1
+    },
+    {
+      "task": "doc-24",
+      "query_from": "2b",
+      "answer_in_chunks": true,
+      "head_covers": true,
+      "focused_covers": true,
+      "moved": 3,
+      "chunks": 5,
+      "2b_passed": true,
+      "2b_read_document_calls": 2
+    },
+    {
+      "task": "doc-25",
+      "query_from": "2b",
+      "answer_in_chunks": true,
+      "head_covers": true,
+      "focused_covers": true,
+      "moved": 3,
+      "chunks": 5,
+      "2b_passed": true,
+      "2b_read_document_calls": 2
+    },
+    {
+      "task": "doc-26",
+      "query_from": "2b",
+      "answer_in_chunks": true,
+      "head_covers": true,
+      "focused_covers": true,
+      "moved": 2,
+      "chunks": 5,
+      "2b_passed": true,
+      "2b_read_document_calls": 0
+    },
+    {
+      "task": "doc-27",
+      "query_from": "2b",
+      "answer_in_chunks": false,
+      "head_covers": false,
+      "focused_covers": false,
+      "moved": 3,
+      "chunks": 5,
+      "2b_passed": false,
+      "2b_read_document_calls": 0
+    },
+    {
+      "task": "doc-28",
+      "query_from": "2b",
+      "answer_in_chunks": true,
+      "head_covers": true,
+      "focused_covers": true,
+      "moved": 4,
+      "chunks": 5,
+      "2b_passed": true,
+      "2b_read_document_calls": 0
+    },
+    {
+      "task": "doc-29",
+      "query_from": "2b",
+      "answer_in_chunks": true,
+      "head_covers": true,
+      "focused_covers": true,
+      "moved": 3,
+      "chunks": 5,
+      "2b_passed": true,
+      "2b_read_document_calls": 0
+    },
+    {
+      "task": "doc-30",
+      "query_from": "2b",
+      "answer_in_chunks": true,
+      "head_covers": true,
+      "focused_covers": true,
+      "moved": 2,
+      "chunks": 5,
+      "2b_passed": true,
+      "2b_read_document_calls": 0
+    },
+    {
+      "task": "doc-31",
+      "query_from": "2b",
+      "answer_in_chunks": true,
+      "head_covers": true,
+      "focused_covers": true,
+      "moved": 3,
+      "chunks": 5,
+      "2b_passed": false,
+      "2b_read_document_calls": 0
+    },
+    {
+      "task": "doc-32",
+      "query_from": "2b",
+      "answer_in_chunks": true,
+      "head_covers": true,
+      "focused_covers": true,
+      "moved": 4,
+      "chunks": 5,
+      "2b_passed": true,
+      "2b_read_document_calls": 0
+    },
+    {
+      "task": "doc-33",
+      "query_from": "2b",
+      "answer_in_chunks": true,
+      "head_covers": false,
+      "focused_covers": false,
+      "moved": 4,
+      "chunks": 5,
+      "2b_passed": true,
+      "2b_read_document_calls": 1
+    },
+    {
+      "task": "doc-34",
+      "query_from": "2b",
+      "answer_in_chunks": true,
+      "head_covers": false,
+      "focused_covers": true,
+      "moved": 4,
+      "chunks": 5,
+      "2b_passed": true,
+      "2b_read_document_calls": 1
+    },
+    {
+      "task": "doc-35",
+      "query_from": "2b",
+      "answer_in_chunks": true,
+      "head_covers": false,
+      "focused_covers": false,
+      "moved": 4,
+      "chunks": 5,
+      "2b_passed": true,
+      "2b_read_document_calls": 1
+    },
+    {
+      "task": "doc-36",
+      "query_from": "2b",
+      "answer_in_chunks": true,
+      "head_covers": false,
+      "focused_covers": false,
+      "moved": 5,
+      "chunks": 5,
+      "2b_passed": false,
+      "2b_read_document_calls": 1
+    },
+    {
+      "task": "doc-37",
+      "query_from": "2b",
+      "answer_in_chunks": true,
+      "head_covers": false,
+      "focused_covers": true,
+      "moved": 3,
+      "chunks": 5,
+      "2b_passed": true,
+      "2b_read_document_calls": 1
+    },
+    {
+      "task": "doc-38",
+      "query_from": "2b",
+      "answer_in_chunks": true,
+      "head_covers": true,
+      "focused_covers": true,
+      "moved": 3,
+      "chunks": 5,
+      "2b_passed": true,
+      "2b_read_document_calls": 0
+    }
+  ]
+}

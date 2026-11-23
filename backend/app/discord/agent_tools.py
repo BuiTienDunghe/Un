@@ -23,6 +23,16 @@ JOKES_ORDER = 27
 # clipped message as if it were the whole of it.
 HISTORY_MESSAGE_MAX_CHARS = 800
 
+# agent.history_hints (off by default): what a keyword search that matched nothing tells the model.
+# Told only "no message matched", qwen3.5:2b answered "tôi không thể truy cập lịch sử" to "hôm qua mọi
+# người bàn gì" after searching those words (Agent Eval hist-08, run of 10/11). Shared with the v2 tool
+# (source_memory.ScopedSearchHistory).
+HISTORY_NO_MATCH = "không có tin nhắn nào chứa các từ khóa này"
+HISTORY_NO_MATCH_HINT = (
+    "Từ khóa có thể không đúng chữ trong tin. Muốn xem các tin gần đây (ví dụ: hôm qua bàn gì, tóm tắt gần đây) "
+    "thì gọi lại search_history bỏ trống query."
+)
+
 
 class HistoryBackend(Protocol):
     def search(
@@ -129,6 +139,9 @@ class SearchHistory:
             limit=min(max(limit, 1), 10),
         )
         if not hits:
+            if getattr(service, "history_hints", False):
+                # agent.history_hints: a miss on the words is not "there is no history" (hist-08, 10/11).
+                return service._dump({"result": HISTORY_NO_MATCH, "hint": HISTORY_NO_MATCH_HINT}), None, None
             return service._dump(
                 {"result": "không tìm thấy tin nhắn cũ nào khớp"}
             ), None, None
@@ -174,9 +187,9 @@ class SearchJokes:
 
 def register_jokes(registry: ToolRegistry, label_service: Any) -> None:
     """Apart from register(), so agent_eval, which registers only search_history, keeps its tool list."""
-    registry.register(AgentTool(SEARCH_JOKES_SCHEMA, SearchJokes(label_service), "Đang tìm trong kho câu đùa…"), JOKES_ORDER)
+    registry.register(AgentTool(SEARCH_JOKES_SCHEMA, SearchJokes(label_service), "Đang tìm trong kho câu đùa…", discord_only=True), JOKES_ORDER)
 
 
 def register(registry: ToolRegistry, history_service: HistoryBackend | None) -> None:
     """Plug search_history into an agent's registry, reading `history_service`."""
-    registry.register(AgentTool(SEARCH_HISTORY_SCHEMA, SearchHistory(history_service), "Đang xem lịch sử tin nhắn của server…", state_policy="read"), ORDER)
+    registry.register(AgentTool(SEARCH_HISTORY_SCHEMA, SearchHistory(history_service), "Đang xem lịch sử tin nhắn của server…", state_policy="read", discord_only=True), ORDER)

@@ -20,6 +20,63 @@ Thư mục `data/evaluation/results/kept/*/` vẫn là nơi giữ bằng chứng
 
 ---
 
+## 23/11/2026 — Kiểm tham số theo schema và giữ đầu-đuôi kết quả cũ: test trên CPU và đếm ngoại tuyến trên các lệnh gọi đã lưu
+
+- **Câu hỏi:** hai cơ chế lấy từ pi, opencode và DeepSeek Harness (`agent.validate_arguments`; `agent.context_budget.keep_edges`; cả hai tắt) có đạt test của chúng và giữ nguyên test đang có không? Trên mọi lệnh gọi đã lưu của Agent Eval, bước kiểm tham số sẽ đổi kiểu hay từ chối bao nhiêu lệnh, và có từ chối lệnh nào của bài đã đạt không?
+- **Điều kiện:**
+  - Code: cây làm việc trên `aab85e6`, nhánh `docs/harness-breakthrough-plan`, chưa commit, chồng lên mục 23/11 bên dưới.
+  - Python 3.11.9 trên Windows. Không database, không Ollama. CPU vẫn dành cho dự án khác, nên chỉ chạy test liên quan.
+  - Đếm ngoại tuyến: không model. 131 tệp `task_results.jsonl` trong `data/evaluation/results/kept/` (4.711 bài; một lần chạy được giữ ở hai thư mục thì đếm hai lần), từng lệnh gọi đúng như model đã viết, kiểm theo schema Agent Eval đưa cho model (`core_tools()` cộng `search_history`).
+- **Đăng ký trước:** không. Trước đó, đếm tay 66 bài 2B (ghi trong `.scratch/harness-research/code-improvements-2026-11-23.md`) đã không thấy lỗi tham số nào.
+- **Kết quả:**
+
+  | Lần chạy | Kết quả |
+  |---|---|
+  | `tests/test_tool_arguments_and_edges.py` (mới) + `test_context_budget.py` + `test_agent_small_model_aids.py` | 98 đạt, lần đầu |
+  | 69 tệp test agent, công cụ, bộ đo, Discord, tool state | 1.173 đạt, 269 bỏ qua (cần PostgreSQL hoặc bản clone BFCL), 0 hỏng |
+  | `compileall` các tệp đã sửa; `model_registry --check` | sạch; 0 lỗi, 2 cảnh báo cũ |
+
+  | Đếm ngoại tuyến | qwen3.5:2b | qwen3.5:9b | Tổng |
+  |---|---:|---:|---:|
+  | Bài | 132 | 4.564 | 4.711 (15 bài không ghi model) |
+  | Lệnh gọi | 154 | 3.975 | 4.129 |
+  | Sẽ được đổi kiểu | 0 | 0 | 0 |
+  | Sẽ bị từ chối | 0 | 0 | 0 |
+  | Gọi tên công cụ không có | — | — | 0 |
+
+- **Kết luận:** cả hai đạt test ngay lần đầu, test cũ giữ nguyên. Trên Agent Eval, `validate_arguments` không đổi gì: không lệnh nào trong 4.129 lệnh đã lưu sai kiểu hay thiếu tham số bắt buộc. Lợi ích của nó, nếu có, nằm ở công cụ MCP và công cụ ghi tệp, nơi chưa có dữ liệu. `keep_edges` chưa có phép đo nào ngoài test.
+- **Trạng thái:** xong phần CPU. `keep_edges` chờ đo bằng bộ bài dài ctx-01..07 khi có GPU; `validate_arguments` chỉ đáng đo khi có bộ bài dùng MCP hoặc ghi tệp.
+- **Bằng chứng:** `data/evaluation/results/kept/code-aids-offline-20261123/` gồm `argument_check.py` và `argument_check.json`. Log pytest không lưu thành tệp; các số trên chép từ đầu ra trong phiên làm việc.
+
+## 23/11/2026 — Năm cơ chế hỗ trợ model nhỏ và sửa lỗi đọc lịch sử v2: test trên CPU và đo trích đoạn ngoại tuyến
+
+- **Câu hỏi:** code mới (sửa `ScopedSearchHistory` bỏ mất tin mới nhất; năm cờ `agent.scoped_tools`, `dedupe_calls`, `focused_excerpts`, `history_hints`, `final_keeps_tools`, đều tắt) có đạt test của nó và giữ nguyên các test đang có không? Trích đoạn theo chỗ khớp có cho model thấy đáp án ở nhiều bài hơn trích 400 ký tự đầu không?
+- **Điều kiện:**
+  - Code: cây làm việc trên `aab85e6`, nhánh `docs/harness-breakthrough-plan`, chưa commit.
+  - Python 3.11.9 trên Windows (máy `dungbui`, máy phụ). Không database, không Ollama, ẩn CUDA. CPU đang chạy dự án khác (tải khoảng 94 %), nên chỉ chạy test liên quan, không chạy cả bộ.
+  - Đo trích đoạn: không model. 21 bài `documents` của Agent Eval v0 có `must_mention`, các đoạn bộ đo phát lại (`retrieval.jsonl`), và câu `search_documents` đầu tiên qwen3.5:2b đã viết ở lần chạy 10/11 (`c57-compare-20261110/ae/ae-C-main-2b`); một bài 2B không tìm (doc-22) thì dùng câu truy xuất đã ghi.
+- **Đăng ký trước:** không. Phép đo trích đoạn viết sau khi đã đếm được 5 bài có đáp án nằm sau ký tự 400 (doc-33..37).
+- **Kết quả:**
+
+  | Lần chạy | Kết quả |
+  |---|---|
+  | `tests/test_agent_small_model_aids.py` (mới), lần 1 | 21 đạt, 2 hỏng: trích đoạn chọn cửa sổ bắt đầu sớm nhất khi hoà điểm và cắt mất đáp án |
+  | Như trên, sau khi sửa cách hoà điểm (chọn cửa sổ có từ khớp sát nhau nhất, canh giữa) | 23 đạt |
+  | 43 tệp test agent, công cụ, bộ đo, tool state | 871 đạt, 65 bỏ qua (cần PostgreSQL hoặc bản clone BFCL), 1 hỏng |
+  | Bài hỏng chạy lại riêng, thư mục tạm của pytest đặt trên ổ D: | 1 đạt. Lỗi là đường dẫn khác ổ (tạm ở C:, repo ở D:), không do code |
+  | `compileall` các tệp đã sửa; `model_registry --check` | sạch; 0 lỗi, 2 cảnh báo cũ |
+
+  | Trích đoạn, 20 bài có đáp án trong các đoạn phát lại | Bài có đủ mọi mẫu đáp án trong trích đoạn |
+  |---|---:|
+  | 400 ký tự đầu (hiện tại) | 15 |
+  | Theo chỗ khớp câu tìm kiếm của 2B | 17 |
+
+  Được doc-34, doc-37; không mất bài nào. doc-33, doc-35, doc-36 vẫn hụt. Bài thứ 21 (doc-27) không có đáp án trong đoạn nào.
+
+- **Kết luận:** code mới đạt test của nó sau một lần sửa, test cũ giữ nguyên. Trích đoạn mới cho thấy đáp án ở thêm 2/5 bài từng cần `read_document`; đây là số về những gì model được thấy, chưa phải số đạt bài, và chưa đo model nào.
+- **Trạng thái:** xong phần CPU. Năm cờ chờ đo Agent Eval cùng ngày với đối chứng khi có GPU.
+- **Bằng chứng:** `data/evaluation/results/kept/code-aids-offline-20261123/` gồm `excerpt_coverage.py` và `excerpt_coverage.json`. Log pytest không lưu thành tệp; các số trên chép từ đầu ra trong phiên làm việc.
+
 ## 12/11/2026 — Test đợt 2 công cụ ghi tệp (write_file, move_file, delete_file có duyệt), chưa commit
 
 - **Câu hỏi:** code đợt 2 có đạt bộ test mới của nó không? Có làm hỏng test nào đang có không? Code và test này mới chỉ được đọc qua hai vòng duyệt của Fable, chưa chạy lần nào.

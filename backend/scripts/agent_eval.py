@@ -82,6 +82,15 @@ DISCORD_GUILD_NAME = "Góc Nhỏ"
 DATA_FILES = ("dataset.json", "tasks.jsonl", "retrieval.jsonl", "documents.jsonl")
 CATEGORIES = ("documents", "history", "status", "no_tool")
 SURFACES = ("web", "discord")
+# The small-model aids of AgentService (23/11/2026), as agent.* keys and --flags; all off by default.
+SMALL_MODEL_AIDS = {
+    "scoped_tools": "offer Discord-only tools only on Discord tasks and name only the offered tools in the guide",
+    "dedupe_calls": "answer a call identical to one already run this turn with a note instead of running it again",
+    "focused_excerpts": "show the 400 characters of a chunk that match the query best instead of its first 400",
+    "history_hints": "a search_history keyword miss says how to read the latest messages",
+    "final_keeps_tools": "ask the forced answer with the same tool list as the rounds before it",
+    "validate_arguments": "check each call against the schema the model was shown before it runs, converting \"4\" to 4",
+}
 # pending = a real-corpus question whose retrieval is not recorded yet
 # (scripts.agent_eval_record_retrieval); the runner refuses to replay it.
 RETRIEVAL_SOURCES = ("handwritten", "recorded", "pending")
@@ -544,6 +553,7 @@ def run_eval(
     lookup_check = bool(agent_config.get("lookup_check", False))
     read_on_check = bool(agent_config.get("read_on_check", False))
     read_rest = bool(agent_config.get("read_rest", False))
+    aids = {key: bool(agent_config.get(key, False)) for key in SMALL_MODEL_AIDS}
     history = FixtureHistory(dataset.guild)
     # The tools as the API offers them: the core's, plus app.discord's search_history
     # plugged in with the fixture guild (ticket 22, C4). The manifest's hash and the
@@ -561,13 +571,24 @@ def run_eval(
         # N1 (ticket 20's arbitration round): a last-message paste under this estimate reaches the model whole.
         "paste_inline": {"max_tokens": inline_max_tokens, "fixed_tokens": INLINE_FIXED_TOKENS, "chars_per_token": CHARS_PER_TOKEN},
         # Ticket 44: null = off, the conversation goes to the model as the loop holds it.
-        "context_budget": None if context_budget is None else {"ceiling_tokens": context_budget.ceiling_tokens or inline_max_tokens, "keep_recent": context_budget.keep_recent},
+        # keep_edges is written only when on, so a manifest from before it reads the same.
+        "context_budget": None if context_budget is None else {
+            "ceiling_tokens": context_budget.ceiling_tokens or inline_max_tokens, "keep_recent": context_budget.keep_recent,
+            **({"keep_edges": True} if context_budget.keep_edges else {}),
+        },
         # Ticket 45: a last-message paste past that estimate read in parts by the code; runs only compare when this agrees.
         "long_input": long_input,
         # Harness-fix round: a turn that gave up before any lookup is sent back once; runs only compare when this agrees.
         "lookup_check": lookup_check,
         "read_on_check": read_on_check,
         "read_rest": read_rest,
+        # Small-model aids (23/11/2026): written only when one is on, so a run without them has the manifest
+        # every earlier run has. With scoped_tools the guide differs by surface: both hashes are recorded.
+        **({"small_model_aids": aids} if any(aids.values()) else {}),
+        **({"agent_guide_sha256_by_surface": {
+            surface: _sha256(defense.agent_guide(AgentService(router, None, None, registry=registry, **aids).guide_text(context)))
+            for surface, context in (("web", None), ("discord", {"guild_id": history.guild_id}))
+        }} if aids.get("scoped_tools") else {}),
         "turn_budget_seconds": turn_budget_seconds,
         "final_reserve_seconds": final_reserve_seconds,
         "injection_defense": defense.enabled,
@@ -581,7 +602,7 @@ def run_eval(
         "clock_note": clock["content"] if clock is not None else None,
         "discord_persona_sha256": _sha256(discord_persona) if discord_persona is not None else None,
         # What the model is shown, not what is registered: a tool that waits for approval is not shown while nothing can approve it.
-        "tools_sha256": _sha256(json.dumps(AgentService(router, None, None, registry=registry)._offered_schemas(), ensure_ascii=False, sort_keys=True)),
+        "tools_sha256": _sha256(json.dumps(AgentService(router, None, None, registry=registry, **aids)._offered_schemas(), ensure_ascii=False, sort_keys=True)),
         "dataset": {
             "version": dataset.version,
             "sha256": dataset.sha256,
@@ -621,6 +642,7 @@ def run_eval(
             lookup_check=lookup_check,
             read_on_check=read_on_check,
             read_rest=read_rest,
+            **aids,
         )
         tool_context = {"guild_id": history.guild_id} if task.get("surface") == "discord" else None
         answer: str | None = None
@@ -721,6 +743,11 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         help="clear the oldest tool results when the prompt nears the window (ticket 44); default: agent.context_budget in models.yaml, off",
     )
     parser.add_argument(
+        "--context-keep-edges", action="store_true",
+        help="with the budget on, cut old tool results to their first and last characters before clearing them; implies --context-budget; "
+        "default: agent.context_budget.keep_edges in models.yaml, off",
+    )
+    parser.add_argument(
         "--lookup-check", action="store_true",
         help="send a turn that gave up before any lookup back once to look (harness-fix round); default: agent.lookup_check in models.yaml, off",
     )
@@ -736,6 +763,8 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         "--read-rest", action="store_true",
         help="when a turn stopped at excerpts and said the fact is not there, the code reads the rest and the model answers from notes; default: agent.read_rest in models.yaml, off",
     )
+    for key, help_text in SMALL_MODEL_AIDS.items():
+        parser.add_argument(f"--{key.replace('_', '-')}", dest=key, action="store_true", help=f"{help_text}; default: agent.{key} in models.yaml, off")
     parser.add_argument(
         "--max-steps", type=int,
         help="tool rounds per turn instead of agent.max_steps: what the context budget needs on tasks that read many times",
@@ -796,10 +825,12 @@ def ollama_version(base_url: str) -> str | None:
 def context_section(agent_section: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
     """agent.context_budget with the command line over it (ticket 44)."""
     section = dict(agent_section.get("context_budget") or {})
-    if args.context_budget or args.context_ceiling:
+    if args.context_budget or args.context_ceiling or args.context_keep_edges:
         section["enabled"] = True
     if args.context_ceiling:
         section["ceiling_tokens"] = args.context_ceiling
+    if args.context_keep_edges:
+        section["keep_edges"] = True
     return section
 
 
@@ -968,6 +999,8 @@ def main(argv: list[str] | None = None) -> int:
         "lookup_check": bool(args.lookup_check or agent_section.get("lookup_check", False)),
         "read_on_check": bool(args.read_on_check or agent_section.get("read_on_check", False)),
         "read_rest": bool(args.read_rest or agent_section.get("read_rest", False)),
+        # Small-model aids (23/11/2026): a flag here or agent.<key> in models.yaml; all off by default.
+        **{key: bool(getattr(args, key) or agent_section.get(key, False)) for key in SMALL_MODEL_AIDS},
     }
     defense = InjectionDefense.from_config(config.get("rag", {}), enabled_override=settings.rag_injection_defense_enabled)
 
